@@ -18,15 +18,7 @@ export async function POST(req) {
             path: '/',
             maxAge: twoDays,
         });
-
-        // res.cookies.set('refreshToken', refreshToken, {
-        //   httpOnly: false,
-        //   secure: false,
-        //   sameSite: 'lax',
-        //   path: '/',
-        //   maxAge: twoDays,
-        // });
-
+ 
         return res;
     } catch (err) {
         console.error('Error setting cookie:', err);

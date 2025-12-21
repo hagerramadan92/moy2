@@ -1,4 +1,3 @@
-// Global function to get user info from localStorage
 export const getUserInfo = () => {
   if (typeof window === 'undefined') return null;
 

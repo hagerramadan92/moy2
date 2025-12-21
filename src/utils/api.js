@@ -1,15 +1,12 @@
 // lib/axios.ts
 import axios from 'axios';
 
-export const baseImg = process.env.NEXT_PUBLIC_WS_URL;
-export const BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1`;
-
+export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
 });
-
 
 export const uploadTimeout = 15 * 60 * 1000; // 15m
 export const fileTimeout = 54 * 60 * 1000; // 5m
@@ -19,8 +16,6 @@ export const refreshClient = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
 });
-
-
 
 // attach access token if present
 api.interceptors.request.use(config => {
@@ -34,8 +29,5 @@ api.interceptors.request.use(config => {
   }
   return config;
 });
-
-
-// auth interseptor will be added in useAuthInterceptor hook at @/hooks/useAuthInterceptor;
 
 export default api;
