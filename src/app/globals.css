@@ -159,7 +159,7 @@ body {
 .cover{
   background-image: url("/images/cover.png");
   width: 100%;
-  min-height: 676px;
+  min-height: 677px;
   height: auto;
   background-repeat: no-repeat;
   background-size: cover;
