@@ -19,6 +19,7 @@ export default async function RootLayout({ children, params }) {
 		<html lang={"ar"} dir={'rtl'} suppressHydrationWarning>
 			<body className={`  ${almarai.variable} `}>
 				<Layout>{children}</Layout>
+			
 			</body>
 		</html>
 	);
