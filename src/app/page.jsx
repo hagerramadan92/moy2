@@ -1,7 +1,7 @@
 'use client';
 import AvailableSize from '@/components/molecules/AvailableSize';
 import ChooseUs from '@/components/molecules/ChooseUs';
-import CurrentLocation from '@/components/molecules/CurrentLocation';
+// import CurrentLocation from '@/components/molecules/CurrentLocation';
 import CustomerReviews from '@/components/molecules/CustomerReviews';
 import Footer from '@/components/molecules/Footer';
 import HomeCover from '@/components/molecules/HomeCover';
