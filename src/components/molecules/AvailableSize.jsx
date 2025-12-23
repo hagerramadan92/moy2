@@ -118,7 +118,7 @@ export default function AvailableSize() {
                     >
                     
                       {item === 3 && isCenterCard(index) && (
-                        <span className="absolute top-3 right-3 bg-orange-400 text-white text-xs px-3 py-1 rounded-full z-10">
+                        <span className="absolute top-3 right-3 bg-gradient-to-b from-[#E9BD85] to-[#F48C06] text-white text-[16px] px-3 py-2 rounded-full z-10">
                           الأكثر طلبًا
                         </span>
                       )}
@@ -179,7 +179,7 @@ export default function AvailableSize() {
                         className={`
                           w-full rounded-xl py-2.5 sm:py-3 
                           transition-all duration-300
-                          font-semibold
+                          font-semibold 
                           ${isCenterCard(index) 
                             ? 'bg-[#5A9CF0] text-white hover:bg-[#4A8AE0]' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
