@@ -7,6 +7,7 @@ import StaticSection from "@/components/molecules/StaticSection";
 import DriverServicesSection from "@/components/molecules/DriverServicesSection";
 import CallToActionSection from "@/components/molecules/CallToActionSection";
 import HowToUseAppSection from "@/components/molecules/HowToUseAppSection";
+import Footer from "@/components/molecules/Footer";
 import Cover from "@/components/molecules/cover";
 import AppPromotionSection from "@/components/molecules/AppPromotionSection";
 import StartJourneySection from "@/components/molecules/StartJourneySection";
@@ -23,6 +24,7 @@ export default function DriversPage() {
       <HowToUseAppSection />
       <AppPromotionSection />
       <CallToActionSection />
+      <Footer/>
     </main>
   );
 }
