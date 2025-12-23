@@ -10,6 +10,13 @@ import React from 'react';
 const page = () => {
 	return (
 		<>
+			<div className="">welcome</div>
+			<HomeCover />
+			<ChooseUs />
+			<AvailableSize />
+			<CurrentLocation />
+			<CustomerReviews />
+			<Footer />
 		<HomeCover/>
 		<ChooseUs/>	
 		<AvailableSize/>
