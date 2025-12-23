@@ -23,14 +23,14 @@ export default function AvailableSize() {
     };
 
     api.on("select", onSelect);
-    onSelect(); // تحديث الفهرس الأولي
+    onSelect();
 
     return () => {
       api.off("select", onSelect);
     };
   }, [api]);
 
-  // Auto-play يدوي
+ 
   useEffect(() => {
     if (!autoPlay || !api) return;
 
@@ -38,27 +38,25 @@ export default function AvailableSize() {
       if (api.canScrollNext()) {
         api.scrollNext();
       } else {
-        api.scrollTo(0); // العودة للبداية
+        api.scrollTo(0); 
       }
     }, 3000);
 
     return () => clearInterval(interval);
   }, [api, autoPlay]);
 
-  // تحديد إذا كان الكارت في المنتصف
+ 
   const isCenterCard = (index) => {
     return index === currentIndex;
   };
 
-  // تحديد إذا كان الكارت على الجانبين
   const isSideCard = (index) => {
     return Math.abs(index - currentIndex) === 1;
   };
 
-  // إيقاف Auto-play عند التفاعل
   const handleInteraction = useCallback(() => {
     setAutoPlay(false);
-    // إعادة تشغيل Auto-play بعد 10 ثواني من عدم التفاعل
+    
     setTimeout(() => setAutoPlay(true), 10000);
   }, []);
 
@@ -78,8 +76,8 @@ export default function AvailableSize() {
                 direction: "rtl",
                 loop: true,
                 skipSnaps: false,
-                watchDrag: false, // إيقاف السحب لتقليل الحركة العشوائية
-                duration: 20, // تقليل سرعة الحركة
+                watchDrag: false, 
+                duration: 20, 
               }}
               className="w-full"
               onMouseEnter={handleInteraction}
@@ -116,14 +114,14 @@ export default function AvailableSize() {
                         }
                       }}
                     >
-                      {/* شارة الأكثر طلباً على الكارت الثالث فقط */}
+                 
                       {item === 3 && isCenterCard(index) && (
                         <span className="absolute top-3 right-3 bg-orange-400 text-white text-xs px-3 py-1 rounded-full z-10">
                           الأكثر طلبًا
                         </span>
                       )}
 
-                      {/* الصورة */}
+                     
                       <div className="flex-1 flex flex-col justify-center">
                         <div className={`
                           mb-4 transition-all duration-300
@@ -187,7 +185,7 @@ export default function AvailableSize() {
                           mt-auto
                         `}
                         onClick={(e) => {
-                          e.stopPropagation(); // منع حدث النقر من الانتشار للكارت
+                          e.stopPropagation();
                           handleInteraction();
                         }}
                       >
