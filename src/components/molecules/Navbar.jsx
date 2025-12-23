@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
+import LoginFlowDialog from "./LoginFlowDialog";
 
 const NAV_LINKS = [
 	{ href: "/", label: "الرئيسية" },
@@ -17,7 +18,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
 	const pathname = usePathname();
-
+    const [open, setOpen] = useState(false)
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [user, setUser] = useState(null);
 
@@ -141,7 +142,9 @@ export default function Navbar() {
 				<div className="flex items-center gap-2">
 					<motion.div whileTap={{ scale: 0.98 }}>
 						<Link
-							href="/order"
+							// href="/order"
+							href="/"
+							onClick={() => setOpen(true)}
 							className={[
 								"relative inline-flex items-center justify-center rounded-full px-6 py-3",
 								"text-sm font-bold text-white shadow-md",
@@ -155,14 +158,17 @@ export default function Navbar() {
 					</motion.div>
 
 					{/* Logged out */}
+					 <LoginFlowDialog open={open} onOpenChange={setOpen} />
 					{!user ? (
 						<Link
+						
 							href="/login"
 							className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white/70 hover:text-slate-900 hover:ring-1 hover:ring-slate-200/70 sm:flex"
 						>
 							<UserIcon className="h-5 w-5" />
 							تسجيل الدخول
 						</Link>
+						
 					) : (
 						<div className="relative hidden sm:block" ref={dropdownRef}>
 							<button

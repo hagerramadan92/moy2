@@ -201,6 +201,10 @@ body {
   height: auto;
   margin: 0 auto;
 }
+.input-override input {
+  font-size: 48px !important;
+  color: #579BE8 !important;
+}
 
 
 @media (min-width: 1841px) {
