@@ -5,17 +5,19 @@ import CurrentLocation from '@/components/molecules/CurrentLocation';
 import CustomerReviews from '@/components/molecules/CustomerReviews';
 import Footer from '@/components/molecules/Footer';
 import HomeCover from '@/components/molecules/HomeCover';
+import HowItWorks from '@/components/molecules/HowItWorks';
 import React from 'react';
 
 const page = () => {
 	return (
 		<>
-			<HomeCover />
-			<ChooseUs />
-			<AvailableSize />
-			<CurrentLocation />
-			<CustomerReviews />
-			<Footer />
+		<HomeCover/>
+		<ChooseUs/>	
+		<AvailableSize/>
+		<HowItWorks/>
+		{/* <CurrentLocation/> */}
+		<CustomerReviews/>
+		<Footer/>
 		</>
 	);
 };
