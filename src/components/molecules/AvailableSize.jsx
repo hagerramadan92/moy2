@@ -23,14 +23,14 @@ export default function AvailableSize() {
     };
 
     api.on("select", onSelect);
-    onSelect(); // تحديث الفهرس الأولي
+    onSelect();
 
     return () => {
       api.off("select", onSelect);
     };
   }, [api]);
 
-  // Auto-play يدوي
+
   useEffect(() => {
     if (!autoPlay || !api) return;
 
@@ -38,38 +38,38 @@ export default function AvailableSize() {
       if (api.canScrollNext()) {
         api.scrollNext();
       } else {
-        api.scrollTo(0); // العودة للبداية
+        api.scrollTo(0); 
       }
     }, 3000);
 
     return () => clearInterval(interval);
   }, [api, autoPlay]);
 
-  // تحديد إذا كان الكارت في المنتصف
+
   const isCenterCard = (index) => {
     return index === currentIndex;
   };
 
-  // تحديد إذا كان الكارت على الجانبين
+
   const isSideCard = (index) => {
     return Math.abs(index - currentIndex) === 1;
   };
 
-  // إيقاف Auto-play عند التفاعل
+  
   const handleInteraction = useCallback(() => {
     setAutoPlay(false);
-    // إعادة تشغيل Auto-play بعد 10 ثواني من عدم التفاعل
+   
     setTimeout(() => setAutoPlay(true), 10000);
   }, []);
 
   return (
     <section dir="rtl" className="py-12 sm:py-16 md:py-20 bg-white">
-      <div className="container mx-auto px-4">
+      <div className="container  px-4">
         <h2 className="text-center text-2xl sm:text-2.5xl md:text-3xl font-bold text-[#5A9CF0] mb-10 sm:mb-12 md:mb-14">
           السعات المتاحة
         </h2>
 
-        <div className="relative max-w-6xl mx-auto">
+        <div className="relative px-10 mx-auto">
           <div className="relative">
             <Carousel
               setApi={setApi}
@@ -78,8 +78,8 @@ export default function AvailableSize() {
                 direction: "rtl",
                 loop: true,
                 skipSnaps: false,
-                watchDrag: false, // إيقاف السحب لتقليل الحركة العشوائية
-                duration: 20, // تقليل سرعة الحركة
+                watchDrag: true, 
+                duration: 20, 
               }}
               className="w-full"
               onMouseEnter={handleInteraction}
@@ -116,14 +116,14 @@ export default function AvailableSize() {
                         }
                       }}
                     >
-                      {/* شارة الأكثر طلباً على الكارت الثالث فقط */}
+                    
                       {item === 3 && isCenterCard(index) && (
                         <span className="absolute top-3 right-3 bg-orange-400 text-white text-xs px-3 py-1 rounded-full z-10">
                           الأكثر طلبًا
                         </span>
                       )}
 
-                      {/* الصورة */}
+                 
                       <div className="flex-1 flex flex-col justify-center">
                         <div className={`
                           mb-4 transition-all duration-300
@@ -187,7 +187,7 @@ export default function AvailableSize() {
                           mt-auto
                         `}
                         onClick={(e) => {
-                          e.stopPropagation(); // منع حدث النقر من الانتشار للكارت
+                          e.stopPropagation(); 
                           handleInteraction();
                         }}
                       >
@@ -198,10 +198,10 @@ export default function AvailableSize() {
                 ))}
               </CarouselContent>
 
-              {/* أزرار التنقل - واحدة يمين وواحدة شمال */}
+          
               <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
                 <div className="relative w-full flex justify-between px-2 sm:px-4">
-                  {/* السهم الأيمن (للسابق) */}
+              
                   <div className="pointer-events-auto">
                     <CarouselPrevious 
                       className="
@@ -216,7 +216,7 @@ export default function AvailableSize() {
                     />
                   </div>
                   
-                  {/* السهم الأيسر (للـتالي) */}
+             
                   <div className="pointer-events-auto">
                     <CarouselNext 
                       className="
@@ -235,7 +235,7 @@ export default function AvailableSize() {
             </Carousel>
           </div>
 
-          {/* مؤشرات الصفحات */}
+        
           <div className="flex justify-center mt-8 space-x-2">
             {[1, 2, 3, 4, 5].map((_, index) => (
               <button
