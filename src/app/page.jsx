@@ -5,6 +5,7 @@ import CurrentLocation from '@/components/molecules/CurrentLocation';
 import CustomerReviews from '@/components/molecules/CustomerReviews';
 import Footer from '@/components/molecules/Footer';
 import HomeCover from '@/components/molecules/HomeCover';
+import HowItWorks from '@/components/molecules/HowItWorks';
 import React from 'react';
 
 const page = () => {
@@ -13,7 +14,8 @@ const page = () => {
 		<HomeCover/>
 		<ChooseUs/>	
 		<AvailableSize/>
-		<CurrentLocation/>
+		<HowItWorks/>
+		{/* <CurrentLocation/> */}
 		<CustomerReviews/>
 		<Footer/>
 		</>
