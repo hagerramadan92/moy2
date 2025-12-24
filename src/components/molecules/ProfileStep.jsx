@@ -30,19 +30,19 @@ export default function ProfileStep({ onNext, onSkip }) {
            </Button>
       </div>
 
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-6">
         <label className="relative group cursor-pointer">
-            <div className={`w-32 h-32 rounded-full overflow-hidden border-4 border-gray-100 group-hover:border-blue-100 transition-colors ${preview ? 'bg-white' : 'bg-gray-100'}`}>
+            <div className={`w-36 h-36 rounded-full overflow-hidden border-4 border-[#579BE8]/10 group-hover:border-[#579BE8] transition-all duration-300 ${preview ? 'bg-white' : 'bg-[#579BE8]/5'}`}>
                 {preview ? (
                      <img src={preview} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <div className="w-full h-full flex items-center justify-center text-[#579BE8]/40 group-hover:text-[#579BE8] transition-colors">
                         <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                     </div>
                 )}
             </div>
             
-            <div className="absolute bottom-1 right-1 bg-[#579BE8] text-white w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm group-hover:scale-110 transition-transform">
+            <div className="absolute bottom-2 right-2 bg-[#579BE8] text-white w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
                 <FaPlusCircle className="w-5 h-5" />
             </div>
 
@@ -53,20 +53,20 @@ export default function ProfileStep({ onNext, onSkip }) {
                 onChange={handleChange}
             />
         </label>
-        <p className="text-gray-500 text-sm font-medium">اضف صورة شخصية</p>
+        <p className="text-gray-500 text-sm font-semibold">اضف صورة شخصية</p>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-semibold text-gray-700">الاسم</label>
+            <label htmlFor="name" className="block text-md font-semibold text-gray-700 mr-1">الاسم</label>
             <Input 
                 placeholder="الاسم الكامل" 
-                className="pl-4 h-14 text-lg bg-gray-50/50 border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/10 rounded-xl transition-all" 
+                className="pl-4 h-[64px] text-lg bg-white border-2 border-[#579BE8]/20 focus:border-[#579BE8] focus:ring-4 focus:ring-[#579BE8]/10 rounded-2xl transition-all shadow-sm font-medium text-gray-800" 
             />
         </div>
         
         <Button  
-            className="w-full h-16 bg-[#579BE8] hover:bg-[#4a8cd9] text-white text-xl font-bold rounded-2xl shadow-lg shadow-blue-500/20 mt-4 active:scale-[0.98] transition-all" 
+            className="w-full h-[64px] bg-[#579BE8] hover:bg-[#4889d4] hover:shadow-lg hover:-translate-y-0.5 text-white text-xl font-bold rounded-2xl shadow-md shadow-[#579BE8]/20 mt-4 active:scale-[0.98] transition-all" 
             onClick={onNext}
         >
           إنشاء الحساب

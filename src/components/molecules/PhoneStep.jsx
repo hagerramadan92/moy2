@@ -12,10 +12,10 @@ export default function PhoneStep({ onNext }) {
         <p className="text-gray-500 text-center text-lg font-medium">سجل دخولك للاستمرار</p>
       </div>
       
-      <div className="space-y-4">
-        <label className="text-right block text-sm font-semibold text-gray-700">رقم الجوال</label>
+      <div className="space-y-5">
+        <label className="text-right block text-md font-semibold text-gray-700 mr-1">رقم الجوال</label>
         <div className="relative group">
-            <div className="absolute top-1/2 -translate-y-1/2 left-4 w-[60px] h-[28px] opacity-80 transition-opacity group-hover:opacity-100">
+            <div className="absolute top-1/2 -translate-y-1/2 left-4 w-[60px] h-[30px] opacity-90 transition-opacity">
                 <Image 
                     src="/images/phone-icon.png" 
                     alt="Phone Icon" 
@@ -27,13 +27,13 @@ export default function PhoneStep({ onNext }) {
           <Input
             placeholder="5xxxxxxxx"
             dir="ltr"
-            className="text-left pl-24 h-16 text-xl tracking-wider font-semibold text-[#579BE8] bg-gray-50/50 border-2 border-gray-100 focus:border-[#579BE8]/50 focus:ring-4 focus:ring-[#579BE8]/10 rounded-2xl transition-all placeholder:text-gray-300 pointer-events-auto"
+            className="text-left pl-24 h-[70px] text-2xl tracking-widest font-bold text-[#579BE8] bg-white border-2 border-[#579BE8]/20 focus:border-[#579BE8] focus:ring-4 focus:ring-[#579BE8]/10 rounded-2xl transition-all placeholder:text-gray-300 pointer-events-auto shadow-sm"
           />
         </div>
       </div>
     
       <Button
-        className="w-full h-16 bg-[#579BE8] hover:bg-[#4a8cd9] text-white text-xl font-bold rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all cursor-pointer"
+        className="w-full h-[70px] bg-[#579BE8] hover:bg-[#4889d4] hover:shadow-lg hover:-translate-y-0.5 text-white text-xl font-bold rounded-2xl shadow-md shadow-[#579BE8]/20 active:scale-[0.98] transition-all cursor-pointer mt-4"
         onClick={onNext}
       >
         تأكيد

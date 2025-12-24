@@ -16,9 +16,9 @@ export default function WelcomeStep({ onFinish }) {
           stiffness: 260,
           damping: 20
         }}
-        className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-2"
+        className="w-24 h-24 bg-[#579BE8]/10 rounded-full flex items-center justify-center mb-2"
       >
-        <CheckCircle className="text-green-500 w-12 h-12" strokeWidth={3} />
+        <CheckCircle className="text-[#579BE8] w-12 h-12" strokeWidth={3} />
       </motion.div>
 
       <div className="space-y-2">
