@@ -6,79 +6,91 @@ import { MdOutlineLocalPolice } from "react-icons/md";
 
 export default function ChooseUs() {
   return (
-    <section className="py-8 sm:py-10 md:py-14 px-4 sm:px-6 lg:px-[4%] xl:px-[2%] bg-white">
-      <div className="text-center mb-12 sm:mb-16 md:mb-21">
-        <h2 className="text-[28px] sm:text-[32px] md:text-[36px] font-bold text-[#579BE8]">
-          ليش تختارنا
-        </h2>
-        <p className="text-gray-500 mt-2 text-[18px] sm:text-[20px] md:text-[24px] max-w-2xl mx-auto px-4">
-          نوفر لك أفضل تجربة طلب وتوصيل مياه بأحدث التقنيات
-        </p>
+    <section className="py-16 md:py-24 px-4 bg-white relative overflow-hidden">
+      {/* Subtle Background Decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-50/50 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-cyan-50/50 rounded-full blur-[100px]" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 mb-4 xl:grid-cols-4 lg:grid-cols-3 
-       md:grid-cols-2 gap-12 sm:gap-12 lg:gap-12 w-full">
-        <Card
-          icon={
-            <HiArrowTrendingDown className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />
-          }
-          title="أسعار تنافسية"
-          desc="أفضل الأسعار من عروض متعددة"
-          gradient="from-[#9CC6F4] to-[#4787D0]"
-        />
+      <div className="max-w-[1400px] mx-auto relative z-10 w-full">
+        <div className="text-center mb-16 md:mb-24">
+          <h2 className="text-3xl md:text-4xl lg:text-[36px] font-bold text-[#579BE8] mb-4">
+            ليش تختارنا ؟
+          </h2>
+          <p className="text-gray-500 text-lg md:text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed">
+            نوفر لك أفضل تجربة طلب وتوصيل مياه بأحدث التقنيات وأعلى معايير الجودة
+          </p>
+        </div>
 
-        <Card
-          icon={<BsLightningCharge className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />}
-          title="سرعة في التنفيذ"
-          desc="توصيل سريع بأفضل وقت ممكن"
-          gradient="from-[#E5BD8A] to-[#D57B06]"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-16 gap-x-8 lg:gap-8 pt-12">
+          <Card
+            icon={<HiArrowTrendingDown className="w-10 h-10 md:w-12 md:h-12" />}
+            title="أسعار تنافسية"
+            desc="نضمن لك أفضل الأسعار في السوق مع عروض حصرية ومتجددة تناسب كافة احتياجاتك اليومية."
+            gradient="from-[#9CC6F4] to-[#4787D0]"
+            shadowColor="shadow-blue-200"
+          />
 
-        <Card
-          icon={<MdOutlineLocalPolice className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />}
-          title="موثوقية وأمان"
-          desc="سواقين معتمدين وخدمة مضمونة"
-          gradient="from-[#68E62E] to-[#348C0B]"
-        />
+          <Card
+            icon={<BsLightningCharge className="w-10 h-10 md:w-12 md:h-12" />}
+            title="سرعة في التنفيذ"
+            desc="شبكة توصيل ذكية وسريعة تضمن وصول طلبك في الوقت المحدد وبأعلى كفاءة ممكنة."
+            gradient="from-[#E5BD8A] to-[#D57B06]"
+            shadowColor="shadow-amber-200"
+          />
 
-        <Card
-          icon={<FiHeadphones className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />}
-          title="دعم فني"
-          desc="دعم متواصل على مدار الساعة"
-          gradient="from-[#E0AAF0] to-[#B508E9]"
-        />
+          <Card
+            icon={<MdOutlineLocalPolice className="w-10 h-10 md:w-12 md:h-12" />}
+            title="موثوقية وأمان"
+            desc="جميع السائقين معتمدين وموثقين لضمان خدمة آمنة واحترافية لك ولعائلتك."
+            gradient="from-[#68E62E] to-[#348C0B]"
+            shadowColor="shadow-green-200"
+          />
+
+          <Card
+            icon={<FiHeadphones className="w-10 h-10 md:w-12 md:h-12" />}
+            title="دعم فني"
+            desc="فريق دعم متواجد على مدار الساعة للإجابة على استفساراتك وخدمتك في أي وقت."
+            gradient="from-[#E0AAF0] to-[#B508E9]"
+            shadowColor="shadow-purple-200"
+          />
+        </div>
       </div>
     </section>
   );
 }
 
 /* ===== Card Component ===== */
-function Card({ icon, title, desc, gradient }) {
+function Card({ icon, title, desc, gradient, shadowColor }) {
   return (
     <div
-      className="relative bg-white rounded-xl sm:rounded-2xl
-                 px-6 sm:px-8 md:px-10 lg:px-12 
-                 pt-12 sm:pt-14 md:pt-16 
-                 pb-8 sm:pb-10 md:pb-12 
+      className="group relative bg-white rounded-[32px]
+                 px-8 pt-16 pb-10
                  text-center w-full
-                 shadow-md hover:shadow-xl
-                 transition-all duration-300 hover:-translate-y-1"
+                 border border-gray-100
+                 shadow-[0_8px_30px_rgb(0,0,0,0.04)]
+                 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]
+                 transition-all duration-300 hover:-translate-y-2"
     >
       <div
-        className={`absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2
-                    w-16 h-16 sm:w-20 sm:h-20 md:w-25 md:h-24 
+        className={`absolute -top-10 left-1/2 -translate-x-1/2
+                    w-20 h-20 md:w-24 md:h-24
                     flex items-center justify-center
-                    rounded-lg sm:rounded-xl 
-                    bg-gradient-to-r ${gradient}
-                    text-white shadow-lg`}
+                    rounded-[24px]
+                    bg-gradient-to-b ${gradient}
+                    text-white shadow-xl ${shadowColor}
+                    group-hover:scale-110 transition-transform duration-300 ease-out`}
       >
-        {icon}
+        <div className="brightness-110 drop-shadow-md">
+           {icon}
+        </div>
       </div>
 
-      <h3 className="font-semibold text-[20px] sm:text-[22px] md:text-[24px] lg:text-[27.35px] mt-4 sm:mt-2">
+      <h3 className="font-bold text-xl md:text-2xl text-gray-900 mt-6 mb-4">
         {title}
       </h3>
-      <p className="text-[#7A7E80] text-[14px] sm:text-[16px] md:text-[18px] mt-4 sm:mt-6 md:mt-7.5">
+      <p className="text-gray-500 text-base md:text-[17px] leading-relaxed">
         {desc}
       </p>
     </div>
