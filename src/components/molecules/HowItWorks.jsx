@@ -20,47 +20,46 @@ const HowItWorks = () => {
         </div>
 
         <div className="relative px-4 md:px-5">
-          {/* الخطوط - للشاشات المتوسطة وما فوق */}
-          <div className="hidden lg:block">
-            <div className="absolute top-[30px] md:top-[40px] right-[15%] xl:right-[210px] w-[20%] xl:w-[183px] z-0">
+          <div className="lines">
+            <div className="absolute top-[-46%] md:top-[-46%] 
+            right-[15%] xl:right-[210px] w-[20%] xl:w-[183px] ">
               <Image 
                 src="/images/line1.png" 
-                width={183} 
-                height={8} 
+                width={1830} 
+                height={80} 
                 alt="line1"
-                className="w-full h-2 object-contain"
+                className="w-full h-89 object-contain"
               />
             </div>
-            <div className="absolute top-[30px] md:top-[40px] right-[35%] xl:right-[55%] w-[20%] xl:w-[183px] z-0">
+            <div className="absolute top-[30px] md:top-[-42%] right-[35%] xl:right-[54%] w-[20%] xl:w-[183px] z-0">
               <Image 
                 src="/images/line1.png" 
-                width={183} 
-                height={8} 
+                width={1830} 
+                height={800} 
                 alt="line1"
-                className="w-full h-2 object-contain"
+                className="w-full h-82 object-contain"
               />
             </div>
-            <div className="absolute top-[30px] md:top-[40px] right-[55%] xl:right-[35%] w-[20%] xl:w-[183px] z-0">
+            <div className="absolute top-[-50%] right-[55%] xl:right-[34%] w-[20%] xl:w-[183px] z-0">
               <Image 
                 src="/images/line2.png" 
-                width={183} 
-                height={8} 
+                width={1830} 
+                height={800} 
                 alt="line2"
-                className="w-full h-2 object-contain"
+                className="w-full h-92 object-contain"
               />
             </div>
-            <div className="absolute top-[30px] md:top-[40px] left-[5%] xl:left-[10%] w-[25%] xl:w-[210px] z-0">
+            <div className="absolute top-[30px] md:top-[-45%] left-[5%] xl:left-[13%] w-[25%] xl:w-[210px] z-0">
               <Image 
                 src="/images/line3.png" 
-                width={210} 
-                height={8} 
+                width={2100} 
+                height={800} 
                 alt="line3"
-                className="w-full h-2 object-contain"
+                className="w-full h-92 object-contain"
               />
             </div>
           </div>
 
-          {/* الخطوط - للشاشات الصغيرة */}
           <div className="lg:hidden flex justify-center mb-8">
             <div className="flex items-center space-x-4 rtl:space-x-reverse">
               <div className="w-8 h-1 bg-[#579BE8] rounded-full"></div>
@@ -71,7 +70,6 @@ const HowItWorks = () => {
             </div>
           </div>
 
-          {/* الخطوات */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 md:gap-4 lg:gap-0 relative z-10">
             
             {/* STEP 1 */}

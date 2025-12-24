@@ -3,6 +3,7 @@ import AppPromotionSection from '@/components/molecules/AppPromotionSection';
 import AvailableSize from '@/components/molecules/AvailableSize';
 import CallToActionSection from '@/components/molecules/CallToActionSection';
 import ChooseUs from '@/components/molecules/ChooseUs';
+import CurrentLocation from '@/components/molecules/CurrentLocation';
 import CustomerReviews from '@/components/molecules/CustomerReviews';
 import Deals from '@/components/molecules/Deals';
 import Footer from '@/components/molecules/Footer';
@@ -18,6 +19,7 @@ const page = () => {
 		<ChooseUs/>	
 		<AvailableSize/>
 		<HowItWorks/>
+		<CurrentLocation/>
 		<Deals/>
 		<CustomerReviews/>
 		 <HowToUseAppSection />
