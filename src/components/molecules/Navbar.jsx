@@ -414,7 +414,7 @@ function Avatar({ user, fallbackLetter }) {
 
 /* --- Icons --- */
 
-function DropletIcon({ className = "" }) {
+export function DropletIcon({ className = "" }) {
 	return (
 		<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
 			<path
