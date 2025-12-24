@@ -10,11 +10,11 @@ import Footer from "@/components/molecules/Footer";
 const ArticlePage = () => {
   return (
     <main>
-<ArticlesHero/>
-<ArticlesSection/>
-<AppPromotionSection/>
-<CallToActionSection/>
-<Footer/>
+      <ArticlesHero />
+      <ArticlesSection />
+      <AppPromotionSection />
+      <CallToActionSection />
+      <Footer />
     </main>
   );
 };
