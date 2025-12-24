@@ -155,13 +155,25 @@ const ReviewCard = ({ review, x }) => {
 
 export default function CustomerReviewsExact() {
   const [width, setWidth] = useState(0);
+  const [isRTL, setIsRTL] = useState(false);
   const carousel = useRef();
   const x = useMotionValue(0);
 
   useEffect(() => {
-    if (carousel.current) {
-      setWidth(carousel.current.scrollWidth - carousel.current.offsetWidth);
-    }
+    // Check for RTL direction
+    const rtl = document.dir === "rtl" || document.documentElement.dir === "rtl";
+    setIsRTL(rtl);
+
+    const handleResize = () => {
+      if (carousel.current) {
+        setWidth(carousel.current.scrollWidth - carousel.current.offsetWidth);
+      }
+    };
+
+    handleResize(); // Initial calculation
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return (
@@ -178,7 +190,10 @@ export default function CustomerReviewsExact() {
         >
           <motion.div
             drag="x"
-            dragConstraints={{ right: 0, left: -width }}
+            dragConstraints={{ 
+                right: isRTL ? width : 0, 
+                left: isRTL ? 0 : -width 
+            }}
             whileTap={{ cursor: "grabbing" }}
             style={{ x }}
             className="flex gap-8 px-4 md:px-12 py-10"
