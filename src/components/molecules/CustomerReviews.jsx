@@ -64,7 +64,7 @@ const reviews = [
   },
 ];
 
-const ReviewCard = ({ review, x }) => {
+const ReviewCard = ({ review, x, isDragging }) => {
   const cardRef = useRef(null);
 
   // 3D Rotation Effect based on x position
@@ -73,20 +73,8 @@ const ReviewCard = ({ review, x }) => {
   const rotateY = useTransform(x, [-500, 0, 500], [15, 0, -15]);
   const rotateZ = useTransform(x, [-500, 0, 500], [2, 0, -2]);
   const scale = useTransform(x, [-500, 0, 500], [0.9, 1, 0.9]);
-  const opacity = useTransform(x, [-800, 0, 800], [0.5, 1, 0.5]);
-
-  // Floating Animation
-  const floatingY = useMotionValue(0);
-
-  useEffect(() => {
-    // Determine a random offset and duration for organic feel
-    const randomOffset = Math.random() * 20;
-    const duration = 3 + Math.random() * 2;
-    
-    // Simple keyframe animation logic using vanilla JS for the floating value 
-    // or we can use animate() from framer-motion if avoiding re-renders is key,
-    // but a declarative motion.div is easier.
-  }, []);
+  const opacityTransform = useTransform(x, [-800, 0, 800], [0.5, 1, 0.5]);
+  const opacity = isDragging ? opacityTransform : 1;
 
   return (
     <motion.div
@@ -98,19 +86,9 @@ const ReviewCard = ({ review, x }) => {
         opacity,
         x: 0, // This is local offset, the parent handles the slider x
       }}
-      className="min-w-[300px] md:min-w-[350px] lg:min-w-[400px] perspective-1000"
+      className="min-w-[85%] md:min-w-[45%] lg:min-w-[30%] perspective-1000"
     >
       <motion.div
-        animate={{
-          y: [-5, 5, -5],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut",
-          // Randomize delay so they don't float in sync
-          delay: Math.random() * 2, 
-        }}
         className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/40 h-full select-none"
       >
         <div className="flex justify-between items-center mb-3 pointer-events-none">
@@ -156,7 +134,9 @@ const ReviewCard = ({ review, x }) => {
 export default function CustomerReviewsExact() {
   const [width, setWidth] = useState(0);
   const [isRTL, setIsRTL] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const carousel = useRef();
+  const carouselContent = useRef();
   const x = useMotionValue(0);
 
   useEffect(() => {
@@ -165,16 +145,31 @@ export default function CustomerReviewsExact() {
     setIsRTL(rtl);
 
     const handleResize = () => {
-      if (carousel.current) {
-        setWidth(carousel.current.scrollWidth - carousel.current.offsetWidth);
+      if (carouselContent.current && carousel.current) {
+        const scrollWidth = carouselContent.current.scrollWidth;
+        const offsetWidth = carousel.current.offsetWidth;
+        const calculatedWidth = scrollWidth - offsetWidth;
+        setWidth(calculatedWidth);
+        
+        // Reset position on resize
+        x.set(0);
       }
     };
 
-    handleResize(); // Initial calculation
+    // Use requestAnimationFrame to ensure DOM is ready
+    const resizeObserver = new ResizeObserver(handleResize);
+    if (carousel.current) {
+      resizeObserver.observe(carousel.current);
+    }
 
+    handleResize(); // Initial calculation
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
+    };
+  }, [x]);
 
   return (
     <section className="py-16 bg-gradient-to-b bg-[#EFF5FD] overflow-hidden">
@@ -186,20 +181,45 @@ export default function CustomerReviewsExact() {
         {/* Carousel Container */}
         <motion.div
           ref={carousel}
-          className="cursor-grab active:cursor-grabbing overflow-hidden perspective-1000"
+          className="cursor-grab active:cursor-grabbing overflow-hidden perspective-1000 rounded-lg"
         >
           <motion.div
+            ref={carouselContent}
             drag="x"
             dragConstraints={{ 
                 right: isRTL ? width : 0, 
                 left: isRTL ? 0 : -width 
+            }}
+            dragElastic={0.2}
+            dragTransition={{
+              power: 0.3,
+              restDelta: 10,
+            }}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={(event, info) => {
+              setIsDragging(false);
+              const swipeThreshold = 50;
+              const swipe = info.offset.x;
+
+              if (Math.abs(swipe) > swipeThreshold) {
+                // Snap to next/previous on swipe
+                const snapPoints = isRTL 
+                  ? [0, width / 2, width]
+                  : [-width, -width / 2, 0];
+                
+                const closest = snapPoints.reduce((prev, curr) =>
+                  Math.abs(curr - x.get()) < Math.abs(prev - x.get()) ? curr : prev
+                );
+                
+                x.set(closest);
+              }
             }}
             whileTap={{ cursor: "grabbing" }}
             style={{ x }}
             className="flex gap-8 px-4 md:px-12 py-10"
           >
             {reviews.map((review) => (
-              <ReviewCard key={review.id} review={review} x={x} />
+              <ReviewCard key={review.id} review={review} x={x} isDragging={isDragging} />
             ))}
           </motion.div>
         </motion.div>
