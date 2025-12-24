@@ -159,7 +159,7 @@ body {
 .cover{
   background-image: url("/images/cover.png");
   width: 100%;
-  min-height: 677px;
+  min-height: 679px;
   height: auto;
   background-repeat: no-repeat;
   background-size: cover;
@@ -201,14 +201,26 @@ body {
   height: auto;
   margin: 0 auto;
 }
-
+.input-override input {
+  font-size: 48px !important;
+  color: #579BE8 !important;
+}
+.maps{
+   width: 746px;
+   height: 539px;
+}
 
 @media (min-width: 1841px) {
   .start_container{
     padding-right: 18%;
   }
 }
+@media (max-width:1565px) and (min-width:0px){
+  .maps{
+    width: 100%;
+  }
 
+}
 @media (max-width:1840px) and (min-width:1681px){
   .start_container{
     padding-right: 12%;
@@ -331,7 +343,6 @@ body {
   }
 }
 
-/* شاشات صغيرة جداً */
 @media (max-width: 480px) {
   .cover h1 {
     font-size: 20px;
@@ -351,7 +362,6 @@ body {
   }
 }
 
-/* تحسين للأجهزة التي لديها ارتفاع شاشة قليل */
 @media (max-height: 700px) and (max-width: 1023px) {
   .cover {
     min-height: auto;
@@ -362,87 +372,6 @@ body {
     max-width: 400px;
   }
 }
-/* .cover{
-  background-image: url("/images/cover.png");
-  width: 100%;
-  height:676px;
-  background-repeat: no-repeat;
-  background-size: cover;
-  display: flex;
-  align-items: center
-}
-
-.start_container{
-  padding-right: 18%;
-}
-.cover h1{
-  font-size: 40px;
-  color: #ffff;
-  font-weight: 700;
-  line-height: 170%
-}
-.cover .desc{
-  font-weight: 400;
-  font-size: 32px;
-  line-height: 170%;
-  color:rgba(0, 0, 0, 0.51);
-   width: 544px;
-}
-
-.cover .download_app{
-font-size: 14px;
-color: #fff;
-width: 113px;
-
-}
-.form-left{
-  position: absolute;
-   top: 57px;
-   left: 144px;
-   width: 462px;
-   height: 570px;
-  
-}
-
-
-
-@media (max-width:1840px) and (min-width:1681px){
-  .start_container{
-  padding-right: 12%;
-}
-}
-@media (max-width:1680px) and (min-width:1312px){
-  .start_container{
-  padding-right: 5%;
-}
-}
-@media (max-width:1311px) and (min-width:1024px){
-  .start_container{
-  padding-right: 2%;
-}
-.form-left{
-  position: absolute;
-   top: 57px;
-   left: 44px;
-   width: 462px;
-   height: 570px;
-  
-}
-}
-
-@media (max-width:1023px) and (min-width:0px){
-  .start_container{
-  padding-right: 2%;
-}
-.form-left{
-  position: absolute;
-   top: 500PX;
-   left: 0px;
-   width: 100%;
-   height: 570px;
-  
-}
-} */
 
 
 @layer base {
