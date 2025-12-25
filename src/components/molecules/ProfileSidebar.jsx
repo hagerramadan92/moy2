@@ -62,17 +62,11 @@ export default function ProfileSidebar() {
                 ))}
 
                 <div className="flex flex-col gap-4 pt-4 border-t border-border">
-                    <div className="flex items-center gap-2 text-destructive font-bold px-2">
+                    <div className="flex items-center gap-2 text-destructive rounded-lg hover:translate-x-[-2px] cursor-pointer transition-all duration-200 font-bold px-2 py-2 hover:bg-destructive/10 hover:text-destructive">
                         <MdLogout className="w-5 h-5" />
                         <h2 className="text-lg">تسجيل خروج</h2>
                     </div>
-                    <div className="flex flex-col gap-1 pr-4 border-r-2 border-border/50">
-                        <button
-                            className="text-start text-base py-2 px-4 rounded-lg transition-all duration-200 text-muted-foreground hover:bg-destructive/10 hover:text-destructive w-full"
-                        >
-                            تسجيل خروج
-                        </button>
-                    </div>
+
                 </div>
             </div>
         </aside>
