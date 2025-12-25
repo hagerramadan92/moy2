@@ -32,7 +32,7 @@ export default function StartJourneySection() {
   ];
 
   return (
-    <section className="w-full py-8 sm:py-10 md:py-12 bg-white my-4 lg:my-8">
+    <section className="container py-8 sm:py-10 md:py-12 bg-white my-4 lg:my-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Heading */}

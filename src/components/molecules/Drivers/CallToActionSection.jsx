@@ -9,7 +9,7 @@ export default function CallToActionSection() {
   return (
     <section
       className="
-        w-full
+        container
         h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] xl:h-[560px]
         flex
         flex-col
@@ -22,7 +22,7 @@ export default function CallToActionSection() {
         my-2 lg:my-4
       "
     >
-      <div className="w-full px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center gap-[4px] sm:gap-[6px] lg:gap-[8px]">
+      <div className="container px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center gap-[4px] sm:gap-[6px] lg:gap-[8px]">
         <h2 className="font-cairo font-normal text-xl sm:text-2xl md:text-3xl lg:text-[32px] xl:text-[40px] leading-[130%] sm:leading-[140%] lg:leading-[150%] text-[#253B80] text-center">
           جاهز تطلب المويه؟
         </h2>

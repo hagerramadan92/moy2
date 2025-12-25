@@ -24,7 +24,7 @@ const ArticlesPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Centered Grid Container */}
         <div className="flex justify-center">
           <div className="w-full max-w-6xl">

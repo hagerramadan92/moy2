@@ -40,7 +40,7 @@ export default function ServicesSection() {
   ];
 
   return (
-    <section className="w-full py-8 sm:py-10 md:py-12 lg:py-16 my-4 lg:my-8">
+    <section className="container py-8 sm:py-10 md:py-12 lg:py-16 my-4 lg:my-8">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
@@ -66,7 +66,7 @@ export default function ServicesSection() {
                 
                 {/* Title */}
                 <div className="w-full text-right mb-3 sm:mb-4">
-                  <h3 className="font-cairo font-semibold text-xl sm:text-2xl md:text-[32px] leading-[140%] sm:leading-[150%] md:leading-[170%] mt-8 sm:mt-10 md:mt-12"
+                  <h3 className="font-cairo font-semibold text-xl sm:text-2xl md:text-[32px] leading-[140%] sm:leading-[150%] md:leading-[170%] mt-8 sm:mt-10 md:mt-12 whitespace-nowrap"
                     style={{ color: service.color }}>
                     {service.title}
                   </h3>

@@ -36,7 +36,7 @@ const VisionMissionSection = () => {
   ];
 
   return (
-    <section className="w-full py-12 md:py-16 lg:py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+    <section className="container py-12 md:py-16 lg:py-20 px-4 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto flex flex-col items-center gap-12 md:gap-16 lg:gap-20">
         
         <div className="w-full max-w-3xl mx-auto">

@@ -8,18 +8,21 @@ const ContactHero = () => {
       title: 'جودة مضمونة',
       description: 'مياه نقية 100% معتمدة من هيئة الغذاء ضمان الجوده',
       textColor: 'text-[#1C7C4B]',
-      borderGradient: 'linear-gradient(260.48deg, #1C7C4B 0%, rgba(102, 102, 102, 0) 100%)'
+      borderStartColor: '#1C7C4B',
+      borderEndColor: 'rgba(102, 102, 102, 0)'
     },
     {
       title: 'توصيل سريع',
       description: 'توصيل مجاني للطلبات أكثر من 100 ريال خلال ساعة',
       textColor: 'text-[#579BE8]',
-      borderGradient: 'linear-gradient(259.57deg, #579BE8 2.46%, rgba(102, 102, 102, 0) 100%)'
+      borderStartColor: '#579BE8',
+      borderEndColor: 'rgba(102, 102, 102, 0)'
     },
     {
       title: 'عروض الشركات',
       textColor: 'text-[#B70005]',
-      borderGradient: 'linear-gradient(257.28deg, #B70005 3.19%, rgba(102, 102, 102, 0) 100%)',
+      borderStartColor: '#B70005',
+      borderEndColor: 'rgba(102, 102, 102, 0)',
       isTwoLines: true,
       line1: 'خصومات خاصة للتعاقدات السنوية',
       line2: 'خصم 20%'
@@ -27,7 +30,7 @@ const ContactHero = () => {
   ];
 
   return (
-    <section className="w-full flex flex-col items-center justify-start pt-8 md:pt-12 lg:pt-16 pb-8 md:pb-12 lg:pb-16 px-4">
+    <section className=" container flex flex-col items-center justify-start pt-8 md:pt-12 lg:pt-16 pb-8 md:pb-12 lg:pb-16 px-4">
       
       <div className="flex flex-col items-center w-full max-w-6xl mx-auto mb-4 md:mb-8 lg:mb-12">
         
@@ -67,16 +70,19 @@ const ContactHero = () => {
             key={index}
             className="relative w-full max-w-[280px] md:max-w-[320px] lg:max-w-[354px] h-[120px] md:h-[135px] lg:h-[145px]"
           >
-            <div
-              className="w-full h-full rounded-[24px] md:rounded-[28px] lg:rounded-[32px] p-[8px] md:p-[10px] flex flex-col items-center justify-center gap-[8px] md:gap-[10px] bg-white"
-              style={{
-                border: '1px solid transparent',
-                borderImageSource: feature.borderGradient,
-                borderImageSlice: 1,
-              }}
-            >
+            {/* الحاوية الخارجية - حواف دائرية مع تدرج */}
+            <div className="relative w-full h-full rounded-[24px] md:rounded-[28px] lg:rounded-[32px] p-[2px]">
+              {/* خلفية التدرج */}
               <div 
-                className="w-full h-full rounded-[20px] md:rounded-[24px] lg:rounded-[28px] flex flex-col items-center justify-center gap-2 md:gap-3 lg:gap-4 bg-white"
+                className="absolute inset-0 rounded-[24px] md:rounded-[28px] lg:rounded-[32px]"
+                style={{
+                  background: `linear-gradient(260deg, ${feature.borderStartColor} 0%, ${feature.borderEndColor} 100%)`,
+                }}
+              ></div>
+              
+              {/* الحاوية الداخلية البيضاء */}
+              <div 
+                className="relative w-full h-full rounded-[22px] md:rounded-[26px] lg:rounded-[30px] flex flex-col items-center justify-center gap-2 md:gap-3 lg:gap-4 bg-white"
               >
                 <h3 
                   className={`text-center px-2 ${feature.textColor}`}

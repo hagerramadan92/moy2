@@ -6,6 +6,8 @@ import VisionMissionSection from '@/components/molecules/Contacts/VisionMissionS
 import SpecialOffersSection from '@/components/molecules/Contacts/SpecialOffersSection';
 import Footer from '@/components/molecules/Footer';
 import React from 'react';
+import OrderForm from '@/components/molecules/orders/Order';
+import SearchDriverPage from '@/components/molecules/orders/page2';
 
 
 const ContactPage = () => {
@@ -16,7 +18,8 @@ const ContactPage = () => {
       <ContactFormSection />
       <SpecialOffersSection/>
       <Footer />
-
+<OrderForm/>
+<SearchDriverPage/>
     </main>
   );
 };

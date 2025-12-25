@@ -35,7 +35,7 @@ export default function LoginFlowDialog({ open, onOpenChange }) {
       center: {
           x: 0,
           opacity: 1,
-      },
+      }, 
       exit: (direction) => ({
           x: direction < 0 ? 20 : -20,
           opacity: 0,

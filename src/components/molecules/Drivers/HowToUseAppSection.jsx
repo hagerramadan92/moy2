@@ -5,7 +5,7 @@ import { AiOutlinePlayCircle } from "react-icons/ai";
 
 export default function HowToUseAppSection() {
   return (
-    <section className="relative w-full h-[300px] sm:h-[350px] md:h-[400px] lg:h-[466px] bg-[rgba(87,155,232,0.13)] overflow-hidden my-8 lg:my-12">
+    <section className="relative container h-[300px] sm:h-[350px] md:h-[400px] lg:h-[466px] bg-[rgba(87,155,232,0.13)] overflow-hidden my-8 lg:my-12">
       <AiOutlinePlayCircle
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
              text-[#579BE8] w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] md:w-[110px] md:h-[110px] lg:w-[130px] lg:h-[130px] font-light"

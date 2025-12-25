@@ -16,12 +16,12 @@ const ContactFormSection = () => {
 
   return (
     <section 
-      className="w-full min-h-[895px] flex flex-col items-center justify-center px-4 py-12 md:py-16 lg:py-20"
+      className="min-h-[895px] flex flex-col items-center justify-center px-4 py-12 md:py-16 lg:py-20"
       style={{
         background: 'radial-gradient(103.58% 103.58% at 50% 50%, #579BE8 0%, #041221 100%)'
       }}
     >
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="container max-w-7xl mx-auto">
         
         <div className="flex justify-center mb-1 md:mb-2 lg:mb-3">
           <h2 className="font-cairo font-semibold text-white text-2xl md:text-3xl lg:text-4xl xl:text-[43.39px] text-center py-3 md:py-4 lg:py-2 w-[90%] max-w-[534px] leading-[100%] tracking-[0%] rounded-xl">
