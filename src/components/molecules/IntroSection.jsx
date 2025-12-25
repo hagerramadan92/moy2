@@ -4,7 +4,7 @@ import React from "react";
 
 export default function IntroSection() {
   return (
-    <section className="flex flex-col lg:flex-row-reverse items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 py-6 sm:py-8 max-w-[1000px] mx-auto mb-4 md:mb-6">
+    <section className="flex flex-col lg:flex-row-reverse items-center justify-between gap-4 sm:gap-6  py-6 sm:py-8 container mx-auto mb-4 md:mb-6">
       
       {/* Text Section */}
       <div className="flex flex-col justify-center items-start w-full lg:w-[550px] gap-3 sm:gap-4">

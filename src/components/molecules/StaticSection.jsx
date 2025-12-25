@@ -48,7 +48,7 @@ export default function StaticSection() {
 
   return (
     <section className="w-full px-4 sm:px-6 lg:px-8 py-8 lg:py-12 my-4 lg:my-8">
-      <div className="max-w-[1200px] mx-auto">
+      <div className="container mx-auto">
         <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8">
           
           {/* Left Section - Features */}
