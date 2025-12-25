@@ -10,7 +10,7 @@ export default function StatsSection() {
   ];
 
   return (
-    <section className="flex flex-col sm:flex-row justify-center items-center px-4 sm:px-6 py-8 sm:py-12 lg:py-16 bg-white my-4 lg:my-8">
+    <section className=" container flex flex-col sm:flex-row justify-center items-center px-4 sm:px-6 py-8 sm:py-12 lg:py-16 bg-white my-4 lg:my-8">
       {stats.map((stat, index) => (
         <React.Fragment key={index}>
           <div className="flex flex-col items-center justify-center w-full sm:w-auto min-w-[200px] sm:min-w-[250px] lg:w-[359px] h-[150px] sm:h-[180px] lg:h-[200px] text-center relative px-4">

@@ -15,11 +15,11 @@ export default function Cover() {
           fill
           className="object-cover"
           priority
-        />
+        /> 
       </div>
 
       {/* Main Content Container */}
-      <div className="relative container mx-auto px-4 md:px-8 pt-20 pb-12 md:pt-32 md:pb-16">
+      <div className="relative container mx-auto   pt-20 pb-12 md:pt-32 md:pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
           
           {/* Left Column - Content */}
