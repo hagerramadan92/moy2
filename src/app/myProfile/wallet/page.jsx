@@ -5,11 +5,13 @@ import { IoDocumentText, IoWalletOutline } from "react-icons/io5";
 import { FaArrowUp, FaArrowDown, FaCalendarAlt, FaPlus, FaChevronRight } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { RxDotsHorizontal } from "react-icons/rx";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function WalletPage() {
     const [activeTab, setActiveTab] = useState("all");
+    const router = useRouter();
 
     const transactions = [
         { id: "456789356", type: "deposit", title: "إضافة ", date: "الثلاثاء - 10 نوفمبر 1.13ص", amount: "2,134", status: "completed" },
@@ -49,7 +51,11 @@ export default function WalletPage() {
                         </div>
                     </div>
 
-                    <button className="flex py-3 px-6 items-center gap-3 bg-white text-[#579BE8] font-bold rounded-2xl cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all group relative z-10 shadow-lg">
+                    <button
+                        id="addMoney"
+                        onClick={() => router.push("/myProfile/wallet/add-money")}
+                        className="flex py-3 px-6 items-center gap-3 bg-white text-[#579BE8] font-bold rounded-2xl cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all group relative z-10 shadow-lg"
+                    >
                         <div className="bg-[#579BE8]/10 p-1.5 rounded-lg group-hover:bg-[#579BE8] group-hover:text-white transition-colors">
                             <FaPlus className="text-sm" />
                         </div>
