@@ -6,13 +6,13 @@ import { DropletIcon } from "../Navbar";
 import Image from "next/image";
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-b from-[#072D58] to-[#072D58] text-white py-8 sm:py-12">
+    <footer dir="rtl" className="bg-gradient-to-b from-[#072D58] to-[#072D58] text-white py-8 sm:py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8 sm:mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 text-center lg:grid-cols-4 gap-8 lg:gap-12 mb-8 sm:mb-12 ">
           {/* Logo and Description Section */}
-          <div className="sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row lg:flex-col gap-4 items-start">
-            <div className="flex gap-3 items-start">
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start">
+            <div className="flex gap-3 items-center sm:items-start">
               <motion.div
                 whileHover={{ rotate: -6, scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
@@ -21,9 +21,9 @@ export default function Footer() {
                 <div className="absolute -inset-1 rounded-[18px] bg-gradient-to-br from-sky-500/25 to-blue-600/25 blur-md" />
                 <DropletIcon className="relative h-6 w-6" />
               </motion.div>
-              <div className="flex-1">
+              <div className="flex-1 text-center sm:text-left lg:text-right">
                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">وايت مياه</h3>
-                <p className="text-sm sm:text-base text-gray-300 leading-relaxed max-w-xs">
+                <p className="text-sm sm:text-base text-gray-300 leading-relaxed max-w-xs mx-auto sm:mx-0 lg:mx-auto">
                   منصة توصيل المياة الرائدة في المملكة العربية السعودية نرب العملاء مع سواقين موثوقين
                 </p>
               </div>
@@ -32,10 +32,10 @@ export default function Footer() {
 
           {/* Support Section */}
           <div className="sm:col-span-1">
-            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 text-center sm:text-left lg:text-right">
               الدعم
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 text-center sm:text-left lg:text-right">
               <li>
                 <a
                   href="#"
@@ -73,10 +73,10 @@ export default function Footer() {
 
           {/* Legal Section */}
           <div className="sm:col-span-1">
-            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 text-center sm:text-left lg:text-right">
               قانوني
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 text-center sm:text-left lg:text-right">
               <li>
                 <a
                   href="#"
@@ -114,10 +114,10 @@ export default function Footer() {
 
           {/* Company Section */}
           <div className="sm:col-span-1">
-            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 text-center sm:text-left lg:text-right">
               الشركة
             </h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 text-center sm:text-left lg:text-right">
               <li>
                 <a
                   href="#"
