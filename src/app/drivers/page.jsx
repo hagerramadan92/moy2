@@ -8,7 +8,7 @@ import DriverServicesSection from "@/components/molecules/Drivers/DriverServices
 import AppPromotionSection from "@/components/molecules/Drivers/AppPromotionSection";
 import CallToActionSection from "@/components/molecules/Drivers/CallToActionSection";
 import HowToUseAppSection from "@/components/molecules/Drivers/HowToUseAppSection";
-import Footer from "@/components/molecules/Footer";
+import Footer from "@/components/molecules/common/Footer";
 import Cover from "@/components/molecules/Drivers/cover";
 import StartJourneySection from "@/components/molecules/Drivers/StartJourneySection";
 

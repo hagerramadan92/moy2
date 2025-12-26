@@ -132,7 +132,7 @@ export default function CurrentLocation() {
             <div className="space-y-8">
               {/* Title */}
               <div className="space-y-4">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                <h1 className="text-2xl md:text-3xl  font-bold text-[#579BE8] leading-tight">
                   حدد موقعك بدقة ليصلك السائق بأسرع وقت
                 </h1>
                 <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full"></div>

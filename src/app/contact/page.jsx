@@ -4,7 +4,7 @@ import ContactFormSection from '@/components/molecules/Contacts/ContactFormSecti
 import ContactHero from '@/components/molecules/Contacts/ContactHero';
 import VisionMissionSection from '@/components/molecules/Contacts/VisionMissionSection';
 import SpecialOffersSection from '@/components/molecules/Contacts/SpecialOffersSection';
-import Footer from '@/components/molecules/Footer';
+import Footer from '@/components/molecules/common/Footer';
 import React from 'react';
 import OrderForm from '@/components/molecules/orders/Order';
 import SearchDriverPage from '@/components/molecules/orders/page2';

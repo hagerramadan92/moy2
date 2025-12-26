@@ -1,4 +1,5 @@
-import ProfileSidebar from "@/components/molecules/ProfileSidebar";
+
+import ProfileSidebar from "@/components/molecules/my-profile/ProfileSidebar";
 
 export default function ProfileLayout({ children }) {
     return (

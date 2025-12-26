@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import LoginFlowDialog from "./LoginFlowDialog";
+import LoginFlowDialog from "../molecules/order-now/LoginFlowDialog";
 
 const NAV_LINKS = [
 	{ href: "/", label: "الرئيسية" },

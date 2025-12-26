@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSection';
 import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
-import Footer from '@/components/molecules/Footer';
+import Footer from '@/components/molecules/common/Footer';
 
 const ArticleDetails = () => {
   const params = useParams();

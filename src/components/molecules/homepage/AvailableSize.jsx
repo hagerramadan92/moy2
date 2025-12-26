@@ -13,7 +13,7 @@ import { IoIosArrowForward } from "react-icons/io";
 export default function AvailableSize() {
   const [api, setApi] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(false);
 
   useEffect(() => {
     if (!api) return;
@@ -54,7 +54,7 @@ export default function AvailableSize() {
 
   const handleInteraction = useCallback(() => {
     setAutoPlay(false);
-    setTimeout(() => setAutoPlay(true), 10000);
+    setTimeout(() => setAutoPlay(false), 10000);
   }, []);
 
   const scrollNext = useCallback(() => {
@@ -72,14 +72,14 @@ export default function AvailableSize() {
   }, [api, handleInteraction]);
 
   return (
-    <section dir="rtl" className="py-12 sm:py-16 md:py-20 bg-white ">
-      <div className="container px-4 ">
-        <h2 className="text-center text-2xl sm:text-2.5xl md:text-3xl font-bold text-[#5A9CF0] mb-10 sm:mb-12 md:mb-14">
+    <section dir="rtl" className="py-8 sm:py-12 container mx-auto md:py-16 lg:py-20 bg-white">
+      <div className=" px-4 sm:px-6 lg:px-8">
+        <h2 className="text-center max-w-7xl mx-auto text-xl sm:text-2xl md:text-2.5xl lg:text-3xl font-bold text-[#5A9CF0] mb-8 sm:mb-10 md:mb-12 lg:mb-14">
           السعات المتاحة
         </h2>
 
-        <div className="relative  sm:px-4 mx-auto ">
-          <div className="relative px-8">
+        <div className="relative mx-auto">
+          <div className="relative px-4 sm:px-6 md:px-8 lg:px-12">
             <Carousel
               setApi={setApi}
               opts={{
@@ -90,16 +90,17 @@ export default function AvailableSize() {
                 watchDrag: true,
                 duration: 20,
               }}
-              className="w-full "
+              className="w-full"
               onMouseEnter={handleInteraction}
               onTouchStart={handleInteraction}
             >
-              <CarouselContent className="ml-0 -mr-4 h-[512px] ">
+              <CarouselContent className="ml-0 -mr-1
+               sm:-mr-2 min-h-[500px] sm:min-h-[450px] md:min-h-[480px] lg:min-h-[512px]">
                 {[1, 2, 3, 4, 5].map((item, index) => (
                   <CarouselItem
                     key={item}
                     className={`
-                      pr-4
+                      pr-1 sm:pr-2
                       basis-full sm:basis-2/3 md:basis-1/2 lg:basis-1/3
                       transition-all duration-300 ease-out
                       ${isCenterCard(index) ? "z-10" : "z-0"}
@@ -107,9 +108,10 @@ export default function AvailableSize() {
                   >
                     <div
                       className={`
-                        relative rounded-2xl bg-white p-4 sm:p-5 text-center
+                        relative rounded-xl sm:rounded-2xl bg-white p-3 sm:p-4 md:p-5 text-center
                         border-2 transition-all duration-300 ease-out
-                        flex flex-col  w-[382.75457763671875px] h-[481.4996032714844px]
+                        flex flex-col w-full max-w-[300px] sm:max-w-[350px] md:max-w-[380px] mx-auto
+                        min-h-[380px] sm:min-h-[420px] md:min-h-[460px] lg:h-[481px]
                         ${
                           isCenterCard(index)
                             ? "border-[#5A9CF0] scale-100 opacity-100 shadow-lg"
@@ -127,16 +129,16 @@ export default function AvailableSize() {
                       }}
                     >
                       {item === 3 && isCenterCard(index) && (
-                        <span className="absolute top-3  right-3 bg-linear-to-b from-[#E9BD85] to-[#F48C06] text-white text-[15.88px] px-3 py-2 rounded-full z-10">
+                        <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-gradient-to-b from-[#E9BD85] to-[#F48C06] text-white text-xs sm:text-sm md:text-base px-2 py-1 sm:px-3 sm:py-2 rounded-full z-10">
                           الأكثر طلبًا
                         </span>
                       )}
 
                       {/* المحتوى */}
-                      <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex-1 flex flex-col justify-center py-2 sm:py-4">
                         <div
                           className={`
-                          mb-4 transition-all duration-300 w-[290.8114318847656px] h-[200.23081970214844px]
+                          mb-3 sm:mb-4 transition-all duration-300 w-full max-w-[180px] sm:max-w-[200px] md:max-w-[220px] mx-auto
                           ${isCenterCard(index) ? "scale-105" : "scale-95"}
                         `}
                         >
@@ -145,16 +147,13 @@ export default function AvailableSize() {
                             alt={`شاحنة ${item} طن`}
                             width={220}
                             height={140}
-                            className={`
-                              mx-auto w-full max-w-[200px] sm:max-w-[220px] h-auto
-                              transition-all duration-300 
-                            `}
+                            className="mx-auto w-full h-auto transition-all duration-300"
                           />
                         </div>
 
                         <h3
                           className={`
-                          text-lg sm:text-[34.29px] font-bold mb-2 transition-all duration-300
+                          text-base sm:text-xl md:text-2xl lg:text-[34.29px] font-bold mb-2 sm:mb-3 transition-all duration-300
                           ${
                             isCenterCard(index)
                               ? "text-black"
@@ -169,7 +168,7 @@ export default function AvailableSize() {
                           {item === 5 && "10 طن"}
                         </h3>
 
-                        <p className="text-[#000000A6] text-[16.03px]  mb-3">
+                        <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
                           {item === 1 && "مناسب للاستخدامات الصغيرة"}
                           {item === 2 && "مناسب للاستخدامات المتوسطة"}
                           {item === 3 && "مناسب للاستخدامات الكبيرة"}
@@ -179,7 +178,7 @@ export default function AvailableSize() {
 
                         <p
                           className={`
-                          font-semibold text-base sm:text-[20.58px] mb-0 transition-all duration-300
+                          font-semibold text-sm sm:text-base md:text-lg lg:text-[20.58px] mb-0 transition-all duration-300
                           ${
                             isCenterCard(index)
                               ? "text-[#5A9CF0]"
@@ -197,9 +196,9 @@ export default function AvailableSize() {
 
                       <Button
                         className={`
-                          w-full rounded-xl py-6 
+                          w-full rounded-lg sm:rounded-xl py-3 sm:py-4 md:py-5 lg:py-6 
                           transition-all duration-300
-                          font-semibold text-base
+                          font-semibold text-sm sm:text-base
                           ${
                             isCenterCard(index)
                               ? "bg-[#5A9CF0] text-white hover:bg-[#4278be]"
@@ -220,12 +219,12 @@ export default function AvailableSize() {
               </CarouselContent>
             </Carousel>
 
-            <div className="absolute inset-y-0 left-5 right-0 flex items-center justify-between pointer-events-none z-20">
-              <div className="pointer-events-auto absolute right-0 transform translate-x-1/2">
+            <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none z-20">
+              <div className="pointer-events-auto absolute right-0 sm:right-2 md:right-4 transform translate-x-1/2 sm:translate-x-0">
                 <Button
                   variant="outline"
                   className="
-                          w-10 h-10
+                          w-8 h-8 sm:w-10 sm:h-10
                           cursor-pointer
                           rounded-full 
                           bg-white hover:bg-[#5A9CF0] 
@@ -234,22 +233,21 @@ export default function AvailableSize() {
                           transition-all duration-300
                           hover:scale-110
                           p-0
+                          shadow-md
                         "
                   onClick={scrollNext}
                 >
                   <span className="scale-150">
-                    <IoIosArrowForward  className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <IoIosArrowForward className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                   </span>
-
                   <span className="sr-only">الكارت التالي</span>
                 </Button>
               </div>
 
-              <div className="pointer-events-auto absolute left-0 transform -translate-x-1/2">
+              <div className="pointer-events-auto absolute left-0 sm:left-2 md:left-4 transform -translate-x-1/2 sm:translate-x-0">
                 <Button
-               
                   className="
-                   w-10 h-10
+                          w-8 h-8 sm:w-10 sm:h-10
                           cursor-pointer
                           rounded-full 
                           bg-white hover:bg-[#5A9CF0] 
@@ -258,20 +256,20 @@ export default function AvailableSize() {
                           transition-all duration-300
                           hover:scale-110
                           p-0
+                          shadow-md
                   "
                   onClick={scrollPrev}
                 >
-                    <span className="scale-150">
-                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-
-                    </span>
+                  <span className="scale-150">
+                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  </span>
                   <span className="sr-only">الكارت السابق</span>
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center mt-8 space-x-2">
+          <div className="flex justify-center items-center  mt-6 sm:mt-8 gap-2">
             {[1, 2, 3, 4, 5].map((_, index) => (
               <button
                 key={index}
@@ -282,8 +280,8 @@ export default function AvailableSize() {
                   }
                 }}
                 className={`
-                  w-2 h-2 rounded-full transition-all duration-300
-                  ${isCenterCard(index) ? "bg-[#5A9CF0] w-6" : "bg-gray-300"}
+                  h-2 rounded-full transition-all duration-300
+                  ${isCenterCard(index) ? "bg-[#5A9CF0] w-6 sm:w-8" : "bg-gray-300 w-2"}
                 `}
                 aria-label={`انتقل إلى البطاقة ${index + 1}`}
               />
