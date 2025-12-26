@@ -4,7 +4,7 @@ import React from "react";
 export default function AppPromotionSection() {
   return (
     <section className="relative py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8">
-      <div className="w-full max-w-[300px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] xl:max-w-[1100px] 2xl:w-[1296px] 
+      <div className="container max-w-[300px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] xl:max-w-[1100px] 2xl:w-[1296px] 
                      h-[150px] sm:h-[200px] md:h-[250px] lg:h-[300px] xl:h-[340px] 2xl:h-[377px] 
                      rounded-[16px] sm:rounded-[20px] md:rounded-[24px] lg:rounded-[28px] xl:rounded-[30px] 2xl:rounded-[32px] 
                      bg-[#EFF5FD] mx-auto relative">

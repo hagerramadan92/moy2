@@ -3,8 +3,8 @@
 import { useParams, useRouter } from 'next/navigation';
 import React from 'react';
 import Image from 'next/image';
-import AppPromotionSection from '@/components/molecules/AppPromotionSection';
-import CallToActionSection from '@/components/molecules/CallToActionSection';
+import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSection';
+import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
 import Footer from '@/components/molecules/Footer';
 
 const ArticleDetails = () => {
@@ -39,8 +39,8 @@ const ArticleDetails = () => {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative w-full min-h-[400px] lg:h-[461px] bg-gradient-to-b from-[rgba(87,155,232,0.69)] to-[#1C4471] overflow-visible">
-        <div className="relative container mx-auto px-4 h-full">
+      <section className="relative container min-h-[400px] lg:h-[461px] bg-gradient-to-b from-[rgba(87,155,232,0.69)] to-[#1C4471] overflow-visible">
+        <div className="relative mx-auto px-4 h-full">
           {/* Back Button */}
           <div className="pt-6">
             <button 

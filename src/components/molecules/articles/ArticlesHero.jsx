@@ -25,11 +25,11 @@ const ArticlesHero = () => {
   ];
 
   return (
-    <section className="w-full bg-white">
+    <section className="container bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 lg:py-24 min-h-[70vh] flex flex-col justify-center items-center">
         
         {/* Header Section */}
-        <div className="w-full max-w-3xl mb-6 md:mb-8 text-center">
+        <div className="container max-w-3xl mb-6 md:mb-8 text-center">
           <h1 className="font-cairo font-semibold text-xl sm:text-2xl md:text-3xl lg:text-4xl text-[#579BE8] mb-4 md:mb-6">
             📚 مدونة وايت مياه
           </h1>
@@ -71,3 +71,5 @@ const ArticlesHero = () => {
 };
 
 export default ArticlesHero;
+
+

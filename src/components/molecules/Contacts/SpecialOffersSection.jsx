@@ -23,7 +23,7 @@ const SpecialOffersSection = () => {
   };
 
   return (
-    <section className="w-full py-12 md:py-16 lg:py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
+    <section className="container py-12 md:py-16 lg:py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto flex flex-col items-center gap-10 md:gap-12 lg:gap-16">
         
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
