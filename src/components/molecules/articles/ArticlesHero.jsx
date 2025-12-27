@@ -43,7 +43,7 @@ const ArticlesHero = () => {
             </p>
           </div>
         </div>
-
+ 
         {/* Categories Buttons */}
         <div className="w-full max-w-md mt-2 md:mt-2 lg:mt-4">
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
