@@ -12,6 +12,7 @@ const NAV_LINKS = [
 	{ href: "/drivers", label: "السائقين" },
 	{ href: "/contracts", label: "التعاقدات" },
 	{ href: "/articles", label: "المقالات" },
+	{ href: "/orders", label: "الطلب" },
 ];
 
 
