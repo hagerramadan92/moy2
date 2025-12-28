@@ -67,8 +67,11 @@ export default function OrderDetailsPage() {
         },
         driver: (isPending || isCancelled) ? null : {
             name: "أحمد الرشيدي",
-            image: "/images/customer.png",
+            image: "/images/driver.png",
             rating: 4.9,
+            deliveries: 1240,
+            experience: "3 سنوات",
+            isVerified: true,
             phone: "+966 55 000 1111",
             vehicle: "وايت مرسيدس - لوحة (أ ب ج 1234)",
             deliveryTime: isProcessing ? "متوقع خلال 15 دقيقة" : "11:45 صباحاً",
@@ -128,11 +131,10 @@ export default function OrderDetailsPage() {
     };
 
     return (
-        <div className="space-y-6 fade-in-up pb-10 relative">
-            
+        <>
             {/* Success Toast */}
             {showSuccessToast && (
-                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] bg-green-500 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
                     <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                         <BiCheck className="w-6 h-6" />
                     </div>
@@ -142,19 +144,19 @@ export default function OrderDetailsPage() {
 
             {/* Rating Modal */}
             {showRatingModal && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm" onClick={() => setShowRatingModal(false)}></div>
-                    <div className="relative bg-white dark:bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-border animate-float-slow">
-                        <button onClick={() => setShowRatingModal(false)} className="absolute top-6 left-6 w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-10"><BiX className="w-6 h-6" /></button>
-                        <div className="p-10 text-center">
+                <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/80 backdrop-blur-md" onClick={() => setShowRatingModal(false)}></div>
+                    <div className="relative bg-white dark:bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-border animate-float-slow overflow-hidden">
+                        <button onClick={() => setShowRatingModal(false)} className="absolute top-6 left-6 w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]"><BiX className="w-6 h-6" /></button>
+                        <div className="p-10 text-center relative z-[215]">
                             <div className="w-21 h-21 rounded-[2rem] bg-amber-500/10 mx-auto flex items-center justify-center mb-6"><FaStar className="w-12 h-12 text-amber-500" /></div>
-                            <h3 className="text-2xl font-black mb-2 tracking-tight">تقييم تجربة التوصيل</h3>
+                            <h3 className="text-2xl font-black mb-2 tracking-tight line-clamp-1">تقييم تجربة التوصيل</h3>
                             <p className="text-sm text-muted-foreground mb-8">رأيك يهمنا في تحسين جودة خدمات مياه "ستون"</p>
                             <div className="flex flex-col items-center gap-8">
                                 <div className="flex items-center gap-3">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => setUserRating(star)} className="transition-transform active:scale-90">
-                                            {star <= (hoverRating || userRating) ? <FaStar className="w-10 h-10 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]" /> : <FaRegStar className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />}
+                                            {star <= (hoverRating || userRating) ? <FaStar className="w-10 h-10 text-amber-400 drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]" /> : <FaRegStar className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />}
                                         </button>
                                     ))}
                                 </div>
@@ -168,6 +170,9 @@ export default function OrderDetailsPage() {
                     </div>
                 </div>
             )}
+
+            <div className="space-y-6 fade-in-up pb-10 relative">
+            
 
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -204,10 +209,10 @@ export default function OrderDetailsPage() {
             </div>
 
             {/* Main Content View Adapts to State */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:gap-8">
                 
                 {/* Visual Vision Area (Map or Banner) */}
-                <div className="lg:col-span-3 bg-white dark:bg-card rounded-[2rem] md:rounded-[2.5rem] border border-border/50 shadow-sm overflow-hidden relative min-h-[400px] md:min-h-[500px] flex flex-col">
+                <div className="xl:col-span-2 bg-white dark:bg-card rounded-[2rem] md:rounded-[2.5rem] border border-border/50 shadow-sm overflow-hidden relative min-h-[400px] md:min-h-[500px] flex flex-col">
                     
                     {/* 1. Processing State: Map & Live Tracking */}
                     {isProcessing && (
@@ -302,7 +307,7 @@ export default function OrderDetailsPage() {
 
                     {/* 4. Completed State: Success Hero */}
                     {isCompleted && (
-                        <div className="flex-1 flex flex-col md:flex-row items-center justify-between p-8 md:p-12 lg:p-14 relative overflow-hidden bg-gradient-to-l from-green-50/50 to-white dark:from-green-500/5 dark:to-card">
+                        <div className="flex-1 flex flex-col md:flex-row items-center justify-between p-8 md:p-12 xl:p-14 relative overflow-hidden bg-gradient-to-l from-green-50/50 to-white dark:from-green-500/5 dark:to-card">
                              <div className="relative z-10 flex-1 text-center md:text-right space-y-6 md:space-y-8 w-full">
                                 <div>
                                     <div className="w-12 h-12 md:w-14 md:h-14 bg-green-500 rounded-2xl flex items-center justify-center text-white mb-6 md:mx-0 mx-auto shadow-xl shadow-green-500/20 animate-bounce">
@@ -312,10 +317,10 @@ export default function OrderDetailsPage() {
                                     <p className="text-muted-foreground text-xs md:text-sm font-medium">تم إغلاق الطلب وتأكيد الاستلام بنجاح.</p>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
-                                    <div className="bg-white/50 dark:bg-card/50 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-green-500/10 backdrop-blur-sm">
+                                <div className="grid grid-cols-1 gap-4 text-right">
+                                    <div className="bg-white/50 dark:bg-card/50 p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-green-500/10 backdrop-blur-sm">
                                         <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">عنوان التوصيل</p>
-                                        <p className="text-xs md:text-sm font-black leading-snug truncate md:whitespace-normal">{orderData.customer.address}</p>
+                                        <p className="text-xs md:text-sm font-black leading-snug">{orderData.customer.address}</p>
                                     </div>
                                     <div className="bg-white/50 dark:bg-card/50 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-green-500/10 backdrop-blur-sm">
                                         <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">المستلم</p>
@@ -329,8 +334,8 @@ export default function OrderDetailsPage() {
                                     <div className="px-4 py-2 bg-secondary/70 rounded-full text-[10px] md:text-xs font-black">مدة الانتظار: 25 دقيقة</div>
                                 </div>
                              </div>
-                             <div className="flex-1 relative w-full h-[300px] md:h-[400px] mt-8 md:mt-0 animate-float-slow hidden lg:block">
-                                <Image src="/images/car.png" alt="Truck Success" fill className="object-contain drop-shadow-[0_20px_50px_rgba(87,155,232,0.3)]" />
+                             <div className="flex-1 relative w-full h-[300px] md:h-[400px] mt-8 md:mt-0 animate-float-slow hidden xl:block">
+                                <Image src="/images/truck.png" alt="Truck Success" fill className="object-contain drop-shadow-[0_20px_50px_rgba(87,155,232,0.3)]" />
                              </div>
                         </div>
                     )}
@@ -364,34 +369,95 @@ export default function OrderDetailsPage() {
                 </div>
 
                 {/* Right Side Card: Driver Info or Support */}
-                <div className="flex flex-col gap-6 w-full">
+                <div className="flex flex-col gap-6 w-full xl:max-w-none max-w-3xl mx-auto xl:sticky xl:top-24 self-start">
                     {/* Driver Card */}
                     {orderData.driver && (
-                        <div className="bg-white dark:bg-card rounded-[2rem] md:rounded-[2.5rem] border border-border/50 shadow-sm p-6 md:p-8 flex flex-col items-center flex-1 text-center">
-                            <div className="w-full flex justify-between items-center mb-6 md:mb-8">
-                                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground">بيانات الناقل</p>
-                                <div className={`w-2.5 h-2.5 rounded-full ${isProcessing ? 'bg-amber-500 animate-ping' : 'bg-green-500'}`}></div>
+                        <div className="relative overflow-hidden bg-white/70 dark:bg-card/70 backdrop-blur-xl rounded-[2.5rem] border border-border/50 shadow-sm p-6 md:p-8 flex flex-col items-center flex-1">
+                            {/* Decorative Background Glows */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-[#579BE8]/10 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full"></div>
+                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/10 blur-3xl translate-y-1/2 -translate-x-1/2 rounded-full"></div>
+
+                            <div className="w-full flex justify-between items-center mb-8 relative z-10">
+                                <span className="bg-[#579BE8]/10 text-[#579BE8] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">بيانات الناقل</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-muted-foreground">{isProcessing ? "جاري التوصيل" : "تم التوصيل"}</span>
+                                    <div className={`w-2.5 h-2.5 rounded-full ${isProcessing ? 'bg-amber-500 animate-pulse' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'}`}></div>
+                                </div>
                             </div>
-                            <div className="relative mb-6">
-                                <div className="w-24 h-24 md:w-28 md:h-28 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border-4 border-white dark:border-card shadow-2xl mx-auto">
+
+                            <div className="relative mb-6 group">
+                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2.5rem] overflow-hidden border-4 border-white dark:border-card/50 mx-auto transition-transform duration-500 group-hover:scale-105">
                                     <Image src={orderData.driver.image} alt={orderData.driver.name} fill className="object-cover" />
                                 </div>
-                                <div className="absolute -bottom-2 right-1/2 translate-x-1/2 bg-[#579BE8] text-white px-3 py-1 rounded-full border-2 border-white dark:border-card shadow-lg flex items-center gap-1.5 whitespace-nowrap">
-                                    <FaStar className="w-3 h-3 mb-0.5" /><span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight">{orderData.driver.rating} التصنيف</span>
+                                {orderData.driver.isVerified && (
+                                    <div className="absolute -top-2 -right-2 bg-green-500 text-white w-8 h-8 rounded-2xl border-4 border-white dark:border-card flex items-center justify-center animate-in zoom-in duration-500 delay-300">
+                                        <BiCheck className="w-5 h-5 font-bold" />
+                                    </div>
+                                )}
+                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white dark:bg-card px-4 py-1.5 rounded-2xl border border-border/50 flex items-center gap-2 whitespace-nowrap">
+                                    <FaStar className="w-3.5 h-3.5 text-amber-400" />
+                                    <span className="text-xs font-black">{orderData.driver.rating}</span>
                                 </div>
                             </div>
-                            <h4 className="font-black text-xl md:text-2xl mb-1 mt-4">{orderData.driver.name}</h4>
-                            <p className="text-[11px] md:text-xs text-muted-foreground mb-6 md:mb-8 font-medium leading-relaxed max-w-[200px]">{orderData.driver.vehicle}</p>
-                            
-                            {isProcessing ? (
-                                <div className="w-full grid grid-cols-2 gap-3 mb-4">
-                                    <button className="flex flex-col items-center justify-center p-3 md:p-4 rounded-2xl md:rounded-3xl bg-green-500 text-white shadow-lg shadow-green-500/20 gap-2 active:scale-95 transition-all"><div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white/20 flex items-center justify-center"><BiPhoneCall className="w-5 h-5 md:w-6 md:h-6" /></div><span className="text-[9px] md:text-[10px] font-black">اتصال</span></button>
-                                    <button className="flex flex-col items-center justify-center p-3 md:p-4 rounded-2xl md:rounded-3xl bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20 gap-2 active:scale-95 transition-all"><div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-white/20 flex items-center justify-center"><BiMessageSquareDetail className="w-5 h-5 md:w-6 md:h-6" /></div><span className="text-[9px] md:text-[10px] font-black">دردشة</span></button>
+
+                            <div className="text-center relative z-10 w-full">
+                                <h4 className="font-black text-xl md:text-2xl mb-1">{orderData.driver.name}</h4>
+                                <div className="flex items-center justify-center gap-2 mb-6">
+                                    <BiSolidTruck className="w-4 h-4 text-[#579BE8]" />
+                                    <p className="text-[11px] md:text-xs text-muted-foreground font-bold">{orderData.driver.vehicle}</p>
                                 </div>
-                            ) : (
-                                <button onClick={() => setShowRatingModal(true)} className="w-full py-4 md:py-5 rounded-2xl md:rounded-[2rem] bg-[#579BE8] text-white font-black text-xs hover:shadow-xl transition-all flex items-center justify-center gap-3 mb-4 active:scale-95"><FaStar className="w-4 h-4 text-amber-300" /><span>تقييم تجربة التوصيل</span></button>
-                            )}
-                            <button className="w-full py-3 md:py-4 rounded-xl md:rounded-[1.5rem] bg-secondary/50 font-black text-[9px] md:text-[10px] flex items-center justify-center gap-2 mt-auto hover:bg-secondary active:scale-95 transition-all"><BiNavigation className="w-4 h-4 text-[#579BE8]" /><span>متابعة على الخريطة</span></button>
+
+                                {/* Driver Stats Grid - Stacked Vertically */}
+                                <div className="flex flex-col gap-3 w-full mb-8">
+                                    <div className="bg-secondary/30 rounded-2xl p-4 border border-border/20 flex items-center justify-between">
+                                        <p className="text-[10px] text-muted-foreground font-bold">عدد الطلبات</p>
+                                        <p className="font-black text-sm">{orderData.driver.deliveries}+</p>
+                                    </div>
+                                    <div className="bg-secondary/30 rounded-2xl p-4 border border-border/20 flex items-center justify-between">
+                                        <p className="text-[10px] text-muted-foreground font-bold">الخبرة</p>
+                                        <p className="font-black text-sm">{orderData.driver.experience}</p>
+                                    </div>
+                                </div>
+                                
+                                {isProcessing ? (
+                                    <div className="w-full flex flex-col gap-3 mb-6">
+                                        <button className="flex items-center justify-between p-4 rounded-3xl bg-green-500 text-white active:scale-95 transition-all hover:bg-green-600 group/btn">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
+                                                    <BiPhoneCall className="w-5 h-5" />
+                                                </div>
+                                                <span className="text-[11px] font-black">اتصال بالفني</span>
+                                            </div>
+                                            <BiX className="w-4 h-4 opacity-0" /> {/* Spacer */}
+                                        </button>
+                                        <button className="flex items-center justify-between p-4 rounded-3xl bg-[#579BE8] text-white active:scale-95 transition-all hover:bg-[#4986d1] group/btn">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
+                                                    <BiMessageSquareDetail className="w-5 h-5" />
+                                                </div>
+                                                <span className="text-[11px] font-black">دردشة فورية</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => setShowRatingModal(true)} 
+                                        className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-[#579BE8] to-purple-500 text-white font-black text-xs transition-all flex items-center justify-center gap-3 mb-6 active:scale-[0.98] group"
+                                    >
+                                        <div className="bg-white/20 p-2 rounded-xl group-hover:rotate-12 transition-transform">
+                                            <FaStar className="w-4 h-4 text-amber-300" />
+                                        </div>
+                                        <span>تقييم تجربة التوصيل</span>
+                                    </button>
+                                )}
+
+                                <button className="w-full py-4 rounded-2xl bg-secondary/50 font-black text-[10px] flex items-center justify-center gap-3 hover:bg-secondary active:scale-[0.98] transition-all border border-border/50">
+                                    <div className="w-7 h-7 bg-white dark:bg-card rounded-lg flex items-center justify-center">
+                                        <BiNavigation className="w-4 h-4 text-[#579BE8]" />
+                                    </div>
+                                    <span>تتبع المسار الفعلي للناقل</span>
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -419,21 +485,12 @@ export default function OrderDetailsPage() {
                          </div>
                     )}
 
-                    <div className="bg-[#579BE8]/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6 border border-[#579BE8]/20 group hover:bg-[#579BE8] transition-all duration-500 cursor-pointer">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#579BE8] flex items-center justify-center text-white group-hover:bg-white group-hover:text-[#579BE8] transition-colors"><BiTimeFive className="w-6 h-6 md:w-7 md:h-7" /></div>
-                            <div>
-                                <h4 className="font-bold text-xs md:text-sm tracking-tight group-hover:text-white transition-colors">دعم العملاء</h4>
-                                <p className="text-[9px] md:text-[10px] text-muted-foreground group-hover:text-white/80 transition-colors">متاح على مدار الساعة</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             {/* Bottom Timeline & Financials */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-                <div className="lg:col-span-2 bg-white dark:bg-card rounded-[2rem] md:rounded-[2.5rem] border border-border/50 shadow-sm p-6 md:p-10">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-4">
+                <div className="xl:col-span-2 bg-white dark:bg-card rounded-[2rem] md:rounded-[2.5rem] border border-border/50 shadow-sm p-6 md:p-10">
                     <h3 className="font-black text-lg md:text-xl mb-8 md:mb-10 flex items-center gap-3"><span className="w-1.5 h-6 md:w-2 md:h-8 bg-[#579BE8] rounded-full"></span>خط سير الطلب</h3>
                     <div className="flex flex-col space-y-6 md:space-y-8 relative">
                          <div className="absolute top-2 bottom-2 right-[19px] md:right-[21px] w-0.5 bg-secondary/50"></div>
@@ -477,5 +534,6 @@ export default function OrderDetailsPage() {
                 </div>
             </div>
         </div>
+    </>
     );
 }
