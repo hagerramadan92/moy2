@@ -22,7 +22,6 @@ const page = () => {
 		<CurrentLocation/>
 		<Deals/>
 		<CustomerReviews/>
-		 <HowToUseAppSection />
 		<AppPromotionSection />
 		<CallToActionSection />
 		<Footer/>
