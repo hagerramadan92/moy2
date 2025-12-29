@@ -79,10 +79,9 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                     <Link
                                         key={linkIdx}
                                         href={link.href}
-                                        style={isActive(link.href) ? { backgroundColor: "#579BE815" } : {}}
                                         className={`text-base py-2 px-4 rounded-lg transition-all duration-200 block
                                             ${isActive(link.href)
-                                                ? "text-primary font-bold translate-x-[-4px]"
+                                                ? "text-primary font-bold translate-x-[-4px] bg-[#579BE8]/25 border-r-2 border-[#579BE8]"
                                                 : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:translate-x-[-2px]"
                                             }`}
                                     >
@@ -144,7 +143,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                             onClick={() => setIsOpen(false)}
                                             className={`text-base py-2.5 px-4 rounded-lg transition-all duration-200 block
                                                 ${isActive(link.href)
-                                                    ? "text-primary font-bold bg-[#579BE815] translate-x-[-4px]"
+                                                    ? "text-primary font-bold bg-[#579BE8]/25 border-r-2 border-[#579BE8] translate-x-[-4px]"
                                                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                                                 }`}
                                         >

@@ -51,7 +51,15 @@ export default function SupportPage() {
     return (
         <div className="space-y-10 fade-in-up">
             {/* Search Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] to-[#315782] rounded-[2rem] p-8 sm:p-12 text-center text-white shadow-xl">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] rounded-[2.5rem] p-8 sm:p-12 text-center text-white shadow-2xl border border-white/10">
+                {/* Decorative Background Icons */}
+                <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                    <FaHeadset size={160} />
+                </div>
+                <div className="absolute bottom-0 left-0 p-4 opacity-10 -rotate-12">
+                    <FaQuestionCircle size={140} />
+                </div>
+
                 <div className="relative z-10 space-y-4">
                     <h2 className="text-3xl sm:text-4xl font-black tracking-tight">مركز المساعدة</h2>
                     <p className="text-white/80 max-w-lg mx-auto text-sm sm:text-base">

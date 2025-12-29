@@ -52,7 +52,7 @@ export default function AddMoneyPage() {
     };
 
     return (
-        <div className="space-y-6 fade-in-up mt-1 lg:mt-[-6rem]" >
+        <div className="space-y-6 fade-in-up mt-1 md:mt-[0rem] lg:mt-[-4rem] xl:mt-[-5rem]" >
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <button
@@ -161,7 +161,7 @@ export default function AddMoneyPage() {
                         <div className="text-2xl text-gray-500">
                             <MdSecurity />
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                             جميع معاملاتك المالية مشفرة وآمنة وفقاً لأعلى معايير الأمان العالمية.
                         </p>
                     </div>

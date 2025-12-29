@@ -134,27 +134,46 @@ export default function ContractingPage() {
         <div className="space-y-8 fade-in-up">
             {/* Summary Hero Card (Wallet Style) */}
             <div className="">
-                <div className="flex py-8 px-8 flex-col gap-6 sm:flex-row sm:items-center justify-between bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground rounded-[2.5rem] shadow-xl relative overflow-hidden">
+                <div className="flex py-6 px-8 flex-col gap-4 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground rounded-[2.5rem] shadow-2xl relative overflow-hidden border border-white/10">
+                    {/* Decorative Background Elements */}
                     <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
-                        <FaHardHat size={160} />
+                        <FaHardHat size={120} />
                     </div>
+                    <div className="absolute bottom-0 left-0 p-4 opacity-10 -rotate-12">
+                        <IoWalletOutline size={100} />
+                    </div>
+                    
+                    {/* Animated Glow Effects */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-0 right-1/4 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
 
-                    <div className="flex flex-col gap-3 relative z-10">
-                        <p className="text-sm opacity-90 font-medium">إجمالي تعاقداتك النشطة</p>
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-5xl md:text-6xl font-black tracking-tight">04</h3>
-                            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl text-sm font-bold">
-                                عقود نشطة
+                    {/* Main Content - Centered */}
+                    <div className="flex flex-col gap-3 items-center justify-center relative z-10 w-full">
+                        {/* Total Active Contracts */}
+                        <div className="flex flex-col gap-2 items-center text-center">
+                            <p className="text-sm opacity-90 font-semibold tracking-wide">إجمالي تعاقداتك النشطة</p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <h3 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight drop-shadow-2xl bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent">
+                                    04
+                                </h3>
+                                <div className="bg-white/25 backdrop-blur-md px-4 py-1.5 rounded-xl text-sm font-bold shadow-lg border border-white/20">
+                                    عقود نشطة
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex flex-col gap-2 relative z-10 text-right">
-                        <p className="text-sm opacity-80">أحدث طلب تعاقد</p>
-                        <p className="font-bold text-lg">مؤسسة وايت مياه التجارية</p>
-                        <div className="flex items-center justify-end gap-2 text-xs opacity-70">
-                            <FaCalendarAlt />
-                            <span>ينتهي في: 15 مايو 2025</span>
+                        {/* Divider */}
+                        <div className="w-20 h-0.5 bg-white/30 rounded-full"></div>
+
+                        {/* Latest Contract Info */}
+                        <div className="flex flex-col gap-2 items-center text-center max-w-md">
+                            <p className="text-xs opacity-80 font-medium">أحدث طلب تعاقد</p>
+                            <p className="font-black text-lg md:text-xl drop-shadow-lg">مؤسسة وايت مياه التجارية</p>
+                            <div className="flex items-center justify-center gap-2 text-xs opacity-90 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
+                                <FaCalendarAlt className="w-3 h-3" />
+                                <span className="font-semibold">ينتهي في: 15 مايو 2025</span>
+                            </div>
                         </div>
                     </div>
                 </div>
