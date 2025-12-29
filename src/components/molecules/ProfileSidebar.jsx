@@ -25,6 +25,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                 { name: "الملف الشخصي", href: "/myProfile" },
                 { name: "محفظتك", href: "/myProfile/wallet" },
                 { name: "الطلبات", href: "/myProfile/orders" },
+                { name: "التعاقدات", href: "/myProfile/contracting" },
             ]
         },
         {
@@ -36,7 +37,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
             ]
         }
     ];
-    
+
     const handleLogout = () => {
         Swal.fire({
             title: "تسجيل الخروج",
@@ -65,7 +66,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden min-[1113px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit sticky top-52">
+            <aside className="hidden min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit sticky top-52">
                 <div className="flex flex-col gap-8">
                     {navItems.map((section, idx) => (
                         <div key={idx} className="flex flex-col gap-4">
@@ -78,7 +79,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                     <Link
                                         key={linkIdx}
                                         href={link.href}
-                                        style={isActive(link.href) ? { background: "linear-gradient(to right, #579BE810, transparent)" } : {}}
+                                        style={isActive(link.href) ? { backgroundColor: "#579BE815" } : {}}
                                         className={`text-base py-2 px-4 rounded-lg transition-all duration-200 block
                                             ${isActive(link.href)
                                                 ? "text-primary font-bold translate-x-[-4px]"
@@ -93,7 +94,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                     ))}
 
                     <div className="flex flex-col gap-4 pt-4 border-t border-border">
-                        <div 
+                        <div
                             onClick={handleLogout}
                             className="flex items-center gap-2 text-destructive rounded-lg hover:translate-x-[-2px] cursor-pointer transition-all duration-200 font-bold px-2 py-2 hover:bg-destructive/10 hover:text-destructive"
                         >
@@ -105,22 +106,22 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
             </aside>
 
             {/* Mobile Drawer */}
-            <div 
+            <div
                 className={`fixed inset-0 z-[100] min-[1113px]:hidden transition-all duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
             >
                 {/* Backdrop */}
-                <div 
+                <div
                     className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                     onClick={() => setIsOpen(false)}
                 />
-                
+
                 {/* Drawer */}
-                <div 
+                <div
                     className={`absolute right-0 top-0 h-full w-[280px] bg-white dark:bg-card p-6 shadow-2xl transition-transform duration-300 transform ${isOpen ? "translate-x-0" : "translate-x-full"}`}
                 >
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-bold">القائمة</h2>
-                        <button 
+                        <button
                             onClick={() => setIsOpen(false)}
                             className="p-2 hover:bg-secondary rounded-xl transition-colors"
                         >
@@ -143,7 +144,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                             onClick={() => setIsOpen(false)}
                                             className={`text-base py-2.5 px-4 rounded-lg transition-all duration-200 block
                                                 ${isActive(link.href)
-                                                    ? "text-primary font-bold bg-[#579BE810] translate-x-[-4px]"
+                                                    ? "text-primary font-bold bg-[#579BE815] translate-x-[-4px]"
                                                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                                                 }`}
                                         >
@@ -155,7 +156,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                         ))}
 
                         <div className="flex flex-col gap-4 pt-4 border-t border-border mt-auto">
-                            <div 
+                            <div
                                 onClick={() => { setIsOpen(false); handleLogout(); }}
                                 className="flex items-center gap-2 text-destructive rounded-lg font-bold px-2 py-3 hover:bg-destructive/10"
                             >
