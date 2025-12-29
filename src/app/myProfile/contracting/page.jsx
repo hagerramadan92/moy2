@@ -134,7 +134,7 @@ export default function ContractingPage() {
         <div className="space-y-8 fade-in-up">
             {/* Summary Hero Card (Wallet Style) */}
             <div className="">
-                <div className="flex py-6 px-8 flex-col gap-4 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground rounded-[2.5rem] shadow-2xl relative overflow-hidden border border-white/10">
+                <div className="flex py-6 px-8 flex-col gap-4 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground rounded-2xl shadow-2xl relative overflow-hidden">
                     {/* Decorative Background Elements */}
                     <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
                         <FaHardHat size={120} />
@@ -180,7 +180,7 @@ export default function ContractingPage() {
             </div>
 
             {/* Main Section Card */}
-            <div className="bg-white dark:bg-card border border-border/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
 
                 {/* Tabs Header (Wallet Style) */}
                 <div className="p-4 border-b border-border/60 flex items-center justify-center bg-secondary/5">

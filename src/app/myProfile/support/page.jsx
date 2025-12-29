@@ -51,7 +51,7 @@ export default function SupportPage() {
     return (
         <div className="space-y-10 fade-in-up">
             {/* Search Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] rounded-[2.5rem] p-8 sm:p-12 text-center text-white shadow-2xl border border-white/10">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] rounded-2xl p-8 sm:p-12 text-center text-white shadow-2xl">
                 {/* Decorative Background Icons */}
                 <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
                     <FaHeadset size={160} />
@@ -109,7 +109,7 @@ export default function SupportPage() {
             </div>
 
             {/* FAQs Section */}
-            <div className="bg-white dark:bg-card border border-border/50 rounded-[2rem] p-8 shadow-sm">
+            <div className="bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-8">
                     <div className="p-2 bg-[#579BE8]/10 rounded-lg text-[#579BE8]">
                         <FaQuestionCircle size={20} />

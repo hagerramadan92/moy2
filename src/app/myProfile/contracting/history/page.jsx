@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
     FaArrowRight, FaChevronRight, FaCalendarAlt, FaFileDownload,
     FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle
@@ -16,6 +17,8 @@ export default function ContractHistoryPage() {
     const [activeTab, setActiveTab] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
 
     // Sample contract history data
     const contractHistory = [
@@ -86,6 +89,23 @@ export default function ContractHistoryPage() {
         return matchesTab && matchesStatus && matchesSearch;
     });
 
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentContracts = filteredContracts.slice(indexOfFirstItem, indexOfLastItem);
+
+    const onPageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, selectedStatus, searchQuery]);
+
     const tabs = [
         { id: "all", label: "الكل" },
         { id: "commercial", label: "تجاري" },
@@ -111,7 +131,7 @@ export default function ContractHistoryPage() {
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Active Contracts */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all border border-white/10">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <FaCheckCircle size={100} className="rotate-12" />
                     </div>
@@ -135,7 +155,7 @@ export default function ContractHistoryPage() {
                 </div>
 
                 {/* Completed Contracts */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all border border-white/10">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <IoDocumentText size={100} className="-rotate-12" />
                     </div>
@@ -159,7 +179,7 @@ export default function ContractHistoryPage() {
                 </div>
 
                 {/* Total Value */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all border border-white/10">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <MdBusinessCenter size={100} className="rotate-12" />
                     </div>
@@ -216,53 +236,52 @@ export default function ContractHistoryPage() {
             </div>
 
             {/* Contract History Table */}
-            <div className="bg-white dark:bg-card border border-border/60 rounded-[2.5rem] shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden">
                 {/* Tabs Header */}
-                <div className="p-3 border-b border-border/60 flex items-center justify-between bg-secondary/5">
-                    <div className="flex bg-secondary/30 p-1 rounded-2xl w-fit">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
-                                    ? "text-primary shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                            >
-                                {activeTab === tab.id && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute inset-0 bg-white dark:bg-card rounded-xl shadow-sm"
-                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                    />
-                                )}
-                                <span className="relative z-10">{tab.label}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="text-sm text-muted-foreground font-medium">
-                        {filteredContracts.length} عقد
+                <div className="p-6 border-b border-border/50 flex items-center justify-between">
+                    <h3 className="font-black text-xl text-foreground">سجل التعاقدات</h3>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-secondary/30 p-1 rounded-2xl">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
+                                        ? "bg-[#579BE8] text-white shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                        }`}
+                                >
+                                    {activeTab === tab.id && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-[#579BE8] rounded-xl shadow-sm"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                    <span className="relative z-10">{tab.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 {/* Table Content */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right border-collapse">
+                    <table className="w-full min-w-[800px] text-right border-collapse">
                         <thead>
-                            <tr className="bg-secondary/10 text-muted-foreground/70 text-sm font-bold uppercase tracking-wider">
-                                <th className="px-6 py-4">رقم العقد</th>
-                                <th className="px-6 py-4">اسم العقد</th>
-                                <th className="px-6 py-4">النوع</th>
-                                <th className="px-6 py-4">تاريخ البدء</th>
-                                <th className="px-6 py-4">المدة</th>
-                                <th className="px-6 py-4">القيمة</th>
+                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
+                                <th className="px-6 py-4 text-right">رقم العقد</th>
+                                <th className="px-6 py-4 text-right">اسم العقد</th>
+                                <th className="px-6 py-4 hidden lg:table-cell">النوع</th>
+                                <th className="px-6 py-4 hidden xl:table-cell">تاريخ البدء</th>
+                                <th className="px-6 py-4 hidden lg:table-cell">المدة</th>
+                                <th className="px-6 py-4 text-center">القيمة</th>
                                 <th className="px-6 py-4 text-center">الحالة</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border/40">
+                        <tbody className="divide-y divide-border/50">
                             <AnimatePresence mode="popLayout">
-                                {filteredContracts.map((contract) => (
+                                {currentContracts.map((contract) => (
                                     <motion.tr
                                         key={contract.id}
                                         initial={{ opacity: 0, y: 10 }}
@@ -273,39 +292,37 @@ export default function ContractHistoryPage() {
                                         onClick={() => router.push(`/myProfile/contracting`)}
                                     >
                                         <td className="px-6 py-5">
-                                            <span className="text-xs font-mono bg-secondary/40 px-2 py-1 rounded-lg text-muted-foreground">
-                                                #{contract.id}
-                                            </span>
+                                            <Link href={`/myProfile/contracting`} className="font-bold text-[#579BE8] hover:underline">
+                                                {contract.id}
+                                            </Link>
                                         </td>
                                         <td className="px-6 py-5">
                                             <span className="font-bold text-foreground">{contract.title}</span>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${contract.type === "commercial"
-                                                ? "bg-blue-100/50 text-blue-600 dark:bg-blue-500/10"
-                                                : "bg-purple-100/50 text-purple-600 dark:bg-purple-500/10"
+                                        <td className="px-6 py-5 hidden lg:table-cell">
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${contract.type === "commercial"
+                                                ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+                                                : "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400"
                                                 }`}>
                                                 {contract.type === "commercial" ? (
                                                     <>
-                                                        <MdBusinessCenter size={12} />
+                                                        <MdBusinessCenter size={14} />
                                                         <span>تجاري</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <FaUser size={10} />
+                                                        <FaUser size={12} />
                                                         <span>شخصي</span>
                                                     </>
                                                 )}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <span className="text-sm text-muted-foreground">{contract.startDate}</span>
+                                        <td className="px-6 py-5 text-muted-foreground text-sm hidden xl:table-cell">{contract.startDate}</td>
+                                        <td className="px-6 py-5 text-sm hidden lg:table-cell">
+                                            <span className="font-bold">{contract.duration}</span>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <span className="text-sm font-bold">{contract.duration}</span>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-1 font-black text-lg text-foreground">
+                                            <div className="flex items-center justify-center gap-1 font-black text-lg text-foreground">
                                                 {contract.cost}
                                                 <Image
                                                     src="/images/RS.png"
@@ -319,11 +336,11 @@ export default function ContractHistoryPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 text-center">
-                                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${contract.status === "active"
-                                                ? "bg-green-100/50 text-green-600 dark:bg-green-500/10"
-                                                : "bg-gray-100/50 text-gray-600 dark:bg-gray-500/10"
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${contract.status === "active"
+                                                ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+                                                : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"
                                                 }`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${contract.status === "active" ? "bg-green-600" : "bg-gray-600"
+                                                <span className={`w-2 h-2 rounded-full ${contract.status === "active" ? "bg-green-600" : "bg-gray-600"
                                                     }`}></span>
                                                 {contract.status === "active" ? "نشط" : "مكتمل"}
                                             </span>
@@ -331,45 +348,70 @@ export default function ContractHistoryPage() {
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>
+                            {currentContracts.length === 0 && (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-10 text-center text-muted-foreground">
+                                        لا توجد عقود تطابق البحث
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
-
-                    {filteredContracts.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                            <div className="bg-secondary/20 p-6 rounded-full mb-4">
-                                <IoDocumentText size={48} className="text-muted-foreground/30" />
-                            </div>
-                            <h4 className="text-lg font-bold mb-1">لا توجد عقود</h4>
-                            <p className="text-sm text-muted-foreground">
-                                لم يتم العثور على أي عقود تطابق البحث.
-                            </p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer / Pagination */}
                 {filteredContracts.length > 0 && (
-                    <div className="p-6 border-t border-border/60 bg-secondary/5 flex items-center justify-between flex-wrap gap-4">
-                        <p className="text-sm text-muted-foreground font-medium">
-                            عرض 1-{filteredContracts.length} من {contractHistory.length} عقد
-                        </p>
+                    <div className="p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="text-sm font-medium text-muted-foreground">
+                            عرض <span className="text-foreground font-bold">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredContracts.length)}</span> من أصل <span className="text-foreground font-bold">{filteredContracts.length}</span> عقد
+                        </div>
 
                         <div className="flex items-center gap-2">
-                            <button className="p-2 rounded-xl border border-border hover:bg-white dark:hover:bg-card hover:border-primary/50 transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed group">
-                                <FaChevronRight className="w-4 h-4" />
+                            <button 
+                                disabled={currentPage === 1}
+                                onClick={() => onPageChange(currentPage - 1)}
+                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <FaChevronRight className="w-3 h-3" />
                             </button>
 
-                            {[1].map((page, i) => (
-                                <button
-                                    key={i}
-                                    className="min-w-[40px] h-[40px] rounded-xl font-bold transition-all bg-gradient-to-r from-[#579BE8] to-[#124987] text-white shadow-lg shadow-[#579BE8]/20"
-                                >
-                                    {page}
-                                </button>
-                            ))}
+                            <div className="flex items-center gap-1">
+                                {[...Array(totalPages)].map((_, idx) => {
+                                    const pageNum = idx + 1;
+                                    if (
+                                        pageNum === 1 || 
+                                        pageNum === totalPages || 
+                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                    ) {
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => onPageChange(pageNum)}
+                                                className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
+                                                    currentPage === pageNum 
+                                                    ? "bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20" 
+                                                    : "hover:bg-secondary/50 text-muted-foreground"
+                                                }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    } else if (
+                                        pageNum === currentPage - 2 || 
+                                        pageNum === currentPage + 2
+                                    ) {
+                                        return <span key={pageNum} className="px-1 text-muted-foreground">...</span>;
+                                    }
+                                    return null;
+                                })}
+                            </div>
 
-                            <button className="p-2 rounded-xl border border-border hover:bg-white dark:hover:bg-card hover:border-primary/50 transition-all text-muted-foreground hover:text-primary rotate-180">
-                                <FaChevronRight className="w-4 h-4" />
+                            <button 
+                                disabled={currentPage === totalPages}
+                                onClick={() => onPageChange(currentPage + 1)}
+                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all rotate-180"
+                            >
+                                <FaChevronRight className="w-3 h-3" />
                             </button>
                         </div>
                     </div>

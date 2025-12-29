@@ -5,7 +5,8 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BiDotsVerticalRounded, BiSort, BiHelpCircle, BiSolidShow } from "react-icons/bi";
-import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes } from "react-icons/fa";
+import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes, FaBox } from "react-icons/fa";
+import { IoDocumentText } from "react-icons/io5";
 
 export default function OrdersPage() {
     const [statusFilter, setStatusFilter] = useState("all");
@@ -88,79 +89,88 @@ export default function OrdersPage() {
     };
 
     return (
-        <div className="space-y-8 fade-in-up ">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold">إدارة الطلبات</h2>
-                <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 xl:gap-3">
-                    <div className="relative group flex-1 md:flex-none">
-                        <label className="flex items-center gap-2 bg-white dark:bg-card px-3 xl:px-4 py-2.5 rounded-xl text-[12px] xl:text-[14px] font-medium border border-border shadow-sm hover:border-[#579BE8]/30 transition-all cursor-pointer">
-                            <FaCalendarAlt className="text-[#579BE8]" />
-                            <span className="whitespace-nowrap">{selectedDate || "تصفية باليوم"}</span>
-                            <input 
-                                type="date" 
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                            />
-                            {selectedDate && (
-                                <button 
-                                    onClick={(e) => { e.preventDefault(); setSelectedDate(""); }}
-                                    className="z-10 bg-secondary/50 p-1 rounded-full hover:bg-secondary transition-colors mr-2"
-                                >
-                                    <FaTimes className="w-2.5 h-2.5 text-muted-foreground" />
-                                </button>
-                            )}
-                        </label>
-                    </div>
-                    <button className="flex items-center gap-2 bg-white dark:bg-card px-3 xl:px-4 py-2.5 rounded-xl text-[12px] xl:text-[14px] font-medium border border-border shadow-sm hover:shadow-md transition-all cursor-pointer flex-1 md:flex-none">
-                        <FaDownload className="text-muted-foreground shrink-0" />
-                        <span className="whitespace-nowrap">تنزيل التقرير</span>
-                    </button>
-                    <button className="flex items-center gap-2 bg-[#579BE8] text-white px-4 xl:px-5 py-2.5 rounded-xl text-[12px] xl:text-[14px] font-bold shadow-lg shadow-[#579BE8]/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex-1 md:flex-none">
-                        <FaPlus className="shrink-0" />
-                        <span className="whitespace-nowrap">طلب جديد</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-2.5 xl:gap-6">
+        <div className="space-y-8 fade-in-up">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, idx) => (
-                    <div key={idx} className="bg-white dark:bg-card p-4 lg:p-2.5 xl:p-5 rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all group">
-                        <div className="flex items-center justify-between mb-3 lg:mb-2 xl:mb-4">
-                            <div className={`${stat.bg} p-2.5 lg:p-1.5 xl:p-3 rounded-2xl border transition-all duration-300 group-hover:scale-110 shadow-sm flex items-center justify-center`}>
-                                <div className="relative w-5 h-5 lg:w-3.5 lg:h-3.5 xl:w-6 xl:h-6">
-                                    <Image src={stat.icon} alt={stat.label} fill className="invert brightness-0 object-contain" />
-                                </div>
-                            </div>
-                            <div className="bg-secondary/50 px-2 lg:px-1.5 py-0.5 xl:px-2.5 xl:py-1 rounded-lg">
-                                <span className="text-[10px] xl:text-[11px] font-bold text-muted-foreground">+12.5%</span>
-                            </div>
+                    <div key={idx} className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
+                        {/* Decorative Elements */}
+                        <div className="absolute -right-6 -top-6 opacity-10">
+                            <FaBox size={100} className="rotate-12" />
                         </div>
-                        <div>
-                            <p className="text-muted-foreground text-[12px] lg:text-[10px] xl:text-sm mb-1">{stat.label}</p>
-                            <h3 className={`text-xl lg:text-base xl:text-2xl font-bold ${stat.color}`}>{stat.value}</h3>
+                        <div className="absolute -left-4 -bottom-4 opacity-10">
+                            <div className="w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+                        </div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                                    <FaBox className="text-lg" />
+                                </div>
+                                <p className="text-sm font-bold opacity-90">{stat.label}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-4xl font-black drop-shadow-lg">{stat.value}</h3>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
 
+            {/* Filters and Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="relative flex-1 max-w-md w-full">
+                    <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground z-10" size={20} />
+                    <input 
+                        type="date" 
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="w-full pr-12 pl-12 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
+                    />
+                    {selectedDate && (
+                        <button 
+                            onClick={(e) => { 
+                                e.preventDefault(); 
+                                e.stopPropagation();
+                                setSelectedDate(""); 
+                            }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
+                            title="مسح التاريخ"
+                        >
+                            <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
+                        </button>
+                    )}
+                </div>
+
+                {/* <div className="flex gap-3 flex-wrap">
+                    <button className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl hover:shadow-md hover:border-[#579BE8]/50 transition-all font-bold shadow-sm">
+                        <FaDownload />
+                        <span>تصدير</span>
+                    </button>
+                    <button className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-2 border-transparent rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold shadow-lg active:scale-95">
+                        <FaPlus />
+                        <span>طلب جديد</span>
+                    </button>
+                </div> */}
+            </div>
+
             {/* Orders Table Section */}
-            <div className="bg-white dark:bg-card rounded-2xl border border-border/50 shadow-sm overflow-visible">
-                <div className="p-5 xl:p-6 border-b border-border/50 flex flex-col lg:flex-col xl:flex-row xl:items-center justify-between gap-4 lg:gap-6">
-                    <h3 className="font-bold text-lg">أحدث الطلبات</h3>
+            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <h3 className="font-black text-xl text-foreground">أحدث الطلبات</h3>
                     
-                    <div className="flex flex-wrap items-center gap-2 xl:gap-3 max-w-full lg:w-full xl:w-auto lg:justify-between">
-                        {/* Status Filter - Scrollable on small to mid screens */}
-                        <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-xl overflow-x-auto scrollbar-hide max-w-full">
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Status Filter */}
+                        <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-2xl">
                             {["all", "completed", "processing", "pending", "cancelled"].map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
-                                    className={`px-3 lg:px-2.5 xl:px-4 py-1.5 rounded-lg text-[11px] lg:text-[10px] xl:text-sm font-bold transition-all whitespace-nowrap ${
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                                         statusFilter === status 
-                                        ? "bg-white dark:bg-card text-[#579BE8] shadow-sm" 
-                                        : "text-muted-foreground hover:text-foreground"
+                                        ? "bg-[#579BE8] text-white shadow-sm" 
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                                     }`}
                                 >
                                     {statusText[status]}
@@ -169,11 +179,11 @@ export default function OrdersPage() {
                         </div>
 
                         {/* Sort Dropdown */}
-                        <div className="relative group">
+                        <div className="relative">
                             <select 
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="appearance-none bg-white dark:bg-card border border-border rounded-xl px-4 py-2 pr-10 text-sm font-medium focus:ring-2 focus:ring-[#579BE8]/20 outline-none cursor-pointer hover:border-[#579BE8]/30 transition-all"
+                                className="appearance-none bg-white dark:bg-card border-2 border-border/60 rounded-2xl px-5 py-3 pr-10 pl-10 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer shadow-sm hover:shadow-md hover:border-[#579BE8]/50"
                             >
                                 <option value="date-desc">الأحدث أولاً</option>
                                 <option value="date-asc">الأقدم أولاً</option>
@@ -186,41 +196,41 @@ export default function OrdersPage() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto scrollbar-hide min-h-[450px] pb-20">
+                <div className="overflow-x-auto scrollbar-hide">
                     <table className="w-full min-w-[800px] text-right border-collapse">
                         <thead>
-                            <tr className="bg-secondary/30 text-muted-foreground text-[13px] uppercase tracking-wider font-bold text-center">
+                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
                                 <th className="px-6 py-4 text-right">رقم الطلب</th>
                                 <th className="px-6 py-4 text-right">العميل</th>
                                 <th className="px-6 py-4 hidden xl:table-cell">التاريخ</th>
                                 <th className="px-6 py-4 hidden xl:table-cell">العناصر</th>
-                                <th className="px-6 py-4">الإجمالي</th>
-                                <th className="px-6 py-4">الحالة</th>
-                                <th className="px-6 py-4">الإجراء</th>
+                                <th className="px-6 py-4 text-center">الإجمالي</th>
+                                <th className="px-6 py-4 text-center">الحالة</th>
+                                <th className="px-6 py-4 text-center">الإجراء</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
                             {currentOrders.length > 0 ? (
                                 currentOrders.map((order) => (
                                     <tr key={order.id} className="hover:bg-secondary/10 transition-colors group">
-                                        <td className="px-6 py-5 font-bold text-[#579BE8]">
-                                            <Link href={`/myProfile/orders/${order.id.replace('#WTR-', '')}`} className="hover:underline">
+                                        <td className="px-6 py-5">
+                                            <Link href={`/myProfile/orders/${order.id.replace('#WTR-', '')}`} className="font-bold text-[#579BE8] hover:underline">
                                                 {order.id}
                                             </Link>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
+                                                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold">
                                                     {order.customer.charAt(0)}
                                                 </div>
-                                                <span className="font-medium">{order.customer}</span>
+                                                <span className="font-medium text-foreground">{order.customer}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 text-muted-foreground hidden xl:table-cell">{order.date}</td>
-                                        <td className="px-6 py-5 hidden xl:table-cell">{order.items} عناصر</td>
+                                        <td className="px-6 py-5 text-muted-foreground text-sm hidden xl:table-cell">{order.date}</td>
+                                        <td className="px-6 py-5 text-sm hidden xl:table-cell">{order.items} عناصر</td>
                                         <td className="px-6 py-5 font-bold text-center">{order.amount.toFixed(2)} ر.س</td>
                                         <td className="px-6 py-5 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-[12px] font-bold ${statusStyles[order.status]}`}>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusStyles[order.status]}`}>
                                                 {statusText[order.status]}
                                             </span>
                                         </td>
@@ -239,10 +249,10 @@ export default function OrdersPage() {
                                             {openOrderId === order.id && (
                                                 <div 
                                                     ref={dropdownRef}
-                                                    className="absolute left-6 top-[70%] z-[100] w-[180px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200"
+                                                    className="absolute left-6 top-[70%] z-[100] w-[180px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200 overflow-hidden"
                                                 >
                                                     <Link 
-                                                        href={`/myProfile/orders/${order.id.replace('#', '')}`}
+                                                        href={`/myProfile/orders/${order.id.replace('#WTR-', '')}`}
                                                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground"
                                                     >
                                                         <BiSolidShow className="w-4 h-4 text-[#579BE8]" />
@@ -289,7 +299,6 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-1">
                             {[...Array(totalPages)].map((_, idx) => {
                                 const pageNum = idx + 1;
-                                // Simple logic to show current, first, last, and points around current
                                 if (
                                     pageNum === 1 || 
                                     pageNum === totalPages || 

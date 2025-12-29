@@ -54,16 +54,21 @@ export default function AddMoneyPage() {
     return (
         <div className="space-y-6 fade-in-up mt-1" >
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-                <button
-                    onClick={() => router.back()}
-                    className="p-3 bg-white dark:bg-card border border-border rounded-xl hover:bg-secondary/20 transition-all shadow-sm group"
-                >
-                    <FaArrowRight className="text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
-                <div>
-                    <h2 className="text-2xl font-bold text-foreground">إضافة أموال</h2>
-                    <p className="text-muted-foreground text-sm">قم بشحن محفظتك بسهولة وأمان</p>
+            <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                    <IoWalletOutline size={120} />
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-3 bg-white/10 backdrop-blur-md border border-white/30 rounded-xl hover:bg-white/20 transition-all shadow-lg group"
+                    >
+                        <FaArrowRight className="text-white group-hover:scale-110 transition-transform" />
+                    </button>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">إضافة أموال</h2>
+                        <p className="text-white/90 text-sm">قم بشحن محفظتك بسهولة وأمان</p>
+                    </div>
                 </div>
             </div>
 

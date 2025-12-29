@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { IoDocumentText, IoWalletOutline } from "react-icons/io5";
 import { FaArrowUp, FaArrowDown, FaCalendarAlt, FaPlus, FaChevronRight } from "react-icons/fa";
 import Image from "next/image";
@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function WalletPage() {
     const [activeTab, setActiveTab] = useState("all");
     const router = useRouter();
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
 
     const transactions = [
         { id: "456789356", type: "deposit", title: "إضافة ", date: "الثلاثاء - 10 نوفمبر 1.13ص", amount: "2,134", status: "completed" },
@@ -24,6 +26,23 @@ export default function WalletPage() {
         if (activeTab === "spend") return t.type === "spend";
         return true;
     });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentTransactions = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
+
+    const onPageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab]);
 
     const tabs = [
         { id: "all", label: "الكل" },
@@ -76,47 +95,50 @@ export default function WalletPage() {
             </div>
 
             {/* Transactions Section */}
-            <div id="totalInfo" className="bg-white dark:bg-card border border-border/60 rounded-3xl shadow-sm overflow-hidden flex flex-col">
+            <div id="totalInfo" className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                 {/* Tabs Header */}
-                <div className="p-3 border-b border-border/60 flex items-center justify-between bg-secondary/5">
-                    <div className="flex bg-secondary/30 p-1 rounded-2xl w-fit">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-6 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
-                                    ? "text-primary shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                            >
-                                {activeTab === tab.id && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute inset-0 bg-white dark:bg-card rounded-xl shadow-sm"
-                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                    />
-                                )}
-                                <span className="relative z-10">{tab.label}</span>
-                            </button>
-                        ))}
+                <div className="p-6 border-b border-border/50 flex items-center justify-between">
+                    <h3 className="font-black text-xl text-foreground">المعاملات</h3>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-secondary/30 p-1 rounded-2xl">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
+                                        ? "bg-[#579BE8] text-white shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                        }`}
+                                >
+                                    {activeTab === tab.id && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-[#579BE8] rounded-xl shadow-sm"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                    <span className="relative z-10">{tab.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 {/* Transactions Content */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right border-collapse">
+                    <table className="w-full min-w-[600px] text-right border-collapse">
                         <thead>
-                            <tr className="bg-secondary/10 text-muted-foreground/70 text-sm font-bold uppercase tracking-wider">
-                                <th className="px-6 py-4">رقم الطلب </th>
-                                <th className="px-6 py-4">تفاصيل المعاملة</th>
-                                <th className="px-6 py-4">التاريخ والوقت</th>
-                                <th className="px-6 py-4">المبلغ</th>
+                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
+                                <th className="px-6 py-4 text-right">رقم المعاملة</th>
+                                <th className="px-6 py-4 text-right">تفاصيل المعاملة</th>
+                                <th className="px-6 py-4 hidden lg:table-cell">التاريخ والوقت</th>
+                                <th className="px-6 py-4 text-center">المبلغ</th>
                                 <th className="px-6 py-4 text-center">الإجراء</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border/40">
+                        <tbody className="divide-y divide-border/50">
                             <AnimatePresence mode="popLayout">
-                                {filteredTransactions.map((transaction) => (
+                                {currentTransactions.map((transaction) => (
                                     <motion.tr
                                         key={transaction.id}
                                         initial={{ opacity: 0, y: 10 }}
@@ -141,11 +163,9 @@ export default function WalletPage() {
                                                 <span className="font-bold text-foreground">{transaction.title}</span>
                                             </div>
                                         </td>
+                                        <td className="px-6 py-5 text-muted-foreground text-sm hidden lg:table-cell">{transaction.date}</td>
                                         <td className="px-6 py-5">
-                                            <span className="text-sm text-muted-foreground">{transaction.date}</span>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className={`flex items-center gap-1 font-black text-lg ${transaction.type === "deposit" ? "text-green-600" : "text-foreground"
+                                            <div className={`flex items-center justify-center gap-1 font-black text-lg ${transaction.type === "deposit" ? "text-green-600" : "text-foreground"
                                                 }`}>
                                                 {transaction.type === "deposit" ? "+" : "-"} {transaction.amount}
                                                 <Image src="/images/RS.png" alt="RS" width={16} height={16}
@@ -153,55 +173,81 @@ export default function WalletPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 text-center">
-                                            <button className="p-2 hover:bg-white dark:hover:bg-card rounded-full transition-all border border-transparent hover:border-border hover:shadow-sm">
-                                                <RxDotsHorizontal className="text-muted-foreground group-hover:text-primary transition-colors" />
+                                            <button className="p-2 hover:bg-white dark:hover:bg-card rounded-lg transition-all border border-transparent hover:border-border hover:shadow-sm text-muted-foreground group-hover:text-[#579BE8]">
+                                                <RxDotsHorizontal className="w-5 h-5" />
                                             </button>
                                         </td>
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>
+                            {currentTransactions.length === 0 && (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-10 text-center text-muted-foreground">
+                                        لا توجد معاملات تطابق البحث
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
-
-                    {filteredTransactions.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                            <div className="bg-secondary/20 p-6 rounded-full mb-4">
-                                <IoWalletOutline size={48} className="text-muted-foreground/30" />
-                            </div>
-                            <h4 className="text-lg font-bold mb-1">لا توجد معاملات</h4>
-                            <p className="text-sm text-muted-foreground">لم يتم العثور على أي عمليات في هذا القسم حتى الآن.</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer / Pagination */}
-                <div className="p-6 border-t border-border/60 bg-secondary/5 flex items-center justify-between flex-wrap gap-4">
-                    <p className="text-sm text-muted-foreground font-medium">عرض 1-10 من 50 معاملة</p>
+                {filteredTransactions.length > 0 && (
+                    <div className="p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="text-sm font-medium text-muted-foreground">
+                            عرض <span className="text-foreground font-bold">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)}</span> من أصل <span className="text-foreground font-bold">{filteredTransactions.length}</span> معاملة
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                        <button className="p-2 rounded-xl border border-border hover:bg-white dark:hover:bg-card hover:border-primary/50 transition-all text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed group">
-                            <FaChevronRight className="w-4 h-4" />
-                        </button>
-
-                        {[1, 2, 3, "...", 12].map((page, i) => (
-                            <button
-                                key={i}
-                                className={`min-w-[40px] h-[40px] rounded-xl font-bold transition-all ${page === 1
-                                    ? "bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20"
-                                    : page === "..."
-                                        ? "text-muted-foreground cursor-default"
-                                        : "border border-border hover:bg-white dark:hover:bg-card hover:border-primary/50 text-muted-foreground hover:text-primary shadow-sm"
-                                    }`}
+                        <div className="flex items-center gap-2">
+                            <button 
+                                disabled={currentPage === 1}
+                                onClick={() => onPageChange(currentPage - 1)}
+                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >
-                                {page}
+                                <FaChevronRight className="w-3 h-3" />
                             </button>
-                        ))}
 
-                        <button className="p-2 rounded-xl border border-border hover:bg-white dark:hover:bg-card hover:border-primary/50 transition-all text-muted-foreground hover:text-primary rotate-180">
-                            <FaChevronRight className="w-4 h-4" />
-                        </button>
+                            <div className="flex items-center gap-1">
+                                {[...Array(totalPages)].map((_, idx) => {
+                                    const pageNum = idx + 1;
+                                    if (
+                                        pageNum === 1 || 
+                                        pageNum === totalPages || 
+                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                    ) {
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => onPageChange(pageNum)}
+                                                className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
+                                                    currentPage === pageNum 
+                                                    ? "bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20" 
+                                                    : "hover:bg-secondary/50 text-muted-foreground"
+                                                }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    } else if (
+                                        pageNum === currentPage - 2 || 
+                                        pageNum === currentPage + 2
+                                    ) {
+                                        return <span key={pageNum} className="px-1 text-muted-foreground">...</span>;
+                                    }
+                                    return null;
+                                })}
+                            </div>
+
+                            <button 
+                                disabled={currentPage === totalPages}
+                                onClick={() => onPageChange(currentPage + 1)}
+                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all rotate-180"
+                            >
+                                <FaChevronRight className="w-3 h-3" />
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
