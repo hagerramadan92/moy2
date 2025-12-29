@@ -1,19 +1,15 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSection';
 import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
 import Footer from '@/components/molecules/common/Footer';
 
-const ArticleDetails = () => {
-  const params = useParams();
-  const router = useRouter();
-  const articleId = params.id;
-
-  const article = {
-    id: articleId,
+const allArticles = [
+  {
+    id: 1,
     imageUrl: "/man.png",
     category: "الصحة",
     title: "فوائد شرب الماء للجسم والصحة العامة",
@@ -22,19 +18,131 @@ const ArticleDetails = () => {
 كما يساعد الماء في تنظيم درجة حرارة الجسم من خلال التعرق، ويسهل عملية الهضم ويمنع الإمساك. بالإضافة إلى ذلك، يعمل الماء على تنقية الجسم من السموم عبر الكلى.
 ينصح الخبراء بشرب 8 أكواب من الماء يومياً على الأقل، مع زيادة هذه الكمية في الأيام الحارة أو عند ممارسة الرياضة.
 في ووتر هب إكسبريس، نحرص على توفير مياه نقية وصحية لكم ولعائلاتكم، مع خدمة توصيل سريعة ومريحة حتى باب منزلكم.`,
+    description: "تعرف على أهمية شرب الماء يومياً وكيف يؤثر على صحتك ونشاطك اليومي...",
     author: "د. عماد حسن",
     author2: "د. أحمد محمد",
     author2Title: "كاتب ومتخصص في مجال المياه والصحة",
     date: "6 ديسمبر 2025",
     readTime: "5 دقائق",
-  };
-
-  const relatedArticles = Array(3).fill({
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  },
+  {
     id: 2,
     imageUrl: "/man.png",
-    title: "فوائد شرب الماء للجسم والصحة العامة",
-    description: "تعرف على أهمية شرب الماء يومياً وكيف يؤثر على صحتك ونشاطك اليومي..."
-  });
+    category: "الصحة",
+    title: "كيفية الحفاظ على ترطيب الجسم في الصيف",
+    content: `مع ارتفاع درجات الحرارة في فصل الصيف، يزداد خطر الإصابة بالجفاف الذي يؤثر سلباً على صحة الجسم. يتعرض الجسم لفقدان كميات كبيرة من السوائل عبر التعرق، مما يستدعي تعويضها بشرب كميات كافية من الماء.
+تشير الدراسات إلى أن احتياجات الجسم من الماء تزيد بنسبة 20-30% في الأيام الحارة مقارنة بالأيام المعتدلة. ولذلك، ينصح بتناول كوب من الماء كل ساعة تقريباً خلال النهار.
+كما ينصح بتجنب المشروبات التي تحتوي على الكافيين أو السكريات، لأنها قد تزيد من فقدان السوائل. بدلاً من ذلك، يمكن الاعتماد على الماء العادي أو الماء المضاف إليه شرائح الليمون أو النعناع لإضافة نكهة منعشة.
+في ووتر هب إكسبريس، نوفر لكم مياه نقية ومعقمة تصل إليكم طازجة، مع خدمة التوصيل المجانية عند الطلب عبر التطبيق أو الموقع الإلكتروني.`,
+    description: "نصائح مهمة للحفاظ على مستوى الماء في الجسم خلال الأيام الحارة...",
+    author: "د. سارة أحمد",
+    author2: "د. سارة أحمد",
+    author2Title: "أخصائية تغذية ومتخصصة في الصحة العامة",
+    date: "5 ديسمبر 2025",
+    readTime: "4 دقائق",
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  },
+  {
+    id: 3,
+    imageUrl: "/man.png",
+    category: "اخبار",
+    title: "تطورات جديدة في تقنيات تحلية المياه",
+    content: `شهدت تقنيات تحلية المياه تطوراً ملحوظاً خلال السنوات الأخيرة، حيث أصبحت أكثر كفاءة وأقل استهلاكاً للطاقة. تعتمد التقنيات الحديثة على أغشية متطورة قادرة على تنقية المياه بأقل تكلفة وأعلى جودة.
+أحدث هذه التقنيات هي نظام التناضح العكسي المتطور الذي يقلل من استهلاك الطاقة بنسبة 40% مقارنة بالأنظمة التقليدية. كما توصل الباحثون إلى مواد جديدة لتصنيع الأغشية تزيد من عمرها الافتراضي وتقلل من تكاليف الصيانة.
+تهدف هذه التطورات إلى جعل المياه المحلاة متاحة لشريحة أكبر من السكان، خاصة في المناطق التي تعاني من شح الموارد المائية الطبيعية.
+في ووتر هب إكسبريس، نواكب هذه التطورات من خلال استخدام أحدث تقنيات التنقية والتعبئة لضمان جودة المياه التي نقدمها لعملائنا الكرام.`,
+    description: "أحدث الابتكارات في مجال تحلية المياه وتأثيرها على البيئة...",
+    author: "م. خالد محمد",
+    author2: "م. خالد محمد",
+    author2Title: "خبير في تقنيات معالجة المياه",
+    date: "4 ديسمبر 2025",
+    readTime: "6 دقائق",
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  },
+  {
+    id: 4,
+    imageUrl: "/man.png",
+    category: "اخبار",
+    title: "مؤتمر المياه الدولي 2025",
+    content: `انعقد مؤتمر المياه الدولي لعام 2025 في دبي بحضور أكثر من 3000 خبير ومتخصص من حول العالم. ناقش المؤتمر التحديات التي تواجه قطاع المياه على مستوى العالم والحلول المبتكرة للتغلب عليها.
+تطرق المؤتمر إلى قضايا هامة مثل ندرة المياه في بعض المناطق، وتلوث مصادر المياه، وسبل تحسين كفاءة استخدام المياه في القطاعات المختلفة.
+كما تم عرض تجارب ناجحة من دول مختلفة في مجال إدارة الموارد المائية، وتبادل الخبرات بين المشاركين.
+شاركت ووتر هب إكسبريس في المؤتمر كشريك استراتيجي، حيث قدمت تجربتها الناجحة في توفير مياه شرب آمنة ونقية للمجتمعات المحلية.`,
+    description: "أهم ما تم مناقشته في مؤتمر المياه الدولي لهذا العام...",
+    author: "أحمد علي",
+    author2: "أحمد علي",
+    author2Title: "مراسل صحفي متخصص في الشؤون البيئية",
+    date: "3 ديسمبر 2025",
+    readTime: "7 دقائق",
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  },
+  {
+    id: 5,
+    imageUrl: "/man.png",
+    category: "الصحة",
+    title: "أضرار قلة شرب الماء على الكلى",
+    content: `تلعب الكلى دوراً حيوياً في تنقية الجسم من السموم، وتعتمد في أداء وظيفتها بشكل أساسي على توفر كميات كافية من الماء. عندما يقل استهلاك الماء، تتراكم السموم في الجسم وقد تؤدي إلى تكون حصوات الكلى.
+تشير الدراسات إلى أن قلة شرب الماء تزيد من خطر الإصابة بحصوات الكلى بنسبة 40%، كما ترفع احتمالية الإصابة بالتهابات المسالك البولية.
+تظهر أعراض قلة الماء في الجسم على شكل تغير لون البول إلى الأصفر الداكن، والشعور المستمر بالإرهاق، وجفاف الفم والجلد.
+ينصح الأطباء بشرب ما لا يقل عن 2 لتر من الماء يومياً للحفاظ على صحة الكلى، مع زيادة هذه الكمية للأشخاص الذين يمارسون نشاطاً بدنياً مرتفعاً.
+توفر ووتر هب إكسبريس عبوات مياه بأحجام مختلفة تناسب احتياجاتك اليومية، مع خدمة التوصيل المنتظمة لضمان توفر المياه النقية دائماً في منزلك.`,
+    description: "كيف تؤثر قلة المياه على وظائف الكلى والصحة العامة...",
+    author: "د. يوسف كمال",
+    author2: "د. يوسف كمال",
+    author2Title: "استشاري أمراض الكلى والمسالك البولية",
+    date: "2 ديسمبر 2025",
+    readTime: "5 دقائق",
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  },
+  {
+    id: 6,
+    imageUrl: "/man.png",
+    category: "اخبار",
+    title: "مشروع جديد لتحسين شبكة المياه",
+    content: `أعلنت وزارة المياه عن مشروع جديد لتحسين شبكة توزيع المياه في المدن الرئيسية. يهدف المشروع إلى تقليل الفاقد من المياه وتوصيل مياه شرب آمنة لمزيد من الأسر.
+يتضمن المشروع استبدال الأنابيب القديمة بأخرى حديثة مقاومة للتسرب، وتركيب عدادات ذكية تمكن المستهلكين من مراقبة استهلاكهم المائي بدقة.
+من المتوقع أن يسهم المشروع في توفير 30% من المياه المفقودة في الشبكة الحالية، مما يعني توفير كميات أكبر من المياه الصالحة للشرب.
+تتعاون ووتر هب إكسبريس مع الجهات المعنية في هذا المشروع من خلال تقديم الدعم الفني والخبرة المكتسبة في مجال إدارة وتوزيع المياه النقية.`,
+    description: "تفاصيل المشروع الجديد لتحسين جودة وتوزيع المياه في المدينة...",
+    author: "مريم سعيد",
+    author2: "مريم سعيد",
+    author2Title: "مهندسة مدنية متخصصة في شبكات المياه",
+    date: "1 ديسمبر 2025",
+    readTime: "4 دقائق",
+    personIconUrl: "/person.png",
+    calendarIconUrl: "/calender.png",
+    timeIconUrl: "/time2.png"
+  }
+];
+
+const ArticleDetails = () => {
+  const params = useParams();
+  const router = useRouter();
+  const articleId = parseInt(params.id);
+
+  const article = allArticles.find(article => article.id === articleId) || allArticles[0];
+
+  const relatedArticles = allArticles
+    .filter(item => item.category === article.category && item.id !== articleId)
+    .slice(0, 3);
+
+  if (relatedArticles.length < 3) {
+    const otherArticles = allArticles
+      .filter(item => item.category !== article.category)
+      .slice(0, 3 - relatedArticles.length);
+    relatedArticles.push(...otherArticles);
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -64,7 +172,7 @@ const ArticleDetails = () => {
             </div>
 
             {/* Title */}
-            <h1 className="font-cairo font-semibold text-xl md:text-2xl lg:text-[28px] text-center text-white mb-4 leading-tight whitespace-nowrap  text-ellipsis">
+            <h1 className="font-cairo font-semibold text-xl md:text-2xl lg:text-[28px] text-center text-white mb-4 leading-tight whitespace-nowrap text-ellipsis">
               {article.title}
             </h1>
 
@@ -163,7 +271,10 @@ const ArticleDetails = () => {
               </span>
               <br className="hidden sm:block" />
               <span className="font-cairo font-semibold text-base md:text-lg lg:text-[18px] px-3 py-2 md:px-4 md:py-4 rounded-lg text-[#579BE8] bg-white inline-block border border-[#579BE8]/20">
-                #صحة #مياه #نصائح طبية #حياة صحية
+                {article.category === "الصحة" 
+                  ? "#صحة #مياه #نصائح طبية #حياة صحية" 
+                  : "#أخبار #مياه #تقنيات #مشاريع تنموية"
+                }
               </span>
             </div>
 
@@ -245,8 +356,12 @@ const ArticleDetails = () => {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 justify-items-center">
                 {relatedArticles.map((relatedArticle, index) => (
-                  <div key={index} className="w-full max-w-xs sm:max-w-full">
-                    <div className="w-full h-[280px] sm:h-[300px] lg:h-[350px] bg-white rounded-xl lg:rounded-[24px] shadow-md lg:shadow-[0px_4px_4px_rgba(0,0,0,0.25)] overflow-hidden hover:shadow-lg transition-shadow">
+                  <div 
+                    key={index} 
+                    className="w-full max-w-xs sm:max-w-full cursor-pointer"
+                    onClick={() => router.push(`/articles/${relatedArticle.id}`)}
+                  >
+                    <div className="w-full h-[280px] sm:h-[300px] lg:h-[350px] bg-white rounded-xl lg:rounded-[24px] shadow-md lg:shadow-[0px_4px_4px_rgba(0,0,0,0.25)] overflow-hidden hover:shadow-lg transition-shadow hover:scale-[1.02] transition-transform duration-300">
                       <div className="relative w-full h-[140px] sm:h-[160px] lg:h-[200px] overflow-hidden">
                         <Image 
                           src={relatedArticle.imageUrl} 
@@ -256,6 +371,11 @@ const ArticleDetails = () => {
                         />
                       </div>
                       <div className="p-4 lg:p-5">
+                        <div className="flex justify-end mb-2">
+                          <span className="inline-block px-3 py-1 rounded-full bg-[rgba(87,155,232,0.1)] border border-[rgba(87,155,232,0.3)] font-cairo font-semibold text-[10px] text-[#579BE8]">
+                            {relatedArticle.category}
+                          </span>
+                        </div>
                         <h3 className="font-cairo font-semibold text-sm md:text-sm lg:text-[15px] text-right text-[#579BE8] mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
                           {relatedArticle.title}
                         </h3>

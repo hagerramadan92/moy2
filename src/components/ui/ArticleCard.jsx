@@ -1,3 +1,4 @@
+// components/ui/ArticleCard.jsx
 'use client';
 
 import React from 'react';
@@ -54,29 +55,29 @@ const ArticleCard = ({
         </button>
 
         {/* title */}
-        <div className="absolute top-[321.48px] right-[27.47px] w-[329px]">
-          <h3 className="font-cairo font-semibold text-[21.87px] leading-[120%] text-right text-[#579BE8] tracking-[-0.76px] 
+        <div className="absolute top-[320.48px] md:top-[320.48px] right-[27.47px] w-[calc(100%-55px)] md:w-[329px]">
+          <h3 className="font-cairo font-semibold text-[16px] md:text-[21.87px] leading-[120%] text-right text-[#579BE8] tracking-[-0.76px] 
                         overflow-hidden
                         line-clamp-2 md:line-clamp-1
-                        md:whitespace-nowrap md:overflow-visible
-                        pb-3 md:pb-0">
+                        md:whitespace-nowrap md:overflow-hidden
+                        pb-2 md:pb-3"> 
             {title}
           </h3>
         </div>
 
         {/* description */}
-        <div className="absolute top-[375px] md:top-[361.94px] right-[26.76px] w-[415px]">
-          <p className="font-cairo font-normal text-[15.31px] leading-[140%] md:leading-[100%] text-right text-[#757575] tracking-[-0.76px] 
+        <div className="absolute top-[360px] md:top-[361.94px] right-[26.76px] w-[calc(100%-55px)] md:w-[415px]">
+          <p className="font-cairo font-normal text-[14px] md:text-[15.31px] leading-[140%] md:leading-[100%] text-right text-[#757575] tracking-[-0.76px] 
                        overflow-hidden
                        line-clamp-2 md:line-clamp-1
-                       md:whitespace-nowrap md:overflow-visible
-                       pt-1 md:pt-0">
+                       md:whitespace-nowrap md:overflow-hidden
+                       pt-0 md:pt-0"> 
             {description}
           </p>
         </div>
 
-        {/*  Line */}
-        <div className="absolute top-[415px] md:top-[403.49px] left-1/2 transform -translate-x-1/2 w-[500.8px] h-[0px] mt-2">
+        {/* Line */}
+        <div className="absolute top-[410px] md:top-[400px] left-1/2 transform -translate-x-1/2 w-[calc(100%-55px)] md:w-[500.8px] h-[0px] mt-3 md:mt-1"> {/* زودت mt-4 بدل mt-2 */}
           <div className="w-full border-t-[0.87px] border-[#579BE8]"></div>
         </div>
 
@@ -128,5 +129,3 @@ const ArticleCard = ({
 };
 
 export default ArticleCard;
-
-
