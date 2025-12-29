@@ -42,7 +42,7 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Animated Water Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#315782] overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
         {/* Floating Water Drops with Animation */}
         <motion.div
           animate={{
@@ -54,7 +54,7 @@ export default function Login() {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl"
+          className="absolute top-20 right-20 w-32 h-32 bg-[#579BE8]/10 rounded-full blur-2xl"
         ></motion.div>
         <motion.div
           animate={{
@@ -67,7 +67,7 @@ export default function Login() {
             ease: "easeInOut",
             delay: 1,
           }}
-          className="absolute bottom-40 left-32 w-48 h-48 bg-white/5 rounded-full blur-3xl"
+          className="absolute bottom-40 left-32 w-48 h-48 bg-[#579BE8]/8 rounded-full blur-3xl"
         ></motion.div>
         <motion.div
           animate={{
@@ -80,21 +80,21 @@ export default function Login() {
             ease: "easeInOut",
             delay: 0.5,
           }}
-          className="absolute top-1/2 left-1/4 w-40 h-40 bg-white/8 rounded-full blur-2xl"
+          className="absolute top-1/2 left-1/4 w-40 h-40 bg-[#579BE8]/12 rounded-full blur-2xl"
         ></motion.div>
         
         {/* Water Ripple Effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[#579BE8]/20 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent"></div>
       </div>
 
       {/* Decorative Water Icons */}
-      <div className="absolute top-10 right-10 text-white/10">
+      <div className="absolute top-10 right-10 text-[#579BE8]/15">
         <IoWaterOutline size={120} className="rotate-12" />
       </div>
-      <div className="absolute bottom-10 left-10 text-white/10">
+      <div className="absolute bottom-10 left-10 text-[#579BE8]/15">
         <FaWater size={100} className="-rotate-12" />
       </div>
-      <div className="absolute top-1/2 right-1/4 text-white/5">
+      <div className="absolute top-1/2 right-1/4 text-[#579BE8]/10">
         <IoWaterOutline size={200} className="rotate-45" />
       </div>
 
