@@ -52,7 +52,7 @@ export default function AddMoneyPage() {
     };
 
     return (
-        <div className="space-y-6 fade-in-up mt-1 md:mt-[0rem] lg:mt-[-4rem] xl:mt-[-5rem]" >
+        <div className="space-y-6 fade-in-up mt-1" >
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <button

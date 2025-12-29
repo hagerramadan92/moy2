@@ -7,8 +7,9 @@ import { FaRegUser } from "react-icons/fa";
 import { FaHeadset } from "react-icons/fa6";
 import { MdLogout } from "react-icons/md";
 import { FiLogOut } from "react-icons/fi";
-import { IoWalletOutline } from "react-icons/io5"; // Added for variety if needed, or stick to FaRegUser
-import { BiPackage } from "react-icons/bi"; // For Orders
+import { IoWalletOutline } from "react-icons/io5";
+import { BiPackage } from "react-icons/bi";
+import { FaHistory, FaMoneyBillWave } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { HiMenuAlt3, HiX } from "react-icons/hi";
 
@@ -16,14 +17,20 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
 
     const isActive = (path) => pathname === path;
+    const isWalletActive = pathname.startsWith('/myProfile/wallet');
+
+    const walletDropdownItems = [
+        { name: "محفظتك", href: "/myProfile/wallet", icon: <IoWalletOutline className="w-4 h-4" /> },
+        { name: "سجل المدفوعات", href: "/myProfile/wallet/payment-history", icon: <FaHistory className="w-4 h-4" /> },
+        { name: "شحن المحفظة", href: "/myProfile/wallet/add-money", icon: <FaMoneyBillWave className="w-4 h-4" /> },
+    ];
 
     const navItems = [
         {
-            title: "الحساب",
+            title: "الحساب الشخصي",
             icon: <FaRegUser className="w-5 h-5" />,
             links: [
                 { name: "الملف الشخصي", href: "/myProfile" },
-                { name: "محفظتك", href: "/myProfile/wallet" },
                 { name: "الطلبات", href: "/myProfile/orders" },
                 { name: "التعاقدات", href: "/myProfile/contracting" },
             ]
@@ -88,6 +95,38 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                         {link.name}
                                     </Link>
                                 ))}
+                                
+                                {/* Wallet Dropdown - Always Open - Only in first section */}
+                                {idx === 0 && (
+                                    <div className="flex flex-col gap-1">
+                                        <div className={`text-base py-2 px-4 rounded-lg transition-all duration-200 flex items-center gap-2
+                                            ${isWalletActive
+                                                ? "text-primary font-bold"
+                                                : "text-muted-foreground"
+                                            }`}
+                                        >
+                                            <IoWalletOutline className="w-5 h-5" />
+                                            <span>محفظتك</span>
+                                        </div>
+                                        
+                                        <div className="flex flex-col gap-1 mr-6 mt-1">
+                                            {walletDropdownItems.map((item, itemIdx) => (
+                                                <Link
+                                                    key={itemIdx}
+                                                    href={item.href}
+                                                    className={`text-sm py-2 px-4 rounded-lg transition-all duration-200 flex items-center gap-2
+                                                        ${isActive(item.href)
+                                                            ? "text-primary font-bold bg-[#579BE8]/25 border-r-2 border-[#579BE8] translate-x-[-4px]"
+                                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:translate-x-[-2px]"
+                                                        }`}
+                                                >
+                                                    {item.icon}
+                                                    <span>{item.name}</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -150,6 +189,39 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
                                             {link.name}
                                         </Link>
                                     ))}
+                                    
+                                    {/* Wallet Dropdown - Always Open - Only in first section */}
+                                    {idx === 0 && (
+                                        <div className="flex flex-col gap-1">
+                                            <div className={`text-base py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center gap-2
+                                                ${isWalletActive
+                                                    ? "text-primary font-bold"
+                                                    : "text-muted-foreground"
+                                                }`}
+                                            >
+                                                <IoWalletOutline className="w-5 h-5" />
+                                                <span>محفظتك</span>
+                                            </div>
+                                            
+                                            <div className="flex flex-col gap-1 mr-6 mt-1">
+                                                {walletDropdownItems.map((item, itemIdx) => (
+                                                    <Link
+                                                        key={itemIdx}
+                                                        href={item.href}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className={`text-sm py-2 px-4 rounded-lg transition-all duration-200 flex items-center gap-2
+                                                            ${isActive(item.href)
+                                                                ? "text-primary font-bold bg-[#579BE8]/25 border-r-2 border-[#579BE8] translate-x-[-4px]"
+                                                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                                            }`}
+                                                    >
+                                                        {item.icon}
+                                                        <span>{item.name}</span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
