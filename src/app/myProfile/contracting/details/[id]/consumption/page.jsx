@@ -385,21 +385,7 @@ export default function ConsumptionPage() {
                 </div>
             </motion.div>
 
-            {/* Back Button */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="flex justify-end"
-            >
-                <Button 
-                    onClick={() => router.push(`/myProfile/contracting/details/${contractId}`)}
-                    className="bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg md:rounded-xl font-bold text-xs md:text-sm lg:text-base w-full sm:w-auto"
-                >
-                    <FaArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 rotate-180" />
-                    <span>العودة إلى تفاصيل العقد</span>
-                </Button>
-            </motion.div>
+         
         </div>
     );
 }
