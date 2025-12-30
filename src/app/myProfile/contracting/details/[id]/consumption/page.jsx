@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
     FaArrowRight, FaChartLine, FaCalendarAlt, FaWater, FaTint, FaMoneyBillWave, FaChartBar, FaChartArea
@@ -27,6 +27,18 @@ export default function ConsumptionPage() {
     const params = useParams();
     const contractId = params.id;
     const [chartType, setChartType] = useState('line'); // 'line', 'bar', 'area'
+    const [isMobile, setIsMobile] = useState(false);
+    const [isTablet, setIsTablet] = useState(false);
+
+    useEffect(() => {
+        const checkSize = () => {
+            setIsMobile(window.innerWidth < 640);
+            setIsTablet(window.innerWidth < 1024);
+        };
+        checkSize();
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
+    }, []);
 
     // Mock consumption data
     const consumptionData = [
@@ -47,10 +59,10 @@ export default function ConsumptionPage() {
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white dark:bg-card border-2 border-border/60 rounded-xl p-3 shadow-xl">
-                    <p className="font-bold text-foreground mb-2">{label}</p>
+                <div className="bg-white dark:bg-card border-2 border-border/60 rounded-xl p-2 md:p-3 shadow-xl text-xs md:text-sm">
+                    <p className="font-bold text-foreground mb-1 md:mb-2 text-xs md:text-sm">{label}</p>
                     {payload.map((entry, index) => (
-                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                        <p key={index} className="text-xs md:text-sm" style={{ color: entry.color }}>
                             {entry.name}: <span className="font-bold">{entry.value.toLocaleString()}</span>
                             {entry.dataKey === 'amount' ? ' لتر' : ' ريال'}
                         </p>
@@ -93,50 +105,50 @@ export default function ConsumptionPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-2xl overflow-hidden relative group"
+                className="bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 lg:p-8 shadow-2xl overflow-hidden relative group"
             >
-                <div className="absolute top-0 right-0 opacity-[0.05]">
+                <div className="absolute top-0 right-0 opacity-[0.05] hidden md:block">
                     <FaChartLine size={200} className="rotate-12" />
                 </div>
-                <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-40 h-40 md:w-80 md:h-80 bg-white/5 rounded-full blur-3xl"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 md:w-96 md:h-96 bg-white/5 rounded-full blur-3xl"></div>
                 
                 <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-2">
+                    <div className="flex items-center gap-3 md:gap-4 mb-2">
                         <motion.div 
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
                             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                            className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/25 backdrop-blur-lg flex items-center justify-center shadow-2xl border-2 border-white/30"
+                            className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-lg flex items-center justify-center shadow-2xl border-2 border-white/30 flex-shrink-0"
                         >
-                            <FaChartLine className="w-7 h-7 md:w-8 md:h-8" />
+                            <FaChartLine className="w-5 h-5 md:w-7 md:h-7 lg:w-8 lg:h-8" />
                         </motion.div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black mb-1 drop-shadow-lg">سجل الاستهلاك</h1>
-                            <p className="text-sm md:text-base opacity-90 font-medium">عقد #{contractId}</p>
+                        <div className="min-w-0">
+                            <h1 className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-black mb-1 drop-shadow-lg truncate">سجل الاستهلاك</h1>
+                            <p className="text-xs md:text-sm lg:text-base opacity-90 font-medium">عقد #{contractId}</p>
                         </div>
                     </div>
                 </div>
             </motion.div>
 
             {/* Enhanced Statistics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-5">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-5 md:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
+                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-[#579BE8]/5 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-[#579BE8]/5 rounded-full blur-2xl"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
-                                <FaWater className="w-6 h-6 text-white" />
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg flex-shrink-0">
+                                <FaWater className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
                             </div>
-                            <p className="text-xs md:text-sm text-muted-foreground font-bold uppercase tracking-wider">إجمالي الاستهلاك</p>
+                            <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-bold uppercase tracking-wider">إجمالي الاستهلاك</p>
                         </div>
-                        <p className="text-2xl md:text-3xl font-black text-foreground mb-1">{totalConsumption.toLocaleString()}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground font-medium">لتر</p>
+                        <p className="text-xl md:text-2xl lg:text-3xl font-black text-foreground mb-1">{totalConsumption.toLocaleString()}</p>
+                        <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-medium">لتر</p>
                     </div>
                 </motion.div>
 
@@ -144,18 +156,18 @@ export default function ConsumptionPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-5 md:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
+                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/5 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-green-500/5 rounded-full blur-2xl"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg">
-                                <FaMoneyBillWave className="w-6 h-6 text-white" />
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <FaMoneyBillWave className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
                             </div>
-                            <p className="text-xs md:text-sm text-muted-foreground font-bold uppercase tracking-wider">إجمالي التكلفة</p>
+                            <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-bold uppercase tracking-wider">إجمالي التكلفة</p>
                         </div>
-                        <p className="text-2xl md:text-3xl font-black text-foreground mb-1">{totalCost.toLocaleString()}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground font-medium">ريال</p>
+                        <p className="text-xl md:text-2xl lg:text-3xl font-black text-foreground mb-1">{totalCost.toLocaleString()}</p>
+                        <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-medium">ريال</p>
                     </div>
                 </motion.div>
 
@@ -163,18 +175,18 @@ export default function ConsumptionPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-5 md:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
+                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-blue-500/5 rounded-full blur-2xl"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
-                                <FaTint className="w-6 h-6 text-white" />
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <FaTint className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
                             </div>
-                            <p className="text-xs md:text-sm text-muted-foreground font-bold uppercase tracking-wider">متوسط الاستهلاك</p>
+                            <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-bold uppercase tracking-wider">متوسط الاستهلاك</p>
                         </div>
-                        <p className="text-2xl md:text-3xl font-black text-foreground mb-1">{averageConsumption.toLocaleString()}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground font-medium">لتر/شهر</p>
+                        <p className="text-xl md:text-2xl lg:text-3xl font-black text-foreground mb-1">{averageConsumption.toLocaleString()}</p>
+                        <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-medium">لتر/شهر</p>
                     </div>
                 </motion.div>
 
@@ -182,18 +194,18 @@ export default function ConsumptionPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-5 md:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
+                    className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 shadow-lg hover:shadow-2xl transition-all group relative overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-orange-500/5 rounded-full blur-2xl"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg">
-                                <FaChartLine className="w-6 h-6 text-white" />
+                        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <FaChartLine className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" />
                             </div>
-                            <p className="text-xs md:text-sm text-muted-foreground font-bold uppercase tracking-wider">أعلى استهلاك</p>
+                            <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-bold uppercase tracking-wider">أعلى استهلاك</p>
                         </div>
-                        <p className="text-2xl md:text-3xl font-black text-foreground mb-1">{maxConsumption.toLocaleString()}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground font-medium">لتر</p>
+                        <p className="text-xl md:text-2xl lg:text-3xl font-black text-foreground mb-1">{maxConsumption.toLocaleString()}</p>
+                        <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground font-medium">لتر</p>
                     </div>
                 </motion.div>
             </div>
@@ -203,41 +215,41 @@ export default function ConsumptionPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-4 shadow-lg"
+                className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg"
             >
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
                     <button
                         onClick={() => setChartType('line')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
                             chartType === 'line'
                                 ? 'bg-[#579BE8] text-white shadow-lg'
                                 : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
                         }`}
                     >
-                        <FaChartLine className="w-4 h-4" />
-                        خطي
+                        <FaChartLine className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        <span>خطي</span>
                     </button>
                     <button
                         onClick={() => setChartType('bar')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
                             chartType === 'bar'
                                 ? 'bg-[#579BE8] text-white shadow-lg'
                                 : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
                         }`}
                     >
-                        <FaChartBar className="w-4 h-4" />
-                        أعمدة
+                        <FaChartBar className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        <span>أعمدة</span>
                     </button>
                     <button
                         onClick={() => setChartType('area')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
                             chartType === 'area'
                                 ? 'bg-[#579BE8] text-white shadow-lg'
                                 : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
                         }`}
                     >
-                        <FaChartArea className="w-4 h-4" />
-                        منطقة
+                        <FaChartArea className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        <span>منطقة</span>
                     </button>
                 </div>
             </motion.div>
@@ -247,32 +259,32 @@ export default function ConsumptionPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl overflow-hidden"
+                className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl overflow-hidden"
             >
-                <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                    <h3 className="text-xl md:text-2xl font-black flex items-center gap-3">
-                        <FaCalendarAlt className="w-6 h-6 md:w-7 md:h-7 text-[#579BE8]" />
+                <div className="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-3 md:gap-4">
+                    <h3 className="text-lg md:text-xl lg:text-2xl font-black flex items-center gap-2 md:gap-3">
+                        <FaCalendarAlt className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-[#579BE8] flex-shrink-0" />
                         <span>سجل الاستهلاك الشهري</span>
                     </h3>
                 </div>
 
-                <div className="w-full" style={{ direction: 'ltr' }}>
-                    <ResponsiveContainer width="100%" height={400}>
+                <div className="w-full overflow-x-auto" style={{ direction: 'ltr' }}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 300 : isTablet ? 350 : 400} minHeight={300}>
                         {chartType === 'line' ? (
-                            <LineChart data={consumptionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <LineChart data={consumptionData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis 
                                     dataKey="month" 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
                                     style={{ direction: 'rtl' }}
                                 />
                                 <YAxis 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                    label={{ value: 'لتر', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
+                                    label={!isMobile ? { value: 'لتر', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 } : undefined}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend 
-                                    wrapperStyle={{ paddingTop: '20px' }}
+                                    wrapperStyle={{ paddingTop: '20px', fontSize: isMobile ? '10px' : '12px' }}
                                     iconType="line"
                                 />
                                 <Line 
@@ -280,51 +292,51 @@ export default function ConsumptionPage() {
                                     dataKey="amount" 
                                     name="الاستهلاك (لتر)"
                                     stroke="#579BE8" 
-                                    strokeWidth={3}
-                                    dot={{ fill: '#579BE8', r: 5 }}
-                                    activeDot={{ r: 8 }}
+                                    strokeWidth={isMobile ? 2 : 3}
+                                    dot={{ fill: '#579BE8', r: isMobile ? 3 : 5 }}
+                                    activeDot={{ r: isMobile ? 6 : 8 }}
                                 />
                                 <Line 
                                     type="monotone" 
                                     dataKey="cost" 
                                     name="التكلفة (ريال)"
                                     stroke="#10b981" 
-                                    strokeWidth={3}
-                                    dot={{ fill: '#10b981', r: 5 }}
-                                    activeDot={{ r: 8 }}
+                                    strokeWidth={isMobile ? 2 : 3}
+                                    dot={{ fill: '#10b981', r: isMobile ? 3 : 5 }}
+                                    activeDot={{ r: isMobile ? 6 : 8 }}
                                 />
                             </LineChart>
                         ) : chartType === 'bar' ? (
-                            <BarChart data={consumptionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <BarChart data={consumptionData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis 
                                     dataKey="month" 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
                                     style={{ direction: 'rtl' }}
                                 />
                                 <YAxis 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                    label={{ value: 'لتر / ريال', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
+                                    label={!isMobile ? { value: 'لتر / ريال', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 } : undefined}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend 
-                                    wrapperStyle={{ paddingTop: '20px' }}
+                                    wrapperStyle={{ paddingTop: '20px', fontSize: isMobile ? '10px' : '12px' }}
                                 />
                                 <Bar 
                                     dataKey="amount" 
                                     name="الاستهلاك (لتر)"
                                     fill="#579BE8" 
-                                    radius={[8, 8, 0, 0]}
+                                    radius={[isMobile ? 4 : 8, isMobile ? 4 : 8, 0, 0]}
                                 />
                                 <Bar 
                                     dataKey="cost" 
                                     name="التكلفة (ريال)"
                                     fill="#10b981" 
-                                    radius={[8, 8, 0, 0]}
+                                    radius={[isMobile ? 4 : 8, isMobile ? 4 : 8, 0, 0]}
                                 />
                             </BarChart>
                         ) : (
-                            <AreaChart data={consumptionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <AreaChart data={consumptionData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#579BE8" stopOpacity={0.8}/>
@@ -338,16 +350,16 @@ export default function ConsumptionPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis 
                                     dataKey="month" 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
                                     style={{ direction: 'rtl' }}
                                 />
                                 <YAxis 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                    label={{ value: 'لتر / ريال', angle: -90, position: 'insideLeft', fill: '#6b7280' }}
+                                    tick={{ fill: '#6b7280', fontSize: isMobile ? 10 : 12 }}
+                                    label={!isMobile ? { value: 'لتر / ريال', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 } : undefined}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend 
-                                    wrapperStyle={{ paddingTop: '20px' }}
+                                    wrapperStyle={{ paddingTop: '20px', fontSize: isMobile ? '10px' : '12px' }}
                                 />
                                 <Area 
                                     type="monotone" 
@@ -356,7 +368,7 @@ export default function ConsumptionPage() {
                                     stroke="#579BE8" 
                                     fillOpacity={1}
                                     fill="url(#colorAmount)"
-                                    strokeWidth={2}
+                                    strokeWidth={isMobile ? 1.5 : 2}
                                 />
                                 <Area 
                                     type="monotone" 
@@ -365,7 +377,7 @@ export default function ConsumptionPage() {
                                     stroke="#10b981" 
                                     fillOpacity={1}
                                     fill="url(#colorCost)"
-                                    strokeWidth={2}
+                                    strokeWidth={isMobile ? 1.5 : 2}
                                 />
                             </AreaChart>
                         )}
@@ -382,9 +394,9 @@ export default function ConsumptionPage() {
             >
                 <Button 
                     onClick={() => router.push(`/myProfile/contracting/details/${contractId}`)}
-                    className="bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm md:text-base"
+                    className="bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-lg md:rounded-xl font-bold text-xs md:text-sm lg:text-base w-full sm:w-auto"
                 >
-                    <FaArrowRight className="w-4 h-4 rotate-180" />
+                    <FaArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 rotate-180" />
                     <span>العودة إلى تفاصيل العقد</span>
                 </Button>
             </motion.div>
