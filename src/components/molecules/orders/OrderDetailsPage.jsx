@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import CancelOrderModal from '../../ui/CancelOrderModal';
+import CustomerSupportPage from './CustomerSupportPage';
 
 /**
  * Main component for displaying order details and driver information
  */
 export default function OrderDetailsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [showSupportPage, setShowSupportPage] = useState(false); 
 
   /**
    * Opens the cancel order confirmation modal
@@ -28,18 +30,34 @@ export default function OrderDetailsPage() {
    * Handles the order cancellation process
    */
   const handleCancelOrder = () => {
-    // Implementation for order cancellation
     console.log('Order cancelled');
     setIsCancelModalOpen(false);
   };
 
   /**
+   * Navigates to customer support page
+   */
+  const handleHelpClick = () => {
+    setShowSupportPage(true); 
+  };
+
+  /**
+   * Handles back from support page
+   */
+  const handleBackFromSupport = () => {
+    setShowSupportPage(false); 
+  };
+
+  /**
    * Handles the continue order action
-   * The modal will handle its own state management
    */
   const handleContinueOrder = () => {
     console.log('Continue order - modal handles this action');
   };
+
+  if (showSupportPage) {
+    return <CustomerSupportPage onBack={handleBackFromSupport} />;
+  }
 
   return (
     <>
@@ -165,6 +183,7 @@ export default function OrderDetailsPage() {
                   </button>
 
                   <button
+                    onClick={handleHelpClick}
                     className="bg-[#579BE8] hover:bg-[#579BE8]/90 text-white rounded-xl h-12 md:h-14 flex items-center justify-center gap-2 transition-colors"
                   >
                     <div className="relative w-5 h-5 md:w-6 md:h-6">
@@ -384,6 +403,7 @@ export default function OrderDetailsPage() {
                       </button>
 
                       <button
+                        onClick={handleHelpClick}
                         className="bg-[#579BE8] hover:bg-[#579BE8]/90 text-white rounded-xl h-14 flex items-center justify-center gap-2 transition-colors"
                       >
                         <div className="relative w-6 h-6">
@@ -512,6 +532,7 @@ export default function OrderDetailsPage() {
                 </button>
 
                 <button
+                  onClick={handleHelpClick}
                   className="w-full bg-white border border-[#579BE8] text-[#579BE8] hover:bg-gray-50 rounded-xl h-14 flex items-center justify-center gap-3 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
