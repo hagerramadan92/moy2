@@ -1,105 +1,230 @@
+"use client";
+
 import Image from "next/image";
 import React from "react";
+import { motion } from "framer-motion";
+import { FaMobileAlt, FaBolt, FaShieldAlt, FaClock, FaCheckCircle, FaStar, FaUsers } from "react-icons/fa";
+import AppDownloadButtons from "../homepage/AppDownloadButtons";
 
 export default function AppPromotionSection() {
+  const features = [
+    { icon: FaBolt, title: "طلب فوري", desc: "احصل على المياه خلال دقائق", color: "text-yellow-500" },
+    { icon: FaShieldAlt, title: "دفع آمن", desc: "معاملات محمية ومشفرة", color: "text-green-500" },
+    { icon: FaClock, title: "تتبع مباشر", desc: "راقب طلبك في الوقت الفعلي", color: "text-blue-500" },
+  ];
+
+  const stats = [
+    { icon: FaUsers, value: "100K+", label: "مستخدم نشط" },
+    { icon: FaStar, value: "4.9", label: "تقييم المستخدمين" },
+    { icon: FaCheckCircle, value: "99%", label: "رضا العملاء" },
+  ];
+
   return (
-    <section className="relative py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8">
-      <div className="container max-w-[300px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] xl:max-w-[1100px] 2xl:w-[1296px] 
-                     h-[150px] sm:h-[200px] md:h-[250px] lg:h-[300px] xl:h-[340px] 2xl:h-[377px] 
-                     rounded-[16px] sm:rounded-[20px] md:rounded-[24px] lg:rounded-[28px] xl:rounded-[30px] 2xl:rounded-[32px] 
-                     bg-[#EFF5FD] mx-auto relative">
-        
-        {/* Phone Image - Small on mobile, Big on desktop */}
-        <div className="absolute 
-                       w-[80px] h-[100px] 
-                       sm:w-[100px] sm:h-[125px] 
-                       md:w-[120px] md:h-[150px]
-                       lg:w-[180px] lg:h-[225px]  
-                       xl:w-[240px] xl:h-[300px]  
-                       2xl:w-[350px] 2xl:h-[450px] 
-                       
-                       top-1/2 -translate-y-1/2 
-                       sm:top-1/2 sm:-translate-y-1/2 
-                       md:top-[-10px] md:-translate-y-0
-                       lg:top-[-20px] 
-                       xl:top-[-40px] 
-                       2xl:top-[-120px]
-                       
-                       left-[20px] sm:left-[30px] md:left-[40px] lg:left-[60px] xl:left-[100px] 2xl:left-[165px]">
-          <Image
-            src="/iPhone 16.png"
-            alt="iPhone 16"
-            fill
-            className="object-contain drop-shadow-[0px_4px_16.3px_rgba(0,0,0,0.31)]"
-            sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, (max-width: 1024px) 120px, (max-width: 1280px) 180px, (max-width: 1536px) 240px, 350px"
-            priority
-          />
-        </div>
+    <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 overflow-hidden overflow-y-hidden sm:overflow-y-visible w-full h-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/40" dir="rtl">
+      {/* Elegant background pattern */}
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{ 
+            x: [0, 50, 0],
+            y: [0, -30, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ 
+            duration: 15,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-20 right-10 w-[500px] aspect-square bg-gradient-to-br from-[#579BE8]/12 via-[#4788d5]/8 to-transparent rounded-full blur-3xl"
+        ></motion.div>
+        <motion.div
+          animate={{ 
+            x: [0, -40, 0],
+            y: [0, 40, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ 
+            duration: 18,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute bottom-20 left-10 w-[450px] aspect-square bg-gradient-to-tr from-[#1C7C4B]/10 via-[#2A9D5F]/6 to-transparent rounded-full blur-3xl"
+        ></motion.div>
+      </div>
 
-        {/* Text and Buttons */}
-        <div className="absolute 
-                       w-[calc(100%-40px)] sm:w-auto
-                       left-[20px] sm:left-auto
-                       right-[20px] sm:right-[30px] md:right-[40px] lg:right-[50px] xl:right-[60px] 2xl:right-[40px]
-                       
-                       top-1/2 -translate-y-1/2 
-                       text-center sm:text-right">
-          
-          <h2 className="font-cairo font-normal 
-                        text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 2xl:text-[48px] 
-                        leading-[100%] text-[#579BE8] 
-                        mb-2 sm:mb-3 md:mb-4 lg:mb-5 xl:mb-6">
-            تطبيق وايت مياه
-          </h2>
-
-          <p className="font-cairo font-normal 
-                       text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-[32px] 
-                       leading-[100%] text-[#579BE8] 
-                       mb-3 sm:mb-4 md:mb-5 lg:mb-6 xl:mb-8 2xl:mb-10
-                       hidden sm:block">
-            اطلب المويه من خلال جوالك مع تطبيق وايت مياه !
-          </p>
-
-          <p className="font-cairo font-normal 
-                       text-xs leading-[100%] text-[#579BE8] 
-                       mb-3
-                       block sm:hidden">
-            اطلب المويه من جوالك
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6 
-                         justify-center sm:justify-end
-                         mx-auto sm:mx-0">
-            
-            {/* App Store Button */}
-            <div className="w-[80px] h-[25px] sm:w-[100px] sm:h-[32px] md:w-[120px] md:h-[38px] 
-                          lg:w-[140px] lg:h-[44px] xl:w-[160px] xl:h-[50px] 2xl:w-[192px] 2xl:h-[60px] 
-                          relative mx-auto sm:mx-0">
-              <Image
-                src="/appStore.png"
-                alt="Download on App Store"
-                fill
-                className="object-contain"
-                sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, (max-width: 1024px) 120px, (max-width: 1280px) 140px, (max-width: 1536px) 160px, 192px"
-              />
+      <div className="px-3 mx-auto max-w-7xl px-4 sm:px-6 md:px-8 relative z-10 h-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          {/* Left Side - Phone Image with Elegant Design */}
+          <motion.div
+            initial={{ opacity: 0, x: -60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative flex justify-center lg:justify-end order-2 lg:order-2"
+          >
+            <div className="relative">
+              {/* Elegant glow layers */}
+              <div className="absolute inset-0 -m-12">
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.2, 0.3, 0.2],
+                  }}
+                  transition={{ 
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute inset-0 bg-gradient-to-r from-[#579BE8]/25 to-[#4788d5]/15 rounded-full blur-3xl"
+                ></motion.div>
+              </div>
+              
+              {/* Phone with smooth animation */}
+              <motion.div
+                animate={{ 
+                  y: [0, -12, 0],
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="relative w-[180px] sm:w-[220px] md:w-[260px] lg:w-[320px] aspect-[4/5] z-10"
+              >
+                <Image
+                  src="/iPhone 16.png"
+                  alt="iPhone 16"
+                  fill
+                  className="object-contain drop-shadow-2xl"
+                  sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, (max-width: 1024px) 260px, 320px"
+                  priority
+                />
+              </motion.div>
             </div>
+          </motion.div>
 
-            {/* Google Play Button */}
-            <div className="w-[80px] h-[25px] sm:w-[100px] sm:h-[32px] md:w-[120px] md:h-[38px] 
-                          lg:w-[140px] lg:h-[44px] xl:w-[160px] xl:h-[50px] 2xl:w-[192px] 2xl:h-[60px] 
-                          relative mx-auto sm:mx-0">
-              <Image
-                src="/googlePlay.png"
-                alt="Download on Google Play"
-                fill
-                className="object-contain"
-                sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, (max-width: 1024px) 120px, (max-width: 1280px) 140px, (max-width: 1536px) 160px, 192px"
-              />
-            </div>
+          {/* Right Side - Enhanced Content */}
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="flex flex-col justify-center text-center lg:text-right order-1 lg:order-1 space-y-5 sm:space-y-6"
+          >
+            {/* Elegant Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 justify-center lg:justify-start mb-3"
+            >
+              <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold text-[#579BE8] bg-white/80 backdrop-blur-sm border-2 border-[#579BE8]/30 px-3 py-1.5 rounded-full shadow-md hover:shadow-lg transition-all duration-300">
+                <FaMobileAlt className="text-[#579BE8] text-xs" />
+                <span>تطبيق موبايل احترافي</span>
+              </span>
+            </motion.div>
 
-          </div>
+            {/* Elegant Title */}
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight mb-3"
+            >
+              <span className="block bg-gradient-to-r from-[#579BE8] via-[#4788d5] to-[#315782] bg-clip-text text-transparent mb-2">
+                تطبيق وايت مياه
+              </span>
+              <span className="block text-gray-800 text-base sm:text-lg md:text-xl font-semibold">
+                تجربة استثنائية في راحة يدك
+              </span>
+            </motion.h2>
+
+            {/* Elegant Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6 max-w-2xl mx-auto lg:mx-0"
+            >
+              اطلب المياه بسهولة من خلال تطبيقنا الذكي
+              <br className="hidden sm:block" />
+              <span className="hidden sm:inline">مع تتبع مباشر ودفع آمن وتوصيل سريع</span>
+            </motion.p>
+
+            {/* Stats Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="grid grid-cols-3 gap-4 sm:gap-5 mb-8"
+            >
+              {stats.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
+                    whileHover={{ scale: 1.05, y: -3 }}
+                    className="group relative bg-white/90 backdrop-blur-sm rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
+                  >
+                    <div className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#4788d5] mb-2 shadow-md group-hover:scale-110 transition-transform">
+                      <Icon className="text-white text-xs sm:text-sm" />
+                    </div>
+                    <p className="text-base sm:text-lg md:text-xl font-black text-gray-900 mb-1">{stat.value}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-600 font-medium">{stat.label}</p>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+
+            {/* Enhanced Features */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-col gap-4 mb-8"
+            >
+              {features.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: 30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                    className="flex items-start gap-4 justify-center lg:justify-end text-right group"
+                  >
+                    <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#4788d5] flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
+                      <Icon className="text-white text-base sm:text-lg" />
+                    </div>
+                    <div className="text-right flex-1">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1">{feature.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{feature.desc}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+
+            {/* Download Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+            >
+              <AppDownloadButtons className="justify-start" />
+            </motion.div>
+          </motion.div>
         </div>
-
       </div>
     </section>
   );

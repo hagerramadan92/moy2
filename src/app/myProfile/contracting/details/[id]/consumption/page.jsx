@@ -268,7 +268,7 @@ export default function ConsumptionPage() {
                     </h3>
                 </div>
 
-                <div className="w-full overflow-x-auto" style={{ direction: 'ltr' }}>
+                <div className="w-full" style={{ direction: 'ltr' }}>
                     <ResponsiveContainer width="100%" height={isMobile ? 300 : isTablet ? 350 : 400} minHeight={300}>
                         {chartType === 'line' ? (
                             <LineChart data={consumptionData} margin={{ top: 5, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: 5 }}>

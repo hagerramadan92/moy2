@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { IoWaterOutline, IoEyeOutline } from "react-icons/io5";
 import { SlLocationPin } from "react-icons/sl";
 import { FaMoneyBillWave } from "react-icons/fa6";
@@ -45,13 +46,25 @@ const HowItWorks = () => {
       dir="rtl"
       className="py-16 md:py-24 bg-[#EFF5FD] relative overflow-hidden"
     >
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[#579BE8] mb-4">
-            كيف تعمل الخدمة؟
+        <div className="px-3 mx-auto max-w-7xl relative z-10">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-6 sm:mb-8 md:mb-10"
+        >
+          <div className="inline-block mb-2 md:mb-3">
+            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+              خطوات العمل
+            </span>
+          </div>
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+            <span className="block text-[#579BE8]">كيف تعمل الخدمة؟</span>
           </h2>
-          {/* User didn't have a sub-paragraph in the reverted version, but adding a spacer or keeping it clean */}
-        </div>
+          <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+        </motion.div>
 
         {/* Desktop Wave Line SVG */}
         {/* Visible only on XL/LG screens where the 5-col grid exists */}

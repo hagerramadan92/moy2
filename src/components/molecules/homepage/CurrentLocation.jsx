@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { IoLocationOutline } from "react-icons/io5";
 
@@ -125,18 +126,29 @@ export default function CurrentLocation() {
       <div className="absolute top-0 left-0 w-72 h-72 bg-[#579BE8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#DF4F3C]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="px-3 mx-auto max-w-7xl  sm:px-6 md:px-8 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left Content */}
             <div className="space-y-8">
               {/* Title */}
-              <div className="space-y-4">
-                <h1 className="text-2xl md:text-3xl  font-bold text-[#579BE8] leading-tight">
-                  حدد موقعك بدقة ليصلك السائق بأسرع وقت
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="text-right mb-6 sm:mb-8 md:mb-10"
+              >
+                <div className="inline-block mb-2 md:mb-3">
+                  <span className="text-[10px] sm:text-xs font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+                    تحديد الموقع
+                  </span>
+                </div>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+                  <span className="block text-[#579BE8]">حدد موقعك بدقة ليصلك السائق بأسرع وقت</span>
                 </h1>
-                <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full"></div>
-              </div>
+                <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full ml-auto"></div>
+              </motion.div>
 
               {/* Features */}
               <div className="space-y-6 pt-4">

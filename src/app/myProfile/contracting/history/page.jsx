@@ -238,11 +238,11 @@ export default function ContractHistoryPage() {
     }, 0);
 
     return (
-        <div className="space-y-8 fade-in-up">
+        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
             {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 lg:gap-5">
                 {/* Active Contracts */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <FaCheckCircle size={100} className="rotate-12" />
                     </div>
@@ -252,21 +252,21 @@ export default function ContractHistoryPage() {
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
 
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                                <FaCheckCircle className="text-lg" />
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
+                                <FaCheckCircle className="text-sm md:text-base lg:text-lg" />
                             </div>
-                            <p className="text-sm font-bold opacity-90">العقود النشطة</p>
+                            <p className="text-xs md:text-sm font-bold opacity-90">العقود النشطة</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <h3 className="text-4xl font-black drop-shadow-lg">{totalActive}</h3>
+                            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalActive}</h3>
                         </div>
-                        <p className="text-xs opacity-75 mt-2 font-medium">عقود قيد التنفيذ</p>
+                        <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">عقود قيد التنفيذ</p>
                     </div>
                 </div>
 
                 {/* Completed Contracts */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <IoDocumentText size={100} className="-rotate-12" />
                     </div>
@@ -276,21 +276,21 @@ export default function ContractHistoryPage() {
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
 
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                                <IoDocumentText className="text-lg" />
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
+                                <IoDocumentText className="text-sm md:text-base lg:text-lg" />
                             </div>
-                            <p className="text-sm font-bold opacity-90">العقود المكتملة</p>
+                            <p className="text-xs md:text-sm font-bold opacity-90">العقود المكتملة</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <h3 className="text-4xl font-black drop-shadow-lg">{totalCompleted}</h3>
+                            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalCompleted}</h3>
                         </div>
-                        <p className="text-xs opacity-75 mt-2 font-medium">عقود منتهية</p>
+                        <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">عقود منتهية</p>
                     </div>
                 </div>
 
                 {/* Total Value */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
                         <MdBusinessCenter size={100} className="rotate-12" />
                     </div>
@@ -300,39 +300,39 @@ export default function ContractHistoryPage() {
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
 
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                                <MdBusinessCenter className="text-lg" />
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
+                                <MdBusinessCenter className="text-sm md:text-base lg:text-lg" />
                             </div>
-                            <p className="text-sm font-bold opacity-90">القيمة الإجمالية</p>
+                            <p className="text-xs md:text-sm font-bold opacity-90">القيمة الإجمالية</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-4xl font-black drop-shadow-lg">{totalValue.toLocaleString()}</h3>
-                            <Image src="/images/RS.png" alt="RS" width={28} height={28} quality={100} unoptimized className="opacity-90" />
+                        <div className="flex items-center gap-1.5 md:gap-2">
+                            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalValue.toLocaleString()}</h3>
+                            <Image src="/images/RS.png" alt="RS" width={28} height={28} quality={100} unoptimized className="opacity-90 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
                         </div>
-                        <p className="text-xs opacity-75 mt-2 font-medium">إجمالي التعاقدات</p>
+                        <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">إجمالي التعاقدات</p>
                     </div>
                 </div>
             </div>
 
             {/* Filters and Search */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
                 <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
                     {/* Search Input */}
                     <div className="relative flex-1 max-w-md w-full">
-                        <IoSearchOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8]" size={20} />
+                        <IoSearchOutline className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5" />
                         <input
                             type="text"
                             placeholder="ابحث برقم العقد أو الاسم..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pr-12 pl-4 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
+                            className="w-full pr-10 md:pr-12 pl-3 md:pl-4 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md"
                         />
                     </div>
 
                     {/* Date Filter */}
                     <div className="relative flex-1 w-full sm:max-w-md">
-                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={20} />
+                        <FaCalendarAlt className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none w-4 h-4 md:w-5 md:h-5" />
                         <input 
                             ref={dateInputRef}
                             type="text"
@@ -341,7 +341,7 @@ export default function ContractHistoryPage() {
                             autoComplete="off"
                             inputMode="none"
                             data-input
-                            className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-12' : 'pl-4'}`}
+                            className={`w-full pr-10 md:pr-12 py-2.5 md:py-3 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-10 md:pl-12' : 'pl-3 md:pl-4'}`}
                         />
                         {selectedDate && (
                             <button 
@@ -368,7 +368,7 @@ export default function ContractHistoryPage() {
 
                 <div className="flex gap-3 flex-wrap items-center">
                     <Select value={selectedStatus} onValueChange={setSelectedStatus} dir="rtl">
-                        <SelectTrigger className="px-5 h-[52px] !h-[52px] py-0 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold shadow-sm hover:shadow-md hover:border-[#579BE8]/50 min-w-[180px] data-[size=default]:!h-[52px]">
+                        <SelectTrigger className="px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] !h-[44px] md:!h-[48px] lg:!h-[52px] py-0 bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold text-xs md:text-sm shadow-sm hover:shadow-md hover:border-[#579BE8]/50 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] data-[size=default]:!h-[44px] md:data-[size=default]:!h-[48px] lg:data-[size=default]:!h-[52px]">
                             <SelectValue placeholder="اختر الحالة" />
                         </SelectTrigger>
                         <SelectContent className="text-right">
@@ -380,25 +380,25 @@ export default function ContractHistoryPage() {
                         </SelectContent>
                     </Select>
 
-                    <button className="flex items-center justify-center gap-2 px-5 h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-2xl hover:shadow-xl hover:shadow-[#579BE8]/25 hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md active:scale-[0.98]">
-                        <FaFileDownload className="w-4 h-4" />
-                        <span className="text-sm">تصدير</span>
+                    <button className="flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl hover:shadow-lg md:hover:shadow-xl hover:shadow-[#579BE8]/25 hover:-translate-y-0.5 transition-all duration-200 font-bold text-xs md:text-sm shadow-md active:scale-[0.98]">
+                        <FaFileDownload className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        <span>تصدير</span>
                     </button>
                 </div>
             </div>
 
             {/* Contract History Table */}
-            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-card border border-border/60 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
                 {/* Tabs Header */}
-                <div className="p-6 border-b border-border/50 flex items-center justify-between">
-                    <h3 className="font-black text-xl text-foreground">سجل التعاقدات</h3>
+                <div className="p-3 md:p-4 lg:p-6 border-b border-border/50 flex items-center justify-between flex-wrap gap-3">
+                    <h3 className="font-black text-base md:text-lg lg:text-xl text-foreground">سجل التعاقدات</h3>
                     <div className="flex items-center gap-3">
-                        <div className="flex bg-secondary/30 p-1 rounded-2xl">
+                        <div className="flex bg-secondary/30 p-0.5 md:p-1 rounded-xl md:rounded-2xl">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
+                                    className={`px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-bold transition-all relative ${activeTab === tab.id
                                         ? "bg-[#579BE8] text-white shadow-sm"
                                         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                                         }`}
@@ -418,18 +418,19 @@ export default function ContractHistoryPage() {
                 </div>
 
                 {/* Table Content */}
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[800px] text-right border-collapse">
+                <div className="w-full">
+                    <div className="overflow-x-auto scrollbar-hide">
+                        <table className="w-full text-right border-collapse">
                         <thead>
-                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4 text-right">رقم العقد</th>
-                                <th className="px-6 py-4 text-right">اسم العقد</th>
-                                <th className="px-6 py-4 hidden lg:table-cell">النوع</th>
-                                <th className="px-6 py-4 hidden xl:table-cell">تاريخ البدء</th>
-                                <th className="px-6 py-4 hidden lg:table-cell">المدة</th>
-                                <th className="px-6 py-4 text-center">القيمة</th>
-                                <th className="px-6 py-4 text-center">الحالة</th>
-                                <th className="px-6 py-4 text-center">الإجراءات</th>
+                            <tr className="bg-secondary/30 text-muted-foreground text-xs md:text-sm uppercase tracking-wider font-bold">
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-right whitespace-nowrap">رقم العقد</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-right">اسم العقد</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden lg:table-cell whitespace-nowrap">النوع</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden xl:table-cell whitespace-nowrap">تاريخ البدء</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden lg:table-cell whitespace-nowrap">المدة</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">القيمة</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">الحالة</th>
+                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
@@ -444,42 +445,42 @@ export default function ContractHistoryPage() {
                                         className="hover:bg-secondary/10 transition-colors group cursor-pointer"
                                         onClick={() => router.push(`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`)}
                                     >
-                                        <td className="px-6 py-5">
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
                                             <Link 
                                                 href={`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`} 
-                                                className="font-bold text-[#579BE8] hover:underline"
+                                                className="font-bold text-[#579BE8] hover:underline text-xs md:text-sm whitespace-nowrap"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 {contract.id}
                                             </Link>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <span className="font-bold text-foreground">{contract.title}</span>
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
+                                            <span className="font-bold text-foreground text-xs md:text-sm line-clamp-1">{contract.title}</span>
                                         </td>
-                                        <td className="px-6 py-5 hidden lg:table-cell">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${contract.type === "commercial"
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 hidden lg:table-cell">
+                                            <span className={`inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap ${contract.type === "commercial"
                                                 ? "bg-[#579BE8]/10 text-[#579BE8] dark:bg-[#579BE8]/20 dark:text-[#579BE8]"
                                                 : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"
                                                 }`}>
                                                 {contract.type === "commercial" ? (
                                                     <>
-                                                        <MdBusinessCenter size={14} />
+                                                        <MdBusinessCenter className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                                         <span>تجاري</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <FaUser size={12} />
+                                                        <FaUser className="w-3 h-3" />
                                                         <span>شخصي</span>
                                                     </>
                                                 )}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-muted-foreground text-sm hidden xl:table-cell">{contract.startDate}</td>
-                                        <td className="px-6 py-5 text-sm hidden lg:table-cell">
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-muted-foreground text-xs md:text-sm hidden xl:table-cell whitespace-nowrap">{contract.startDate}</td>
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-xs md:text-sm hidden lg:table-cell whitespace-nowrap">
                                             <span className="font-bold">{contract.duration}</span>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center justify-center gap-1 font-black text-lg text-foreground">
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
+                                            <div className="flex items-center justify-center gap-1 font-black text-xs md:text-sm lg:text-base text-foreground whitespace-nowrap">
                                                 {contract.cost}
                                                 <Image
                                                     src="/images/RS.png"
@@ -488,28 +489,28 @@ export default function ContractHistoryPage() {
                                                     height={16}
                                                     priority
                                                     unoptimized
-                                                    className="w-4 h-4 opacity-70"
+                                                    className="w-3 h-3 md:w-4 md:h-4 opacity-70"
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 text-center">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${contract.status === "active"
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
+                                            <span className={`inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap ${contract.status === "active"
                                                 ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400"
                                                 : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"
                                                 }`}>
-                                                <span className={`w-2 h-2 rounded-full ${contract.status === "active" ? "bg-green-600" : "bg-gray-600"
+                                                <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${contract.status === "active" ? "bg-green-600" : "bg-gray-600"
                                                     }`}></span>
                                                 {contract.status === "active" ? "نشط" : "مكتمل"}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-center">
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
                                             {contract.status === "active" && (
                                                 <button
                                                     onClick={(e) => handleTerminateClick(contract, e)}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95"
+                                                    className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
                                                     title="إنهاء العقد"
                                                 >
-                                                    <FaBan className="w-3.5 h-3.5" />
+                                                    <FaBan className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                                     <span>إنهاء</span>
                                                 </button>
                                             )}
@@ -519,70 +520,71 @@ export default function ContractHistoryPage() {
                             </AnimatePresence>
                             {currentContracts.length === 0 && (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-10 text-center text-muted-foreground">
+                                    <td colSpan="8" className="px-4 md:px-6 py-8 md:py-10 text-center text-muted-foreground text-xs md:text-sm">
                                         لا توجد عقود تطابق البحث
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 {/* Footer / Pagination */}
                 {filteredContracts.length > 0 && (
-                    <div className="p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="text-sm font-medium text-muted-foreground">
+                    <div className="p-3 md:p-4 lg:p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+                        <div className="text-xs md:text-sm font-medium text-muted-foreground">
                             عرض <span className="text-foreground font-bold">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredContracts.length)}</span> من أصل <span className="text-foreground font-bold">{filteredContracts.length}</span> عقد
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <button 
-                                disabled={currentPage === 1}
-                                onClick={() => onPageChange(currentPage - 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                            >
-                                <FaChevronRight className="w-3 h-3" />
-                            </button>
+                            <div className="flex items-center gap-1.5 md:gap-2">
+                                <button 
+                                    disabled={currentPage === 1}
+                                    onClick={() => onPageChange(currentPage - 1)}
+                                    className="p-1.5 md:p-2 rounded-lg md:rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <FaChevronRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                </button>
 
-                            <div className="flex items-center gap-1">
-                                {[...Array(totalPages)].map((_, idx) => {
-                                    const pageNum = idx + 1;
-                                    if (
-                                        pageNum === 1 || 
-                                        pageNum === totalPages || 
-                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                                    ) {
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => onPageChange(pageNum)}
-                                                className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
-                                                    currentPage === pageNum 
-                                                    ? "bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20" 
-                                                    : "hover:bg-secondary/50 text-muted-foreground"
-                                                }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    } else if (
-                                        pageNum === currentPage - 2 || 
-                                        pageNum === currentPage + 2
-                                    ) {
-                                        return <span key={pageNum} className="px-1 text-muted-foreground">...</span>;
-                                    }
-                                    return null;
-                                })}
+                                <div className="flex items-center gap-0.5 md:gap-1">
+                                    {[...Array(totalPages)].map((_, idx) => {
+                                        const pageNum = idx + 1;
+                                        if (
+                                            pageNum === 1 || 
+                                            pageNum === totalPages || 
+                                            (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                        ) {
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => onPageChange(pageNum)}
+                                                    className={`w-7 h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 rounded-lg md:rounded-xl text-xs md:text-sm font-bold transition-all ${
+                                                        currentPage === pageNum 
+                                                        ? "bg-[#579BE8] text-white shadow-md md:shadow-lg shadow-[#579BE8]/20" 
+                                                        : "hover:bg-secondary/50 text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        } else if (
+                                            pageNum === currentPage - 2 || 
+                                            pageNum === currentPage + 2
+                                        ) {
+                                            return <span key={pageNum} className="px-0.5 md:px-1 text-muted-foreground text-xs">...</span>;
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+
+                                <button 
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => onPageChange(currentPage + 1)}
+                                    className="p-1.5 md:p-2 rounded-lg md:rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all rotate-180"
+                                >
+                                    <FaChevronRight className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                </button>
                             </div>
-
-                            <button 
-                                disabled={currentPage === totalPages}
-                                onClick={() => onPageChange(currentPage + 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all rotate-180"
-                            >
-                                <FaChevronRight className="w-3 h-3" />
-                            </button>
-                        </div>
                     </div>
                 )}
             </div>

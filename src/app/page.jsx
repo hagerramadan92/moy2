@@ -8,7 +8,6 @@ import CustomerReviews from '@/components/molecules/homepage/CustomerReviews';
 import Deals from '@/components/molecules/homepage/Deals';
 import Footer from '@/components/molecules/common/Footer';
 import HowItWorks from '@/components/molecules/homepage/HowItWorks';
-import HowToUseAppSection from '@/components/molecules/Drivers/HowToUseAppSection';
 import React from 'react';
 import HomeCover from '@/components/molecules/homepage/HomeCover';
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   Carousel,
   CarouselContent,
@@ -12,7 +13,7 @@ import { useState, useEffect, useCallback } from "react";
 import { IoIosArrowForward } from "react-icons/io";
 export default function AvailableSize() {
   const [api, setApi] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(1);
   const [autoPlay, setAutoPlay] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,8 @@ export default function AvailableSize() {
     };
 
     api.on("select", onSelect);
+    // Start from second card (index 1)
+    api.scrollTo(1, false);
     onSelect();
 
     return () => {
@@ -74,9 +77,24 @@ export default function AvailableSize() {
   return (
     <section dir="rtl" className="py-8 sm:py-12 container mx-auto md:py-16 lg:py-20 bg-white">
       <div className=" px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center max-w-7xl mx-auto text-xl sm:text-2xl md:text-2.5xl lg:text-3xl font-bold text-[#5A9CF0] mb-8 sm:mb-10 md:mb-12 lg:mb-14">
-          السعات المتاحة
-        </h2>
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-6 sm:mb-8 md:mb-10"
+        >
+          <div className="inline-block mb-2 md:mb-3">
+            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+              السعات المتاحة
+            </span>
+          </div>
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+            <span className="block text-[#579BE8]">اختر السعة المناسبة لك</span>
+          </h2>
+          <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+        </motion.div>
 
         <div className="relative mx-auto">
           <div className="relative px-4 sm:px-6 md:px-8 lg:px-12">

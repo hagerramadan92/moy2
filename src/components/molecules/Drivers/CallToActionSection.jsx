@@ -1,73 +1,132 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { MdOutlineStarBorder } from "react-icons/md";
 import { AiTwotoneCheckCircle } from "react-icons/ai";
 import { BsStars } from "react-icons/bs";
+import { FaArrowLeft, FaHeadset } from "react-icons/fa";
 
 export default function CallToActionSection() {
+  const router = useRouter();
+  const features = [
+    { icon: MdOutlineStarBorder, text: "تقييم ٤.٩", desc: "من آلاف العملاء" },
+    { icon: AiTwotoneCheckCircle, text: "موثوق", desc: "سائقين معتمدين" },
+    { icon: BsStars, text: "خدمة سريعة", desc: "توصيل خلال ساعات" },
+  ];
+
   return (
     <section
-      className="
-        container
-        h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] xl:h-[560px]
-        flex
-        flex-col
-        items-center
-        justify-center
-        gap-[12px] sm:gap-[20px] lg:gap-[30px]
-        bg-[radial-gradient(50%_116.88%_at_50%_50%,rgba(233,242,252,0)_0%,rgba(152,193,241,0.7)_100%)]
-        font-['Cairo',_sans-serif]
-        py-6 sm:py-8
-        my-2 lg:my-4
-      "
+      className="relative w-full h-auto py-14 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-gray-50 via-white to-gray-50"
+      dir="rtl"
     >
-      <div className="container px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center gap-[4px] sm:gap-[6px] lg:gap-[8px]">
-        <h2 className="font-cairo font-normal text-xl sm:text-2xl md:text-3xl lg:text-[32px] xl:text-[40px] leading-[130%] sm:leading-[140%] lg:leading-[150%] text-[#253B80] text-center">
-          جاهز تطلب المويه؟
-        </h2>
-        <p className="font-cairo font-normal text-lg sm:text-xl md:text-2xl lg:text-[28px] xl:text-[40px] leading-[130%] sm:leading-[140%] lg:leading-[150%] text-[#253B80] text-center">
-          احصل على عروض أسعار فورية من سواقين موثوقين في منطقتك الآن
-        </p>
+      {/* Professional Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8]/3 via-transparent to-[#124987]/3"></div>
+        
+        {/* Professional dot pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle, #579BE8 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          backgroundPosition: '0 0, 12px 12px'
+        }}></div>
+        
+        {/* Subtle diagonal lines */}
+        <div className="absolute inset-0 opacity-[0.015]" style={{
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, #579BE8 10px, #579BE8 11px)`,
+        }}></div>
+        
+        {/* Top and bottom borders */}
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#579BE8]/20 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#579BE8]/20 to-transparent"></div>
+        
+        {/* Corner accents */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#579BE8]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#124987]/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-[12px] sm:gap-[16px] lg:gap-[20px] w-full px-4 sm:px-6 lg:px-8">
-        <button className="w-full sm:w-[180px] md:w-[200px] lg:w-[221px] h-[55px] sm:h-[65px] md:h-[75px] lg:h-[88px] rounded-[16px] sm:rounded-[20px] lg:rounded-[24px] flex items-center justify-center font-normal text-base sm:text-lg md:text-xl lg:text-[24px] xl:text-[28px] leading-[130%] sm:leading-[140%] lg:leading-[150%] text-white bg-gradient-to-b from-[#245893] to-[#0B1B2D] hover:opacity-90 transition-opacity duration-200">
-          اطلب الآن
-        </button>
+      <div className="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="flex flex-col items-center text-center">
+          {/* Header Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-3xl mb-8 sm:mb-10"
+          >
+            {/* Professional Badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 mb-4 rounded-full bg-[#579BE8]/10 border border-[#579BE8]/30"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-[#579BE8]"></div>
+              <span className="text-xs font-medium text-[#579BE8]">خدمة احترافية موثوقة</span>
+            </motion.div>
 
-        <button className="w-full sm:w-[250px] md:w-[280px] lg:w-[307px] h-[55px] sm:h-[65px] md:h-[75px] lg:h-[88px] rounded-[16px] sm:rounded-[20px] lg:rounded-[24px] flex items-center justify-center font-normal text-base sm:text-lg md:text-xl lg:text-[24px] xl:text-[28px] leading-[130%] sm:leading-[140%] lg:leading-[150%] text-[#1C4471] border border-[#1C4471] bg-transparent hover:bg-[#1C4471] hover:text-white transition-all duration-200">
-          تحدث مع خدمة العملاء
-        </button>
-      </div>
+            {/* Main Heading */}
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 leading-tight">
+              <span className="text-[#579BE8]">جاهز تطلب المويه؟</span>
+            </h2>
 
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-[12px] sm:gap-[20px] lg:gap-[30px] xl:gap-[40px] mt-1 sm:mt-2 lg:mt-3 w-full px-4 sm:px-6 lg:px-8">
-        <button className="flex items-center gap-2 w-auto h-[28px] sm:h-[32px] lg:h-[36px] hover:opacity-80 transition-opacity duration-200">
-          <MdOutlineStarBorder 
-            className="w-[16px] h-[15px] sm:w-[18px] sm:h-[17px] lg:w-[20px] lg:h-[19px] xl:w-[22px] xl:h-[21px] text-[#253B80] opacity-100"
-          />
-          <span className="text-[#253B80] font-normal text-sm sm:text-base lg:text-lg xl:text-[24px] leading-[130%] sm:leading-[140%] lg:leading-[150%]">
-            تقييم ٤.٩
-          </span>
-        </button>
+            {/* Subtitle */}
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed">
+              احصل على عروض أسعار فورية من سواقين موثوقين في منطقتك الآن
+            </p>
+          </motion.div>
 
-        <button className="flex items-center gap-2 w-auto h-[28px] sm:h-[32px] lg:h-[36px] hover:opacity-80 transition-opacity duration-200">
-          <AiTwotoneCheckCircle 
-            className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] lg:w-[24px] lg:h-[24px] xl:w-[28px] xl:h-[28px] text-[#253B80] opacity-100"
-          />
-          <span className="text-[#253B80] font-normal text-sm sm:text-base lg:text-lg xl:text-[24px] leading-[130%] sm:leading-[140%] lg:leading-[150%]">
-            موثوق
-          </span>
-        </button>
+          {/* Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 w-full mb-8 sm:mb-10"
+          >
+            {/* Primary Button */}
+            <motion.button
+              onClick={() => router.push("/orders")}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative w-full sm:w-auto sm:min-w-[180px] md:min-w-[200px] h-12 sm:h-14 rounded-xl border border-[#94c5f8] bg-gradient-to-r from-[#579BE8] to-[#124987] text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
+            >
+              {/* Subtle shine on hover */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full"
+                transition={{ duration: 0.6 }}
+              />
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <span>اطلب الآن</span>
+                <FaArrowLeft className="text-xs group-hover:-translate-x-0.5 transition-transform" />
+              </span>
+            </motion.button>
 
-        <button className="flex items-center gap-2 w-auto h-[28px] sm:h-[32px] lg:h-[36px] hover:opacity-80 transition-opacity duration-200">
-          <BsStars 
-            className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px] lg:w-[24px] lg:h-[24px] xl:w-[28px] xl:h-[28px] text-[#253B80] opacity-100"
-          />
-          <span className="text-[#253B80] font-normal text-sm sm:text-base lg:text-lg xl:text-[24px] leading-[130%] sm:leading-[140%] lg:leading-[150%]">
-            خدمة سريعة
-          </span>
-        </button>
+            {/* Secondary Button */}
+            <motion.button
+              onClick={() => router.push("/myProfile/help-center")}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative w-full sm:w-auto sm:min-w-[220px] md:min-w-[240px] h-12 sm:h-14 rounded-xl border border-[#94c5f8] bg-gradient-to-r from-[#579BE8] to-[#124987] text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
+            >
+              {/* Subtle shine on hover */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full"
+                transition={{ duration: 0.6 }}
+              />
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <FaHeadset className="text-sm" />
+                <span>تحدث مع خدمة العملاء</span>
+              </span>
+            </motion.button>
+          </motion.div>
+
+       
+        </div>
       </div>
     </section>
   );

@@ -142,7 +142,7 @@ export default function ContractingPage() {
     const iconClasses = (name) => `absolute right-4 ${errors[name] ? 'top-[3.4rem]' : 'top-[3.3rem]'} text-muted-foreground/60 w-5 h-5`;
 
     return (
-        <div className="space-y-6 md:space-y-8 fade-in-up">
+        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
             {/* Enhanced Hero Card */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -150,7 +150,7 @@ export default function ContractingPage() {
                 transition={{ duration: 0.6 }}
                 className="relative"
             >
-                <div className="flex py-8 md:py-10 px-6 md:px-8 flex-col gap-5 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-2xl md:rounded-3xl shadow-2xl relative overflow-hidden group">
+                <div className="flex py-5 md:py-6 lg:py-8 px-4 md:px-6 lg:px-8 flex-col gap-3 md:gap-4 lg:gap-5 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-xl md:rounded-2xl lg:rounded-3xl shadow-xl md:shadow-2xl relative overflow-hidden group">
                     {/* Enhanced Decorative Background Elements */}
                     <div className="absolute top-0 right-0 p-4 opacity-[0.08] rotate-12 group-hover:rotate-6 transition-transform duration-1000">
                         <FaHardHat size={140} className="text-white" />
@@ -189,8 +189,8 @@ export default function ContractingPage() {
                             <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xl border-2 border-white/30 mb-2">
                                 <FaHardHat className="w-8 h-8 md:w-10 md:h-10 text-white" />
                             </div>
-                            <h2 className="text-2xl md:text-3xl font-black drop-shadow-lg">طلب تعاقد جديد</h2>
-                            <p className="text-sm md:text-base opacity-90 font-medium">اختر نوع التعاقد واملأ البيانات المطلوبة</p>
+                            <h2 className="text-lg md:text-xl lg:text-2xl font-black drop-shadow-lg">طلب تعاقد جديد</h2>
+                            <p className="text-xs md:text-sm lg:text-base opacity-90 font-medium">اختر نوع التعاقد واملأ البيانات المطلوبة</p>
                         </motion.div>
                     </div>
                 </div>
@@ -201,17 +201,17 @@ export default function ContractingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl md:rounded-3xl shadow-xl overflow-hidden flex flex-col"
+                className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl lg:rounded-3xl shadow-lg md:shadow-xl overflow-hidden flex flex-col"
             >
                 {/* Enhanced Tabs Header */}
-                <div className="p-5 md:p-6 border-b-2 border-border/60 flex items-center justify-center bg-gradient-to-b from-secondary/10 to-transparent">
-                    <div className="flex bg-secondary/40 dark:bg-secondary/20 p-2 rounded-2xl w-full max-w-md shadow-inner">
+                <div className="p-3 md:p-4 lg:p-5 border-b-2 border-border/60 flex items-center justify-center bg-gradient-to-b from-secondary/10 to-transparent">
+                    <div className="flex bg-secondary/40 dark:bg-secondary/20 p-1.5 md:p-2 rounded-xl md:rounded-2xl w-full max-w-md shadow-inner">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2.5 py-3 md:py-3.5 rounded-xl text-sm md:text-base font-black transition-all relative group ${activeTab === tab.id
-                                    ? "text-[#579BE8] shadow-lg"
+                                className={`flex-1 flex items-center justify-center gap-2 md:gap-2.5 py-2 md:py-2.5 lg:py-3 rounded-lg md:rounded-xl text-xs md:text-sm lg:text-base font-black transition-all relative group ${activeTab === tab.id
+                                    ? "text-[#579BE8] shadow-md md:shadow-lg"
                                     : "text-muted-foreground hover:text-foreground hover:bg-white/80 dark:hover:bg-card/80"
                                     }`}
                             >
@@ -234,25 +234,25 @@ export default function ContractingPage() {
                 </div>
 
                 {/* Enhanced Split Layout Section */}
-                <div className="flex flex-col lg:flex-row min-h-[600px]">
+                <div className="flex flex-col lg:flex-row min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
                     {/* Enhanced Illustration Side */}
                     <motion.div
                         key={activeTab}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="lg:w-[40%] relative bg-gradient-to-br from-[#579BE8]/5 via-[#579BE8]/10 to-[#124987]/5 dark:from-[#579BE8]/10 dark:via-[#579BE8]/5 dark:to-[#124987]/10 p-8 md:p-10 lg:p-12 flex flex-col items-center justify-center text-center overflow-hidden border-l-2 border-border/40"
+                        className="lg:w-[40%] relative bg-gradient-to-br from-[#579BE8]/5 via-[#579BE8]/10 to-[#124987]/5 dark:from-[#579BE8]/10 dark:via-[#579BE8]/5 dark:to-[#124987]/10 p-4 md:p-6 lg:p-8 xl:p-12 flex flex-col items-center justify-center text-center overflow-hidden border-l-2 border-border/40"
                     >
                         <div className="absolute top-0 right-0 w-40 h-40 bg-[#579BE8]/10 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
                         <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#124987]/10 rounded-full translate-y-28 -translate-x-28 blur-3xl"></div>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#579BE8]/5 rounded-full blur-3xl"></div>
 
-                        <div className="relative z-10 space-y-6 md:space-y-8">
+                        <div className="relative z-10 space-y-4 md:space-y-5 lg:space-y-6">
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{ delay: 0.3, duration: 0.5 }}
-                                className="w-full max-w-[240px] md:max-w-[280px] mx-auto"
+                                className="w-full max-w-[180px] md:max-w-[220px] lg:max-w-[240px] xl:max-w-[280px] mx-auto"
                             >
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8]/20 to-[#124987]/20 rounded-3xl blur-2xl transform scale-110"></div>
@@ -270,8 +270,8 @@ export default function ContractingPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
                             >
-                                <h3 className="text-xl md:text-2xl font-black mb-3 text-foreground">{activeTab === 'commercial' ? "تعاقد تجاري" : "تعاقد شخصي"}</h3>
-                                <p className="text-sm md:text-base text-muted-foreground leading-relaxed px-2 md:px-4 font-medium">
+                                <h3 className="text-base md:text-lg lg:text-xl font-black mb-2 md:mb-3 text-foreground">{activeTab === 'commercial' ? "تعاقد تجاري" : "تعاقد شخصي"}</h3>
+                                <p className="text-xs md:text-sm lg:text-base text-muted-foreground leading-relaxed px-2 md:px-4 font-medium">
                                     {activeTab === 'commercial'
                                         ? "حلول متكاملة للشركات والمؤسسات مع إدارة ذكية لمواقع التوصيل المتعددة."
                                         : "خطة مريحة لمنزلك أو استراحتك تضمن لك وفرة المياه دائماً وبأقل التكاليف."}
@@ -286,70 +286,70 @@ export default function ContractingPage() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="lg:w-[60%] p-6 md:p-8 lg:p-10 bg-gradient-to-br from-white to-secondary/5 dark:from-card dark:to-secondary/10"
+                        className="lg:w-[60%] p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white to-secondary/5 dark:from-card dark:to-secondary/10"
                     >
-                        <form className="space-y-5 md:space-y-6" onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                                <div className="space-y-2 relative">
-                                    <label className={`${labelClasses} text-sm md:text-base`}>{activeTab === 'commercial' ? "اسم المؤسسة" : "الاسم الكامل"}</label>
+                        <form className="space-y-4 md:space-y-5" onSubmit={handleSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>{activeTab === 'commercial' ? "اسم المؤسسة" : "الاسم الكامل"}</label>
                                     <div className="relative">
-                                        <FaBuilding className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
                                             type="text"
                                             name="name"
                                             value={formData.name}
                                             onChange={handleInputChange}
                                             placeholder={activeTab === 'commercial' ? "مؤسسة وايت مياه التجارية" : "عبدالله محمد الفهد"}
-                                            className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md`}
                                         />
                                     </div>
-                                    {errors.name && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                    {errors.name && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.name}
                                     </p>}
                                 </div>
-                                <div className="space-y-2 relative">
-                                    <label className={`${labelClasses} text-sm md:text-base`}>اسم مقدم الطلب</label>
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>اسم مقدم الطلب</label>
                                     <div className="relative">
-                                        <FaUser className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <FaUser className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
                                             type="text"
                                             name="applicantName"
                                             value={formData.applicantName}
                                             onChange={handleInputChange}
                                             placeholder="فهد السليمان"
-                                            className={`w-full bg-white dark:bg-card border-2 ${errors.applicantName ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.applicantName ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md`}
                                         />
                                     </div>
-                                    {errors.applicantName && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                    {errors.applicantName && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.applicantName}
                                     </p>}
                                 </div>
-                                <div className="space-y-2 relative">
-                                    <label className={`${labelClasses} text-sm md:text-base`}>رقم الجوال</label>
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>رقم الجوال</label>
                                     <div className="relative">
-                                        <FaPhoneAlt className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <FaPhoneAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
                                             type="tel"
                                             name="phone"
                                             value={formData.phone}
                                             onChange={handleInputChange}
                                             placeholder="05XXXXXXXX"
-                                            className={`w-full bg-white dark:bg-card border-2 ${errors.phone ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.phone ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md`}
                                         />
                                     </div>
-                                    {errors.phone && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                    {errors.phone && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.phone}
                                     </p>}
                                 </div>
-                                <div className="space-y-2 relative">
-                                    <label className={`${labelClasses} text-sm md:text-base`}>مدة التعاقد</label>
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>مدة التعاقد</label>
                                     <div className="relative">
                                         <Select 
                                             value={formData.duration} 
                                             onValueChange={(value) => setFormData(prev => ({ ...prev, duration: value }))}
                                             dir="rtl"
                                         >
-                                            <SelectTrigger className="w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-xl md:rounded-2xl pr-12 pl-12 py-3.5 md:py-4 h-auto focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md !h-[52px] md:!h-[56px] data-[size=default]:!h-[52px] md:data-[size=default]:!h-[56px]">
+                                            <SelectTrigger className="w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-lg md:rounded-xl lg:rounded-2xl pr-10 md:pr-12 pl-10 md:pl-12 py-2.5 md:py-3 lg:py-3.5 h-auto focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md !h-[44px] md:!h-[48px] lg:!h-[52px] data-[size=default]:!h-[44px] md:data-[size=default]:!h-[48px] lg:data-[size=default]:!h-[52px]">
                                                 <SelectValue placeholder="اختر مدة التعاقد" />
                                             </SelectTrigger>
                                             <SelectContent className="text-right">
@@ -359,48 +359,48 @@ export default function ContractingPage() {
                                                 <SelectItem value="سنة كاملة">سنة كاملة</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10 pointer-events-none" />
+                                        <FaCalendarAlt className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10 pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2 relative">
-                                <label className={`${labelClasses} text-sm md:text-base`}>عنوان مكانك الرئيسي</label>
+                            <div className="space-y-1.5 md:space-y-2 relative">
+                                <label className={`${labelClasses} text-xs md:text-sm`}>عنوان مكانك الرئيسي</label>
                                 <div className="relative">
-                                    <FaMapMarkerAlt className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                    <FaMapMarkerAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                     <input
                                         type="text"
                                         name="address"
                                         value={formData.address}
                                         onChange={handleInputChange}
                                         placeholder="الرياض، حي الملقا، شارع الأمير محمد بن سعد"
-                                        className={`w-full bg-white dark:bg-card border-2 ${errors.address ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                        className={`w-full bg-white dark:bg-card border-2 ${errors.address ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md`}
                                     />
                                 </div>
-                                {errors.address && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                {errors.address && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                     <span>⚠️</span> {errors.address}
                                 </p>}
                             </div>
 
-                            <div className="space-y-2 relative">
-                                <label className={`${labelClasses} text-sm md:text-base`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
+                            <div className="space-y-1.5 md:space-y-2 relative">
+                                <label className={`${labelClasses} text-xs md:text-sm`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
                                 <div className="relative">
-                                    <FaEdit className={`absolute right-4 top-4 text-[#579BE8] w-5 h-5 z-10`} />
+                                    <FaEdit className={`absolute right-3 md:right-4 top-3 md:top-4 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                     <textarea
                                         name="notes"
                                         value={formData.notes}
                                         onChange={handleInputChange}
-                                        rows="4"
+                                        rows="3"
                                         placeholder="اكتب أي متطلبات خاصة أو ملاحظات لمواقع التوصيل هنا..."
-                                        className={`w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-xl md:rounded-2xl px-12 py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md resize-none`}
+                                        className={`w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-3 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md resize-none`}
                                     ></textarea>
                                 </div>
                             </div>
 
-                            <div className="pt-2 md:pt-4">
+                            <div className="pt-2 md:pt-3">
                                 <Button 
                                     type="submit" 
-                                    className="w-full py-4 md:py-6 cursor-pointer rounded-lg text-xl font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-md hover:shadow-lg transition-all"
+                                    className="w-full py-3 md:py-4 lg:py-5 cursor-pointer rounded-lg md:rounded-xl text-sm md:text-base lg:text-lg font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-md hover:shadow-lg transition-all"
                                 >
                                     تأكيد طلب التعاقد
                                 </Button>

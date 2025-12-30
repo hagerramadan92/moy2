@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import React from "react";
-  import WaterTypeSelect from "../homepage/WaterTypeSelect";
-  import WaterSizeSelect from "../homepage/WaterSizeSelect";
+import WaterTypeSelect from "../homepage/WaterTypeSelect";
+import WaterSizeSelect from "../homepage/WaterSizeSelect";
+import AppDownloadButtons from "../homepage/AppDownloadButtons";
 
 export default function HomeCover() {
   const [waterType, setWaterType] = React.useState("");
@@ -47,37 +48,7 @@ export default function HomeCover() {
           <p className="desc text-base sm:text-lg md:text-xl mb-6 sm:mb-8">
             حدد الكمية والموقع واستقبل عروض الأسعار من السواقين فورا
           </p>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            {/* Google Play */}
-            <button className="flex flex-row-reverse items-center justify-start gap-2 sm:gap-3 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto text-white border-[#94c5f8] bg-gradient-to-r from-[#579BE8] to-[#124987]">
-              <Image
-                src="/images/Playstore.png"
-                width={28}
-                height={34}
-                alt="Google Play"
-                className="w-6 h-7 sm:w-7 sm:h-9 flex-shrink-0"
-              />
-              <div className="text-right">
-                <p className="text-[10px] sm:text-xs leading-tight">Download on</p>
-                <p className="text-xs sm:text-sm font-semibold leading-tight">Google Play</p>
-              </div>
-            </button>
-
-            {/* App Store */}
-            <button className="flex flex-row-reverse items-center justify-start gap-2 sm:gap-3 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto text-white border-[#94c5f8] bg-gradient-to-r from-[#579BE8] to-[#124987]">
-              <Image
-                src="/images/app.png"
-                width={28}
-                height={34}
-                alt="App Store"
-                className="w-6 h-7 sm:w-7 sm:h-9 flex-shrink-0"
-              />
-              <div className="text-right">
-                <p className="text-[10px] sm:text-xs leading-tight">Download on</p>
-                <p className="text-xs sm:text-sm font-semibold leading-tight">App Store</p>
-              </div>
-            </button>
-          </div>
+          <AppDownloadButtons />
         </div>
       </div>
       </div>
