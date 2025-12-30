@@ -132,12 +132,12 @@ export default function AppPromotionSection() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight mb-3"
             >
-              <span className="block bg-gradient-to-r from-[#579BE8] via-[#4788d5] to-[#315782] bg-clip-text text-transparent mb-2">
+              <span className="block  bg-gradient-to-r from-[#579BE8] via-[#4788d5] to-[#315782] bg-clip-text text-transparent mb-2">
                 تطبيق وايت مياه
               </span>
-              <span className="block text-gray-800 text-base sm:text-lg md:text-xl font-semibold">
+              {/* <span className="block text-gray-800 text-base sm:text-lg md:text-xl font-semibold">
                 تجربة استثنائية في راحة يدك
-              </span>
+              </span> */}
             </motion.h2>
 
             {/* Elegant Description */}
@@ -146,7 +146,7 @@ export default function AppPromotionSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6 max-w-2xl mx-auto lg:mx-0"
+              className="text-sm sm:text-base mb-3 md:text-lg text-gray-600 leading-relaxed mb-6 max-w-2xl mx-auto lg:mx-0"
             >
               اطلب المياه بسهولة من خلال تطبيقنا الذكي
               <br className="hidden sm:block" />
@@ -154,34 +154,7 @@ export default function AppPromotionSection() {
             </motion.p>
 
             {/* Stats Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="grid grid-cols-3 gap-4 sm:gap-5 mb-8"
-            >
-              {stats.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
-                    whileHover={{ scale: 1.05, y: -3 }}
-                    className="group relative bg-white/90 backdrop-blur-sm rounded-2xl p-4 sm:p-5 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-                  >
-                    <div className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#4788d5] mb-2 shadow-md group-hover:scale-110 transition-transform">
-                      <Icon className="text-white text-xs sm:text-sm" />
-                    </div>
-                    <p className="text-base sm:text-lg md:text-xl font-black text-gray-900 mb-1">{stat.value}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-600 font-medium">{stat.label}</p>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
+          
 
             {/* Enhanced Features */}
             <motion.div
