@@ -13,7 +13,7 @@ export default function StatsSection() {
     <section className="flex flex-col font-cairo sm:flex-row justify-center items-center px-4 sm:px-6 py-8 sm:py-12 lg:py-16 bg-white my-4 lg:my-8">
       {stats.map((stat, index) => (
         <React.Fragment key={index}>
-          <div className="flex flex-col items-center justify-center container sm:w-auto min-w-[200px] sm:min-w-[250px] lg:w-[359px] h-[150px] sm:h-[180px] lg:h-[200px] text-center relative px-4">
+          <div className="container flex flex-col items-center justify-center  sm:w-auto min-w-[200px] sm:min-w-[250px] lg:w-[359px] h-[150px] sm:h-[180px] lg:h-[200px] text-center relative px-4">
             <h3 className="text-[36px] sm:text-[44px] lg:text-[52px] font-semibold text-[#579BE8] leading-[1.2] sm:leading-[1.4] lg:leading-[1.6]">
               {stat.number}
             </h3>

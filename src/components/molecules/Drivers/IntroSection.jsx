@@ -4,41 +4,58 @@ import React from "react";
 
 export default function IntroSection() {
   return (
-    <section className="flex flex-col lg:flex-row-reverse  font-cairo gap-4 sm:gap-6 px-4 sm:px-6 py-6 sm:py-8 max-w-[1000px] mb-4 md:mb-6 mx-auto">
+    <section className="flex flex-col lg:flex-row-reverse items-center lg:items-start font-cairo gap-6 sm:gap-8 px-4 sm:px-6 py-6 sm:py-8 max-w-[1000px] mb-4 md:mb-6 mx-auto">
       
-      {/* Text Section */}
-      <div className="flex flex-col justify-center items-start  lg:w-[550px] gap-3 sm:gap-4">
-        <div className="flex items-start">
-          {/*عننا */}
-          <span className="text-[#579BE8] font-medium text-[16px] sm:text-[18px] whitespace-nowrap mt-1">
-            عننا
-          </span>
+      {/* Image Section - First on mobile, second on desktop */}
+      <div className="order-1 lg:order-2 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] lg:w-[350px] lg:h-[350px] rounded-[20px] sm:rounded-[24px] overflow-hidden lg:mr-8 lg:ml-8">
+        <img
+          src="/driver.jpg" 
+          alt="Driver using the app"
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Text Section - Second on mobile, first on desktop */}
+      <div className="order-2 lg:order-1 flex flex-col justify-center lg:justify-start items-center lg:items-start lg:w-[550px] lg:mt-[60px]">
+        <div className="w-full flex flex-col lg:flex-row items-center lg:items-start gap-2 sm:gap-3">
+          {/* "عننا" - positioned for special alignment on desktop */}
+          <div className="flex flex-col items-center lg:items-start lg:mr-4">
+            <span className="text-[#579BE8] font-medium text-[16px] sm:text-[18px] whitespace-nowrap lg:mb-8">
+              عننا
+            </span>
+          </div>
           
-          <div className="text-black font-semibold text-[18px] sm:text-[20px] lg:text-[22px] leading-[1.4] sm:leading-[1.5] mr-3 sm:mr-4">
-            <div className="flex flex-col">
-              <span>نرتقي بخدماتنا عبر ابتكارٍ لا يتوقف،</span>
-              <span className="mr-[-20px] sm:mr-[-30px] lg:mr-[-40px]">وبفريق يؤمن أن الإنسان هو المحرك</span>
-              <span className="mr-[-20px] sm:mr-[-30px] lg:mr-[-40px]">الحقيقي لكل تطوّر</span>
+          {/* Text content - centered on mobile, aligned on desktop */}
+          <div className="flex-1 text-center lg:text-right">
+            <div className="text-black font-semibold text-[18px] sm:text-[20px] lg:text-[22px] leading-[1.4] sm:leading-[1.5]">
+              <div className="flex flex-col items-center lg:items-start">
+                {/* First line */}
+                <span>نرتقي بخدماتنا عبر ابتكارٍ لا يتوقف،</span>
+                
+                {/* Second line - positioned under "عننا" on desktop */}
+                <div className="mt-1 lg:mt-0 lg:mr-[-40px]">
+                  <span>وبفريق يؤمن أن الإنسان هو المحرك</span>
+                </div>
+                
+                {/* Third line */}
+                 <div className="mt-1 lg:mt-0 lg:mr-[-40px]">
+                <span className="mt-1">الحقيقي لكل تطوّر</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="w-full mt-3 sm:mt-4 lg:mt-6 lg:mr-[-40px]">
+              <p className="text-black font-normal text-[13px] sm:text-[14px] leading-[1.6] sm:leading-[1.8] lg:text-nowrap">
+                يعمل تطبيق المايّة على تسهيل حياة السائقين من خلال توفير حلول ذكية تنظّم الوقت وتقلل
+                <br className="hidden sm:block" />
+                الجهد وتمنحهم وضوحًا أكبر في إدارة رحلاتهم وأعمالهم اليومية، مما يجعل تجربتهم أكثر راحة
+                <br className="hidden sm:block" />
+                وسلاسة دون أي تعقيد
+              </p>
             </div>
           </div>
         </div>
-
-        <p className="text-black font-normal text-[13px] sm:text-[14px] leading-[1.6] sm:leading-[1.8] mt-3 sm:mt-4">
-          يعمل تطبيق المايّة على تسهيل حياة السائقين من خلال توفير حلول ذكية تنظّم الوقت وتقلل
-          <br className="hidden sm:block" />
-          الجهد وتمنحهم وضوحًا أكبر في إدارة رحلاتهم وأعمالهم اليومية، مما يجعل تجربتهم أكثر راحة
-          <br className="hidden sm:block" />
-          وسلاسة دون أي تعقيد
-        </p>
-      </div>
-
-      {/* Image Section */}
-      <div className="w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] lg:w-[320px] lg:h-[320px] rounded-[20px] sm:rounded-[24px] overflow-hidden">
-        <img
-          src="/driver.jpg" 
-          alt="picture of driver"
-          className="w-full h-full object-cover"
-        />
       </div>
 
     </section>
