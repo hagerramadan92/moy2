@@ -1,10 +1,21 @@
  
+// const nextConfig = {
+//   devIndicators: false,
+//   reactStrictMode: false,
+//   images: {
+//     remotePatterns: [],
+//   },
+// };
+
+// module.exports = nextConfig
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  devIndicators: false,
-  reactStrictMode: false,
-  images: {
-    remotePatterns: [],
-  },
+  reactStrictMode: true,
+  // تعطيل Turbopack
+  experimental: {
+    turbo: undefined
+  }
 };
 
-module.exports = nextConfig
+module.exports = nextConfig;

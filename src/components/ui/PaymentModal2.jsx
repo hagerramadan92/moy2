@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import OrderScheduledModal from './OrderScheduledModal';
 
 // Payment methods configuration
 const PAYMENT_METHODS = [
@@ -178,70 +179,91 @@ const PaymentOptionsList = ({ methods, selectedMethod, onSelectMethod }) => (
   </div>
 );
 
-// Confirm button component
-const ConfirmButton = ({ onClick }) => (
-  <button
-    onClick={onClick}
-    className="
-      w-full h-14
-      rounded-xl md:rounded-2xl
-      bg-[#579BE8]
-      flex items-center justify-center
-      hover:bg-[#4688d6]
-      transition-colors duration-200
-      mt-4 md:mt-6
-    "
-  >
-    <span className="font-cairo font-normal text-lg md:text-xl text-white">
-      تأكيد الطلب
-    </span>
-  </button>
-);
-
 // Main Payment Modal component
-export default function PaymentModal({ isOpen, onClose, onConfirm, selectedDriverId }) {
+export default function PaymentModal2({ isOpen, onClose, onConfirm, selectedDriverId }) {
   const [selectedMethod, setSelectedMethod] = useState('cash');
+  const [showOrderScheduledModal, setShowOrderScheduledModal] = useState(false);
   const router = useRouter();
   
-  // Don't render if modal is not open
-  if (!isOpen) return null;
+  // Don't render if no modal is open
+  if (!isOpen && !showOrderScheduledModal) return null;
   
   // Handle order confirmation
   const handleConfirm = () => {
-    // Call original confirmation handler if provided
+    // Call original confirmation handler
     onConfirm?.(selectedMethod, selectedDriverId);
     
-    // Close the modal
+    // Close payment modal
     onClose?.();
     
-    // Navigate to order details page
-    router.push('/orders/details');
+    // Open order scheduled modal
+    setShowOrderScheduledModal(true);
+  };
+  
+  // Close order scheduled modal
+  const handleCloseOrderScheduledModal = () => {
+    setShowOrderScheduledModal(false);
+  };
+  
+  // Handle home navigation
+  const handleGoToHome = () => {
+    setShowOrderScheduledModal(false);
+    router.push('/');
   };
   
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-      <div className="mt-16 md:mt-20 lg:mt-24 w-full max-w-xs sm:max-w-sm md:max-w-md">
-        <div className="
-          w-full h-auto min-h-[400px] md:min-h-[450px]
-          bg-white rounded-2xl md:rounded-3xl
-          shadow-lg relative overflow-hidden
-          p-6 md:p-8
-        ">
-          <CloseButton onClose={onClose} />
-          <ModalTitle />
-          
-          <div className="mt-20 md:mt-24 flex flex-col items-center w-full">
-            <div className="w-full max-w-[422px]">
-              <PaymentOptionsList
-                methods={PAYMENT_METHODS}
-                selectedMethod={selectedMethod}
-                onSelectMethod={setSelectedMethod}
-              />
-              <ConfirmButton onClick={handleConfirm} />
+    <>
+      {/* Payment Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="mt-16 md:mt-20 lg:mt-24 w-full max-w-xs sm:max-w-sm md:max-w-md">
+            <div className="
+              w-full h-auto min-h-[400px] md:min-h-[450px]
+              bg-white rounded-2xl md:rounded-3xl
+              shadow-lg relative overflow-hidden
+              p-6 md:p-8
+            ">
+              <CloseButton onClose={onClose} />
+              <ModalTitle />
+              
+              <div className="mt-20 md:mt-24 flex flex-col items-center w-full">
+                <div className="w-full max-w-[422px]">
+                  <PaymentOptionsList
+                    methods={PAYMENT_METHODS}
+                    selectedMethod={selectedMethod}
+                    onSelectMethod={setSelectedMethod}
+                  />
+                  <button
+                    onClick={handleConfirm}
+                    className="
+                      w-full h-14
+                      rounded-xl md:rounded-2xl
+                      bg-[#579BE8]
+                      flex items-center justify-center
+                      hover:bg-[#4688d6]
+                      transition-colors duration-200
+                      mt-4 md:mt-6
+                    "
+                  >
+                    <span className="font-cairo font-normal text-lg md:text-xl text-white">
+                      تأكيد الطلب
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Order Scheduled Confirmation Modal */}
+      {showOrderScheduledModal && (
+        <OrderScheduledModal
+          isOpen={showOrderScheduledModal}
+          onClose={handleCloseOrderScheduledModal}
+          onGoToHome={handleGoToHome}
+        />
+      )}
+    </>
   );
 }
