@@ -1,24 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     FaArrowRight, FaChevronRight, FaCalendarAlt, FaFileDownload,
-    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle
+    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle, FaTimes, FaBan
 } from "react-icons/fa";
 import { MdBusinessCenter, MdFilterList } from "react-icons/md";
 import { IoSearchOutline, IoDocumentText } from "react-icons/io5";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import flatpickr from "flatpickr";
+import { Arabic } from "flatpickr/dist/l10n/ar.js";
+import "flatpickr/dist/flatpickr.min.css";
+import { toast } from "react-hot-toast";
 
 export default function ContractHistoryPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
+    const [selectedDate, setSelectedDate] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+    const dateInputRef = useRef(null);
+    const flatpickrInstance = useRef(null);
+    const [showTerminationModal, setShowTerminationModal] = useState(false);
+    const [selectedContract, setSelectedContract] = useState(null);
+    const [terminationReason, setTerminationReason] = useState("");
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Sample contract history data
     const contractHistory = [
@@ -101,10 +124,98 @@ export default function ContractHistoryPage() {
         }
     };
 
+    // Initialize Flatpickr
+    useEffect(() => {
+        if (dateInputRef.current && !flatpickrInstance.current) {
+            try {
+                flatpickrInstance.current = flatpickr(dateInputRef.current, {
+                    locale: Arabic,
+                    dateFormat: "Y-m-d",
+                    defaultDate: selectedDate || null,
+                    onChange: (selectedDates, dateStr) => {
+                        setSelectedDate(dateStr);
+                    },
+                    allowInput: false,
+                    clickOpens: true,
+                    animate: true,
+                    monthSelectorType: "static",
+                    static: true,
+                    disableMobile: true,
+                    wrap: false,
+                });
+            } catch (error) {
+                console.error("Error initializing Flatpickr:", error);
+            }
+        }
+
+        return () => {
+            if (flatpickrInstance.current) {
+                try {
+                    // Check if the input element still exists in the DOM
+                    if (dateInputRef.current && dateInputRef.current.parentNode) {
+                        flatpickrInstance.current.destroy();
+                    }
+                } catch (error) {
+                    // Silently handle cleanup errors
+                    console.warn("Error destroying Flatpickr:", error);
+                } finally {
+                    flatpickrInstance.current = null;
+                }
+            }
+        };
+    }, []);
+
+    // Update flatpickr when selectedDate changes externally
+    useEffect(() => {
+        if (flatpickrInstance.current) {
+            try {
+                if (selectedDate) {
+                    flatpickrInstance.current.setDate(selectedDate, false);
+                } else {
+                    flatpickrInstance.current.clear();
+                }
+            } catch (error) {
+                console.warn("Error updating Flatpickr date:", error);
+            }
+        }
+    }, [selectedDate]);
+
     // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, selectedStatus, searchQuery]);
+    }, [activeTab, selectedStatus, searchQuery, selectedDate]);
+
+    // Handle termination
+    const handleTerminateClick = (contract, e) => {
+        e.stopPropagation();
+        setSelectedContract(contract);
+        setTerminationReason("");
+        setShowTerminationModal(true);
+    };
+
+    const handleTerminationCancel = () => {
+        setShowTerminationModal(false);
+        setSelectedContract(null);
+        setTerminationReason("");
+    };
+
+    const handleTerminationConfirm = () => {
+        if (!terminationReason.trim()) {
+            toast.error("يرجى إدخال سبب الإنهاء");
+            return;
+        }
+
+        // Here you would typically make an API call to terminate the contract
+        // For now, we'll just show a success message
+        toast.success(`تم إرسال طلب إنهاء العقد ${selectedContract.id} بنجاح`, {
+            duration: 4000,
+            icon: "✅",
+        });
+
+        setShowTerminationModal(false);
+        setSelectedContract(null);
+        setTerminationReason("");
+    };
 
     const tabs = [
         { id: "all", label: "الكل" },
@@ -206,31 +317,72 @@ export default function ContractHistoryPage() {
 
             {/* Filters and Search */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="relative flex-1 max-w-md w-full">
-                    <IoSearchOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-                    <input
-                        type="text"
-                        placeholder="ابحث برقم العقد أو الاسم..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pr-12 pl-4 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
-                    />
+                <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-md w-full">
+                        <IoSearchOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8]" size={20} />
+                        <input
+                            type="text"
+                            placeholder="ابحث برقم العقد أو الاسم..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pr-12 pl-4 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
+                        />
+                    </div>
+
+                    {/* Date Filter */}
+                    <div className="relative flex-1 w-full sm:max-w-md">
+                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={20} />
+                        <input 
+                            ref={dateInputRef}
+                            type="text"
+                            placeholder="اختر التاريخ"
+                            readOnly
+                            autoComplete="off"
+                            inputMode="none"
+                            data-input
+                            className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-12' : 'pl-4'}`}
+                        />
+                        {selectedDate && (
+                            <button 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    setSelectedDate("");
+                                    if (flatpickrInstance.current) {
+                                        try {
+                                            flatpickrInstance.current.clear();
+                                        } catch (error) {
+                                            console.warn("Error clearing Flatpickr:", error);
+                                        }
+                                    }
+                                }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
+                                title="مسح التاريخ"
+                            >
+                                <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex gap-3 flex-wrap">
-                    <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold shadow-sm hover:shadow-md hover:border-[#579BE8]/50"
-                    >
-                        {statusOptions.map(option => (
-                            <option key={option.id} value={option.id}>{option.label}</option>
-                        ))}
-                    </select>
+                <div className="flex gap-3 flex-wrap items-center">
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus} dir="rtl">
+                        <SelectTrigger className="px-5 h-[52px] !h-[52px] py-0 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold shadow-sm hover:shadow-md hover:border-[#579BE8]/50 min-w-[180px] data-[size=default]:!h-[52px]">
+                            <SelectValue placeholder="اختر الحالة" />
+                        </SelectTrigger>
+                        <SelectContent className="text-right">
+                            {statusOptions.map(option => (
+                                <SelectItem key={option.id} value={option.id} className="text-right">
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                    <button className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-2 border-transparent rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold shadow-lg active:scale-95">
-                        <FaFileDownload />
-                        <span>تصدير</span>
+                    <button className="flex items-center justify-center gap-2 px-5 h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-2xl hover:shadow-xl hover:shadow-[#579BE8]/25 hover:-translate-y-0.5 transition-all duration-200 font-bold shadow-md active:scale-[0.98]">
+                        <FaFileDownload className="w-4 h-4" />
+                        <span className="text-sm">تصدير</span>
                     </button>
                 </div>
             </div>
@@ -277,6 +429,7 @@ export default function ContractHistoryPage() {
                                 <th className="px-6 py-4 hidden lg:table-cell">المدة</th>
                                 <th className="px-6 py-4 text-center">القيمة</th>
                                 <th className="px-6 py-4 text-center">الحالة</th>
+                                <th className="px-6 py-4 text-center">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
@@ -289,10 +442,14 @@ export default function ContractHistoryPage() {
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         layout
                                         className="hover:bg-secondary/10 transition-colors group cursor-pointer"
-                                        onClick={() => router.push(`/myProfile/contracting`)}
+                                        onClick={() => router.push(`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`)}
                                     >
                                         <td className="px-6 py-5">
-                                            <Link href={`/myProfile/contracting`} className="font-bold text-[#579BE8] hover:underline">
+                                            <Link 
+                                                href={`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`} 
+                                                className="font-bold text-[#579BE8] hover:underline"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 {contract.id}
                                             </Link>
                                         </td>
@@ -301,8 +458,8 @@ export default function ContractHistoryPage() {
                                         </td>
                                         <td className="px-6 py-5 hidden lg:table-cell">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${contract.type === "commercial"
-                                                ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
-                                                : "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400"
+                                                ? "bg-[#579BE8]/10 text-[#579BE8] dark:bg-[#579BE8]/20 dark:text-[#579BE8]"
+                                                : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"
                                                 }`}>
                                                 {contract.type === "commercial" ? (
                                                     <>
@@ -345,12 +502,24 @@ export default function ContractHistoryPage() {
                                                 {contract.status === "active" ? "نشط" : "مكتمل"}
                                             </span>
                                         </td>
+                                        <td className="px-6 py-5 text-center">
+                                            {contract.status === "active" && (
+                                                <button
+                                                    onClick={(e) => handleTerminateClick(contract, e)}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95"
+                                                    title="إنهاء العقد"
+                                                >
+                                                    <FaBan className="w-3.5 h-3.5" />
+                                                    <span>إنهاء</span>
+                                                </button>
+                                            )}
+                                        </td>
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>
                             {currentContracts.length === 0 && (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-10 text-center text-muted-foreground">
+                                    <td colSpan="8" className="px-6 py-10 text-center text-muted-foreground">
                                         لا توجد عقود تطابق البحث
                                     </td>
                                 </tr>
@@ -417,6 +586,94 @@ export default function ContractHistoryPage() {
                     </div>
                 )}
             </div>
+
+            {/* Termination Modal */}
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {showTerminationModal && (
+                        <>
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={handleTerminationCancel}
+                                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+                                style={{ 
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            />
+                            
+                            {/* Modal */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
+                                style={{ 
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            >
+                                <div 
+                                    className="bg-white dark:bg-card rounded-2xl shadow-2xl max-w-md w-full p-6 border-2 border-border/60 pointer-events-auto"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+                                            <FaBan className="w-6 h-6 text-red-600 dark:text-red-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-foreground">إنهاء العقد</h3>
+                                            <p className="text-xs text-muted-foreground">العقد: {selectedContract?.id}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-bold text-foreground mb-2">
+                                            سبب إنهاء العقد <span className="text-red-500">*</span>
+                                        </label>
+                                        <textarea
+                                            value={terminationReason}
+                                            onChange={(e) => setTerminationReason(e.target.value)}
+                                            placeholder="يرجى كتابة سبب إنهاء العقد..."
+                                            rows={4}
+                                            className="w-full px-4 py-3 bg-white dark:bg-card border-2 border-border/60 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all font-medium resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={handleTerminationCancel}
+                                            className="flex-1 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all"
+                                        >
+                                            إلغاء
+                                        </button>
+                                        <button
+                                            onClick={handleTerminationConfirm}
+                                            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold shadow-lg shadow-red-500/30 hover:shadow-xl transition-all"
+                                        >
+                                            تأكيد
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 }

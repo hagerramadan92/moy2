@@ -5,16 +5,23 @@ import { useRouter } from 'next/navigation';
 import {
     FaHardHat, FaTools, FaChevronLeft, FaCheckCircle,
     FaBuilding, FaUser, FaPhoneAlt, FaMapMarkerAlt,
-    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight
+    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight, FaChevronDown
 } from 'react-icons/fa';
 import { MdOutlineArchitecture, MdBusinessCenter } from 'react-icons/md';
 import { BiBuildingHouse, BiSolidBusiness } from 'react-icons/bi';
 import { IoDocumentText, IoWalletOutline } from "react-icons/io5";
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import Image from 'next/image';
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDotsHorizontal } from "react-icons/rx";
-import Swal from "sweetalert2";
+import { toast } from "react-hot-toast";
 
 export default function ContractingPage() {
     const router = useRouter();
@@ -100,29 +107,33 @@ export default function ContractingPage() {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (validateForm()) {
-            Swal.fire({
-                title: "تم استلام طلبك!",
-                text: "تم إضافة طلب التعاقد بنجاح، وسيتواصل معك فريقنا قريباً.",
-                icon: "success",
-                confirmButtonText: "حسناً",
-                confirmButtonColor: "#579BE8",
-                background: "var(--background)",
-                color: "var(--foreground)",
-                customClass: {
-                    popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
-                    confirmButton: "rounded-2xl font-black px-10 py-3",
-                }
+            const loadingToast = toast.loading("جاري إرسال طلب التعاقد...", {
+                duration: 2000,
             });
-            // Reset form
-            setFormData({
-                name: '',
-                applicantName: '',
-                phone: '',
-                duration: 'شهر واحد',
-                address: '',
-                notes: ''
+            
+            setTimeout(() => {
+                toast.dismiss(loadingToast);
+                toast.success("تم إضافة طلب التعاقد بنجاح، وسيتواصل معك فريقنا قريباً.", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+                
+                // Reset form
+                setFormData({
+                    name: '',
+                    applicantName: '',
+                    phone: '',
+                    duration: 'شهر واحد',
+                    address: '',
+                    notes: ''
+                });
+                setErrors({});
+            }, 2000);
+        } else {
+            toast.error("يرجى ملء جميع الحقول المطلوبة", {
+                duration: 3000,
+                icon: "❌",
             });
-            setErrors({});
         }
     };
 
@@ -131,217 +142,273 @@ export default function ContractingPage() {
     const iconClasses = (name) => `absolute right-4 ${errors[name] ? 'top-[3.4rem]' : 'top-[3.3rem]'} text-muted-foreground/60 w-5 h-5`;
 
     return (
-        <div className="space-y-8 fade-in-up">
-            {/* Summary Hero Card (Wallet Style) */}
-            <div className="">
-                <div className="flex py-6 px-8 flex-col gap-4 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground rounded-2xl shadow-2xl relative overflow-hidden">
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
-                        <FaHardHat size={120} />
+        <div className="space-y-6 md:space-y-8 fade-in-up">
+            {/* Enhanced Hero Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="relative"
+            >
+                <div className="flex py-8 md:py-10 px-6 md:px-8 flex-col gap-5 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-2xl md:rounded-3xl shadow-2xl relative overflow-hidden group">
+                    {/* Enhanced Decorative Background Elements */}
+                    <div className="absolute top-0 right-0 p-4 opacity-[0.08] rotate-12 group-hover:rotate-6 transition-transform duration-1000">
+                        <FaHardHat size={140} className="text-white" />
                     </div>
-                    <div className="absolute bottom-0 left-0 p-4 opacity-10 -rotate-12">
-                        <IoWalletOutline size={100} />
+                    <div className="absolute bottom-0 left-0 p-4 opacity-[0.08] -rotate-12 group-hover:-rotate-6 transition-transform duration-1000">
+                        <IoWalletOutline size={120} className="text-white" />
+                    </div>
+                    <div className="absolute top-1/2 right-1/4 opacity-[0.06]">
+                        <MdBusinessCenter size={100} className="text-white rotate-12" />
                     </div>
 
-                    {/* Animated Glow Effects */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute top-0 right-1/4 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+                    {/* Enhanced Animated Glow Effects */}
+                    <motion.div 
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/8 rounded-full blur-3xl"
+                        animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.3, 0.5, 0.3]
+                        }}
+                        transition={{ 
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                    />
+                    <div className="absolute top-0 right-1/4 w-72 h-72 bg-white/12 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-white/12 rounded-full blur-2xl"></div>
 
-                    {/* Main Content - Centered */}
-                    <div className="flex flex-col gap-3 items-center justify-center relative z-10 w-full">
-                        {/* Total Active Contracts */}
-                        {/* <div className="flex flex-col gap-2 items-center text-center">
-                            <p className="text-sm opacity-90 font-semibold tracking-wide">إجمالي تعاقداتك النشطة</p>
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                                <h3 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight drop-shadow-2xl bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent">
-                                    04
-                                </h3>
-                                <div className="bg-white/25 backdrop-blur-md px-4 py-1.5 rounded-xl text-sm font-bold shadow-lg border border-white/20">
-                                    عقود نشطة
-                                </div>
+                    {/* Main Content - Enhanced */}
+                    <div className="flex flex-col gap-4 items-center justify-center relative z-10 w-full">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="flex flex-col gap-3 items-center text-center max-w-lg"
+                        >
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xl border-2 border-white/30 mb-2">
+                                <FaHardHat className="w-8 h-8 md:w-10 md:h-10 text-white" />
                             </div>
-                        </div> */}
-
-                        {/* Divider */}
-                        {/* <div className="w-20 h-0.5 bg-white/30 rounded-full"></div> */}
-
-                        {/* Latest Contract Info */}
-                        <div className="flex flex-col gap-2 items-center text-center max-w-md">
-                            <p className="text-xs opacity-80 font-medium">أحدث طلب تعاقد</p>
-                            <p className="font-black text-lg md:text-xl drop-shadow-lg">مؤسسة وايت مياه التجارية</p>
-                            <div className="flex items-center justify-center gap-2 text-xs opacity-90 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
-                                <FaCalendarAlt className="w-3 h-3" />
-                                <span className="font-semibold">ينتهي في: 15 مايو 2025</span>
-                            </div>
-                        </div>
+                            <h2 className="text-2xl md:text-3xl font-black drop-shadow-lg">طلب تعاقد جديد</h2>
+                            <p className="text-sm md:text-base opacity-90 font-medium">اختر نوع التعاقد واملأ البيانات المطلوبة</p>
+                        </motion.div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
-            {/* Main Section Card */}
-            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-
-                {/* Tabs Header (Wallet Style) */}
-                <div className="p-4 border-b border-border/60 flex items-center justify-center bg-secondary/5">
-                    <div className="flex bg-secondary/30 p-1.5 rounded-2xl w-full max-w-sm">
+            {/* Main Section Card - Enhanced */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl md:rounded-3xl shadow-xl overflow-hidden flex flex-col"
+            >
+                {/* Enhanced Tabs Header */}
+                <div className="p-5 md:p-6 border-b-2 border-border/60 flex items-center justify-center bg-gradient-to-b from-secondary/10 to-transparent">
+                    <div className="flex bg-secondary/40 dark:bg-secondary/20 p-2 rounded-2xl w-full max-w-md shadow-inner">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all relative group ${activeTab === tab.id
-                                    ? "text-primary shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-white/70 dark:hover:bg-card/70"
+                                className={`flex-1 flex items-center justify-center gap-2.5 py-3 md:py-3.5 rounded-xl text-sm md:text-base font-black transition-all relative group ${activeTab === tab.id
+                                    ? "text-[#579BE8] shadow-lg"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/80 dark:hover:bg-card/80"
                                     }`}
                             >
                                 {activeTab === tab.id && (
                                     <motion.div
                                         layoutId="activeTabContract"
-                                        className="absolute inset-0 bg-white dark:bg-card rounded-xl shadow-sm"
+                                        className="absolute inset-0 bg-white dark:bg-card rounded-xl shadow-lg border-2 border-[#579BE8]/20"
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     />
                                 )}
-                                <span className="relative z-10 flex items-center gap-2">
-                                    {tab.icon}
+                                <span className="relative z-10 flex items-center gap-2.5">
+                                    <span className={`${activeTab === tab.id ? 'text-[#579BE8]' : ''}`}>
+                                        {tab.icon}
+                                    </span>
                                     {tab.label}
                                 </span>
-
-                                {/* Hover underline - Navbar style */}
-                                <motion.span
-                                    className="absolute bottom-1 left-1/2 h-[2px] w-0 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#579BE8] to-[#124987] z-20"
-                                    whileHover={{ width: "50%" }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Split Layout Section */}
-                <div className="flex flex-col lg:flex-row min-h-[500px]">
-                    {/* Illustration Side */}
-                    <div className="lg:w-[35%] relative bg-secondary/10 p-8 lg:p-10 flex flex-col items-center justify-center text-center overflow-hidden border-l border-border/40">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full translate-y-24 -translate-x-24 blur-3xl"></div>
+                {/* Enhanced Split Layout Section */}
+                <div className="flex flex-col lg:flex-row min-h-[600px]">
+                    {/* Enhanced Illustration Side */}
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="lg:w-[40%] relative bg-gradient-to-br from-[#579BE8]/5 via-[#579BE8]/10 to-[#124987]/5 dark:from-[#579BE8]/10 dark:via-[#579BE8]/5 dark:to-[#124987]/10 p-8 md:p-10 lg:p-12 flex flex-col items-center justify-center text-center overflow-hidden border-l-2 border-border/40"
+                    >
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-[#579BE8]/10 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#124987]/10 rounded-full translate-y-28 -translate-x-28 blur-3xl"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#579BE8]/5 rounded-full blur-3xl"></div>
 
-                        <div className="relative z-10 space-y-6">
-                            <div className="w-full max-w-[220px] mx-auto animate-float">
-                                <Image
-                                    src={activeTab === 'commercial' ? "/images/ecommerce.png" : "/images/personal.png"}
-                                    alt={activeTab}
-                                    width={400}
-                                    height={400}
-                                    className="w-full h-auto drop-shadow-2xl"
-                                />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold mb-2">{activeTab === 'commercial' ? "تعاقد تجاري" : "تعاقد شخصي"}</h3>
-                                <p className="text-xs text-muted-foreground leading-relaxed px-4">
+                        <div className="relative z-10 space-y-6 md:space-y-8">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.3, duration: 0.5 }}
+                                className="w-full max-w-[240px] md:max-w-[280px] mx-auto"
+                            >
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8]/20 to-[#124987]/20 rounded-3xl blur-2xl transform scale-110"></div>
+                                    <Image
+                                        src={activeTab === 'commercial' ? "/images/ecommerce.png" : "/images/personal.png"}
+                                        alt={activeTab}
+                                        width={400}
+                                        height={400}
+                                        className="w-full h-auto drop-shadow-2xl relative z-10"
+                                    />
+                                </div>
+                            </motion.div>
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                            >
+                                <h3 className="text-xl md:text-2xl font-black mb-3 text-foreground">{activeTab === 'commercial' ? "تعاقد تجاري" : "تعاقد شخصي"}</h3>
+                                <p className="text-sm md:text-base text-muted-foreground leading-relaxed px-2 md:px-4 font-medium">
                                     {activeTab === 'commercial'
                                         ? "حلول متكاملة للشركات والمؤسسات مع إدارة ذكية لمواقع التوصيل المتعددة."
                                         : "خطة مريحة لمنزلك أو استراحتك تضمن لك وفرة المياه دائماً وبأقل التكاليف."}
                                 </p>
-                            </div>
+                            </motion.div>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Form Side */}
-                    <div className="lg:w-[65%] p-8 lg:p-10">
-                        <form className="space-y-6" onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1 relative">
-                                    <label className={labelClasses}>{activeTab === 'commercial' ? "اسم المؤسسة" : "الاسم الكامل"}</label>
-                                    <FaBuilding className={iconClasses('name')} />
+                    {/* Enhanced Form Side */}
+                    <motion.div
+                        key={`form-${activeTab}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="lg:w-[60%] p-6 md:p-8 lg:p-10 bg-gradient-to-br from-white to-secondary/5 dark:from-card dark:to-secondary/10"
+                    >
+                        <form className="space-y-5 md:space-y-6" onSubmit={handleSubmit}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                                <div className="space-y-2 relative">
+                                    <label className={`${labelClasses} text-sm md:text-base`}>{activeTab === 'commercial' ? "اسم المؤسسة" : "الاسم الكامل"}</label>
+                                    <div className="relative">
+                                        <FaBuilding className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            placeholder={activeTab === 'commercial' ? "مؤسسة وايت مياه التجارية" : "عبدالله محمد الفهد"}
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                        />
+                                    </div>
+                                    {errors.name && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                        <span>⚠️</span> {errors.name}
+                                    </p>}
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <label className={`${labelClasses} text-sm md:text-base`}>اسم مقدم الطلب</label>
+                                    <div className="relative">
+                                        <FaUser className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <input
+                                            type="text"
+                                            name="applicantName"
+                                            value={formData.applicantName}
+                                            onChange={handleInputChange}
+                                            placeholder="فهد السليمان"
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.applicantName ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                        />
+                                    </div>
+                                    {errors.applicantName && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                        <span>⚠️</span> {errors.applicantName}
+                                    </p>}
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <label className={`${labelClasses} text-sm md:text-base`}>رقم الجوال</label>
+                                    <div className="relative">
+                                        <FaPhoneAlt className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleInputChange}
+                                            placeholder="05XXXXXXXX"
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.phone ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
+                                        />
+                                    </div>
+                                    {errors.phone && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                        <span>⚠️</span> {errors.phone}
+                                    </p>}
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <label className={`${labelClasses} text-sm md:text-base`}>مدة التعاقد</label>
+                                    <div className="relative">
+                                        <Select 
+                                            value={formData.duration} 
+                                            onValueChange={(value) => setFormData(prev => ({ ...prev, duration: value }))}
+                                            dir="rtl"
+                                        >
+                                            <SelectTrigger className="w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-xl md:rounded-2xl pr-12 pl-12 py-3.5 md:py-4 h-auto focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md !h-[52px] md:!h-[56px] data-[size=default]:!h-[52px] md:data-[size=default]:!h-[56px]">
+                                                <SelectValue placeholder="اختر مدة التعاقد" />
+                                            </SelectTrigger>
+                                            <SelectContent className="text-right">
+                                                <SelectItem value="شهر واحد">شهر واحد</SelectItem>
+                                                <SelectItem value="3 أشهر (خصم 10%)">3 أشهر (خصم 10%)</SelectItem>
+                                                <SelectItem value="6 أشهر (خصم 20%)">6 أشهر (خصم 20%)</SelectItem>
+                                                <SelectItem value="سنة كاملة">سنة كاملة</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10 pointer-events-none" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 relative">
+                                <label className={`${labelClasses} text-sm md:text-base`}>عنوان مكانك الرئيسي</label>
+                                <div className="relative">
+                                    <FaMapMarkerAlt className={`absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-5 h-5 z-10`} />
                                     <input
                                         type="text"
-                                        name="name"
-                                        value={formData.name}
+                                        name="address"
+                                        value={formData.address}
                                         onChange={handleInputChange}
-                                        placeholder={activeTab === 'commercial' ? "مؤسسة وايت مياه التجارية" : "عبدالله محمد الفهد"}
-                                        className={inputClasses('name')}
+                                        placeholder="الرياض، حي الملقا، شارع الأمير محمد بن سعد"
+                                        className={`w-full bg-white dark:bg-card border-2 ${errors.address ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-xl md:rounded-2xl px-12 py-3.5 md:py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md`}
                                     />
-                                    {errors.name && <p className="text-[10px] text-destructive mr-4 font-bold">{errors.name}</p>}
                                 </div>
-                                <div className="space-y-1 relative">
-                                    <label className={labelClasses}>اسم مقدم الطلب</label>
-                                    <FaUser className={iconClasses('applicantName')} />
-                                    <input
-                                        type="text"
-                                        name="applicantName"
-                                        value={formData.applicantName}
+                                {errors.address && <p className="text-xs text-red-500 mr-4 font-bold flex items-center gap-1">
+                                    <span>⚠️</span> {errors.address}
+                                </p>}
+                            </div>
+
+                            <div className="space-y-2 relative">
+                                <label className={`${labelClasses} text-sm md:text-base`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
+                                <div className="relative">
+                                    <FaEdit className={`absolute right-4 top-4 text-[#579BE8] w-5 h-5 z-10`} />
+                                    <textarea
+                                        name="notes"
+                                        value={formData.notes}
                                         onChange={handleInputChange}
-                                        placeholder="فهد السليمان"
-                                        className={inputClasses('applicantName')}
-                                    />
-                                    {errors.applicantName && <p className="text-[10px] text-destructive mr-4 font-bold">{errors.applicantName}</p>}
-                                </div>
-                                <div className="space-y-1 relative">
-                                    <label className={labelClasses}>رقم الجوال</label>
-                                    <FaPhoneAlt className={iconClasses('phone')} />
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        value={formData.phone}
-                                        onChange={handleInputChange}
-                                        placeholder="05XXXXXXXX"
-                                        className={inputClasses('phone')}
-                                    />
-                                    {errors.phone && <p className="text-[10px] text-destructive mr-4 font-bold">{errors.phone}</p>}
-                                </div>
-                                <div className="space-y-1 relative">
-                                    <label className={labelClasses}>مدة التعاقد</label>
-                                    <FaCalendarAlt className={iconClasses('duration')} />
-                                    <select
-                                        name="duration"
-                                        value={formData.duration}
-                                        onChange={handleInputChange}
-                                        className={`${inputClasses('duration')} appearance-none cursor-pointer`}
-                                    >
-                                        <option>شهر واحد</option>
-                                        <option>3 أشهر (خصم 10%)</option>
-                                        <option>6 أشهر (خصم 20%)</option>
-                                        <option>سنة كاملة</option>
-                                    </select>
+                                        rows="4"
+                                        placeholder="اكتب أي متطلبات خاصة أو ملاحظات لمواقع التوصيل هنا..."
+                                        className={`w-full bg-white dark:bg-card border-2 border-border/60 focus:border-[#579BE8] rounded-xl md:rounded-2xl px-12 py-4 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-sm md:text-base font-medium shadow-sm hover:shadow-md resize-none`}
+                                    ></textarea>
                                 </div>
                             </div>
 
-                            <div className="space-y-1 relative">
-                                <label className={labelClasses}>عنوان مكانك الرئيسي</label>
-                                <FaMapMarkerAlt className={iconClasses('address')} />
-                                <input
-                                    type="text"
-                                    name="address"
-                                    value={formData.address}
-                                    onChange={handleInputChange}
-                                    placeholder="الرياض، حي الملقا، شارع الأمير محمد بن سعد"
-                                    className={inputClasses('address')}
-                                />
-                                {errors.address && <p className="text-[10px] text-destructive mr-4 font-bold">{errors.address}</p>}
-                            </div>
-
-                            <div className="space-y-1 relative">
-                                <label className={labelClasses}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
-                                <FaEdit className={`absolute right-4 top-[3.1rem] text-muted-foreground/60 w-5 h-5`} />
-                                <textarea
-                                    name="notes"
-                                    value={formData.notes}
-                                    onChange={handleInputChange}
-                                    rows="3"
-                                    placeholder="اكتب أي متطلبات خاصة أو ملاحظات لمواقع التوصيل هنا..."
-                                    className={`${inputClasses('notes')} resize-none h-24`}
-                                ></textarea>
-                            </div>
-
-                            <div className="pt-2">
-                                <Button type="submit" className="w-full py-7 rounded-2xl text-lg font-black bg-gradient-to-r from-[#579BE8] to-[#124987] hover:shadow-xl hover:-translate-y-1 text-white shadow-xl shadow-[#579BE8]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group border-none">
-                                    <span>تأكيد طلب التعاقد</span>
-                                    <FaChevronLeft className="w-4 h-4 group-hover:-translate-x-2 transition-transform" />
+                            <div className="pt-2 md:pt-4">
+                                <Button 
+                                    type="submit" 
+                                    className="w-full py-4 md:py-6 cursor-pointer rounded-lg text-xl font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-md hover:shadow-lg transition-all"
+                                >
+                                    تأكيد طلب التعاقد
                                 </Button>
                             </div>
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
-            </div>
+            </motion.div>
 
 
         </div>

@@ -5,17 +5,30 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { BiDotsVerticalRounded, BiSort, BiHelpCircle, BiSolidShow } from "react-icons/bi";
-import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes, FaBox } from "react-icons/fa";
+import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes, FaBox, FaSearch } from "react-icons/fa";
 import { IoDocumentText } from "react-icons/io5";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import flatpickr from "flatpickr";
+import { Arabic } from "flatpickr/dist/l10n/ar.js";
+import "flatpickr/dist/flatpickr.min.css";
 
 export default function OrdersPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortBy, setSortBy] = useState("date-desc");
     const [selectedDate, setSelectedDate] = useState("");
+    const [searchOrderNumber, setSearchOrderNumber] = useState("");
     const [openOrderId, setOpenOrderId] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
     const dropdownRef = useRef(null);
+    const dateInputRef = useRef(null);
+    const flatpickrInstance = useRef(null);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -27,6 +40,62 @@ export default function OrdersPage() {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Initialize Flatpickr
+    useEffect(() => {
+        if (dateInputRef.current && !flatpickrInstance.current) {
+            try {
+                flatpickrInstance.current = flatpickr(dateInputRef.current, {
+                    locale: Arabic,
+                    dateFormat: "Y-m-d",
+                    defaultDate: selectedDate || null,
+                    onChange: (selectedDates, dateStr) => {
+                        setSelectedDate(dateStr);
+                    },
+                    allowInput: false,
+                    clickOpens: true,
+                    animate: true,
+                    monthSelectorType: "static",
+                    static: true,
+                    disableMobile: true,
+                    wrap: false,
+                });
+            } catch (error) {
+                console.error("Error initializing Flatpickr:", error);
+            }
+        }
+
+        return () => {
+            if (flatpickrInstance.current) {
+                try {
+                    // Check if the input element still exists in the DOM
+                    if (dateInputRef.current && dateInputRef.current.parentNode) {
+                        flatpickrInstance.current.destroy();
+                    }
+                } catch (error) {
+                    // Silently handle cleanup errors
+                    console.warn("Error destroying Flatpickr:", error);
+                } finally {
+                    flatpickrInstance.current = null;
+                }
+            }
+        };
+    }, []);
+
+    // Update flatpickr when selectedDate changes externally
+    useEffect(() => {
+        if (flatpickrInstance.current) {
+            try {
+                if (selectedDate) {
+                    flatpickrInstance.current.setDate(selectedDate, false);
+                } else {
+                    flatpickrInstance.current.clear();
+                }
+            } catch (error) {
+                console.warn("Error updating Flatpickr date:", error);
+            }
+        }
+    }, [selectedDate]);
 
     const ordersData = [
         { id: "#WTR-782", status: "completed", date: "2023-12-28", amount: 402.50, items: 1, customer: "سعود بن ناصر" },
@@ -68,6 +137,7 @@ export default function OrdersPage() {
     const filteredOrders = ordersData
         .filter(order => statusFilter === "all" || order.status === statusFilter)
         .filter(order => !selectedDate || order.date === selectedDate)
+        .filter(order => !searchOrderNumber || order.id.toLowerCase().includes(searchOrderNumber.toLowerCase()))
         .sort((a, b) => {
             if (sortBy === "date-desc") return new Date(b.date).getTime() - new Date(a.date).getTime();
             if (sortBy === "date-asc") return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -120,27 +190,92 @@ export default function OrdersPage() {
 
             {/* Filters and Actions */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="relative flex-1 max-w-md w-full">
-                    <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground z-10" size={20} />
-                    <input 
-                        type="date" 
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full pr-12 pl-12 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
-                    />
-                    {selectedDate && (
-                        <button 
-                            onClick={(e) => { 
-                                e.preventDefault(); 
-                                e.stopPropagation();
-                                setSelectedDate(""); 
-                            }}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
-                            title="مسح التاريخ"
-                        >
-                            <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
-                        </button>
-                    )}
+                <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+                    {/* Search by Order Number */}
+                    <div className="relative flex-1 max-w-md w-full">
+                        <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={18} />
+                        <input 
+                            type="text"
+                            placeholder="البحث برقم الطلب"
+                            value={searchOrderNumber}
+                            onChange={(e) => setSearchOrderNumber(e.target.value)}
+                            className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md ${searchOrderNumber ? 'pl-12' : 'pl-4'}`}
+                        />
+                        {searchOrderNumber && (
+                            <button 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    setSearchOrderNumber("");
+                                }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
+                                title="مسح البحث"
+                            >
+                                <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Date Filter */}
+                    <div className="relative flex-1 w-full sm:max-w-md">
+                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={20} />
+                        <input 
+                            ref={dateInputRef}
+                            type="text"
+                            placeholder="اختر التاريخ"
+                            readOnly
+                            autoComplete="off"
+                            inputMode="none"
+                            data-input
+                            className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-12' : 'pl-4'}`}
+                        />
+                        {selectedDate && (
+                            <button 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    setSelectedDate("");
+                                    if (flatpickrInstance.current) {
+                                        try {
+                                            flatpickrInstance.current.clear();
+                                        } catch (error) {
+                                            console.warn("Error clearing Flatpickr:", error);
+                                        }
+                                    }
+                                }}
+                                className="absolute md:left-[10.5rem] left-[5.5rem] top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
+                                title="مسح التاريخ"
+                            >
+                                <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative flex-1 max-w-md w-full">
+                        <Select value={sortBy} onValueChange={setSortBy} dir="rtl">
+                            <SelectTrigger className="pr-10 pl-10 py-0 !h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-medium shadow-sm hover:shadow-md hover:border-[#579BE8]/50 w-full data-[size=default]:!h-[52px]">
+                                <div className="flex items-center gap-2 w-full">
+                                    <BiSort className="text-[#579BE8] w-4 h-4 flex-shrink-0" />
+                                    <SelectValue placeholder="ترتيب حسب" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent className="text-right">
+                                <SelectItem value="date-desc" className="text-right">
+                                    الأحدث أولاً
+                                </SelectItem>
+                                <SelectItem value="date-asc" className="text-right">
+                                    الأقدم أولاً
+                                </SelectItem>
+                                <SelectItem value="amount-desc" className="text-right">
+                                    الأعلى سعراً
+                                </SelectItem>
+                                <SelectItem value="amount-asc" className="text-right">
+                                    الأقل سعراً
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {/* <div className="flex gap-3 flex-wrap">
@@ -177,22 +312,6 @@ export default function OrdersPage() {
                                 </button>
                             ))}
                         </div>
-
-                        {/* Sort Dropdown */}
-                        <div className="relative">
-                            <select 
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="appearance-none bg-white dark:bg-card border-2 border-border/60 rounded-2xl px-5 py-3 pr-10 pl-10 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer shadow-sm hover:shadow-md hover:border-[#579BE8]/50"
-                            >
-                                <option value="date-desc">الأحدث أولاً</option>
-                                <option value="date-asc">الأقدم أولاً</option>
-                                <option value="amount-desc">الأعلى سعراً</option>
-                                <option value="amount-asc">الأقل سعراً</option>
-                            </select>
-                            <FaChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none w-3 h-3" />
-                            <BiSort className="absolute right-3 top-1/2 -translate-y-1/2 text-[#579BE8] pointer-events-none w-4 h-4" />
-                        </div>
                     </div>
                 </div>
 
@@ -219,12 +338,7 @@ export default function OrdersPage() {
                                             </Link>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold">
-                                                    {order.customer.charAt(0)}
-                                                </div>
-                                                <span className="font-medium text-foreground">{order.customer}</span>
-                                            </div>
+                                            <span className="font-medium text-foreground">{order.customer}</span>
                                         </td>
                                         <td className="px-6 py-5 text-muted-foreground text-sm hidden xl:table-cell">{order.date}</td>
                                         <td className="px-6 py-5 text-sm hidden xl:table-cell">{order.items} عناصر</td>

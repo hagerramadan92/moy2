@@ -1,21 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IoWalletOutline, IoFilterSharp, IoSearchOutline, IoDocumentText } from "react-icons/io5";
-import { FaArrowUp, FaArrowDown, FaArrowRight, FaChevronRight, FaFileDownload, FaHistory } from "react-icons/fa";
+import { FaArrowUp, FaArrowDown, FaArrowRight, FaChevronRight, FaFileDownload, FaHistory, FaCalendarAlt, FaTimes } from "react-icons/fa";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { RxDotsHorizontal } from "react-icons/rx";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdDateRange, MdTrendingUp } from "react-icons/md";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import flatpickr from "flatpickr";
+import { Arabic } from "flatpickr/dist/l10n/ar.js";
+import "flatpickr/dist/flatpickr.min.css";
 
 export default function PaymentHistoryPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedPeriod, setSelectedPeriod] = useState("all");
+    const [selectedDate, setSelectedDate] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+    const dateInputRef = useRef(null);
+    const flatpickrInstance = useRef(null);
 
     // Sample payment history data
     const paymentHistory = [
@@ -110,10 +123,66 @@ export default function PaymentHistoryPage() {
         }
     };
 
+    // Initialize Flatpickr
+    useEffect(() => {
+        if (dateInputRef.current && !flatpickrInstance.current) {
+            try {
+                flatpickrInstance.current = flatpickr(dateInputRef.current, {
+                    locale: Arabic,
+                    dateFormat: "Y-m-d",
+                    defaultDate: selectedDate || null,
+                    onChange: (selectedDates, dateStr) => {
+                        setSelectedDate(dateStr);
+                    },
+                    allowInput: false,
+                    clickOpens: true,
+                    animate: true,
+                    monthSelectorType: "static",
+                    static: true,
+                    disableMobile: true,
+                    wrap: false,
+                });
+            } catch (error) {
+                console.error("Error initializing Flatpickr:", error);
+            }
+        }
+
+        return () => {
+            if (flatpickrInstance.current) {
+                try {
+                    // Check if the input element still exists in the DOM
+                    if (dateInputRef.current && dateInputRef.current.parentNode) {
+                        flatpickrInstance.current.destroy();
+                    }
+                } catch (error) {
+                    // Silently handle cleanup errors
+                    console.warn("Error destroying Flatpickr:", error);
+                } finally {
+                    flatpickrInstance.current = null;
+                }
+            }
+        };
+    }, []);
+
+    // Update flatpickr when selectedDate changes externally
+    useEffect(() => {
+        if (flatpickrInstance.current) {
+            try {
+                if (selectedDate) {
+                    flatpickrInstance.current.setDate(selectedDate, false);
+                } else {
+                    flatpickrInstance.current.clear();
+                }
+            } catch (error) {
+                console.warn("Error updating Flatpickr date:", error);
+            }
+        }
+    }, [selectedDate]);
+
     // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, searchQuery]);
+    }, [activeTab, searchQuery, selectedDate]);
 
     const tabs = [
         { id: "all", label: "الكل" },
@@ -228,29 +297,70 @@ export default function PaymentHistoryPage() {
 
             {/* Filters and Search */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="relative flex-1 max-w-md w-full">
-                    <IoSearchOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-                    <input
-                        type="text"
-                        placeholder="ابحث برقم المعاملة أو الوصف..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pr-12 pl-4 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
-                    />
+                <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-md w-full">
+                        <IoSearchOutline className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8]" size={20} />
+                        <input
+                            type="text"
+                            placeholder="ابحث برقم المعاملة أو الوصف..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pr-12 pl-4 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md"
+                        />
+                    </div>
+
+                    {/* Date Filter */}
+                    <div className="relative flex-1 w-full sm:max-w-md">
+                        <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={20} />
+                        <input 
+                            ref={dateInputRef}
+                            type="text"
+                            placeholder="اختر التاريخ"
+                            readOnly
+                            autoComplete="off"
+                            inputMode="none"
+                            data-input
+                            className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-12' : 'pl-4'}`}
+                        />
+                        {selectedDate && (
+                            <button 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    setSelectedDate("");
+                                    if (flatpickrInstance.current) {
+                                        try {
+                                            flatpickrInstance.current.clear();
+                                        } catch (error) {
+                                            console.warn("Error clearing Flatpickr:", error);
+                                        }
+                                    }
+                                }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
+                                title="مسح التاريخ"
+                            >
+                                <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex gap-3 flex-wrap">
-                    <select
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold shadow-sm hover:shadow-md hover:border-[#579BE8]/50"
-                    >
-                        {periods.map(period => (
-                            <option key={period.id} value={period.id}>{period.label}</option>
-                        ))}
-                    </select>
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod} dir="rtl">
+                        <SelectTrigger className="px-5 py-0 !h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all cursor-pointer font-bold shadow-sm hover:shadow-md hover:border-[#579BE8]/50 min-w-[180px] data-[size=default]:!h-[52px]">
+                            <SelectValue placeholder="اختر الفترة" />
+                        </SelectTrigger>
+                        <SelectContent className="text-right">
+                            {periods.map(period => (
+                                <SelectItem key={period.id} value={period.id} className="text-right">
+                                    {period.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                    <button className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-2 border-transparent rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold shadow-lg active:scale-95">
+                    <button className="flex items-center gap-2 px-5 py-3.5 h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-2 border-transparent rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold shadow-lg active:scale-95">
                         <FaFileDownload />
                         <span>تصدير</span>
                     </button>
@@ -313,7 +423,7 @@ export default function PaymentHistoryPage() {
                                         className="hover:bg-secondary/10 transition-colors group"
                                     >
                                         <td className="px-6 py-5">
-                                            <span className="text-xs font-mono bg-secondary/40 px-2 py-1 rounded-lg text-muted-foreground">
+                                            <span className="font-bold text-[#579BE8] hover:underline cursor-pointer">
                                                 #{payment.id}
                                             </span>
                                         </td>

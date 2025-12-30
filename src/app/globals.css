@@ -405,3 +405,95 @@ body {
     }
   }
 }
+
+/* Flatpickr Custom Styles */
+.flatpickr-calendar {
+  background: var(--card) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+  font-family: 'Almarai', 'Noto Kufi Arabic', system-ui, sans-serif !important;
+  padding: 1rem !important;
+}
+
+.flatpickr-months {
+  margin-bottom: 0.5rem !important;
+}
+
+.flatpickr-month {
+  color: var(--foreground) !important;
+  font-weight: 700 !important;
+}
+
+.flatpickr-current-month {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+  padding: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s !important;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+  background: var(--secondary) !important;
+  color: #579BE8 !important;
+  fill: #579BE8 !important;
+}
+
+.flatpickr-weekdays {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.flatpickr-weekday {
+  color: var(--muted-foreground) !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+}
+
+.flatpickr-days {
+  padding-top: 0.5rem !important;
+}
+
+.flatpickr-day {
+  border-radius: 0.5rem !important;
+  color: var(--foreground) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s !important;
+  border: 2px solid transparent !important;
+}
+
+.flatpickr-day:hover {
+  background: var(--secondary) !important;
+  border-color: #579BE8 !important;
+  color: #579BE8 !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: #579BE8 !important;
+  border-color: #579BE8 !important;
+  color: white !important;
+  font-weight: 700 !important;
+}
+
+.flatpickr-day.today {
+  border-color: #579BE8 !important;
+  color: #579BE8 !important;
+  font-weight: 700 !important;
+}
+
+.flatpickr-day.flatpickr-disabled {
+  color: var(--muted-foreground) !important;
+  opacity: 0.4 !important;
+}
