@@ -2,22 +2,55 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import OrderSchedulePage from './OrderSchedulePage';
+import { useRouter } from 'next/navigation';
 
 export default function OrderForm() {
-    const [date, setDate] = useState('');
+    // State management for form inputs
     const [waterType, setWaterType] = useState('');
     const [quantity, setQuantity] = useState('');
     const [location, setLocation] = useState('');
+    const [showSchedule, setShowSchedule] = useState(false);
+    
+    // Router for navigation
+    const router = useRouter();
+
+    // Navigate to search driver page
+    const handleOrderNow = () => {
+        router.push('/orders/search-driver');
+    };
+
+    // Show schedule page
+    const handleSchedule = () => {
+        setShowSchedule(true);
+    };
+
+    // Return from schedule page
+    const handleBack = () => {
+        setShowSchedule(false);
+    };
+
+    // Render schedule page when toggled
+    if (showSchedule) {
+        return <OrderSchedulePage onBack={handleBack} />;
+    }
 
     return (
-        <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="min-h-screen p-4 flex flex-col items-center justify-center">
+            {/* Page Title - "تفاصيل الطلب" */}
+            <div className="w-full max-w-6xl mb-6 text-right">
+                <h1 className="font-cairo font-semibold text-2xl text-black pr-4 lg:pr-0">
+                    تفاصيل الطلب
+                </h1>
+            </div>
+
             <div className="container max-w-6xl bg-white rounded-3xl shadow-lg overflow-hidden">
                 <div className="flex flex-col lg:flex-row">
-                    {/* Left side - Form */}
-                    <div className="lg:w-1/2 p-6 lg:p-8">
+                    {/* Left Column - Form Section */}
+                    <div className="lg:w-1/2 p-4 lg:p-8">
                         <div className="max-w-md mx-auto">
-                            {/* Car image - shown on mobile */}
-                            <div className="w-48 h-28 mx-auto mb-8 lg:mb-12 lg:w-56 lg:h-32">
+                            {/* Desktop Car Image */}
+                            <div className="hidden lg:block w-48 h-28 mx-auto mb-8 lg:mb-12 lg:w-56 lg:h-32">
                                 <Image
                                     src="/images/car.png"
                                     alt="Delivery Car"
@@ -27,14 +60,35 @@ export default function OrderForm() {
                                 />
                             </div>
 
-                            {/* Form content */}
-                            <div className="space-y-8">
-                                <p className="text-right font-semibold text-sm text-gray-800">
+                            {/* Mobile Car Image */}
+                            <div className="lg:hidden relative -mt-16 mb-4">
+                                <div className="flex justify-center">
+                                    <div className="relative">
+                                        <div 
+                                            className="relative w-40 h-40 rounded-full flex items-center justify-center bg-white border border-gray-300 shadow-sm"
+                                        >
+                                            <div className="relative w-28 h-16">
+                                                <Image
+                                                    src="/images/car.png"
+                                                    alt="Delivery Car"
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Form Content */}
+                            <div className="space-y-4 lg:space-y-4">
+                                {/* Form Instruction */}
+                                <p className="text-right font-semibold text-sm text-gray-800 mb-2 lg:mb-4">
                                     اطلب الآن أو حدد موعداً للطلب
                                 </p>
 
-                                {/* Location input */}
-                                <div className="relative">
+                                {/* Location Input Field */}
+                                <div className="relative mb-2 lg:mb-0">
                                     <input
                                         type="text"
                                         value={location}
@@ -47,8 +101,10 @@ export default function OrderForm() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
+                                {/* Water Type and Quantity Selection */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-2">
+                                    {/* Water Type Selection */}
+                                    <div className="space-y-1 lg:space-y-2 lg:mt-4">
                                         <label className="block text-right text-sm font-semibold text-blue-500">
                                             اختر نوع المياه
                                         </label>
@@ -64,7 +120,8 @@ export default function OrderForm() {
                                         </select>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    {/* Water Quantity Selection */}
+                                    <div className="space-y-1 lg:space-y-2 lg:mt-4">
                                         <label className="block text-right text-sm font-semibold text-blue-500">
                                             اختر حجم المياه
                                         </label>
@@ -88,16 +145,31 @@ export default function OrderForm() {
                                     </div>
                                 </div>
 
-                                {/* Action buttons */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                                    <button className="w-full h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center">
-                                        <span className="text-white text-lg font-normal">
+                                {/* Action Buttons */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 lg:pt-2 lg:gap-4">
+                                    {/* Order Now Button */}
+                                    <button 
+                                        onClick={handleOrderNow}
+                                        className="w-full h-12 lg:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center"
+                                    >
+                                        <span className="text-white text-base lg:text-lg font-normal">
                                             اطلب الآن
                                         </span>
                                     </button>
 
-                                    <button className="w-full h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center">
-                                        <span className="text-white text-lg font-normal">
+                                    {/* Schedule Order Button */}
+                                    <button 
+                                        onClick={handleSchedule}
+                                        className="w-full h-12 lg:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Image
+                                            src="/vector (15).png"
+                                            alt="Calendar"
+                                            width={25}
+                                            height={25}
+                                            className="object-contain"
+                                        />
+                                        <span className="text-white text-base lg:text-lg font-normal">
                                             جدول طلبك
                                         </span>
                                     </button>
@@ -106,8 +178,8 @@ export default function OrderForm() {
                         </div>
                     </div>
 
-                    {/* Right side - Map image */}
-                    <div className="lg:w-1/2 h-64 lg:h-auto relative order-first lg:order-last">
+                    {/* Right Column - Map Image */}
+                    <div className="lg:w-1/2 h-56 lg:h-auto relative order-first lg:order-last">
                         <Image
                             src="/location1.jpg"
                             alt="Location Map"
