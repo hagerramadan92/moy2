@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import CancelOrderModal from '../../ui/CancelOrderModal';
 import CustomerSupportPage from './CustomerSupportPage';
 
@@ -11,9 +12,10 @@ import CustomerSupportPage from './CustomerSupportPage';
 export default function OrderDetailsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [showSupportPage, setShowSupportPage] = useState(false); 
+  const router = useRouter();
 
   /**
-   * Opens the cancel order confirmation modal
+   * Opens the cancel order confirmation modal 
    */
   const handleOpenCancelModal = () => {
     setIsCancelModalOpen(true);
@@ -53,6 +55,13 @@ export default function OrderDetailsPage() {
    */
   const handleContinueOrder = () => {
     console.log('Continue order - modal handles this action');
+  };
+
+  /**
+   * Navigates to driver rating/profile page
+   */
+  const handleDriverCardClick = () => {
+    router.push('/driver-rating'); // تعديل هذا المسار حسب احتياجك
   };
 
   if (showSupportPage) {
@@ -201,7 +210,17 @@ export default function OrderDetailsPage() {
 
               {/* Driver Card - Mobile */}
               <div className="mt-6">
-                <div className="bg-white rounded-3xl border border-[#579BE8] shadow-lg p-4 md:p-6">
+                <div 
+                  className="bg-white rounded-3xl border border-[#579BE8] shadow-lg p-4 md:p-6 cursor-pointer hover:shadow-xl transition-shadow duration-300"
+                  onClick={handleDriverCardClick}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleDriverCardClick();
+                    }
+                  }}
+                >
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl md:text-2xl font-semibold text-black">ملف السائق</h2>
                     <div className="flex flex-col items-center">
@@ -293,6 +312,10 @@ export default function OrderDetailsPage() {
                   <div className="space-y-4">
                     <button
                       className="w-full bg-[#579BE8] hover:bg-[#579BE8]/90 text-white rounded-xl h-12 md:h-14 flex items-center justify-center gap-3 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // لمنع trigger للكارد عند الضغط على الزر
+                        console.log('اتصال بالسائق');
+                      }}
                     >
                       <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -302,6 +325,10 @@ export default function OrderDetailsPage() {
 
                     <button
                       className="w-full bg-white border border-[#579BE8] text-[#579BE8] hover:bg-gray-50 rounded-xl h-12 md:h-14 flex items-center justify-center gap-3 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // لمنع trigger للكارد عند الضغط على الزر
+                        console.log('دردشة مع السائق');
+                      }}
                     >
                       <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -436,7 +463,17 @@ export default function OrderDetailsPage() {
 
           {/* Driver Card - Desktop Only */}
           <div className="hidden lg:block w-1/3">
-            <div className="bg-white rounded-3xl border border-[#579BE8] shadow-lg p-6 h-[699px]">
+            <div 
+              className="bg-white rounded-3xl border border-[#579BE8] shadow-lg p-6 h-[699px] cursor-pointer hover:shadow-xl transition-shadow duration-300"
+              onClick={handleDriverCardClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleDriverCardClick();
+                }
+              }}
+            >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-semibold text-black">ملف السائق</h2>
                 <div className="flex flex-col items-center">
@@ -524,6 +561,10 @@ export default function OrderDetailsPage() {
               <div className="space-y-4">
                 <button
                   className="w-full bg-[#579BE8] hover:bg-[#579BE8]/90 text-white rounded-xl h-14 flex items-center justify-center gap-3 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('اتصال بالسائق - ديسكتوب');
+                  }}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -532,8 +573,11 @@ export default function OrderDetailsPage() {
                 </button>
 
                 <button
-                  onClick={handleHelpClick}
                   className="w-full bg-white border border-[#579BE8] text-[#579BE8] hover:bg-gray-50 rounded-xl h-14 flex items-center justify-center gap-3 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('دردشة مع السائق - ديسكتوب');
+                  }}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

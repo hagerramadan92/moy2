@@ -72,10 +72,10 @@ const DriverNameWithStar = ({ name }) => (
 );
 
 const DriverInfoRow = ({ deliveryTime, rating, successfulOrders }) => (
-  <div className="absolute w-[calc(100%-6rem)] top-48 left-14 flex items-center justify-between">
+  <div className="absolute w-[calc(100%-2rem)] top-48 left-6 flex items-center justify-between">
     {/* Delivery Time */}
     <div className="flex items-center gap-1">
-      <div className="relative w-5 h-5">
+      <div className="relative w-4 h-5">
         <Image
           src={getImagePath(IMAGE_PATHS.timeIcon)}
           alt="Delivery time"
@@ -83,7 +83,7 @@ const DriverInfoRow = ({ deliveryTime, rating, successfulOrders }) => (
           className="object-contain"
         />
       </div>
-      <span className="font-sf-arabic font-semibold text-sm text-blue-600 whitespace-nowrap">
+      <span className="font-sf-arabic font-normal text-sm text-blue-600 whitespace-nowrap">
         يصل في {deliveryTime}
       </span>
     </div>
@@ -139,6 +139,7 @@ const OrdersButton = ({ ordersCount, onClick }) => (
     onClick={onClick}
     className="
       absolute w-80 h-14 
+      lg:w-65
       top-56 left-4
       rounded-2xl
       bg-blue-50
@@ -169,6 +170,7 @@ const AcceptButton = ({ onClick }) => (
     onClick={onClick}
     className="
       absolute w-80 h-14 
+      lg:w-65
       top-72 left-4
       rounded-2xl
       bg-blue-600
