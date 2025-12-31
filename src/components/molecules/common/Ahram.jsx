@@ -340,17 +340,17 @@ const ArticleCard = ({ article, index, currentIndex }) => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#579BE8]/10 to-transparent rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         </Link>
         
-        {/* Category Badge with Glow */}
+        {/* Category Badge */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 200 }}
           className="absolute top-4 right-4 z-20"
         >
-          <span className={`px-4 py-2 rounded-full text-xs font-black backdrop-blur-md shadow-xl transition-all duration-300 ${
+          <span className={`px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-md transition-all duration-300 group-hover:shadow-lg ${
             article.category === "الصحة"
-              ? "bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white ring-2 ring-blue-300/50 group-hover:ring-blue-300/80 group-hover:shadow-2xl"
-              : "bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white ring-2 ring-red-300/50 group-hover:ring-red-300/80 group-hover:shadow-2xl"
+              ? "bg-gradient-to-r from-[#579BE8] to-[#4a8dd8]"
+              : "bg-gradient-to-r from-[#315782] to-[#579BE8]"
           }`}>
             {article.category}
           </span>
@@ -567,14 +567,32 @@ export default function Ahram() {
         </motion.div>
 
         {/* Static Articles Grid */}
-        <div className="mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+        <div className="mb-20">
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-10 text-center"
+          >
+            <h3 className="text-3xl md:text-4xl font-black text-gray-900 font-cairo mb-3">
+              جميع المقالات
+            </h3>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+            <p className="text-gray-600 font-cairo font-medium text-base mt-4">
+              اكتشف مجموعة متنوعة من المقالات المهمة والمفيدة
+            </p>
+          </motion.div>
+
+          {/* Articles Grid - 4 columns on large screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
             {displayedStaticArticles.map((article, index) => (
               <motion.div
                 key={article.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
+                className="w-full"
               >
                 <ArticleCard article={article} index={index} currentIndex={index} />
               </motion.div>
@@ -582,17 +600,41 @@ export default function Ahram() {
           </div>
 
           {/* Show More Button */}
-          {staticArticles.length > 3 && (
-            <div className="flex justify-center">
+          {staticArticles.length > 4 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex justify-center"
+            >
               <motion.button
                 onClick={() => setShowAll(!showAll)}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-3 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl font-cairo font-bold text-base hover:from-[#4788d5] hover:to-[#2a4a6f] transition-all duration-300 shadow-lg hover:shadow-xl"
+                className="group relative px-10 py-3.5 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl font-cairo font-bold text-base hover:from-[#4788d5] hover:to-[#2a4a6f] transition-all duration-300 shadow-lg hover:shadow-xl overflow-hidden"
               >
-                {showAll ? 'عرض أقل' : 'عرض المزيد'}
+                {/* Shimmer Effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.6 }}
+                />
+                <span className="relative z-10 flex items-center gap-2">
+                  {showAll ? 'عرض أقل' : 'عرض المزيد'}
+                  <motion.svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    animate={{ rotate: showAll ? 180 : 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </motion.svg>
+                </span>
               </motion.button>
-            </div>
+            </motion.div>
           )}
         </div>
 
