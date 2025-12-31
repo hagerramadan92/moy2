@@ -5,7 +5,7 @@ import AvailableDriversPage from "@/components/molecules/orders/AvailableDrivers
 import React from "react";
 import OrderDetailsPage from "@/components/molecules/orders/OrderDetailsPage";
 import OrderForm from "@/components/molecules/orders/OrderForm";
-
+import CustomerSupportPage from "@/components/molecules/orders/CustomerSupportPage";
 export default function OrdersPage() {
   return (
     <main className="space-y-20">
@@ -13,6 +13,7 @@ export default function OrdersPage() {
    <SearchDriverPage/>
    <AvailableDriversPage/>
    <OrderDetailsPage/>
+   <CustomerSupportPage/>
     </main>
   );
 }
