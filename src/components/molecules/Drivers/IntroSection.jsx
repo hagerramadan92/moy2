@@ -1,63 +1,76 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function IntroSection() {
   return (
-    <section className="flex flex-col lg:flex-row-reverse items-center lg:items-start font-cairo gap-6 sm:gap-8 px-4 sm:px-6 py-6 sm:py-8 max-w-[1000px] mb-4 md:mb-6 mx-auto">
+    <section className="relative w-full py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#579BE8]/10 to-transparent rounded-full blur-3xl -z-0" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tl from-[#315782]/10 to-transparent rounded-full blur-3xl -z-0" />
       
-      {/* Image Section - First on mobile, second on desktop */}
-      <div className="order-1 lg:order-2 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] lg:w-[350px] lg:h-[350px] rounded-[20px] sm:rounded-[24px] overflow-hidden lg:mr-8 lg:ml-8">
-        <img
-          src="/driver.jpg" 
-          alt="Driver using the app"
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      {/* Text Section - Second on mobile, first on desktop */}
-      <div className="order-2 lg:order-1 flex flex-col justify-center lg:justify-start items-center lg:items-start lg:w-[550px] lg:mt-[60px]">
-        <div className="w-full flex flex-col lg:flex-row items-center lg:items-start gap-2 sm:gap-3">
-          {/* "عننا" - positioned for special alignment on desktop */}
-          <div className="flex flex-col items-center lg:items-start lg:mr-4">
-            <span className="text-[#579BE8] font-medium text-[16px] sm:text-[18px] whitespace-nowrap lg:mb-8">
-              عننا
-            </span>
-          </div>
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12">
           
-          {/* Text content - centered on mobile, aligned on desktop */}
-          <div className="flex-1 text-center lg:text-right">
-            <div className="text-black font-semibold text-[18px] sm:text-[20px] lg:text-[22px] leading-[1.4] sm:leading-[1.5]">
-              <div className="flex flex-col items-center lg:items-start">
-                {/* First line */}
-                <span>نرتقي بخدماتنا عبر ابتكارٍ لا يتوقف،</span>
-                
-                {/* Second line - positioned under "عننا" on desktop */}
-                <div className="mt-1 lg:mt-0 lg:mr-[-40px]">
-                  <span>وبفريق يؤمن أن الإنسان هو المحرك</span>
-                </div>
-                
-                {/* Third line */}
-                 <div className="mt-1 lg:mt-0 lg:mr-[-40px]">
-                <span className="mt-1">الحقيقي لكل تطوّر</span>
-                </div>
-              </div>
+          {/* Image Section */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="order-1 lg:order-2 relative w-full max-w-[400px] lg:max-w-[450px] aspect-square rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl shadow-[#579BE8]/20 group"
+          >
+            <Image
+              src="/driver.jpg" 
+              alt="Driver using the app"
+              fill
+              className="object-cover group-hover:scale-110 transition-transform duration-700"
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#579BE8]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            {/* Decorative Border */}
+            <div className="absolute inset-0 border-4 border-transparent bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-2xl lg:rounded-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10 blur-xl" />
+          </motion.div>
+
+          {/* Text Section */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="order-2 lg:order-1 flex-1 max-w-2xl"
+          >
+            {/* Section Label */}
+            <div className="mb-4 lg:mb-6">
+              <span className="inline-block px-4 py-2 bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 text-[#579BE8] font-cairo font-semibold text-base rounded-lg border border-[#579BE8]/20">
+                عننا
+              </span>
             </div>
+
+            {/* Main Heading */}
+            <h2 className="text-xl sm:text-2xl font-cairo font-black text-gray-900 mb-4 lg:mb-6 leading-tight">
+              <span className="block">نرتقي بخدماتنا عبر ابتكارٍ لا يتوقف،</span>
+              <span className="block mt-2">وبفريق يؤمن أن الإنسان هو المحرك</span>
+              <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-[#579BE8] to-[#315782]">
+                الحقيقي لكل تطوّر
+              </span>
+            </h2>
 
             {/* Description */}
-            <div className="w-full mt-3 sm:mt-4 lg:mt-6 lg:mr-[-40px]">
-              <p className="text-black font-normal text-[13px] sm:text-[14px] leading-[1.6] sm:leading-[1.8] lg:text-nowrap">
-                يعمل تطبيق المايّة على تسهيل حياة السائقين من خلال توفير حلول ذكية تنظّم الوقت وتقلل
-                <br className="hidden sm:block" />
-                الجهد وتمنحهم وضوحًا أكبر في إدارة رحلاتهم وأعمالهم اليومية، مما يجعل تجربتهم أكثر راحة
-                <br className="hidden sm:block" />
-                وسلاسة دون أي تعقيد
+            <div className="relative">
+              {/* Decorative Line */}
+              <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mb-6" />
+              
+              <p className="text-gray-600 font-cairo font-normal text-base leading-relaxed">
+                يعمل تطبيق المايّة على تسهيل حياة السائقين من خلال توفير حلول ذكية تنظّم الوقت وتقلل الجهد وتمنحهم وضوحًا أكبر في إدارة رحلاتهم وأعمالهم اليومية، مما يجعل تجربتهم أكثر راحة وسلاسة دون أي تعقيد
               </p>
             </div>
-          </div>
+          </motion.div>
+
         </div>
       </div>
-
     </section>
   );
 }
