@@ -72,7 +72,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header dir="rtl" className="sticky top-0 z-[1000] w-full">
+      <header dir="rtl" className="fixed top-0 z-[1000] w-full">
         <div className="absolute inset-0 -z-10 border-b border-white/20 bg-white/70 backdrop-blur-xl" />
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-sky-100/70 to-transparent" />
 

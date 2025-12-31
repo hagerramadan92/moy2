@@ -18,10 +18,10 @@ export default function ProfileLayout({ children }) {
                 <span>الحساب الشخصي</span>
             </button>
 
-            <div className="container mx-auto py-10 px-4">
+            <div className=" mx-auto py-10 px-3 max-w-7xl">
                 <div className="flex flex-col min-[1123px]:flex-row gap-8 items-start relative">
                     {/* Sidebar / Mobile Menu */}
-                    <div className="w-full min-[1123px]:w-64 flex-shrink-0 min-[1123px]:sticky min-[1123px]:top-24">
+                    <div className="w-full min-[1123px]:w-64 flex-shrink-0">
                         <ProfileSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
                     </div>
 

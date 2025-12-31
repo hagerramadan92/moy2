@@ -78,7 +78,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit sticky top-52">
+            <aside className="hidden min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
                 <div className="flex flex-col gap-8">
                     {navItems.map((section, idx) => (
                         <div key={idx} className="flex flex-col gap-4">

@@ -13,7 +13,9 @@ const Layout = ({ children }) => {
 					duration: 3000,
 				}}
 			/>
-			{children}
+			<div className="pt-20">
+				{children}
+			</div>
 		</div>
 	);
 };
