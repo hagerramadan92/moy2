@@ -1,72 +1,103 @@
 'use client';
 
 import React from 'react';
- 
+import { motion } from 'framer-motion';
+import { FaGift, FaStar, FaPercent } from 'react-icons/fa';
+
 const SpecialOffersSection = () => {
+  const gradient = 'from-[#579BE8] to-[#6BA8F0]';
+
   const offers = [
     {
       title: 'عرض خاص لفترة محدودة',
       mainText: 'اشترِ 10 واحصل على 2 مجاناً',
       description: 'على جميع عبوات المياه الكبيرة',
+      icon: FaGift,
     },
     {
       title: 'برنامج الولاء',
       mainText: 'اجمع النقاط واستبدلها',
       description: 'كل 100 ريال = 10 نقاط مجانية',
+      icon: FaStar,
+    },
+    {
+      title: 'احتفالية الافتتاح الكبير',
+      mainText: 'خصم 30% على الطلب الأول',
+      code: 'WATER30',
+      icon: FaPercent,
     }
   ];
 
-  const bigOffer = {
-    title: '🎉 احتفالية الافتتاح الكبير 🎉',
-    mainText: 'خصم 30% على الطلب الأول',
-    code: 'استخدم كود: WATER30',
-  };
-
   return (
-    <section className="container py-12 md:py-16 lg:py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto flex flex-col items-center gap-10 md:gap-12 lg:gap-16">
-        
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
-          {offers.map((offer, index) => (
-            <div
-              key={index}
-              className="w-full h-[274px] rounded-[24px] p-6 md:p-8 bg-white border border-solid border-transparent shadow-[0px_2px_4px_0px_#EFF5FD]"
-              style={{ borderImage: 'linear-gradient(180deg, #F3F8FE 0%, #579BE8 100%) 1' }}
-            >
-              <div className="w-full h-full flex flex-col justify-center pr-4 md:pr-6 lg:pr-8">
-                <p className="font-cairo font-normal text-right text-gray-800 text-lg md:text-xl mb-6">
-                  {offer.title}
-                </p>
-                <p className="font-cairo font-semibold text-right text-[#579BE8] text-lg md:text-xl lg:text-2xl mb-3 md:mb-4">
-                  {offer.mainText}
-                </p>
-                <p className="font-cairo font-normal text-right text-gray-600 text-base md:text-lg">
-                  {offer.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div
-          className="w-full h-[274px] rounded-[24px] p-6 md:p-8 lg:p-10 bg-white border border-solid border-transparent shadow-[0px_2px_4px_0px_#EFF5FD]"
-          style={{ borderImage: 'linear-gradient(180deg, #F3F8FE 0%, #579BE8 100%) 1' }}
+    <section className="relative w-full py-8 md:py-10 bg-gradient-to-b from-gray-50 to-white">
+      <div className="px-4 mx-auto max-w-6xl relative z-10">
+        {/* Simple Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-6 md:mb-8"
         >
-          <div className="w-full h-full flex flex-col items-center justify-center text-center">
-            <p className="font-cairo font-normal text-[rgba(0,0,0,0.63)] text-lg md:text-xl mb-6 md:mb-8">
-              {bigOffer.title}
-            </p>
-            <div className="space-y-4 md:space-y-6">
-              <p className="font-cairo font-semibold text-[#579BE8] text-xl md:text-2xl lg:text-3xl">
-                {bigOffer.mainText}
-              </p>
-              <p className="font-cairo font-normal text-[rgba(0,0,0,0.63)] text-lg md:text-xl">
-                {bigOffer.code}
-              </p>
-            </div>
+          <div className="inline-block mb-2">
+            <span className="text-sm font-medium text-[#579BE8] bg-[#579BE8]/10 px-3 py-1 rounded-full">
+              عروض حصرية
+            </span>
           </div>
-        </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1.5">
+            <span className="text-[#579BE8]">عروض خاصة</span>
+          </h2>
+          <div className="w-12 h-0.5 bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] rounded-full mx-auto"></div>
+        </motion.div>
 
+        {/* Advanced Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+          {offers.map((offer, index) => {
+            const Icon = offer.icon;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.08 }}
+                className="group"
+              >
+                <div className="relative bg-white rounded-lg p-4 md:p-5 h-full flex flex-col border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  {/* Subtle gradient accent */}
+                  <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                  
+                  <div className="flex flex-col items-center text-center space-y-3 flex-1">
+                    {/* Icon */}
+                    <div className={`w-14 h-14 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-300`}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 flex flex-col justify-center w-full">
+                      <h3 className="text-base md:text-lg font-semibold mb-1.5 text-gray-900">
+                        {offer.title}
+                      </h3>
+                      <p className={`text-base md:text-lg font-bold mb-1.5 bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+                        {offer.mainText}
+                      </p>
+                      {offer.description && (
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                          {offer.description}
+                        </p>
+                      )}
+                      {offer.code && (
+                        <div className={`inline-flex items-center px-3 py-1.5 mt-2 bg-gradient-to-r ${gradient} rounded-full self-center`}>
+                          <span className="text-sm font-bold text-white">{offer.code}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
