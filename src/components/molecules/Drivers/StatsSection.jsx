@@ -184,10 +184,15 @@ export default function StatsSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h2 className="text-2xl sm:text-3xl font-cairo font-bold text-gray-900 mb-3">
-            أرقامنا تتحدث
+          <div className="inline-block mb-2 md:mb-3">
+            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+              إحصائيات
+            </span>
+          </div>
+          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+            <span className="block text-[#579BE8]">أرقامنا تتحدث</span>
           </h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto" />
+          <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
         </motion.div>
 
         {/* Stats Grid - One Row */}

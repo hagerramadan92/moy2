@@ -43,25 +43,24 @@ export default function IntroSection() {
             className="order-2 lg:order-1 flex-1 max-w-2xl"
           >
             {/* Section Label */}
-            <div className="mb-4 lg:mb-6">
-              <span className="inline-block px-4 py-2 bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 text-[#579BE8] font-cairo font-semibold text-base rounded-lg border border-[#579BE8]/20">
+            <div className="mb-2 md:mb-3">
+              <span className="inline-block text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
                 عننا
               </span>
             </div>
 
             {/* Main Heading */}
-            <h2 className="text-xl sm:text-2xl font-cairo font-black text-gray-900 mb-4 lg:mb-6 leading-tight">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
               <span className="block">نرتقي بخدماتنا عبر ابتكارٍ لا يتوقف،</span>
               <span className="block mt-2">وبفريق يؤمن أن الإنسان هو المحرك</span>
-              <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-[#579BE8] to-[#315782]">
+              <span className="block mt-2 text-[#579BE8]">
                 الحقيقي لكل تطوّر
               </span>
             </h2>
+            <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mb-4 lg:mb-6" />
 
             {/* Description */}
             <div className="relative">
-              {/* Decorative Line */}
-              <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mb-6" />
               
               <p className="text-gray-600 font-cairo font-normal text-base leading-relaxed">
                 يعمل تطبيق المايّة على تسهيل حياة السائقين من خلال توفير حلول ذكية تنظّم الوقت وتقلل الجهد وتمنحهم وضوحًا أكبر في إدارة رحلاتهم وأعمالهم اليومية، مما يجعل تجربتهم أكثر راحة وسلاسة دون أي تعقيد

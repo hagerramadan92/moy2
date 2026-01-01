@@ -30,19 +30,19 @@ export default function StaticSection() {
       icon: "/Vector (1).png",
       title: "سريع وسهل",
       description: "واجهة بسيطة تسمح لك بإدارة طلباتك وتحديد أسعارك في ثوانٍ معدودة",
-      gradient: "bg-gradient-to-br from-[#3B5AF1] to-[#05ABE0]"
+      bgColor: "#579BE8"
     },
     {
       icon: "/Vector (2).png",
       title: "أرباح شفافة",
       description: "تتبع أرباحك بشكل لحظي مع إمكانية سحب أموالك في أي وقت",
-      gradient: "bg-gradient-to-br from-[#69111E] to-[#4150F1]"
+      bgColor: "#579BE8"
     },
     {
       icon: "/Vector (13).png",
       title: "آمن وموثوق",
       description: "نظام دفع آمن 100% مع حماية كاملة لبياناتك المالية والشخصية",
-      gradient: "bg-gradient-to-br from-[#33E289] to-[#1C7C4B]"
+      bgColor: "#579BE8"
     }
   ];
 
@@ -53,11 +53,17 @@ export default function StaticSection() {
           
           {/* Features Section - First on mobile, first on desktop */}
           <div className="flex-1 w-full lg:w-auto order-1 mt-12">
-            <div className="text-right mb-6 lg:mb-8">
-              <h2 className="font-cairo font-semibold text-2xl lg:text-3xl text-[#579BE8] mb-3 lg:mb-4">
-                منصة شاملة لإدارة أعمالك
+            <div className="text-center mb-6 lg:mb-8">
+              <div className="inline-block mb-2 md:mb-3">
+                <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+                  منصة متكاملة
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+                <span className="block text-[#579BE8]">منصة شاملة لإدارة أعمالك</span>
               </h2>
-              <p className="font-cairo font-normal text-base lg:text-lg text-black leading-relaxed">
+              <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+              <p className="font-cairo font-normal text-base lg:text-lg text-gray-700 leading-relaxed">
                 تطبيق السائقين هو حلّك الكامل لتحويل صهريج المياه الخاص بك إلى مصدر دخل مستقر ومجزي.<br />
                 نربطك بآلاف العملاء الذين يحتاجون لخدماتك يومياً في جميع أنحاء المملكة.
               </p>
@@ -65,11 +71,16 @@ export default function StaticSection() {
 
             <div className="space-y-4 lg:space-y-6">
               {features.map((feature, index) => (
-                <div key={index} className="flex flex-row items-center gap-3 lg:gap-4">
-                  <div className={`flex-shrink-0 w-12 h-12 lg:w-[70px] lg:h-[70px] rounded-xl lg:rounded-2xl shadow-md flex items-center justify-center ${feature.gradient}`}>
+                <div key={index} className="flex flex-row items-center gap-3 lg:gap-4 group">
+                  <div 
+                    className="flex-shrink-0 w-10 h-10 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl shadow-lg flex items-center justify-center bg-gradient-to-br from-[#579BE8] to-[#315782] group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      boxShadow: '0px 4px 12px rgba(87, 155, 232, 0.3), 0px 2px 4px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
                     {feature.icon === "/Vector (14).png" ? (
                       <div 
-                        className="relative w-6 h-6 lg:w-[35px] lg:h-[35px] flex items-center justify-center"
+                        className="relative w-5 h-5 lg:w-7 lg:h-7 flex items-center justify-center"
                         style={{
                           border: '1.45px solid #FFFFFF',
                           borderRadius: '4px'
@@ -78,19 +89,19 @@ export default function StaticSection() {
                         <Image
                           src={feature.icon}
                           alt={feature.title}
-                          width={23.22}
-                          height={38.71}
+                          width={18}
+                          height={30}
                           className="object-contain"
                         />
                       </div>
                     ) : (
-                      <div className="relative w-6 h-6 lg:w-[35px] lg:h-[35px]">
+                      <div className="relative w-5 h-5 lg:w-7 lg:h-7">
                         <Image
                           src={feature.icon}
                           alt={feature.title}
                           fill
                           className="filter brightness-0 invert object-contain"
-                          sizes="(max-width: 1024px) 24px, 35px"
+                          sizes="(max-width: 1024px) 20px, 28px"
                         />
                       </div>
                     )}
@@ -100,7 +111,7 @@ export default function StaticSection() {
                     <h3 className="font-cairo font-semibold text-lg lg:text-2xl text-[#579BE8] mb-1 lg:mb-2">
                       {feature.title}
                     </h3>
-                    <p className="font-cairo font-normal text-lg lg:text-base text-black">
+                    <p className="font-cairo font-normal text-lg lg:text-base text-gray-600">
                       {feature.description}
                     </p>
                   </div>
@@ -155,8 +166,9 @@ export default function StaticSection() {
               ))}
             </div>
 
-            <div className="mt-3 lg:mt-4">
-              <p className="font-cairo font-normal text-sm lg:text-base text-black text-center leading-relaxed">
+            <div className="mt-1  border border-gray-200/60 rounded-xl p-3">
+              <p className="font-cairo font-normal text-xs  
+              text-gray-600/60 text-center leading-relaxed">
                 هذه الاحصائيات مبنيه علي متوسط اداء السائقين النشطين<br />
                 خلال اخر 3 اشهر
               </p>
