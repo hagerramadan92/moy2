@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaBook, FaNewspaper, FaHeartbeat, FaClock, FaUser, FaCalendarAlt, FaArrowRight, FaFire, FaChartLine } from 'react-icons/fa';
+import { IoIosArrowForward } from 'react-icons/io';
+import { ChevronLeft } from 'lucide-react';
 import { IoDocumentTextOutline } from 'react-icons/io5';
 import { MdArticle } from 'react-icons/md';
 
@@ -137,6 +139,7 @@ const CATEGORIES = [
 
 const CategoryButton = ({ category, isSelected, onClick }) => {
   const Icon = category.icon || FaBook;
+  const selectedBgColor = '#579BE8'; // Unified color for all selected categories
   
   return (
     <motion.button
@@ -151,7 +154,7 @@ const CategoryButton = ({ category, isSelected, onClick }) => {
           : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
         }
       `}
-      style={isSelected ? { backgroundColor: category.color || '#579BE8' } : {}}
+      style={isSelected ? { backgroundColor: selectedBgColor } : {}}
     >
       {Icon && <Icon className="text-base" />}
       <span>{category.name}</span>
@@ -365,6 +368,8 @@ const ArticleCard = ({ article, variant = 'default' }) => {
 };
 
 const ArticlesHeader = ({ selectedCategory, onCategorySelect, apiCategories = [], articleCategories = [] }) => {
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  
   // Start with "جميع المقالات" category
   const allCategories = [{
     id: 0,
@@ -409,6 +414,12 @@ const ArticlesHeader = ({ selectedCategory, onCategorySelect, apiCategories = []
         usedNames.add(cat);
       });
   }
+
+  // Determine which categories to show
+  const categoriesToShow = showAllCategories || allCategories.length <= 5 
+    ? allCategories 
+    : allCategories.slice(0, 5);
+  const hasMoreCategories = allCategories.length > 5;
 
   return (
     <section className="relative w-full py-16 md:py-20 lg:py-24 bg-gradient-to-br from-secondary/20 via-background to-secondary/10 overflow-hidden">
@@ -469,7 +480,7 @@ const ArticlesHeader = ({ selectedCategory, onCategorySelect, apiCategories = []
                 transition={{ delay: 0.4 }}
                 className="flex flex-wrap justify-center gap-3 mt-4"
               >
-                {allCategories.map((category, index) => (
+                {categoriesToShow.map((category, index) => (
                   <CategoryButton
                     key={`category-${category.name}-${category.id || index}`}
                     category={category}
@@ -477,6 +488,36 @@ const ArticlesHeader = ({ selectedCategory, onCategorySelect, apiCategories = []
                     onClick={onCategorySelect}
                   />
                 ))}
+                
+                {/* Show More Button */}
+                {hasMoreCategories && !showAllCategories && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAllCategories(true)}
+                    className="relative flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30 transition-all duration-300 font-cairo font-semibold text-sm"
+                  >
+                    <span>المزيد</span>
+                    <FaArrowRight className="text-sm" />
+                  </motion.button>
+                )}
+                
+                {/* Show Less Button */}
+                {hasMoreCategories && showAllCategories && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAllCategories(false)}
+                    className="relative flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30 transition-all duration-300 font-cairo font-semibold text-sm"
+                  >
+                    <span>أقل</span>
+                    <ChevronLeft className="text-sm" />
+                  </motion.button>
+                )}
               </motion.div>
             </div>
           </div>
