@@ -398,22 +398,78 @@ export default function CurrentLocation() {
 function MapWithClickHandler({ center, onMapClick, currentLocation }) {
   // Component to handle map clicks
   function MapClickHandler() {
-    const { useMapEvents } = require("react-leaflet");
-    useMapEvents({
-      click: onMapClick,
-    });
-    return null;
+    try {
+      const { useMapEvents } = require("react-leaflet");
+      
+      useMapEvents({
+        click: (e) => {
+          if (onMapClick && typeof onMapClick === 'function') {
+            try {
+              // Extract lat/lng from the click event
+              const latlng = e.latlng;
+              if (latlng && typeof latlng.lat === 'number' && typeof latlng.lng === 'number') {
+                // Call onMapClick with lat and lng if it accepts parameters
+                // Otherwise just call it without parameters
+                if (onMapClick.length > 0) {
+                  onMapClick(latlng.lat, latlng.lng);
+                } else {
+                  onMapClick();
+                }
+              } else {
+                // If no valid coordinates, just call the function
+                onMapClick();
+              }
+            } catch (error) {
+              console.error('Error handling map click:', error);
+              // Fallback: try calling without parameters
+              try {
+                onMapClick();
+              } catch (fallbackError) {
+                console.error('Error in fallback map click handler:', fallbackError);
+              }
+            }
+          }
+        },
+      });
+      
+      return null;
+    } catch (error) {
+      console.error('Error initializing MapClickHandler:', error);
+      return null;
+    }
   }
 
   // Component to update map center when location changes
   function MapCenterUpdater({ center }) {
     const { useMap } = require("react-leaflet");
     const map = useMap();
-    useEffect(() => {
-      if (center) {
-        map.setView(center, map.getZoom());
+    
+    React.useEffect(() => {
+      if (!center || !map) return;
+      
+      // Wait for map to be fully initialized
+      if (!map.setView || !map.getZoom) {
+        return;
+      }
+      
+      try {
+        // Check if center is a valid array with 2 elements
+        if (Array.isArray(center) && center.length === 2 && 
+            typeof center[0] === 'number' && typeof center[1] === 'number' &&
+            !isNaN(center[0]) && !isNaN(center[1])) {
+          const currentZoom = map.getZoom();
+          // Use setTimeout to ensure map is ready
+          setTimeout(() => {
+            if (map && map.setView) {
+              map.setView(center, currentZoom, { animate: true });
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error updating map center:', error);
       }
     }, [center, map]);
+    
     return null;
   }
 
@@ -423,9 +479,8 @@ function MapWithClickHandler({ center, onMapClick, currentLocation }) {
       zoom={13}
       style={{ height: "100%", width: "100%", zIndex: 1 }}
       className="rounded-3xl"
+      key={JSON.stringify(center)} // Force re-render when center changes
     >
-      <MapClickHandler />
-      <MapCenterUpdater center={center} />
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -435,6 +490,8 @@ function MapWithClickHandler({ center, onMapClick, currentLocation }) {
           <Popup>موقعك الحالي</Popup>
         </Marker>
       )}
+      <MapClickHandler />
+      <MapCenterUpdater center={center} />
     </MapContainer>
   );
 }

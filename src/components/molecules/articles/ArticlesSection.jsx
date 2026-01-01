@@ -1,12 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaBook, FaNewspaper, FaHeartbeat, FaClock, FaUser, FaCalendarAlt, FaArrowRight, FaFire, FaChartLine } from 'react-icons/fa';
 import { IoDocumentTextOutline } from 'react-icons/io5';
 import { MdArticle } from 'react-icons/md';
+
+const DEFAULT_IMAGE = "/man.png";
+
+// Transform API article to component format
+const transformArticle = (apiArticle) => {
+  return {
+    id: apiArticle.id,
+    imageUrl: apiArticle.featured_image || DEFAULT_IMAGE,
+    category: apiArticle.category?.name || "عام",
+    title: apiArticle.title,
+    description: apiArticle.excerpt || apiArticle.summary || "",
+    author: apiArticle.author?.name || "غير معروف",
+    date: apiArticle.published_at_human || apiArticle.created_at_human || "",
+    readTime: `${apiArticle.reading_time || 5} دقائق`,
+    views: apiArticle.views_count || 0,
+    likes: apiArticle.likes_count || 0,
+    comments: apiArticle.comments_count || 0,
+    featured: apiArticle.is_featured || false,
+    trending: apiArticle.views_count > 100 || false,
+    slug: apiArticle.slug
+  };
+};
 
 const ARTICLES_DATA = [
   {
@@ -114,7 +136,7 @@ const CATEGORIES = [
 ];
 
 const CategoryButton = ({ category, isSelected, onClick }) => {
-  const Icon = category.icon;
+  const Icon = category.icon || FaBook;
   
   return (
     <motion.button
@@ -129,15 +151,18 @@ const CategoryButton = ({ category, isSelected, onClick }) => {
           : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
         }
       `}
-      style={isSelected ? { backgroundColor: category.color } : {}}
+      style={isSelected ? { backgroundColor: category.color || '#579BE8' } : {}}
     >
-      <Icon className="text-base" />
+      {Icon && <Icon className="text-base" />}
       <span>{category.name}</span>
     </motion.button>
   );
 };
 
 const FeaturedArticle = ({ article }) => {
+  const [imageError, setImageError] = useState(false);
+  const defaultImage = "/man.png";
+  
   if (!article) return null;
   
   const categoryData = CATEGORIES.find(cat => cat.name === article.category);
@@ -149,15 +174,16 @@ const FeaturedArticle = ({ article }) => {
       transition={{ duration: 0.6 }}
       className="relative group"
     >
-      <Link href={`/articles/${article.id}`}>
+      <Link href={`/articles/${article.slug || article.id}`}>
         <div className="relative h-[500px] md:h-[600px] rounded-3xl overflow-hidden shadow-2xl cursor-pointer">
           {/* Image with overlay */}
           <div className="absolute inset-0">
             <Image
-              src={article.imageUrl}
+              src={imageError ? defaultImage : (article.imageUrl || defaultImage)}
               alt={article.title}
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-700"
+              onError={() => setImageError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
           </div>
@@ -229,6 +255,7 @@ const FeaturedArticle = ({ article }) => {
 };
 
 const ArticleCard = ({ article, variant = 'default' }) => {
+  const [imageError, setImageError] = useState(false);
   const categoryData = CATEGORIES.find(cat => cat.name === article.category);
   
   if (variant === 'compact') {
@@ -239,15 +266,16 @@ const ArticleCard = ({ article, variant = 'default' }) => {
         whileHover={{ y: -5 }}
         className="group w-full"
       >
-        <Link href={`/articles/${article.id}`}>
+        <Link href={`/articles/${article.slug || article.id}`}>
           <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 w-full h-[140px]">
             <div className="flex gap-4 p-5 h-full">
               <div className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden">
                 <Image
-                  src={article.imageUrl}
+                  src={imageError ? DEFAULT_IMAGE : (article.imageUrl || DEFAULT_IMAGE)}
                   alt={article.title}
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
+                  onError={() => setImageError(true)}
                 />
               </div>
               <div className="flex-1 min-w-0 flex flex-col">
@@ -284,15 +312,16 @@ const ArticleCard = ({ article, variant = 'default' }) => {
       whileHover={{ y: -8 }}
       className="group w-full"
     >
-      <Link href={`/articles/${article.id}`}>
+      <Link href={`/articles/${article.slug || article.id}`}>
         <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col w-full h-[480px]">
           {/* Image */}
           <div className="relative h-[200px] w-full overflow-hidden flex-shrink-0">
             <Image
-              src={article.imageUrl}
+              src={imageError ? DEFAULT_IMAGE : (article.imageUrl || DEFAULT_IMAGE)}
               alt={article.title}
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-500"
+              onError={() => setImageError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
@@ -335,7 +364,52 @@ const ArticleCard = ({ article, variant = 'default' }) => {
   );
 };
 
-const ArticlesHeader = ({ selectedCategory, onCategorySelect }) => {
+const ArticlesHeader = ({ selectedCategory, onCategorySelect, apiCategories = [], articleCategories = [] }) => {
+  // Start with "جميع المقالات" category
+  const allCategories = [{
+    id: 0,
+    name: 'جميع المقالات',
+    icon: FaBook,
+    color: '#4B5563',
+    bgColor: '#F3F4F6'
+  }];
+  
+  // Track used names to avoid duplicates
+  const usedNames = new Set(['جميع المقالات']);
+  
+  // Add API categories if available
+  if (apiCategories.length > 0) {
+    apiCategories.forEach(cat => {
+      if (!usedNames.has(cat.name)) {
+        allCategories.push(cat);
+        usedNames.add(cat.name);
+      }
+    });
+  } else {
+    // Fallback to static categories (excluding "الكل")
+    CATEGORIES.slice(1).forEach(cat => {
+      if (!usedNames.has(cat.name)) {
+        allCategories.push(cat);
+        usedNames.add(cat.name);
+      }
+    });
+    
+    // Add article categories that don't exist in static categories
+    let dynamicIndex = 1000; // Start from high number to avoid conflicts
+    articleCategories
+      .filter(cat => !usedNames.has(cat))
+      .forEach((cat) => {
+        allCategories.push({
+          id: dynamicIndex++,
+          name: cat,
+          icon: FaBook,
+          color: '#579BE8',
+          bgColor: '#EFF6FF'
+        });
+        usedNames.add(cat);
+      });
+  }
+
   return (
     <section className="relative w-full py-16 md:py-20 lg:py-24 bg-gradient-to-br from-secondary/20 via-background to-secondary/10 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -395,9 +469,9 @@ const ArticlesHeader = ({ selectedCategory, onCategorySelect }) => {
                 transition={{ delay: 0.4 }}
                 className="flex flex-wrap justify-center gap-3 mt-4"
               >
-                {CATEGORIES.map((category) => (
+                {allCategories.map((category, index) => (
                   <CategoryButton
-                    key={category.id}
+                    key={`category-${category.name}-${category.id || index}`}
                     category={category}
                     isSelected={selectedCategory === category.name}
                     onClick={onCategorySelect}
@@ -413,15 +487,32 @@ const ArticlesHeader = ({ selectedCategory, onCategorySelect }) => {
 };
 
 const ArticlesGrid = ({ articles, selectedCategory }) => {
-  const featuredArticle = articles.find(a => a.featured);
-  const regularArticles = articles.filter(a => !a.featured);
+  // Get featured articles (can be multiple)
+  const featuredArticles = articles.filter(a => a.featured);
+  const featuredArticle = featuredArticles[0]; // Show first featured article in hero section
+  
+  // Get the ID of the first featured article to exclude it from grid (to avoid duplication)
+  const firstFeaturedArticleId = featuredArticle?.id;
+  
+  // Get all articles excluding the first featured one from grid (already shown in hero)
+  // But include other featured articles in the grid
+  const articlesToShow = (selectedCategory === "جميع المقالات" || selectedCategory === null || selectedCategory === '')
+    ? articles.filter(a => a.id !== firstFeaturedArticleId)
+    : articles.filter(article => article.category === selectedCategory);
+  
   const trendingArticles = articles.filter(a => a.trending && !a.featured).slice(0, 3);
+  
+  // Debug logging
+  console.log('ArticlesGrid - Total articles:', articles.length);
+  console.log('ArticlesGrid - Featured articles:', featuredArticles.length);
+  console.log('ArticlesGrid - Articles to show:', articlesToShow.length);
+  console.log('ArticlesGrid - Trending articles:', trendingArticles.length);
 
   return (
     <section className="py-12 md:py-16 lg:py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Featured Article */}
-        {featuredArticle && selectedCategory === 'الكل' && (
+        {featuredArticle && (selectedCategory === "جميع المقالات" || selectedCategory === null || selectedCategory === '') && (
           <div className="mb-16">
             <div className="flex items-center gap-2 mb-6">
               <FaFire className="text-gray-600 text-xl" />
@@ -432,7 +523,7 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
         )}
 
         {/* Trending Articles */}
-        {trendingArticles.length > 0 && selectedCategory === 'الكل' && (
+        {trendingArticles.length > 0 && (selectedCategory === "جميع المقالات" || selectedCategory === null || selectedCategory === '') && (
           <div className="mb-16">
             <div className="flex items-center gap-2 mb-6">
               <FaChartLine className="text-gray-600 text-xl" />
@@ -449,7 +540,7 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
         {/* All Articles Grid */}
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8">
-            {selectedCategory === 'الكل' ? 'جميع المقالات' : `مقالات ${selectedCategory}`}
+            {selectedCategory === "جميع المقالات" || selectedCategory === null || selectedCategory === '' ? 'جميع المقالات' : `مقالات ${selectedCategory}`}
           </h2>
           <AnimatePresence mode="wait">
             <motion.div
@@ -460,7 +551,7 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
               transition={{ duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
-              {regularArticles.map((article, index) => (
+              {articlesToShow.slice(0, 5).map((article, index) => (
                 <motion.div
                   key={article.id}
                   initial={{ opacity: 0, y: 30 }}
@@ -473,7 +564,7 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
             </motion.div>
           </AnimatePresence>
 
-          {regularArticles.length === 0 && (
+          {articlesToShow.length === 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -485,6 +576,24 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
               </div>
             </motion.div>
           )}
+
+          {/* Read More Button - Show if more than 5 articles */}
+          {articlesToShow.length > 5 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-center mt-12"
+            >
+              <Link
+                href="/articles"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl font-cairo font-bold text-lg hover:from-[#4788d5] hover:to-[#2a4a6f] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <span>اقرأ المزيد</span>
+                <FaArrowRight className="text-xl" />
+              </Link>
+            </motion.div>
+          )}
         </div>
       </div>
     </section>
@@ -492,17 +601,104 @@ const ArticlesGrid = ({ articles, selectedCategory }) => {
 };
 
 const ArticlesSection = () => {
-  const [selectedCategory, setSelectedCategory] = useState("الكل");
+  const [selectedCategory, setSelectedCategory] = useState("جميع المقالات");
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [apiCategories, setApiCategories] = useState([]);
 
-  const filteredArticles = selectedCategory === "الكل" 
-    ? ARTICLES_DATA 
-    : ARTICLES_DATA.filter(article => article.category === selectedCategory);
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        
+        if (response.ok && data.success && data.data) {
+          // Transform API categories to component format
+          const transformedCategories = data.data.map((cat, index) => ({
+            id: cat.id || index + 1,
+            name: cat.name,
+            slug: cat.slug,
+            icon: CATEGORIES.find(c => c.name === cat.name)?.icon || FaBook,
+            color: cat.color || '#579BE8',
+            bgColor: cat.color ? `${cat.color}20` : '#EFF6FF',
+            description: cat.description
+          }));
+          
+          setApiCategories(transformedCategories);
+          console.log('Categories fetched from API:', transformedCategories);
+        } else {
+          console.warn('Failed to fetch categories, using static categories');
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/articles');
+        const data = await response.json();
+        
+        if (response.ok && data.success && data.data) {
+          const transformedArticles = data.data.map(transformArticle);
+          console.log('Articles fetched:', transformedArticles.length);
+          console.log('Articles data:', transformedArticles);
+          setArticles(transformedArticles);
+          
+          // Extract unique categories from articles as fallback
+          const uniqueCategories = [...new Set(transformedArticles.map(a => a.category))];
+          setCategories(uniqueCategories);
+          console.log('Categories from articles:', uniqueCategories);
+        } else {
+          throw new Error(data.message || 'Failed to fetch articles');
+        }
+      } catch (err) {
+        console.error('Error fetching articles:', err);
+        setError(err.message);
+        // Fallback to static data
+        setArticles(ARTICLES_DATA);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
+  }, []);
+
+  const filteredArticles = selectedCategory === "جميع المقالات" || selectedCategory === "الكل" 
+    ? articles 
+    : articles.filter(article => article.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <main className="w-full">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">جاري تحميل المقالات...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="w-full">
       <ArticlesHeader 
         selectedCategory={selectedCategory}
         onCategorySelect={setSelectedCategory}
+        apiCategories={apiCategories}
+        articleCategories={categories}
       />
       <ArticlesGrid articles={filteredArticles} selectedCategory={selectedCategory} />
     </main>

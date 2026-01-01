@@ -2,13 +2,14 @@
 
 import StaticPageContent from "@/components/molecules/common/StaticPageContent";
 
-export default function PrivacyPage() {
+export default function PartnersPage() {
   return (
     <StaticPageContent
-      slug="syas-alkhsosy"
-      title="سياسة الخصوصية"
+      slug="alshrkaaa"
+      title="الشركاء"
       backLink="/"
       backLinkText="العودة للصفحة الرئيسية"
     />
   );
 }
+

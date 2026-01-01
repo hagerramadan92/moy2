@@ -24,6 +24,18 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'http',
+        hostname: 'moya.talaaljazeera.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'moya.talaaljazeera.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

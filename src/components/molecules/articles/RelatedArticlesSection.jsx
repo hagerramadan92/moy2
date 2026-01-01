@@ -14,6 +14,9 @@ import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 
 const ArticleCard = ({ article, index, currentIndex, isActive = false }) => {
+  const [imageError, setImageError] = useState(false);
+  const DEFAULT_IMAGE = "/man.png";
+  
   // Limit title to 5 words
   const titleWords = article.title.split(' ');
   const limitedTitle = titleWords.length > 5 
@@ -63,12 +66,13 @@ const ArticleCard = ({ article, index, currentIndex, isActive = false }) => {
       
        {/* Image */}
        <div className="relative w-full h-[150px] overflow-hidden flex-shrink-0">
-        <Link href={`/articles/${article.id}`} className="block w-full h-full relative">
+        <Link href={`/articles/${article.slug || article.id}`} className="block w-full h-full relative">
           <Image
-            src={article.imageUrl}
+            src={imageError ? DEFAULT_IMAGE : (article.imageUrl || DEFAULT_IMAGE)}
             alt={limitedTitle}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            onError={() => setImageError(true)}
           />
           {/* Multi-layer Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -113,7 +117,7 @@ const ArticleCard = ({ article, index, currentIndex, isActive = false }) => {
        {/* Content */}
        <div className="p-4 flex-1 flex flex-col relative z-10 bg-white">
           {/* Title - One row only with hidden overflow */}
-          <Link href={`/articles/${article.id}`} className="block mb-2 group/title">
+          <Link href={`/articles/${article.slug || article.id}`} className="block mb-2 group/title">
             <h3 
               className={`font-cairo font-black text-xs md:text-base leading-tight transition-all duration-500 overflow-hidden text-ellipsis whitespace-nowrap ${
                 isCenterCard 

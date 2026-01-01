@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { DropletIcon } from "../Navbar";
 import Image from "next/image";
@@ -33,24 +34,24 @@ export default function Footer() {
             <h4 className="text-lg font-bold mb-6 text-white">الدعم</h4>
             <ul className="space-y-4 text-center md:text-start">
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/contact" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   تواصل معنا
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/support" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الدعم الفني
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/help-center" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   مركز المساعدة
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/support" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   بلغ عن مشكلة
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -60,24 +61,24 @@ export default function Footer() {
             <h4 className="text-lg font-bold mb-6 text-white">قانوني</h4>
             <ul className="space-y-4 text-center md:text-start">
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/privacy" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   سياسة الخصوصية
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/terms" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   المصطلحات والتحكم
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/terms" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   سياسة الاستخدام
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/help-center" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الأسئلة الشائعة
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -87,24 +88,24 @@ export default function Footer() {
             <h4 className="text-lg font-bold mb-6 text-white">الشركة</h4>
             <ul className="space-y-4 text-center md:text-start">
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/about" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   من نحن
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/drivers" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   كيفية العمل
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
-                  الأسعار
-                </a>
+                <Link href="/partners" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                  الشركاء
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
-                  المدونة
-                </a>
+                <Link href="/team" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                  الفريق
+                </Link>
               </li>
             </ul>
           </div>
@@ -141,11 +142,11 @@ export default function Footer() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-gray-400">
-                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
                 <div className="w-1 h-1 rounded-full bg-gray-600 hidden sm:block" />
-                <a href="#" className="hover:text-white transition-colors">Terms and Conditions</a>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms and Conditions</Link>
                 <div className="w-1 h-1 rounded-full bg-gray-600 hidden sm:block" />
-                <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
+                <Link href="/privacy" className="hover:text-white transition-colors">Cookie Policy</Link>
               </div>
             </div>
           </div>

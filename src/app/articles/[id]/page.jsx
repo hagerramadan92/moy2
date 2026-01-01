@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
@@ -141,32 +141,209 @@ const allArticles = [
 const ArticleDetails = () => {
   const params = useParams();
   const router = useRouter();
-  const articleId = parseInt(params.id);
   const { scrollYProgress } = useScroll();
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [article, setArticle] = useState(null);
+  const [relatedArticles, setRelatedArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [authorImageError, setAuthorImageError] = useState(false);
+  const DEFAULT_IMAGE = "/man.png";
+  const DEFAULT_AUTHOR_IMAGE = "/person.png";
 
-  const article = allArticles.find(article => article.id === articleId) || allArticles[0];
+  // Get articleId from params, handle both slug and id
+  const articleId = params?.id || params?.slug;
 
-  const relatedArticles = allArticles
-    .filter(item => item.category === article.category && item.id !== articleId)
-    .slice(0, 8);
+  // Debug logging
+  useEffect(() => {
+    console.log('ArticleDetails - params:', params);
+    console.log('ArticleDetails - articleId:', articleId);
+  }, [params, articleId]);
 
-  if (relatedArticles.length < 8) {
-    const otherArticles = allArticles
-      .filter(item => item.category !== article.category && item.id !== articleId)
-      .slice(0, 8 - relatedArticles.length);
-    relatedArticles.push(...otherArticles);
-  }
+  useEffect(() => {
+    const fetchArticle = async () => {
+      // Wait for params to be available
+      if (!params || !articleId) {
+        console.log('ArticleDetails - Waiting for params...', { params, articleId });
+        return;
+      }
 
-  // Transform articles to match the expected format (add publisher field from author)
-  const transformedRelatedArticles = relatedArticles.map(article => ({
-    ...article,
-    publisher: article.author || article.publisher,
-    description: article.description || ''
-  }));
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Validate articleId
+        const validId = String(articleId).trim();
+        if (!validId || validId === 'undefined' || validId === 'null' || validId === '') {
+          console.error('ArticleDetails - Invalid articleId:', articleId);
+          throw new Error('Article ID or slug is required');
+        }
+        
+        console.log('ArticleDetails - Fetching article with ID:', validId);
+        
+        // Fetch article by slug/id
+        const response = await fetch(`/api/articles/${encodeURIComponent(validId)}`);
+        const data = await response.json();
+        
+        console.log('ArticleDetails - API Response:', { status: response.status, success: data.success, hasData: !!data.data, dataKeys: Object.keys(data) });
+        
+        // Handle different response structures
+        let articleData = null;
+        if (response.ok) {
+          if (data.success && data.data) {
+            articleData = data.data;
+          } else if (data.id || data.title) {
+            // Response is the article object directly
+            articleData = data;
+          } else if (data.data && !data.success) {
+            // Response has data but no success field
+            articleData = data.data;
+          }
+        }
+        
+        if (articleData) {
+          
+          // Transform API article to component format
+          const transformedArticle = {
+            id: articleData.id,
+            imageUrl: articleData.featured_image || "/man.png",
+            category: articleData.category?.name || "عام",
+            title: articleData.title,
+            content: articleData.content || articleData.body || articleData.description || "",
+            description: articleData.excerpt || articleData.summary || "",
+            author: articleData.author?.name || "غير معروف",
+            author2: articleData.author?.name || "غير معروف",
+            author2Title: articleData.author?.email || "كاتب",
+            authorAvatar: articleData.author?.avatar || "/person.png",
+            date: articleData.published_at_human || articleData.created_at_human || "",
+            readTime: `${articleData.reading_time || 5} دقائق`,
+            views: articleData.views_count || 0,
+            likes: articleData.likes_count || 0,
+            comments: articleData.comments_count || 0,
+            tags: articleData.tags || []
+          };
+          
+          setArticle(transformedArticle);
+          
+          // Fetch related articles
+          const relatedResponse = await fetch('/api/articles');
+          const relatedData = await relatedResponse.json();
+          
+          if (relatedResponse.ok && relatedData.success && relatedData.data) {
+            const allArticles = relatedData.data.map(apiArticle => ({
+              id: apiArticle.id,
+              imageUrl: apiArticle.featured_image || "/man.png",
+              category: apiArticle.category?.name || "عام",
+              title: apiArticle.title,
+              description: apiArticle.excerpt || apiArticle.summary || "",
+              publisher: apiArticle.author?.name || "غير معروف",
+              date: apiArticle.published_at_human || apiArticle.created_at_human || "",
+              readTime: `${apiArticle.reading_time || 5} دقائق`,
+              views: apiArticle.views_count || 0,
+              slug: apiArticle.slug
+            }));
+            
+            const related = allArticles
+              .filter(item => 
+                item.category === transformedArticle.category && 
+                item.id !== transformedArticle.id
+              )
+              .slice(0, 8);
+            
+            if (related.length < 8) {
+              const otherArticles = allArticles
+                .filter(item => 
+                  item.category !== transformedArticle.category && 
+                  item.id !== transformedArticle.id
+                )
+                .slice(0, 8 - related.length);
+              related.push(...otherArticles);
+            }
+            
+            setRelatedArticles(related);
+          }
+        } else {
+          // If API returns error, provide more context
+          const errorMsg = data.message || data.error || `Failed to fetch article (${response.status})`;
+          console.error('ArticleDetails - API Error:', {
+            status: response.status,
+            message: errorMsg,
+            data: data
+          });
+          throw new Error(errorMsg);
+        }
+      } catch (err) {
+        console.error('Error fetching article:', err);
+        const errorMessage = err.message || 'حدث خطأ أثناء تحميل المقال';
+        setError(errorMessage);
+        
+        // Only fallback to static data if articleId is a number (ID)
+        if (articleId && !isNaN(parseInt(articleId))) {
+          const fallbackArticle = allArticles.find(a => a.id === parseInt(articleId)) || allArticles[0];
+          if (fallbackArticle) {
+            console.log('ArticleDetails - Using fallback article:', fallbackArticle);
+            setArticle(fallbackArticle);
+            
+            const related = allArticles
+              .filter(item => item.category === fallbackArticle.category && item.id !== fallbackArticle.id)
+              .slice(0, 8);
+            setRelatedArticles(related.map(a => ({
+              ...a,
+              publisher: a.author || a.publisher,
+              description: a.description || ''
+            })));
+            setError(null); // Clear error if fallback works
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Only fetch if we have a valid articleId
+    if (articleId && String(articleId).trim() && String(articleId).trim() !== 'undefined' && String(articleId).trim() !== 'null') {
+      fetchArticle();
+    } else if (params && Object.keys(params).length > 0) {
+      // If params exist but articleId is invalid
+      setError('Article ID or slug is required');
+      setLoading(false);
+    }
+  }, [articleId, params]);
 
   // Reading progress bar
   const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل المقال...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error && !article) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => router.push('/articles')}
+            className="px-6 py-2 bg-[#579BE8] text-white rounded-lg"
+          >
+            العودة للمقالات
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!article) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -279,12 +456,13 @@ const ArticleDetails = () => {
               rounded-xl overflow-hidden mb-0 group"
             >
               <Image
-                src={article.imageUrl}
+                src={imageError ? DEFAULT_IMAGE : (article.imageUrl || DEFAULT_IMAGE)}
                 alt={article.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-700"
                 priority
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                onError={() => setImageError(true)}
               />
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40
@@ -312,17 +490,31 @@ const ArticleDetails = () => {
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#315782]/5 to-transparent rounded-full blur-3xl -z-0" />
             
             <div className="relative z-10 space-y-8 mb-12">
-              {article.content.split('\n').map((paragraph, index) => (
-                <motion.p
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 + index * 0.1 }}
-                  className="font-cairo font-normal text-sm md:text-base text-gray-600 leading-relaxed text-justify"
-                >
-                  {paragraph}
-                </motion.p>
-              ))}
+              {article.content ? (
+                typeof article.content === 'string' ? (
+                  article.content.split('\n').map((paragraph, index) => (
+                    paragraph.trim() && (
+                      <motion.p
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + index * 0.1 }}
+                        className="font-cairo font-normal text-sm md:text-base text-gray-600 leading-relaxed text-justify"
+                        dangerouslySetInnerHTML={{ __html: paragraph }}
+                      />
+                    )
+                  ))
+                ) : (
+                  <div 
+                    className="prose prose-lg max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: article.content }}
+                  />
+                )
+              ) : (
+                <p className="font-cairo font-normal text-sm md:text-base text-gray-600 leading-relaxed text-justify">
+                  لا يوجد محتوى متاح لهذا المقال.
+                </p>
+              )}
             </div>
 
             {/* Tags */}
@@ -332,17 +524,28 @@ const ArticleDetails = () => {
                 الوسوم:
               </h3>
               <div className="flex flex-wrap gap-3">
-                {(article.category === "الصحة" 
-                  ? ["#صحة", "#مياه", "#نصائح طبية", "#حياة صحية"]
-                  : ["#أخبار", "#مياه", "#تقنيات", "#مشاريع تنموية"]
-                ).map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="group font-cairo font-medium text-sm cursor-pointer transition-all duration-300 text-[#579BE8] hover:text-[#315782] hover:scale-105"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {article.tags && article.tags.length > 0 ? (
+                  article.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="group font-cairo font-medium text-sm cursor-pointer transition-all duration-300 text-[#579BE8] hover:text-[#315782] hover:scale-105"
+                    >
+                      #{tag}
+                    </span>
+                  ))
+                ) : (
+                  (article.category === "الصحة" 
+                    ? ["#صحة", "#مياه", "#نصائح طبية", "#حياة صحية"]
+                    : ["#أخبار", "#مياه", "#تقنيات", "#مشاريع تنموية"]
+                  ).map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="group font-cairo font-medium text-sm cursor-pointer transition-all duration-300 text-[#579BE8] hover:text-[#315782] hover:scale-105"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                )}
               </div>
             </div>
 
@@ -376,12 +579,13 @@ const ArticleDetails = () => {
           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 mb-12 border border-gray-200/50 shadow-md">
             <div className="flex items-center gap-4">
               <div className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-[#579BE8]/20 flex-shrink-0">
-                <Image
-                  src="/person.png"
-                  alt={article.author2}
-                  fill
-                  className="object-cover"
-                />
+              <Image
+                src={authorImageError ? DEFAULT_AUTHOR_IMAGE : (article.authorAvatar || DEFAULT_AUTHOR_IMAGE)}
+                alt={article.author2}
+                fill
+                className="object-cover"
+                onError={() => setAuthorImageError(true)}
+              />
               </div>
               
               <div className="flex-1 min-w-0">
@@ -399,7 +603,7 @@ const ArticleDetails = () => {
           </div>
 
           {/* Related Articles */}
-          <RelatedArticlesSection articles={transformedRelatedArticles} />
+          <RelatedArticlesSection articles={relatedArticles} />
         </div>
       </section>
 
