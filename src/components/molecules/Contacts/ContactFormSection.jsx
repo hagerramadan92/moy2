@@ -10,16 +10,19 @@ const ContactFormSection = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    subject: '',
     message: ''
   });
   const [errors, setErrors] = useState({
     name: '',
     phone: '',
+    subject: '',
     message: ''
   });
   const [touched, setTouched] = useState({
     name: false,
     phone: false,
+    subject: false,
     message: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,9 +45,21 @@ const ContactFormSection = () => {
     if (!phone.trim()) {
       return 'رقم الجوال مطلوب';
     }
-    const phoneRegex = /^05\d{8}$/;
-    if (!phoneRegex.test(phone.trim())) {
-      return 'يرجى إدخال رقم جوال صحيح (يبدأ بـ 05 ويتكون من 10 أرقام)';
+    // Accept phone numbers starting with 0 or without 0
+    const phoneRegex = /^(0)?5\d{8}$/;
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (!phoneRegex.test(digitsOnly) || (digitsOnly.length !== 9 && digitsOnly.length !== 10)) {
+      return 'يرجى إدخال رقم جوال صحيح';
+    }
+    return '';
+  };
+
+  const validateSubject = (subject) => {
+    if (!subject.trim()) {
+      return 'الموضوع مطلوب';
+    }
+    if (subject.trim().length < 3) {
+      return 'الموضوع يجب أن يكون على الأقل 3 أحرف';
     }
     return '';
   };
@@ -64,22 +79,28 @@ const ContactFormSection = () => {
 
   // Handle input changes with validation
   const handleChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-    
-    // Validate on change if field has been touched
-    if (touched[field]) {
-      let error = '';
-      if (field === 'name') {
-        error = validateName(value);
-      } else if (field === 'phone') {
-        // Remove non-digits for phone
-        const digitsOnly = value.replace(/\D/g, '');
-        setFormData(prev => ({ ...prev, phone: digitsOnly }));
-        error = validatePhone(digitsOnly);
-      } else if (field === 'message') {
-        error = validateMessage(value);
+    if (field === 'phone') {
+      // Remove non-digits for phone
+      const digitsOnly = value.replace(/\D/g, '');
+      setFormData({ ...formData, phone: digitsOnly });
+      if (touched[field]) {
+        setErrors({ ...errors, [field]: validatePhone(digitsOnly) });
       }
-      setErrors({ ...errors, [field]: error });
+    } else {
+      setFormData({ ...formData, [field]: value });
+      
+      // Validate on change if field has been touched
+      if (touched[field]) {
+        let error = '';
+        if (field === 'name') {
+          error = validateName(value);
+        } else if (field === 'subject') {
+          error = validateSubject(value);
+        } else if (field === 'message') {
+          error = validateMessage(value);
+        }
+        setErrors({ ...errors, [field]: error });
+      }
     }
   };
 
@@ -92,6 +113,8 @@ const ContactFormSection = () => {
       error = validateName(formData.name);
     } else if (field === 'phone') {
       error = validatePhone(formData.phone);
+    } else if (field === 'subject') {
+      error = validateSubject(formData.subject);
     } else if (field === 'message') {
       error = validateMessage(formData.message);
     }
@@ -103,6 +126,7 @@ const ContactFormSection = () => {
     return (
       !validateName(formData.name) &&
       !validatePhone(formData.phone) &&
+      !validateSubject(formData.subject) &&
       !validateMessage(formData.message)
     );
   };
@@ -111,21 +135,31 @@ const ContactFormSection = () => {
     e.preventDefault();
     
     // Mark all fields as touched
-    setTouched({ name: true, phone: true, message: true });
+    setTouched({ 
+      name: true, 
+      phone: true, 
+      subject: true, 
+      message: true 
+    });
     
     // Validate all fields
     const nameError = validateName(formData.name);
     const phoneError = validatePhone(formData.phone);
+    const subjectError = validateSubject(formData.subject);
     const messageError = validateMessage(formData.message);
     
     setErrors({
       name: nameError,
       phone: phoneError,
+      subject: subjectError,
       message: messageError
     });
     
     // If form is invalid, don't submit
-    if (nameError || phoneError || messageError) {
+    if (nameError || phoneError || subjectError || messageError) {
+      toast.error('يرجى تصحيح الأخطاء في النموذج', {
+        duration: 3000,
+      });
       return;
     }
     
@@ -133,36 +167,235 @@ const ContactFormSection = () => {
     
     // Show loading toast
     const loadingToast = toast.loading('جاري إرسال الرسالة...', {
-      duration: 1500,
+      duration: Infinity,
     });
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      setIsSubmitting(false);
+    try {
+      // Prepare phone number - ensure it starts with 0
+      let phoneNumber = formData.phone.replace(/\D/g, '');
+      if (!phoneNumber.startsWith('0')) {
+        phoneNumber = '0' + phoneNumber;
+      }
+
+      // Prepare headers
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      // Try to get CSRF token from various sources
+      let csrfToken = null;
       
+      // 1. Try to get from meta tag
+      if (typeof document !== 'undefined') {
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken) {
+          csrfToken = metaToken.getAttribute('content');
+        }
+      }
+
+      // 2. Try to get from cookie
+      if (!csrfToken && typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'XSRF-TOKEN' || name === 'csrf-token' || name === '_token') {
+            csrfToken = decodeURIComponent(value);
+            break;
+          }
+        }
+      }
+
+      // 3. Try to fetch from API endpoint
+      if (!csrfToken) {
+        try {
+          const csrfResponse = await fetch('http://moya.talaaljazeera.com/sanctum/csrf-cookie', {
+            method: 'GET',
+            credentials: 'include',
+          });
+          // After setting cookie, try to get token from cookie again
+          if (typeof document !== 'undefined') {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+              const [name, value] = cookie.trim().split('=');
+              if (name === 'XSRF-TOKEN' || name === 'csrf-token' || name === '_token') {
+                csrfToken = decodeURIComponent(value);
+                break;
+              }
+            }
+          }
+        } catch (csrfError) {
+          console.log('CSRF token setup failed, continuing without it');
+        }
+      }
+
+      // Add CSRF token to headers if found
+      if (csrfToken) {
+        headers['X-CSRF-TOKEN'] = csrfToken;
+        headers['X-XSRF-TOKEN'] = csrfToken;
+      }
+
+      // Prepare request body
+      const requestBody = {
+        name: formData.name.trim(),
+        phone: phoneNumber,
+        subject: formData.subject.trim(),
+        message: formData.message.trim()
+      };
+
+      // Add CSRF token to body if API requires it in body
+      if (csrfToken) {
+        requestBody._token = csrfToken;
+      }
+
+      // Log request details for debugging
+      console.log('Sending request to:', '/api/contact');
+      console.log('Request body:', requestBody);
+
+      // Send POST request to Next.js API route (proxy to avoid CORS issues)
+      let response;
+      try {
+        response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(csrfToken && {
+              'X-CSRF-TOKEN': csrfToken,
+              'X-XSRF-TOKEN': csrfToken,
+            }),
+          },
+          body: JSON.stringify(requestBody),
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      } catch (fetchError) {
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        console.error('Fetch error details:', {
+          error: fetchError,
+          message: fetchError.message,
+          stack: fetchError.stack,
+          name: fetchError.name
+        });
+        
+        // Check if it's a network error
+        if (fetchError instanceof TypeError && fetchError.message === 'Failed to fetch') {
+          toast.error('فشل الاتصال بالخادم. قد تكون هناك مشكلة في CORS أو الخادم غير متاح. يرجى التحقق من اتصالك بالإنترنت أو المحاولة لاحقاً', {
+            duration: 6000,
+          });
+        } else {
+          toast.error(`حدث خطأ أثناء إرسال الرسالة: ${fetchError.message}`, {
+            duration: 5000,
+          });
+        }
+        
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          // If response is not JSON, still consider it success
+          console.log('Response is not JSON, but status is OK');
+        }
+        
+        // Show success toast
+        toast.success('تم إرسال رسالتك بنجاح! سنتواصل معك قريباً', {
+          icon: <FaCheckCircle className="w-5 h-5" />,
+          duration: 4000,
+          style: {
+            background: '#579BE8',
+            color: '#fff',
+            borderRadius: '12px',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+        });
+        
+        // Reset form
+        setFormData({ 
+          name: '', 
+          phone: '', 
+          subject: '', 
+          message: '' 
+        });
+        setErrors({ 
+          name: '', 
+          phone: '', 
+          subject: '', 
+          message: '' 
+        });
+        setTouched({ 
+          name: false, 
+          phone: false, 
+          subject: false, 
+          message: false 
+        });
+      } else {
+        // Handle API error
+        let errorData = {};
+        let errorMessage = 'فشل إرسال الرسالة. يرجى المحاولة مرة أخرى';
+        
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorData.errors || errorMessage;
+          } else {
+            const text = await response.text();
+            errorMessage = text || errorMessage;
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          errorMessage = `خطأ ${response.status}: ${response.statusText}`;
+        }
+        
+        // Handle specific error codes
+        if (response.status === 419) {
+          errorMessage = 'انتهت صلاحية الجلسة. يرجى تحديث الصفحة والمحاولة مرة أخرى';
+        } else if (response.status === 422) {
+          errorMessage = errorMessage || 'البيانات المدخلة غير صحيحة. يرجى التحقق من جميع الحقول';
+        } else if (response.status === 500) {
+          errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً';
+        }
+        
+        toast.error(errorMessage, {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
       // Dismiss loading toast
       toast.dismiss(loadingToast);
       
-      // Show success toast
-      toast.success('تم إرسال رسالتك بنجاح! سنتواصل معك قريباً', {
-        icon: <FaCheckCircle className="w-5 h-5" />,
-        duration: 4000,
-        style: {
-          background: '#579BE8',
-          color: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          fontSize: '14px',
-          fontWeight: '500',
-        },
-      });
+      // Handle network or other errors
+      console.error('Error submitting form:', error);
       
-      // Reset form
-      setFormData({ name: '', phone: '', message: '' });
-      setErrors({ name: '', phone: '', message: '' });
-      setTouched({ name: false, phone: false, message: false });
-    }, 1500);
+      let errorMessage = 'حدث خطأ أثناء إرسال الرسالة. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى';
+      
+      if (error instanceof TypeError) {
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'فشل الاتصال بالخادم. قد تكون هناك مشكلة في الشبكة أو الخادم غير متاح';
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = 'خطأ في الشبكة. يرجى التحقق من اتصالك بالإنترنت';
+        }
+      }
+      
+      toast.error(errorMessage, {
+        duration: 5000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -317,6 +550,38 @@ const ContactFormSection = () => {
               )}
             </div>
 
+            {/* Subject Field */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
+                <FaEnvelope className="w-4 h-4 text-[#579BE8]" />
+                <span>الموضوع</span>
+              </label>
+              <input
+                type="text"
+                value={formData.subject}
+                onChange={(e) => handleChange('subject', e.target.value)}
+                onBlur={() => handleBlur('subject')}
+                className={`w-full h-12 rounded-xl bg-gray-50 border-2 text-right text-gray-900 font-medium text-sm px-4 transition-all outline-none ${
+                  errors.subject
+                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                    : touched.subject && !errors.subject
+                    ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
+                    : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                }`}
+                placeholder="موضوع الرسالة"
+              />
+              {errors.subject && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-500 text-xs font-medium flex items-center gap-1"
+                >
+                  <span>⚠</span>
+                  {errors.subject}
+                </motion.p>
+              )}
+            </div>
+
             {/* Message Field */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
@@ -359,12 +624,12 @@ const ContactFormSection = () => {
             <motion.button
               type="submit"
               disabled={isSubmitting || !isFormValid()}
-              whileHover={{ scale: isFormValid() && !isSubmitting ? 1.02 : 1 }}
-              whileTap={{ scale: isFormValid() && !isSubmitting ? 0.98 : 1 }}
+              whileHover={{ scale: !isSubmitting ? 1.02 : 1 }}
+              whileTap={{ scale: !isSubmitting ? 0.98 : 1 }}
               className={`w-full h-12 rounded-xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
-                isFormValid() && !isSubmitting
-                  ? 'bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] hover:shadow-lg'
-                  : 'bg-gray-400 cursor-not-allowed'
+                isSubmitting
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] hover:shadow-lg'
               }`}
             >
               {isSubmitting ? (

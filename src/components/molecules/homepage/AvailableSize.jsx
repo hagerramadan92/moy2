@@ -2,50 +2,24 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import Spinner from "@/components/ui/spinner";
+import { useState, useEffect } from "react";
 import { IoIosArrowForward } from "react-icons/io";
+import { ChevronLeft } from "lucide-react";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import LoginFlowDialog from '@/components/molecules/order-now/LoginFlowDialog';
+
 export default function AvailableSize() {
-  const [api, setApi] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(1);
-  const [autoPlay, setAutoPlay] = useState(false);
-
-  useEffect(() => {
-    if (!api) return;
-
-    const onSelect = () => {
-      setCurrentIndex(api.selectedScrollSnap());
-    };
-
-    api.on("select", onSelect);
-    // Start from second card (index 1)
-    api.scrollTo(1, false);
-    onSelect();
-
-    return () => {
-      api.off("select", onSelect);
-    };
-  }, [api]);
-
-  useEffect(() => {
-    if (!autoPlay || !api) return;
-
-    const interval = setInterval(() => {
-      if (api.canScrollNext()) {
-        api.scrollNext();
-      } else {
-        api.scrollTo(0);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [api, autoPlay]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [swiper, setSwiper] = useState(null);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const isCenterCard = (index) => {
     return index === currentIndex;
@@ -55,24 +29,57 @@ export default function AvailableSize() {
     return Math.abs(index - currentIndex) === 1;
   };
 
-  const handleInteraction = useCallback(() => {
-    setAutoPlay(false);
-    setTimeout(() => setAutoPlay(false), 10000);
+  const scrollNext = () => {
+    if (swiper) {
+      swiper.slideNext();
+    }
+  };
+
+  const scrollPrev = () => {
+    if (swiper) {
+      swiper.slidePrev();
+    }
+  };
+
+  const goToSlide = (index) => {
+    if (swiper) {
+      swiper.slideTo(index);
+    }
+  };
+
+  // Fetch services from API
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('http://moya.talaaljazeera.com/api/v1/services');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch services');
+        }
+        
+        const data = await response.json();
+        
+        // Handle different possible response structures
+        const servicesData = Array.isArray(data) ? data : (data.data || data.services || []);
+        
+        if (servicesData.length > 0) {
+          setServices(servicesData);
+        } else {
+          setServices([]);
+        }
+      } catch (err) {
+        console.error('Error fetching services:', err);
+        setError(err.message);
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
   }, []);
-
-  const scrollNext = useCallback(() => {
-    if (api) {
-      api.scrollNext();
-      handleInteraction();
-    }
-  }, [api, handleInteraction]);
-
-  const scrollPrev = useCallback(() => {
-    if (api) {
-      api.scrollPrev();
-      handleInteraction();
-    }
-  }, [api, handleInteraction]);
 
   return (
     <section dir="rtl" className="py-8 sm:py-12 container mx-auto md:py-16 lg:py-20 bg-white">
@@ -97,216 +104,235 @@ export default function AvailableSize() {
         </motion.div>
 
         <div className="relative mx-auto">
-          <div className="relative px-4 sm:px-6 md:px-8 lg:px-12">
-            <Carousel
-              setApi={setApi}
-              opts={{
-                align: "center",
-                direction: "rtl",
-                loop: true,
-                skipSnaps: false,
-                watchDrag: true,
-                duration: 20,
-              }}
-              className="w-full"
-              onMouseEnter={handleInteraction}
-              onTouchStart={handleInteraction}
-            >
-              <CarouselContent className="ml-0 -mr-1
-               sm:-mr-2 min-h-[500px] sm:min-h-[450px] md:min-h-[480px] lg:min-h-[512px]">
-                {[1, 2, 3, 4, 5].map((item, index) => (
-                  <CarouselItem
-                    key={item}
-                    className={`
-                      pr-1 sm:pr-2
-                      basis-full sm:basis-2/3 md:basis-1/2 lg:basis-1/3
-                      transition-all duration-300 ease-out
-                      ${isCenterCard(index) ? "z-10" : "z-0"}
-                    `}
-                  >
-                    <div
-                      className={`
-                        relative rounded-xl sm:rounded-2xl bg-white p-3 sm:p-4 md:p-5 text-center
-                        border-2 transition-all duration-300 ease-out
-                        flex flex-col w-full max-w-[300px] sm:max-w-[350px] md:max-w-[380px] mx-auto
-                        min-h-[380px] sm:min-h-[420px] md:min-h-[460px] lg:h-[481px]
-                        ${
-                          isCenterCard(index)
-                            ? "border-[#5A9CF0] scale-100 opacity-100 shadow-lg"
-                            : isSideCard(index)
-                            ? "border-[#5A9CF0]/20 scale-95 opacity-90 shadow-md"
-                            : "opacity-0 scale-90 pointer-events-none"
-                        }
-                        hover:shadow-xl hover:scale-[1.02]
-                      `}
-                      onClick={() => {
-                        if (api) {
-                          api.scrollTo(index);
-                          handleInteraction();
-                        }
-                      }}
-                    >
-                      {item === 3 && isCenterCard(index) && (
-                        <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-gradient-to-b from-[#E9BD85] to-[#F48C06] text-white text-xs sm:text-sm md:text-base px-2 py-1 sm:px-3 sm:py-2 rounded-full z-10">
-                          الأكثر طلبًا
-                        </span>
-                      )}
-
-                      {/* المحتوى */}
-                      <div className="flex-1 flex flex-col justify-center py-2 sm:py-4">
-                        <div
-                          className={`
-                          mb-3 sm:mb-4 transition-all duration-300 w-full max-w-[180px] sm:max-w-[200px] md:max-w-[220px] mx-auto
-                          ${isCenterCard(index) ? "scale-105" : "scale-95"}
+          <div className="relative px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] gap-4">
+                <Spinner size="lg" />
+                {/* <p className="text-gray-500 text-sm sm:text-base">جاري التحميل...</p> */}
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] px-4">
+                <p className="text-red-500 text-sm sm:text-base text-center">خطأ في تحميل البيانات: {error}</p>
+              </div>
+            ) : services.length === 0 ? (
+              <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px]">
+                <p className="text-gray-500 text-sm sm:text-base">لا توجد خدمات متاحة</p>
+              </div>
+            ) : (
+              <Swiper
+                onSwiper={setSwiper}
+                modules={[Navigation]}
+                spaceBetween={12}
+                slidesPerView={1}
+                breakpoints={{
+                  480: {
+                    slidesPerView: 1.5,
+                    spaceBetween: 16,
+                  },
+                  640: {
+                    slidesPerView: 2,
+                    spaceBetween: 20,
+                  },
+                  768: {
+                    slidesPerView: 2.5,
+                    spaceBetween: 24,
+                  },
+                  1024: {
+                    slidesPerView: 3,
+                    spaceBetween: 24,
+                  },
+                }}
+                loop={services.length > 3}
+                centeredSlides={true}
+                initialSlide={Math.min(3, services.length - 1)}
+                onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
+                navigation={{
+                  nextEl: '.swiper-button-next-custom',
+                  prevEl: '.swiper-button-prev-custom',
+                }}
+                className="!pb-8 min-h-[400px] sm:min-h-[450px] md:min-h-[480px] lg:min-h-[512px]"
+                dir="rtl"
+              >
+                {services.map((service, index) => {
+                  // Extract service data from API
+                  const serviceId = service.id || service._id || index;
+                  const capacity = service.name || `${index + 1} طن`;
+                  const description = service.description || service.title || "مناسب للاستخدامات المختلفة";
+                  const price = service.start_price || service.starting_price || service.price || service.cost || 120;
+                  const image = service.image || service.image_url || "/images/car.png";
+                  const isPopular = service.is_popular || service.most_requested || index === 2;
+                  
+                  return (
+                    <SwiperSlide key={serviceId}>
+                      <div
+                        className={`
+                          relative rounded-lg sm:rounded-xl md:rounded-2xl bg-white p-3 sm:p-4 md:p-5 text-center
+                          border-2 transition-all duration-300 ease-out
+                          flex flex-col w-full max-w-[280px] sm:max-w-[320px] md:max-w-[350px] lg:max-w-[380px] mx-auto
+                          min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px]
+                          ${
+                            isCenterCard(index)
+                              ? "border-[#5A9CF0] scale-100 opacity-100 shadow-lg"
+                              : isSideCard(index)
+                              ? "border-[#5A9CF0]/20 scale-95 opacity-90 shadow-md"
+                              : "border-gray-200 scale-90 opacity-80"
+                          }
+                          hover:shadow-xl hover:scale-[1.02] cursor-pointer
                         `}
-                        >
-                          <Image
-                            src="/images/car.png"
-                            alt={`شاحنة ${item} طن`}
-                            width={220}
-                            height={140}
-                            className="mx-auto w-full h-auto transition-all duration-300"
-                          />
+                        onClick={() => goToSlide(index)}
+                      >
+                        {isPopular && isCenterCard(index) && (
+                          <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-gradient-to-b from-[#E9BD85] to-[#F48C06] text-white text-xs sm:text-sm md:text-base px-2 py-1 sm:px-3 sm:py-2 rounded-full z-10">
+                            الأكثر طلبًا
+                          </span>
+                        )}
+
+                        {/* المحتوى */}
+                        <div className="flex-1 flex flex-col justify-center py-2 sm:py-4">
+                          <div
+                            className={`
+                            mb-2 sm:mb-3 md:mb-4 transition-all duration-300 w-full max-w-[140px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-[220px] mx-auto
+                            ${isCenterCard(index) ? "scale-105" : "scale-95"}
+                          `}
+                          >
+                            <Image
+                              src={image}
+                              alt={`شاحنة ${capacity}`}
+                              width={220}
+                              height={140}
+                              className="mx-auto w-full h-auto transition-all duration-300"
+                              onError={(e) => {
+                                e.target.src = "/images/car.png";
+                              }}
+                            />
+                          </div>
+
+                          <h3
+                            className={`
+                            text-base sm:text-xl md:text-2xl lg:text-[34.29px] font-bold mb-2 sm:mb-3 transition-all duration-300
+                            ${
+                              isCenterCard(index)
+                                ? "text-black"
+                                : "opacity-70"
+                            }
+                          `}
+                          >
+                            {capacity}
+                          </h3>
+
+                          <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
+                            {description}
+                          </p>
+
+                          <p
+                            className={`
+                            font-semibold text-sm sm:text-base md:text-lg lg:text-[20.58px] mb-0 transition-all duration-300
+                            ${
+                              isCenterCard(index)
+                                ? "text-[#5A9CF0]"
+                                : "text-[#5A9CF0]/70"
+                            }
+                          `}
+                          >
+                            {typeof price === 'number' ? `يبدأ من ${price} ريال` : (`${price} ريال` || `يبدأ من 120 ريال`)}
+                          </p>
                         </div>
 
-                        <h3
+                        <Button
                           className={`
-                          text-base sm:text-xl md:text-2xl lg:text-[34.29px] font-bold mb-2 sm:mb-3 transition-all duration-300
-                          ${
-                            isCenterCard(index)
-                              ? "text-black"
-                              : "opacity-70"
-                          }
-                        `}
+                            w-full rounded-lg sm:rounded-xl py-3 sm:py-4 md:py-5 lg:py-6 
+                            transition-all duration-300
+                            font-semibold text-sm sm:text-base
+                            ${
+                              isCenterCard(index)
+                                ? "bg-[#5A9CF0] text-white hover:bg-[#4278be]"
+                                : "bg-[#579BE8] text-white hover:bg-[#4278be]"
+                            }
+                            mt-auto
+                          `}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsLoginDialogOpen(true);
+                          }}
                         >
-                          {item === 1 && "3 طن"}
-                          {item === 2 && "5 طن"}
-                          {item === 3 && "6 طن"}
-                          {item === 4 && "8 طن"}
-                          {item === 5 && "10 طن"}
-                        </h3>
-
-                        <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
-                          {item === 1 && "مناسب للاستخدامات الصغيرة"}
-                          {item === 2 && "مناسب للاستخدامات المتوسطة"}
-                          {item === 3 && "مناسب للاستخدامات الكبيرة"}
-                          {item === 4 && "مناسب للمشاريع المتوسطة"}
-                          {item === 5 && "مناسب للمشاريع الكبيرة"}
-                        </p>
-
-                        <p
-                          className={`
-                          font-semibold text-sm sm:text-base md:text-lg lg:text-[20.58px] mb-0 transition-all duration-300
-                          ${
-                            isCenterCard(index)
-                              ? "text-[#5A9CF0]"
-                              : "text-[#5A9CF0]/70"
-                          }
-                        `}
-                        >
-                          {item === 1 && "يبدأ من 120 ريال"}
-                          {item === 2 && "يبدأ من 180 ريال"}
-                          {item === 3 && "يبدأ من 240 ريال"}
-                          {item === 4 && "يبدأ من 320 ريال"}
-                          {item === 5 && "يبدأ من 400 ريال"}
-                        </p>
+                          {"اطلب الآن"}
+                        </Button>
                       </div>
+                    </SwiperSlide>
+                  );
+                })}
+              </Swiper>
+            )}
 
-                      <Button
-                        className={`
-                          w-full rounded-lg sm:rounded-xl py-3 sm:py-4 md:py-5 lg:py-6 
-                          transition-all duration-300
-                          font-semibold text-sm sm:text-base
-                          ${
-                            isCenterCard(index)
-                              ? "bg-[#5A9CF0] text-white hover:bg-[#4278be]"
-                              : "bg-[#579BE8] text-white hover:bg-[#4278be]"
-                          }
-                          mt-auto
-                        `}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleInteraction();
-                        }}
-                      >
-                        {"اطلب الآن"}
-                      </Button>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-
-            <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none z-20">
-              <div className="pointer-events-auto absolute right-0 sm:right-2 md:right-4 transform translate-x-1/2 sm:translate-x-0">
-                <Button
-                  variant="outline"
-                  className="
-                          w-8 h-8 sm:w-10 sm:h-10
-                          cursor-pointer
-                          rounded-full 
-                          bg-white hover:bg-[#5A9CF0] 
-                          border-0 
-                          text-[#5A9CF0] hover:text-white
-                          transition-all duration-300
-                          hover:scale-110
-                          p-0
-                          shadow-md
-                        "
+            {!loading && !error && services.length > 0 && (
+              <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none z-20">
+                <button
+                  className="swiper-button-next-custom pointer-events-auto absolute right-2 sm:right-3 md:right-4 transform translate-x-1/2 sm:translate-x-0
+                    w-8 h-8 sm:w-10 sm:h-10
+                    cursor-pointer
+                    rounded-full 
+                    bg-white hover:bg-[#5A9CF0] 
+                    border-0 
+                    text-[#5A9CF0] hover:text-white
+                    transition-all duration-300
+                    hover:scale-110
+                    active:scale-95
+                    p-0
+                    shadow-md hover:shadow-lg
+                    flex items-center justify-center"
                   onClick={scrollNext}
+                  aria-label="الكارت التالي"
                 >
                   <span className="scale-150">
                     <IoIosArrowForward className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                   </span>
                   <span className="sr-only">الكارت التالي</span>
-                </Button>
-              </div>
+                </button>
 
-              <div className="pointer-events-auto absolute left-0 sm:left-2 md:left-4 transform -translate-x-1/2 sm:translate-x-0">
-                <Button
-                  className="
-                          w-8 h-8 sm:w-10 sm:h-10
-                          cursor-pointer
-                          rounded-full 
-                          bg-white hover:bg-[#5A9CF0] 
-                          border-0 
-                          text-[#5A9CF0] hover:text-white
-                          transition-all duration-300
-                          hover:scale-110
-                          p-0
-                          shadow-md
-                  "
+                <button
+                  className="swiper-button-prev-custom pointer-events-auto absolute left-2 sm:left-3 md:left-4 transform -translate-x-1/2 sm:translate-x-0
+                    w-8 h-8 sm:w-10 sm:h-10
+                    cursor-pointer
+                    rounded-full 
+                    bg-white hover:bg-[#5A9CF0] 
+                    border-0 
+                    text-[#5A9CF0] hover:text-white
+                    transition-all duration-300
+                    hover:scale-110
+                    active:scale-95
+                    p-0
+                    shadow-md hover:shadow-lg
+                    flex items-center justify-center"
                   onClick={scrollPrev}
+                  aria-label="الكارت السابق"
                 >
                   <span className="scale-150">
                     <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                   </span>
                   <span className="sr-only">الكارت السابق</span>
-                </Button>
+                </button>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex justify-center items-center  mt-6 sm:mt-8 gap-2">
-            {[1, 2, 3, 4, 5].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  if (api) {
-                    api.scrollTo(index);
-                    handleInteraction();
-                  }
-                }}
-                className={`
-                  h-2 rounded-full transition-all duration-300
-                  ${isCenterCard(index) ? "bg-[#5A9CF0] w-6 sm:w-8" : "bg-gray-300 w-2"}
-                `}
-                aria-label={`انتقل إلى البطاقة ${index + 1}`}
-              />
-            ))}
-          </div>
+          {!loading && !error && services.length > 0 && (
+            <div className="flex justify-center items-center mt-6 sm:mt-8 gap-2">
+              {services.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`
+                    h-2 rounded-full transition-all duration-300
+                    ${isCenterCard(index) ? "bg-[#5A9CF0] w-6 sm:w-8" : "bg-gray-300 w-2"}
+                  `}
+                  aria-label={`انتقل إلى البطاقة ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
+      <LoginFlowDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
     </section>
   );
 }

@@ -11,7 +11,7 @@ export default function CallToActionSection() {
   return (
     <section className="relative py-14
      sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b 
-     from-gray-50 via-white to-gray-50 overflow-hidden mb-0">
+     from-gray-50 via-white to-gray-50 overflow-hidden my-0">
       {/* Creative Background Pattern */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Animated gradient orbs */}

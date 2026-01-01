@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { IoLocationOutline } from "react-icons/io5";
+import { toast } from "react-hot-toast";
 
 // Dynamically import MapContainer to avoid SSR issues
 const MapContainer = dynamic(
@@ -87,13 +88,73 @@ export default function CurrentLocation() {
     }
 
     if (!navigator.geolocation) {
+      toast.error("المتصفح لا يدعم تحديد الموقع");
       setError("Geolocation is not supported by your browser");
       return;
     }
 
+    // Show permission request toast
+    const toastId = toast(
+      (t) => (
+        <div className="flex flex-col gap-3 p-2">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#579BE8]/10 flex items-center justify-center">
+              <IoLocationOutline className="w-5 h-5 text-[#579BE8]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 mb-1">السماح بالوصول إلى موقعك</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                نحتاج إلى الوصول إلى موقعك لتحديد موقعك بدقة على الخريطة
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    proceedWithLocationDetection();
+                  }}
+                  className="px-4 py-2 bg-[#579BE8] text-white rounded-lg text-sm font-semibold hover:bg-[#4889d4] transition-colors"
+                >
+                  السماح
+                </button>
+                <button
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    toast.error("يجب السماح بالوصول إلى موقعك لتحديد موقعك بدقة", {
+                      duration: 3000,
+                    });
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  رفض
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      {
+        duration: 10000,
+        position: "top-center",
+        style: {
+          background: "white",
+          padding: "16px",
+          borderRadius: "12px",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+          maxWidth: "400px",
+        },
+      }
+    );
+  };
+
+  const proceedWithLocationDetection = () => {
     setIsLoading(true);
     setError(null);
     setLocationAddress(null);
+
+    // Show loading toast
+    const loadingToast = toast.loading("جاري تحديد موقعك...", {
+      position: "top-center",
+    });
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -109,12 +170,36 @@ export default function CurrentLocation() {
         setLocationAddress(address || "لم يتم العثور على اسم الموقع");
         
         setIsLoading(false);
+        
+        // Dismiss loading toast and show success
+        toast.dismiss(loadingToast);
+        toast.success("تم تحديد موقعك بنجاح!", {
+          position: "top-center",
+          duration: 3000,
+          icon: "📍",
+        });
       },
       (err) => {
-        setError(
-          "Unable to retrieve your location. Please make sure location permissions are enabled."
-        );
         setIsLoading(false);
+        
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        let errorMessage = "لم يتم السماح بالوصول إلى موقعك";
+        if (err.code === err.PERMISSION_DENIED) {
+          errorMessage = "تم رفض الوصول إلى موقعك. يرجى السماح بالوصول في إعدادات المتصفح";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          errorMessage = "موقعك غير متاح حالياً";
+        } else if (err.code === err.TIMEOUT) {
+          errorMessage = "انتهت مهلة طلب الموقع";
+        }
+        
+        toast.error(errorMessage, {
+          position: "top-center",
+          duration: 4000,
+        });
+        
+        setError(errorMessage);
         console.error("Geolocation error:", err);
       }
     );

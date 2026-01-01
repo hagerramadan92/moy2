@@ -15,7 +15,17 @@ const nextConfig = {
   // تعطيل Turbopack
   experimental: {
     turbo: undefined
-  }
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.ibb.co',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 module.exports = nextConfig;

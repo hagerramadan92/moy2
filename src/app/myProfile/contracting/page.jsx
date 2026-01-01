@@ -257,7 +257,7 @@ export default function ContractingPage() {
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8]/20 to-[#124987]/20 rounded-3xl blur-2xl transform scale-110"></div>
                                     <Image
-                                        src={activeTab === 'commercial' ? "/images/ecommerce.png" : "/images/personal.png"}
+                                        src={activeTab === 'commercial' ? "/images/ecommerce.png" : "/images/personal.jpeg"}
                                         alt={activeTab}
                                         width={400}
                                         height={400}
