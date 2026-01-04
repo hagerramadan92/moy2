@@ -11,9 +11,11 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import { useRouter } from 'next/navigation';
 import LoginFlowDialog from '@/components/molecules/order-now/LoginFlowDialog';
 
 export default function AvailableSize() {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +254,15 @@ export default function AvailableSize() {
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setIsLoginDialogOpen(true);
+                            // Check if user is logged in
+                            const accessToken = localStorage.getItem("accessToken");
+                            if (accessToken) {
+                              // User is logged in, navigate to orders page
+                              router.push("/orders");
+                            } else {
+                              // User is not logged in, open login dialog
+                              setIsLoginDialogOpen(true);
+                            }
                           }}
                         >
                           {"اطلب الآن"}

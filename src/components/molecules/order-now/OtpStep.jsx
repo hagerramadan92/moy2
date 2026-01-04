@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useRef, useState, useEffect } from "react";
 
-export default function OtpStep({ otp, onOtpChange, error, onNext, onBack }) {
+export default function OtpStep({ otp, onOtpChange, error, onNext, onBack, onResend, verifying, timer, resending }) {
   const [localOtp, setLocalOtp] = useState(otp || ["", "", "", "", "", ""]);
   const inputsRef = useRef([]);
 
@@ -79,11 +79,18 @@ export default function OtpStep({ otp, onOtpChange, error, onNext, onBack }) {
       )}
       
       <div className="flex flex-col items-center gap-3 text-xs sm:text-sm font-medium">
-        <button className="text-gray-400 hover:text-[#579BE8] transition-colors font-semibold">
+        <button 
+          className="text-gray-400 hover:text-[#579BE8] transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={true}
+        >
             ارسال عبر الSMS
         </button>
-        <button className="text-gray-400 hover:text-[#579BE8] transition-colors font-semibold">
-            اعاده الارسال
+        <button 
+          onClick={onResend}
+          disabled={timer > 0 || resending}
+          className="text-gray-400 hover:text-[#579BE8] transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+            {resending ? "جاري الإرسال..." : timer > 0 ? `إعادة الإرسال (${timer})` : "إعادة الإرسال"}
         </button>
       </div>
 
@@ -98,9 +105,9 @@ export default function OtpStep({ otp, onOtpChange, error, onNext, onBack }) {
         <Button 
             className="w-full h-[55px] sm:h-[60px] bg-[#579BE8] hover:bg-[#4889d4] hover:shadow-lg hover:-translate-y-0.5 text-white text-sm sm:text-base md:text-lg font-bold rounded-2xl shadow-md shadow-[#579BE8]/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"  
             onClick={onNext}
-            disabled={!isOtpComplete}
+            disabled={!isOtpComplete || verifying}
         >
-            تأكيد
+            {verifying ? "جاري التحقق..." : "تأكيد"}
         </Button>
       </div>
     </div>
