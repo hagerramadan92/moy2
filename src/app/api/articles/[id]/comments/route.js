@@ -6,7 +6,7 @@ export async function GET(req, { params }) {
     const { id } = await params;
     
     if (!id || id === 'undefined' || id === 'null') {
-      console.error('Article API - Missing or invalid ID:', id);
+      console.error('Comments API - Missing or invalid article ID:', id);
       return NextResponse.json(
         { 
           success: false,
@@ -20,13 +20,12 @@ export async function GET(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use slug-based endpoint: http://moya.talaaljazeera.com/api/v1/articles/{slug}
-    // The API accepts both numeric IDs and slugs, but we'll use slug format
-    const slug = encodeURIComponent(decodedId);
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${slug}`;
+    // Use the comments endpoint: http://moya.talaaljazeera.com/api/v1/articles/{id}/comments
+    const articleId = encodeURIComponent(decodedId);
+    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
     
-    console.log('Article API - Fetching from:', apiUrl);
-    console.log('Article API - Original ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', slug);
+    console.log('Comments API - Fetching from:', apiUrl);
+    console.log('Comments API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);
 
     // Create AbortController for timeout
     const controller = new AbortController();
@@ -52,24 +51,23 @@ export async function GET(req, { params }) {
       throw fetchError;
     }
 
-    console.log('Article API - Response status:', response.status);
+    console.log('Comments API - Response status:', response.status);
 
     let data = {};
     let responseText = '';
     try {
       responseText = await response.text();
-      console.log('Article API - Raw response text length:', responseText?.length || 0);
-      console.log('Article API - Raw response text (first 500 chars):', responseText?.substring(0, 500) || 'empty');
+      console.log('Comments API - Raw response text length:', responseText?.length || 0);
       
       if (responseText && responseText.trim()) {
         data = JSON.parse(responseText);
-        console.log('Article API - Parsed data keys:', Object.keys(data || {}));
+        console.log('Comments API - Parsed data keys:', Object.keys(data || {}));
       } else {
-        console.warn('Article API - Empty response text');
+        console.warn('Comments API - Empty response text');
         data = {};
       }
     } catch (parseError) {
-      console.error('Article API - Parse error:', {
+      console.error('Comments API - Parse error:', {
         error: parseError,
         responseText: responseText?.substring(0, 500),
         responseTextLength: responseText?.length || 0
@@ -78,11 +76,10 @@ export async function GET(req, { params }) {
     }
 
     if (response.ok) {
-      console.log('Article API - Success response structure:', {
+      console.log('Comments API - Success response structure:', {
         hasSuccess: data.success !== undefined,
         hasData: !!data.data,
-        hasId: !!data.id,
-        hasTitle: !!data.title,
+        isArray: Array.isArray(data),
         keys: Object.keys(data)
       });
       
@@ -90,11 +87,17 @@ export async function GET(req, { params }) {
       if (data.success !== undefined) {
         // Response has success field, return as is
         return NextResponse.json(data, { status: response.status });
-      } else if (data.data || data.id || data.title) {
-        // Response has data, id, or title field, wrap it in success structure
+      } else if (Array.isArray(data)) {
+        // Response is an array of comments
         return NextResponse.json({
           success: true,
-          data: data.data || data
+          data: data
+        }, { status: response.status });
+      } else if (data.data && Array.isArray(data.data)) {
+        // Response has data field with array
+        return NextResponse.json({
+          success: true,
+          data: data.data
         }, { status: response.status });
       } else {
         // Response structure is different, return as is
@@ -102,7 +105,7 @@ export async function GET(req, { params }) {
       }
     } else {
       // Handle error response
-      console.error('Article API - Error response from external API:', {
+      console.error('Comments API - Error response from external API:', {
         status: response.status,
         statusText: response.statusText,
         data: data,
@@ -120,7 +123,7 @@ export async function GET(req, { params }) {
         data?.error ||
         (typeof data?.error === 'string' ? data.error : null) ||
         data?.errors?.message ||
-        (response.status === 404 ? 'المقال غير موجود' : `فشل تحميل المقال (${response.status})`);
+        (response.status === 404 ? 'التعليقات غير موجودة' : `فشل تحميل التعليقات (${response.status})`);
       
       return NextResponse.json(
         { 
@@ -128,23 +131,33 @@ export async function GET(req, { params }) {
           message: errorMessage,
           error: data?.error || errorMessage,
           status: response.status,
-          data: data // Include original data for debugging
+          data: [] // Return empty array for comments
         },
         { status: 200 } // Return 200 so frontend can handle it
       );
     }
   } catch (error) {
-    console.error('Article API error:', error);
+    console.error('Comments API error:', error);
     
     if (error.name === 'AbortError' || error.name === 'TimeoutError') {
       return NextResponse.json(
-        { message: 'انتهت مهلة الاتصال بالخادم', error: 'Timeout' },
+        { 
+          success: false,
+          message: 'انتهت مهلة الاتصال بالخادم', 
+          error: 'Timeout',
+          data: []
+        },
         { status: 504 }
       );
     }
     
     return NextResponse.json(
-      { message: 'حدث خطأ أثناء تحميل المقال', error: error.message },
+      { 
+        success: false,
+        message: 'حدث خطأ أثناء تحميل التعليقات', 
+        error: error.message,
+        data: []
+      },
       { status: 500 }
     );
   }

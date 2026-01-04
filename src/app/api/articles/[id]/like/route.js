@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req, { params }) {
+export async function POST(req, { params }) {
   try {
     // Await params as it's a Promise in Next.js 15+
     const { id } = await params;
     
     if (!id || id === 'undefined' || id === 'null') {
-      console.error('Article API - Missing or invalid ID:', id);
+      console.error('Like API - Missing or invalid article ID:', id);
       return NextResponse.json(
         { 
           success: false,
@@ -20,13 +20,25 @@ export async function GET(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use slug-based endpoint: http://moya.talaaljazeera.com/api/v1/articles/{slug}
-    // The API accepts both numeric IDs and slugs, but we'll use slug format
-    const slug = encodeURIComponent(decodedId);
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${slug}`;
+    // Use the like endpoint: http://moya.talaaljazeera.com/api/v1/articles/{id}/like
+    const articleId = encodeURIComponent(decodedId);
+    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${articleId}/like`;
     
-    console.log('Article API - Fetching from:', apiUrl);
-    console.log('Article API - Original ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', slug);
+    console.log('Like API - Posting to:', apiUrl);
+    console.log('Like API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);
+
+    // Get access token from request headers if available
+    const authHeader = req.headers.get('authorization');
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0',
+    };
+
+    // Add authorization header if present
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
 
     // Create AbortController for timeout
     const controller = new AbortController();
@@ -35,12 +47,8 @@ export async function GET(req, { params }) {
     let response;
     try {
       response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0',
-        },
+        method: 'POST',
+        headers: headers,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -52,24 +60,23 @@ export async function GET(req, { params }) {
       throw fetchError;
     }
 
-    console.log('Article API - Response status:', response.status);
+    console.log('Like API - Response status:', response.status);
 
     let data = {};
     let responseText = '';
     try {
       responseText = await response.text();
-      console.log('Article API - Raw response text length:', responseText?.length || 0);
-      console.log('Article API - Raw response text (first 500 chars):', responseText?.substring(0, 500) || 'empty');
+      console.log('Like API - Raw response text length:', responseText?.length || 0);
       
       if (responseText && responseText.trim()) {
         data = JSON.parse(responseText);
-        console.log('Article API - Parsed data keys:', Object.keys(data || {}));
+        console.log('Like API - Parsed data keys:', Object.keys(data || {}));
       } else {
-        console.warn('Article API - Empty response text');
+        console.warn('Like API - Empty response text');
         data = {};
       }
     } catch (parseError) {
-      console.error('Article API - Parse error:', {
+      console.error('Like API - Parse error:', {
         error: parseError,
         responseText: responseText?.substring(0, 500),
         responseTextLength: responseText?.length || 0
@@ -78,31 +85,20 @@ export async function GET(req, { params }) {
     }
 
     if (response.ok) {
-      console.log('Article API - Success response structure:', {
+      console.log('Like API - Success response structure:', {
         hasSuccess: data.success !== undefined,
         hasData: !!data.data,
-        hasId: !!data.id,
-        hasTitle: !!data.title,
         keys: Object.keys(data)
       });
       
-      // Check if response has the expected structure
-      if (data.success !== undefined) {
-        // Response has success field, return as is
-        return NextResponse.json(data, { status: response.status });
-      } else if (data.data || data.id || data.title) {
-        // Response has data, id, or title field, wrap it in success structure
-        return NextResponse.json({
-          success: true,
-          data: data.data || data
-        }, { status: response.status });
-      } else {
-        // Response structure is different, return as is
-        return NextResponse.json(data, { status: response.status });
-      }
+      // Return the response as is
+      return NextResponse.json({
+        success: true,
+        ...data
+      }, { status: response.status });
     } else {
       // Handle error response
-      console.error('Article API - Error response from external API:', {
+      console.error('Like API - Error response from external API:', {
         status: response.status,
         statusText: response.statusText,
         data: data,
@@ -120,31 +116,38 @@ export async function GET(req, { params }) {
         data?.error ||
         (typeof data?.error === 'string' ? data.error : null) ||
         data?.errors?.message ||
-        (response.status === 404 ? 'المقال غير موجود' : `فشل تحميل المقال (${response.status})`);
+        `فشل إضافة الإعجاب (${response.status})`;
       
       return NextResponse.json(
         { 
           success: false,
           message: errorMessage,
           error: data?.error || errorMessage,
-          status: response.status,
-          data: data // Include original data for debugging
+          status: response.status
         },
         { status: 200 } // Return 200 so frontend can handle it
       );
     }
   } catch (error) {
-    console.error('Article API error:', error);
+    console.error('Like API error:', error);
     
     if (error.name === 'AbortError' || error.name === 'TimeoutError') {
       return NextResponse.json(
-        { message: 'انتهت مهلة الاتصال بالخادم', error: 'Timeout' },
+        { 
+          success: false,
+          message: 'انتهت مهلة الاتصال بالخادم', 
+          error: 'Timeout'
+        },
         { status: 504 }
       );
     }
     
     return NextResponse.json(
-      { message: 'حدث خطأ أثناء تحميل المقال', error: error.message },
+      { 
+        success: false,
+        message: 'حدث خطأ أثناء إضافة الإعجاب', 
+        error: error.message
+      },
       { status: 500 }
     );
   }

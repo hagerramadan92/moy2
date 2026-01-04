@@ -12,7 +12,8 @@ import {
   FaComment, 
   FaShareAlt,
   FaBookmark,
-  FaChartLine
+  FaChartLine,
+  FaHeart
 } from 'react-icons/fa';
 import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSection';
 import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
@@ -143,9 +144,13 @@ const ArticleDetails = () => {
   const router = useRouter();
   const { scrollYProgress } = useScroll();
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
+  const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [error, setError] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [authorImageError, setAuthorImageError] = useState(false);
@@ -288,7 +293,8 @@ const ArticleDetails = () => {
             imageUrl: articleData.featured_image || "/man.png",
             category: articleData.category?.name || "عام",
             title: articleData.title,
-            content: articleData.content || articleData.body || articleData.description || "",
+            content: articleData.meta_description || articleData.content || articleData.body || articleData.description || "",
+            meta_description: articleData.meta_description || "",
             description: articleData.excerpt || articleData.summary || "",
             author: articleData.author?.name || "غير معروف",
             author2: articleData.author?.name || "غير معروف",
@@ -303,6 +309,27 @@ const ArticleDetails = () => {
           };
           
           setArticle(transformedArticle);
+          setLikesCount(transformedArticle.likes || 0);
+          
+          // Fetch comments using article ID/slug
+          try {
+            setLoadingComments(true);
+            const commentsResponse = await fetch(`/api/articles/${encodeURIComponent(validSlug)}/comments`);
+            const commentsData = await commentsResponse.json();
+            
+            if (commentsResponse.ok && commentsData.success && commentsData.data) {
+              setComments(Array.isArray(commentsData.data) ? commentsData.data : []);
+            } else if (Array.isArray(commentsData)) {
+              setComments(commentsData);
+            } else {
+              setComments([]);
+            }
+          } catch (commentsError) {
+            console.error('Error fetching comments:', commentsError);
+            setComments([]);
+          } finally {
+            setLoadingComments(false);
+          }
           
           // Fetch related articles
           const relatedResponse = await fetch('/api/articles');
@@ -457,7 +484,7 @@ const ArticleDetails = () => {
         
 
           {/* Header Content */}
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-7xl mx-auto text-center">
             {/* Category Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -645,6 +672,64 @@ const ArticleDetails = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-6 border-t border-gray-200/50">
+              <button
+                onClick={async () => {
+                  try {
+                    // Use article ID for like API (not slug)
+                    if (!article || !article.id) {
+                      console.error('Article ID not found');
+                      return;
+                    }
+                    
+                    // Get access token if available
+                    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+                    const headers = {
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                    };
+                    
+                    if (token) {
+                      headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    
+                    // Call the like API with article ID
+                    const response = await fetch(`/api/articles/${article.id}/like`, {
+                      method: 'POST',
+                      headers: headers,
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                      // Toggle like state
+                      setIsLiked(!isLiked);
+                      
+                      // Update count from API response if available
+                      if (data.data?.likes_count !== undefined) {
+                        setLikesCount(data.data.likes_count);
+                      } else if (data.likes_count !== undefined) {
+                        setLikesCount(data.likes_count);
+                      } else {
+                        // Fallback: update count locally
+                        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+                      }
+                    } else {
+                      console.error('Failed to like article:', data.message || data.error);
+                    }
+                  } catch (error) {
+                    console.error('Error liking article:', error);
+                  }
+                }}
+                className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm transition-all duration-300 border hover:shadow-md ${
+                  isLiked 
+                    ? 'bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-600 border-red-500/40 hover:from-red-500/30 hover:to-pink-500/30' 
+                    : 'bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] border-[#579BE8]/20 hover:border-[#579BE8]/40'
+                }`}
+              >
+                <FaHeart className={`${isLiked ? 'fill-current text-red-600' : 'text-[#579BE8]'} group-hover:scale-110 transition-transform`} />
+                <span>{likesCount}</span>
+              </button>
+
               <button className="group flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm transition-all duration-300 border border-[#579BE8]/20 hover:border-[#579BE8]/40 hover:shadow-md">
                 <FaComment className="text-[#579BE8] group-hover:scale-110 transition-transform" />
                 <span>{article.comments}</span>
@@ -672,14 +757,18 @@ const ArticleDetails = () => {
           {/* Author Card */}
           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 mb-12 border border-gray-200/50 shadow-md">
             <div className="flex items-center gap-4">
-              <div className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-[#579BE8]/20 flex-shrink-0">
-              <Image
-                src={authorImageError ? DEFAULT_AUTHOR_IMAGE : (article.authorAvatar || DEFAULT_AUTHOR_IMAGE)}
-                alt={article.author2}
-                fill
-                className="object-cover"
-                onError={() => setAuthorImageError(true)}
-              />
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-[#579BE8]/20 flex-shrink-0 bg-gradient-to-br from-[#579BE8]/10 to-[#315782]/10 flex items-center justify-center">
+              {authorImageError || !article.authorAvatar ? (
+                <FaUser className="w-8 h-8 text-[#579BE8]" />
+              ) : (
+                <Image
+                  src={article.authorAvatar}
+                  alt={article.author2}
+                  fill
+                  className="object-cover"
+                  onError={() => setAuthorImageError(true)}
+                />
+              )}
               </div>
               
               <div className="flex-1 min-w-0">
