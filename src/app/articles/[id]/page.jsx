@@ -152,20 +152,20 @@ const ArticleDetails = () => {
   const DEFAULT_IMAGE = "/man.png";
   const DEFAULT_AUTHOR_IMAGE = "/person.png";
 
-  // Get articleId from params, handle both slug and id
-  const articleId = params?.id || params?.slug;
+  // Get slug from params (the route uses [id] but it's actually a slug)
+  const articleSlug = params?.id || params?.slug;
 
   // Debug logging
   useEffect(() => {
     console.log('ArticleDetails - params:', params);
-    console.log('ArticleDetails - articleId:', articleId);
-  }, [params, articleId]);
+    console.log('ArticleDetails - articleSlug:', articleSlug);
+  }, [params, articleSlug]);
 
   useEffect(() => {
     const fetchArticle = async () => {
       // Wait for params to be available
-      if (!params || !articleId) {
-        console.log('ArticleDetails - Waiting for params...', { params, articleId });
+      if (!params || !articleSlug) {
+        console.log('ArticleDetails - Waiting for params...', { params, articleSlug });
         return;
       }
 
@@ -173,36 +173,114 @@ const ArticleDetails = () => {
         setLoading(true);
         setError(null);
         
-        // Validate articleId
-        const validId = String(articleId).trim();
-        if (!validId || validId === 'undefined' || validId === 'null' || validId === '') {
-          console.error('ArticleDetails - Invalid articleId:', articleId);
-          throw new Error('Article ID or slug is required');
+        // Validate slug
+        const validSlug = String(articleSlug).trim();
+        if (!validSlug || validSlug === 'undefined' || validSlug === 'null' || validSlug === '') {
+          console.error('ArticleDetails - Invalid article slug:', articleSlug);
+          throw new Error('Article slug is required');
         }
         
-        console.log('ArticleDetails - Fetching article with ID:', validId);
+        console.log('ArticleDetails - Fetching article with slug:', validSlug);
         
-        // Fetch article by slug/id
-        const response = await fetch(`/api/articles/${encodeURIComponent(validId)}`);
-        const data = await response.json();
+        // Fetch article by slug
+        const response = await fetch(`/api/articles/${encodeURIComponent(validSlug)}`);
         
-        console.log('ArticleDetails - API Response:', { status: response.status, success: data.success, hasData: !!data.data, dataKeys: Object.keys(data) });
+        // Get response text first to handle both JSON and non-JSON responses
+        const responseText = await response.text();
+        let data = {};
         
-        // Handle different response structures
-        let articleData = null;
-        if (response.ok) {
-          if (data.success && data.data) {
-            articleData = data.data;
-          } else if (data.id || data.title) {
-            // Response is the article object directly
-            articleData = data;
-          } else if (data.data && !data.success) {
-            // Response has data but no success field
-            articleData = data.data;
+        // Try to parse JSON response
+        try {
+          if (responseText && responseText.trim()) {
+            data = JSON.parse(responseText);
+          }
+        } catch (parseError) {
+          console.error('ArticleDetails - Failed to parse JSON response:', {
+            error: parseError,
+            responseText: responseText.substring(0, 200),
+            status: response.status
+          });
+          
+          // If response is not JSON and status is not ok, throw error
+          if (!response.ok) {
+            throw new Error(`فشل تحميل المقال (${response.status}): ${responseText.substring(0, 100)}`);
           }
         }
         
-        if (articleData) {
+        // Check if response is ok before processing
+        if (!response.ok && response.status !== 200) {
+          // Build error message from various sources
+          let errorMsg = null;
+          
+          if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+            errorMsg = 
+              data?.message || 
+              data?.error?.message ||
+              (typeof data?.error === 'string' ? data.error : null) ||
+              data?.errors?.message ||
+              data?.error ||
+              JSON.stringify(data);
+          } else if (responseText && responseText.trim()) {
+            errorMsg = responseText.substring(0, 200);
+          } else {
+            errorMsg = `فشل تحميل المقال (${response.status} ${response.statusText || ''})`;
+          }
+          
+          console.error('ArticleDetails - HTTP Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            errorData: data,
+            errorDataType: typeof data,
+            errorDataKeys: data ? Object.keys(data) : [],
+            errorDataString: data ? JSON.stringify(data) : 'null',
+            responseText: responseText ? responseText.substring(0, 500) : 'empty',
+            responseTextLength: responseText?.length || 0,
+            finalErrorMessage: errorMsg
+          });
+          
+          throw new Error(errorMsg || `فشل تحميل المقال (${response.status})`);
+        }
+        
+        console.log('ArticleDetails - API Response:', { 
+          status: response.status, 
+          ok: response.ok,
+          success: data?.success, 
+          hasData: !!data?.data, 
+          hasId: !!data?.id,
+          hasTitle: !!data?.title,
+          dataKeys: Object.keys(data || {}),
+          fullData: data
+        });
+        
+        // Handle different response structures
+        let articleData = null;
+        
+        // Check if API returned success=false
+        if (data?.success === false) {
+          const errorMsg = 
+            data?.message || 
+            data?.error?.message ||
+            data?.error ||
+            (typeof data?.error === 'string' ? data.error : null) ||
+            'فشل تحميل المقال';
+          console.error('ArticleDetails - API returned error:', errorMsg, data);
+          throw new Error(errorMsg);
+        }
+        
+        // Extract article data from response
+        if (data?.success === true && data?.data) {
+          // Standard structure: { success: true, data: {...} }
+          articleData = data.data;
+        } else if (data?.id || data?.title) {
+          // Response is the article object directly
+          articleData = data;
+        } else if (data?.data) {
+          // Response has data field
+          articleData = data.data;
+        }
+        
+        if (articleData && (articleData.id || articleData.title)) {
           
           // Transform API article to component format
           const transformedArticle = {
@@ -264,23 +342,39 @@ const ArticleDetails = () => {
             setRelatedArticles(related);
           }
         } else {
-          // If API returns error, provide more context
-          const errorMsg = data.message || data.error || `Failed to fetch article (${response.status})`;
-          console.error('ArticleDetails - API Error:', {
+          // If no article data was extracted, provide detailed error
+          const errorMsg = 
+            data?.message || 
+            data?.error?.message ||
+            data?.error ||
+            (typeof data?.error === 'string' ? data.error : null) ||
+            data?.errors?.message ||
+            'المقال غير موجود أو البيانات غير صحيحة';
+          
+          console.error('ArticleDetails - No article data extracted:', {
             status: response.status,
+            ok: response.ok,
             message: errorMsg,
-            data: data
+            fullData: data,
+            dataKeys: Object.keys(data || {}),
+            hasData: !!data,
+            articleData: articleData,
+            dataSuccess: data?.success,
+            dataHasData: !!data?.data,
+            dataHasId: !!data?.id,
+            dataHasTitle: !!data?.title
           });
-          throw new Error(errorMsg);
+          
+          throw new Error(errorMsg || 'فشل تحميل المقال');
         }
       } catch (err) {
         console.error('Error fetching article:', err);
         const errorMessage = err.message || 'حدث خطأ أثناء تحميل المقال';
         setError(errorMessage);
         
-        // Only fallback to static data if articleId is a number (ID)
-        if (articleId && !isNaN(parseInt(articleId))) {
-          const fallbackArticle = allArticles.find(a => a.id === parseInt(articleId)) || allArticles[0];
+        // Only fallback to static data if slug matches (for testing)
+        if (articleSlug) {
+          const fallbackArticle = allArticles.find(a => a.id === parseInt(articleSlug)) || allArticles[0];
           if (fallbackArticle) {
             console.log('ArticleDetails - Using fallback article:', fallbackArticle);
             setArticle(fallbackArticle);
@@ -301,15 +395,15 @@ const ArticleDetails = () => {
       }
     };
 
-    // Only fetch if we have a valid articleId
-    if (articleId && String(articleId).trim() && String(articleId).trim() !== 'undefined' && String(articleId).trim() !== 'null') {
+    // Only fetch if we have a valid slug
+    if (articleSlug && String(articleSlug).trim() && String(articleSlug).trim() !== 'undefined' && String(articleSlug).trim() !== 'null') {
       fetchArticle();
     } else if (params && Object.keys(params).length > 0) {
-      // If params exist but articleId is invalid
-      setError('Article ID or slug is required');
+      // If params exist but slug is invalid
+      setError('Article slug is required');
       setLoading(false);
     }
-  }, [articleId, params]);
+  }, [articleSlug, params]);
 
   // Reading progress bar
   const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);

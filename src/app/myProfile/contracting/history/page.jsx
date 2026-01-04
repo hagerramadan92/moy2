@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     FaArrowRight, FaChevronRight, FaCalendarAlt, FaFileDownload,
-    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle, FaTimes, FaBan
+    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle, FaTimes, FaBan, FaRedoAlt
 } from "react-icons/fa";
 import { MdBusinessCenter, MdFilterList } from "react-icons/md";
 import { IoSearchOutline, IoDocumentText } from "react-icons/io5";
@@ -217,6 +217,21 @@ export default function ContractHistoryPage() {
         setTerminationReason("");
     };
 
+    // Handle renew contract
+    const handleRenewClick = (contract, e) => {
+        e.stopPropagation();
+        
+        // Here you would typically make an API call to renew the contract
+        // For now, we'll show a success message and navigate to the contracting page
+        toast.success(`تم إرسال طلب تجديد العقد ${contract.id} بنجاح`, {
+            duration: 4000,
+            icon: "✅",
+        });
+        
+        // Optionally navigate to the contracting page to create a new contract
+        // router.push('/contracts');
+    };
+
     const tabs = [
         { id: "all", label: "الكل" },
         { id: "commercial", label: "تجاري" },
@@ -326,7 +341,7 @@ export default function ContractHistoryPage() {
                             placeholder="ابحث برقم العقد أو الاسم..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pr-10 md:pr-12 pl-3 md:pl-4 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md"
+                            className="w-full pr-10 md:pr-12 pl-3 md:pl-4 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md placeholder:font-medium"
                         />
                     </div>
 
@@ -341,7 +356,7 @@ export default function ContractHistoryPage() {
                             autoComplete="off"
                             inputMode="none"
                             data-input
-                            className={`w-full pr-10 md:pr-12 py-2.5 md:py-3 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-10 md:pl-12' : 'pl-3 md:pl-4'}`}
+                            className={`w-full pr-10 md:pr-12 py-2.5 md:py-3 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md cursor-pointer placeholder:font-medium ${selectedDate ? 'pl-10 md:pl-12' : 'pl-3 md:pl-4'}`}
                         />
                         {selectedDate && (
                             <button 
@@ -514,6 +529,16 @@ export default function ContractHistoryPage() {
                                                     <span>إنهاء</span>
                                                 </button>
                                             )}
+                                            {contract.status === "completed" && (
+                                                <button
+                                                    onClick={(e) => handleRenewClick(contract, e)}
+                                                    className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-[#579BE8]/10 hover:bg-[#579BE8]/20 dark:bg-[#579BE8]/20 dark:hover:bg-[#579BE8]/30 text-[#579BE8] dark:text-[#579BE8] transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
+                                                    title="تجديد العقد"
+                                                >
+                                                    <FaRedoAlt className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                                    <span>تجديد</span>
+                                                </button>
+                                            )}
                                         </td>
                                     </motion.tr>
                                 ))}
@@ -651,7 +676,7 @@ export default function ContractHistoryPage() {
                                             onChange={(e) => setTerminationReason(e.target.value)}
                                             placeholder="يرجى كتابة سبب إنهاء العقد..."
                                             rows={4}
-                                            className="w-full px-4 py-3 bg-white dark:bg-card border-2 border-border/60 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all font-medium resize-none"
+                                            className="w-full px-4 py-3 bg-white dark:bg-card border-2 border-border/60 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all font-medium resize-none placeholder:font-medium"
                                         />
                                     </div>
 

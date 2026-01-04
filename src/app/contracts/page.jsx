@@ -40,10 +40,11 @@ export default function ContractsPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-background to-secondary/10">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative w-full py-4 bg-gradient-to-br from-secondary/20 via-background to-secondary/10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Mobile Header */}
-                <div className="lg:hidden bg-white dark:bg-card border-b-2 border-border/60 shadow-md sticky top-0 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+                <div className="lg:hidden bg-white dark:bg-card border-b-2 border-border/60  sticky 
+                top-0 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between p-4">
                         <h1 className="text-xl font-black text-foreground">التعاقدات</h1>
                         <button
@@ -59,7 +60,7 @@ export default function ContractsPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-0 lg:gap-4 py-3 md:py-4 lg:py-4 relative">
+                <div className="flex  flex-col lg:flex-row gap-0 lg:gap-4 py-3 md:py-4 lg:py-4 relative">
                 {/* Sidebar Navigation */}
                 <motion.aside
                     initial={false}

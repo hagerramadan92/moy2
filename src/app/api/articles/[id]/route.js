@@ -19,12 +19,13 @@ export async function GET(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Try to get article by ID or slug
-    // The API should handle both numeric IDs and slugs
-    let apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${encodeURIComponent(decodedId)}`;
+    // Use slug-based endpoint: http://moya.talaaljazeera.com/api/v1/articles/{slug}
+    // The API accepts both numeric IDs and slugs, but we'll use slug format
+    const slug = encodeURIComponent(decodedId);
+    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${slug}`;
     
     console.log('Article API - Fetching from:', apiUrl);
-    console.log('Article API - Original ID:', id, 'Decoded:', decodedId);
+    console.log('Article API - Original ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', slug);
 
     // Create AbortController for timeout
     const controller = new AbortController();
@@ -53,23 +54,43 @@ export async function GET(req, { params }) {
     console.log('Article API - Response status:', response.status);
 
     let data = {};
+    let responseText = '';
     try {
-      const text = await response.text();
-      if (text) {
-        data = JSON.parse(text);
+      responseText = await response.text();
+      console.log('Article API - Raw response text length:', responseText?.length || 0);
+      console.log('Article API - Raw response text (first 500 chars):', responseText?.substring(0, 500) || 'empty');
+      
+      if (responseText && responseText.trim()) {
+        data = JSON.parse(responseText);
+        console.log('Article API - Parsed data keys:', Object.keys(data || {}));
+      } else {
+        console.warn('Article API - Empty response text');
+        data = {};
       }
     } catch (parseError) {
-      console.error('Article API - Parse error:', parseError);
-      data = { error: 'Failed to parse response', raw: text?.substring(0, 200) };
+      console.error('Article API - Parse error:', {
+        error: parseError,
+        responseText: responseText?.substring(0, 500),
+        responseTextLength: responseText?.length || 0
+      });
+      data = { error: 'Failed to parse response', raw: responseText?.substring(0, 200) };
     }
 
     if (response.ok) {
+      console.log('Article API - Success response structure:', {
+        hasSuccess: data.success !== undefined,
+        hasData: !!data.data,
+        hasId: !!data.id,
+        hasTitle: !!data.title,
+        keys: Object.keys(data)
+      });
+      
       // Check if response has the expected structure
       if (data.success !== undefined) {
         // Response has success field, return as is
         return NextResponse.json(data, { status: response.status });
-      } else if (data.data || data.id) {
-        // Response has data or id field, wrap it in success structure
+      } else if (data.data || data.id || data.title) {
+        // Response has data, id, or title field, wrap it in success structure
         return NextResponse.json({
           success: true,
           data: data.data || data
@@ -79,19 +100,36 @@ export async function GET(req, { params }) {
         return NextResponse.json(data, { status: response.status });
       }
     } else {
+      // Handle error response
+      console.error('Article API - Error response from external API:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data,
+        dataKeys: Object.keys(data || {}),
+        dataString: JSON.stringify(data),
+        dataIsEmpty: !data || Object.keys(data).length === 0,
+        responseText: responseText?.substring(0, 500) || 'empty',
+        responseTextLength: responseText?.length || 0
+      });
+      
+      // Extract error message from various possible locations
       const errorMessage = 
-        data.message || 
-        data.error || 
-        `فشل تحميل المقال (${response.status})`;
+        data?.message || 
+        data?.error?.message ||
+        data?.error ||
+        (typeof data?.error === 'string' ? data.error : null) ||
+        data?.errors?.message ||
+        (response.status === 404 ? 'المقال غير موجود' : `فشل تحميل المقال (${response.status})`);
       
       return NextResponse.json(
         { 
           success: false,
           message: errorMessage,
-          error: data.error,
-          status: response.status
+          error: data?.error || errorMessage,
+          status: response.status,
+          data: data // Include original data for debugging
         },
-        { status: response.status }
+        { status: 200 } // Return 200 so frontend can handle it
       );
     }
   } catch (error) {

@@ -199,7 +199,7 @@ export default function PaymentPage() {
                                 onChange={handleCardNumberChange}
                                 placeholder="1234 5678 9012 3456"
                                 maxLength={19}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all text-lg font-mono"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all text-lg font-mono placeholder:font-medium"
                             />
                         </div>
 
@@ -213,7 +213,7 @@ export default function PaymentPage() {
                                 value={cardName}
                                 onChange={(e) => setCardName(e.target.value.toUpperCase())}
                                 placeholder="AHMED MOHAMMED"
-                                className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all placeholder:font-medium"
                             />
                         </div>
 
@@ -229,7 +229,7 @@ export default function PaymentPage() {
                                     onChange={handleExpiryChange}
                                     placeholder="MM/YY"
                                     maxLength={5}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all font-mono"
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all font-mono placeholder:font-medium"
                                 />
                             </div>
                             <div>
@@ -242,7 +242,7 @@ export default function PaymentPage() {
                                     onChange={handleCvvChange}
                                     placeholder="123"
                                     maxLength={3}
-                                    className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all font-mono"
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-border/60 focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 outline-none transition-all font-mono placeholder:font-medium"
                                 />
                             </div>
                         </div>
