@@ -12,8 +12,35 @@ export default function OtpPage() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [useSms, setUseSms] = useState(false);
+  const [otpData, setOtpData] = useState(null);
+  const [resending, setResending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const inputsRef = useRef([]);
   const router = useRouter();
+
+  // Load OTP data from sessionStorage on mount
+  useEffect(() => {
+    const storedOtpData = sessionStorage.getItem("otpData");
+    if (storedOtpData) {
+      try {
+        const parsed = JSON.parse(storedOtpData);
+        setOtpData(parsed);
+        
+        // Auto-fill OTP from response if available
+        if (parsed.otp && parsed.otp.length === 6) {
+          const otpArray = parsed.otp.split("").slice(0, 6);
+          setOtp(otpArray);
+        }
+      } catch (err) {
+        console.error("Error parsing OTP data:", err);
+        // If no valid OTP data, redirect back to login
+        router.push("/login");
+      }
+    } else {
+      // If no OTP data found, redirect back to login
+      router.push("/login");
+    }
+  }, [router]);
 
   const handleSmsClick = () => {
     setUseSms(true);
@@ -54,8 +81,150 @@ export default function OtpPage() {
     }
   };
 
-  const handleVerify = () => {
-      console.log("Verifying OTP:", otp.join(""));
+  const handleVerify = async () => {
+    const enteredOtp = otp.join("");
+
+    if (!enteredOtp || enteredOtp.length !== 6) {
+      alert("يرجى إدخال رمز التحقق كاملاً");
+      return;
+    }
+
+    if (!otpData || !otpData.phone) {
+      alert("بيانات غير صحيحة. يرجى المحاولة مرة أخرى");
+      router.push("/login");
+      return;
+    }
+
+    setVerifying(true);
+
+    try {
+      // Call verify OTP API
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          otp: enteredOtp,
+          phone_number: otpData.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        // Save token to localStorage
+        // Response structure: { status: true, data: { token: "...", user: {...} } }
+        if (data.data?.token) {
+          const token = data.data.token;
+          localStorage.setItem("accessToken", token);
+          
+          // Save token type if available
+          if (data.data?.token_type) {
+            localStorage.setItem("tokenType", data.data.token_type);
+          }
+          
+          // Save refresh token if available
+          if (data.data?.refreshToken) {
+            localStorage.setItem("refreshToken", data.data.refreshToken);
+          }
+        }
+
+        // Save user data to localStorage
+        // Response structure: { status: true, data: { user: { id, phone, name, is_verified } } }
+        const userData = {
+          id: data.data?.user?.id,
+          name: data.data?.user?.name || otpData.phone || "مستخدم",
+          phone: data.data?.user?.phone || otpData.phone,
+          is_verified: data.data?.user?.is_verified || false,
+          phoneNumber: otpData.phoneNumber,
+          countryCode: otpData.countryCode,
+        };
+        
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        // Clear OTP data from sessionStorage
+        sessionStorage.removeItem("otpData");
+        
+        // Navigate to home page
+        router.push("/");
+        
+        // Trigger a custom event to notify Navbar of login
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("userLogin"));
+      } else {
+        alert(data.message || "رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى");
+        // Clear OTP inputs
+        setOtp(["", "", "", "", "", ""]);
+        if (inputsRef.current[0]) {
+          inputsRef.current[0].focus();
+        }
+      }
+    } catch (err) {
+      console.error("Verify OTP error:", err);
+      alert("حدث خطأ أثناء التحقق من رمز التحقق. يرجى المحاولة مرة أخرى");
+      // Clear OTP inputs
+      setOtp(["", "", "", "", "", ""]);
+      if (inputsRef.current[0]) {
+        inputsRef.current[0].focus();
+      }
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!otpData || timer > 0 || resending) return;
+
+    setResending(true);
+
+    try {
+      const response = await fetch("/api/auth/resend-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          country_code: otpData.countryCode,
+          phone_number: otpData.phoneNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        // Update stored OTP data
+        const updatedOtpData = {
+          phone: data.data.phone,
+          method: data.data.method,
+          otp: data.data.otp,
+          countryCode: otpData.countryCode,
+          phoneNumber: otpData.phoneNumber,
+        };
+        sessionStorage.setItem("otpData", JSON.stringify(updatedOtpData));
+        setOtpData(updatedOtpData);
+        
+        // Auto-fill new OTP
+        if (data.data.otp && data.data.otp.length === 6) {
+          const otpArray = data.data.otp.split("").slice(0, 6);
+          setOtp(otpArray);
+        }
+        
+        setTimer(60); // Reset timer
+        
+        // Show success message (optional - you can use toast here)
+        console.log("OTP resent successfully:", data.message);
+      } else {
+        alert(data.message || "فشل إعادة إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
+      }
+    } catch (err) {
+      console.error("Resend OTP error:", err);
+      alert("حدث خطأ أثناء إعادة إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
+    } finally {
+      setResending(false);
+    }
   };
   
   const handleBack = () => {
@@ -232,7 +401,9 @@ export default function OtpPage() {
                   <span>تم ارسال رمز التحقق عبر الواتساب على</span>
                 </div>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="text-gray-900 font-bold text-sm sm:text-base" dir="ltr">+966 5xxxxxxxx</span>
+                  <span className="text-gray-900 font-bold text-sm sm:text-base" dir="ltr">
+                    {otpData?.phone || "+966 5xxxxxxxx"}
+                  </span>
                   <button
                     onClick={handleBack}
                     className="text-[#579BE8] font-bold hover:underline text-xs sm:text-sm px-2 py-1 rounded-lg hover:bg-[#579BE8]/10 transition-colors"
@@ -254,8 +425,14 @@ export default function OtpPage() {
                         {timer} ثانية
                       </span>
                     ) : (
-                      <button className="text-[#579BE8] font-bold hover:underline hover:bg-[#579BE8]/10 px-2 py-1 rounded-lg transition-colors">
-                        إعادة الإرسال
+                      <button 
+                        onClick={handleResendOtp}
+                        disabled={resending}
+                        className={`text-[#579BE8] font-bold hover:underline hover:bg-[#579BE8]/10 px-2 py-1 rounded-lg transition-colors ${
+                          resending ? "opacity-60 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        {resending ? "جاري الإرسال..." : "إعادة الإرسال"}
                       </button>
                     )}
                   </p>
@@ -277,16 +454,29 @@ export default function OtpPage() {
             >
               <Button
                 onClick={handleVerify}
-                disabled={!isOtpComplete}
+                disabled={!isOtpComplete || verifying}
                 className={`w-full h-12 sm:h-14 bg-gradient-to-r from-[#579BE8] via-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#4a8dd8] hover:to-[#0f3d6f] text-white font-black text-base sm:text-lg rounded-lg sm:rounded-xl shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:shadow-[#579BE8]/40 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group ${
-                  !isOtpComplete ? "opacity-60 cursor-not-allowed" : ""
+                  !isOtpComplete || verifying ? "opacity-60 cursor-not-allowed" : ""
                 }`}
               >
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
                 />
-                <span className="relative z-10">تأكيد</span>
-                <FaChevronLeft className="w-4 h-4 relative z-10" />
+                {verifying ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full relative z-10"
+                    />
+                    <span className="relative z-10">جاري التحقق...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="relative z-10">تأكيد</span>
+                    <FaChevronLeft className="w-4 h-4 relative z-10" />
+                  </>
+                )}
               </Button>
             </motion.div>
             

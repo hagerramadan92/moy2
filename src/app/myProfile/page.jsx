@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { FaRegUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaBell, FaHeart, FaChevronLeft, FaStar, FaPlus, FaRegBellSlash, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaShareAlt } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
@@ -10,6 +10,7 @@ import { BiCurrentLocation } from "react-icons/bi";
 import { FaRegTrashCan } from "react-icons/fa6";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import Spinner from "@/components/ui/spinner";
 
 
 export default function MyProfilePage() {
@@ -22,6 +23,7 @@ export default function MyProfilePage() {
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
     const [location, setLocation] = useState("");
+    const [userId, setUserId] = useState(null);
     const [errors, setErrors] = useState({
         fullName: "",
         phone: "",
@@ -41,6 +43,124 @@ export default function MyProfilePage() {
     const [newName, setNewName] = useState("");
     const [editingIndex, setEditingIndex] = useState(null);
     const [editValue, setEditValue] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [avatar, setAvatar] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
+    const [removeImage, setRemoveImage] = useState(false);
+
+    // Fetch user data on component mount
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const accessToken = localStorage.getItem("accessToken");
+                
+                if (!accessToken) {
+                    toast.error("يرجى تسجيل الدخول أولاً");
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await fetch("/api/auth/user", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${accessToken}`,
+                    },
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status) {
+                    // Populate form fields with user data
+                    if (data.data) {
+                        setFullName(data.data.name || data.data.full_name || "");
+                        // Get phone from API response, or from sessionStorage (send-otp response), or from localStorage
+                        const otpData = sessionStorage.getItem("otpData");
+                        let phoneFromOtp = "";
+                        if (otpData) {
+                            try {
+                                const parsedOtp = JSON.parse(otpData);
+                                phoneFromOtp = parsedOtp.phone || "";
+                            } catch (e) {
+                                console.error("Error parsing otpData:", e);
+                            }
+                        }
+                        setPhone(data.data.phone_number || data.data.phone || phoneFromOtp || "");
+                        setLocation(data.data.location || data.data.address || "");
+                        setUserId(data.data.id || data.data.user_id || null);
+                        
+                        // Set avatar if available and not empty, otherwise use default
+                        // Check localStorage first - if avatar was explicitly removed (empty string), don't restore from API
+                        const localUser = localStorage.getItem("user");
+                        let shouldUseDefault = false;
+                        if (localUser) {
+                            try {
+                                const parsedUser = JSON.parse(localUser);
+                                // If avatar is explicitly set to empty string, user removed it - use default
+                                if (parsedUser.avatar === "") {
+                                    shouldUseDefault = true;
+                                }
+                            } catch (e) {
+                                // Ignore parsing errors
+                            }
+                        }
+                        
+                        const avatarUrl = data.data.avatar || data.data.avatar_url;
+                        if (shouldUseDefault || !avatarUrl || avatarUrl.trim() === "") {
+                            setAvatarPreview(null);
+                        } else {
+                            setAvatarPreview(avatarUrl);
+                        }
+                    }
+                } else {
+                    console.error("Failed to fetch user data:", data.message);
+                    // Try to get user data from localStorage as fallback
+                    const localUser = localStorage.getItem("user");
+                    if (localUser) {
+                        try {
+                            const parsedUser = JSON.parse(localUser);
+                            setFullName(parsedUser.name || "");
+                            setPhone(parsedUser.phone || "");
+                            setUserId(parsedUser.id || null);
+                            // Check if avatar exists and is not empty
+                            if (parsedUser.avatar && parsedUser.avatar.trim() !== "") {
+                                setAvatarPreview(parsedUser.avatar);
+                            } else {
+                                setAvatarPreview(null);
+                            }
+                        } catch (e) {
+                            console.error("Error parsing local user data:", e);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching user data:", err);
+                // Try to get user data from localStorage as fallback
+                const localUser = localStorage.getItem("user");
+                if (localUser) {
+                    try {
+                        const parsedUser = JSON.parse(localUser);
+                        setFullName(parsedUser.name || "");
+                        setPhone(parsedUser.phone || "");
+                        setUserId(parsedUser.id || null);
+                        // Check if avatar exists and is not empty
+                        if (parsedUser.avatar && parsedUser.avatar.trim() !== "") {
+                            setAvatarPreview(parsedUser.avatar);
+                        } else {
+                            setAvatarPreview(null);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing local user data:", e);
+                    }
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     const handleAdd = () => {
         if (newName.trim()) {
@@ -467,7 +587,7 @@ export default function MyProfilePage() {
                         </div>
                         <div className="flex-1">
                             <p className="font-bold text-foreground">حذف الصورة</p>
-                            <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف الصورة الشخصية؟</p>
+                            <p className="text-sm text-muted-foreground">سيتم حذف الصورة عند حفظ التغييرات. هل تريد المتابعة؟</p>
                         </div>
                     </div>
                     <div className="flex gap-2 justify-end">
@@ -481,10 +601,14 @@ export default function MyProfilePage() {
                         </button>
                         <button
                             onClick={() => {
-                                // Handle delete image logic here
                                 toast.dismiss(t.id);
-                                toast.success("تم حذف الصورة الشخصية بنجاح", {
-                                    icon: <FaCheckCircle className="w-5 h-5" />,
+                                // Mark image for removal (don't remove yet)
+                                setRemoveImage(true);
+                                setAvatar(null); // Clear any uploaded file
+                                // Show default avatar immediately for visual feedback
+                                setAvatarPreview(null);
+                                toast.success("سيتم حذف الصورة عند حفظ التغييرات. يرجى الضغط على حفظ التغييرات", {
+                                    icon: <FaInfoCircle className="w-5 h-5" />,
                                     style: {
                                         background: "#579BE8",
                                         color: "#fff",
@@ -495,7 +619,7 @@ export default function MyProfilePage() {
                             }}
                             className="px-4 py-2 rounded-xl font-bold text-sm bg-destructive hover:bg-destructive/90 text-white transition-all"
                         >
-                            نعم، احذف
+                            تأكيد
                         </button>
                     </div>
                 </div>
@@ -521,8 +645,47 @@ export default function MyProfilePage() {
         input.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                // Handle image upload logic here
-                toast.success("تم رفع الصورة الشخصية بنجاح", {
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    toast.error("حجم الصورة يجب ألا يتجاوز 5 ميجابايت", {
+                        icon: <FaExclamationTriangle className="w-5 h-5" />,
+                        style: {
+                            background: "#F75A65",
+                            color: "#fff",
+                            borderRadius: "12px",
+                            padding: "16px",
+                        },
+                    });
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    toast.error("يرجى اختيار ملف صورة صحيح", {
+                        icon: <FaExclamationTriangle className="w-5 h-5" />,
+                        style: {
+                            background: "#F75A65",
+                            color: "#fff",
+                            borderRadius: "12px",
+                            padding: "16px",
+                        },
+                    });
+                    return;
+                }
+
+                // Store the file
+                setAvatar(file);
+                // Reset removeImage flag if user uploads a new image
+                setRemoveImage(false);
+
+                // Create preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setAvatarPreview(reader.result);
+                };
+                reader.readAsDataURL(file);
+
+                toast.success("تم اختيار الصورة بنجاح", {
                     icon: <FaCheckCircle className="w-5 h-5" />,
                     style: {
                         background: "#579BE8",
@@ -552,15 +715,7 @@ export default function MyProfilePage() {
     };
 
     const validatePhone = (value) => {
-        // Field is optional, only validate if it has a value
-        if (!value.trim()) {
-            return ""; // No error if empty (optional field)
-        }
-        // Saudi phone validation: Starts with 05 and followed by 8 digits (Total 10)
-        const regex = /^05\d{8}$/;
-        if (!regex.test(value.trim())) {
-            return "يرجى إدخال رقم جوال صحيح (يبدأ بـ 05 ويتكون من 10 أرقام)";
-        }
+        // No validation - phone field is always valid
         return "";
     };
 
@@ -586,8 +741,9 @@ export default function MyProfilePage() {
     const handlePhoneChange = (e) => {
         const value = e.target.value.replace(/\D/g, ""); // Only allow digits
         setPhone(value);
+        // Clear any existing phone errors (no validation)
         if (errors.phone) {
-            setErrors(prev => ({ ...prev, phone: validatePhone(value) }));
+            setErrors(prev => ({ ...prev, phone: "" }));
         }
     };
 
@@ -599,38 +755,9 @@ export default function MyProfilePage() {
         }
     };
 
-    const handleSaveChanges = () => {
-        // Check if at least one field has value
-        if (!fullName.trim() && !phone.trim() && !location.trim()) {
-            toast(
-                (t) => (
-                    <div className="flex items-center gap-3">
-                        <FaInfoCircle className="w-5 h-5 text-[#579BE8]" />
-                        <div className="flex-1">
-                            <p className="font-bold text-foreground">تنبيه</p>
-                            <p className="text-sm text-muted-foreground">يرجى إدخال حقل واحد على الأقل للتعديل</p>
-                        </div>
-                        <button
-                            onClick={() => toast.dismiss(t.id)}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-[#579BE8] hover:bg-[#579BE8]/90 text-white transition-all"
-                        >
-                            موافق
-                        </button>
-                    </div>
-                ),
-                {
-                    duration: 4000,
-                    style: {
-                        background: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "16px",
-                        padding: "16px",
-                        maxWidth: "400px",
-                    },
-                }
-            );
-            return;
-        }
+    const handleSaveChanges = async () => {
+        // Allow saving without changes - user can save name only, avatar only, or both
+        // No validation required - just save current state
 
         // Validate only filled fields
         const newErrors = {};
@@ -640,10 +767,7 @@ export default function MyProfilePage() {
             newErrors.fullName = validateFullName(fullName);
             if (newErrors.fullName) hasErrors = true;
         }
-        if (phone.trim()) {
-            newErrors.phone = validatePhone(phone);
-            if (newErrors.phone) hasErrors = true;
-        }
+        // Phone validation removed - no validation needed
         if (location.trim()) {
             newErrors.location = validateLocation(location);
             if (newErrors.location) hasErrors = true;
@@ -664,7 +788,7 @@ export default function MyProfilePage() {
             return;
         }
 
-        // Handle save changes logic here
+        // Save changes to API
         const loadingToast = toast.loading("جاري الحفظ...", {
             style: {
                 background: "var(--background)",
@@ -674,24 +798,177 @@ export default function MyProfilePage() {
             },
         });
 
-        setTimeout(() => {
+        // Use entered name or get current name from localStorage
+        let nameToSend = fullName.trim();
+        if (!nameToSend) {
+            // Get current name from localStorage
+            const localUser = localStorage.getItem("user");
+            if (localUser) {
+                try {
+                    const parsedUser = JSON.parse(localUser);
+                    nameToSend = parsedUser.name || "";
+                } catch (e) {
+                    console.error("Error parsing local user:", e);
+                }
+            }
+        }
+
+        try {
+            const accessToken = localStorage.getItem("accessToken");
+            
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يرجى تسجيل الدخول أولاً", {
+                    icon: <FaExclamationTriangle className="w-5 h-5" />,
+                    style: {
+                        background: "#F75A65",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+                return;
+            }
+
+            // Create FormData
+            const formData = new FormData();
+            
+            // Always send name (either new or current)
+            if (nameToSend) {
+                formData.append('name', nameToSend);
+            }
+            
+            // Handle avatar: if removeImage is true, send empty string to remove it
+            // If a new avatar is uploaded, send the new file
+            // Otherwise, don't send avatar (API will keep current avatar)
+            if (removeImage) {
+                // Explicitly send empty string to remove avatar
+                formData.append('avatar', '');
+            } else if (avatar) {
+                formData.append('avatar', avatar);
+            }
+
+            const response = await fetch("/api/auth/complete-profile", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+                body: formData,
+            });
+
+            const data = await response.json();
+
             toast.dismiss(loadingToast);
-            toast.success("تم حفظ التعديلات بنجاح", {
-                icon: <FaCheckCircle className="w-5 h-5" />,
+
+            if (response.ok && data.status) {
+                // Update local user data
+                const localUser = localStorage.getItem("user");
+                if (localUser) {
+                    try {
+                        const parsedUser = JSON.parse(localUser);
+                        // Update name with the one that was sent (new or current)
+                        if (nameToSend) {
+                            parsedUser.name = nameToSend;
+                            // Also update the form field if it was empty
+                            if (!fullName.trim()) {
+                                setFullName(nameToSend);
+                            }
+                        }
+                        
+                        // Handle avatar: if removeImage was true, always set to default avatar
+                        // Don't trust API response if we explicitly removed the image
+                        if (removeImage) {
+                            // Explicitly set avatar to empty string in localStorage to ensure it's cleared
+                            parsedUser.avatar = "";
+                            // Always use default avatar when image is removed, ignore API response
+                            setAvatarPreview(null);
+                        } else {
+                            // Update avatar from response (prioritize user.avatar)
+                            // Only set if avatar exists and is not empty
+                            const avatarFromResponse = data.data?.user?.avatar || data.data?.avatar;
+                            if (avatarFromResponse && avatarFromResponse.trim() !== "") {
+                                parsedUser.avatar = avatarFromResponse;
+                                setAvatarPreview(avatarFromResponse);
+                            } else {
+                                // If API returns empty/null avatar, use default
+                                parsedUser.avatar = "";
+                                setAvatarPreview(null);
+                            }
+                        }
+                        localStorage.setItem("user", JSON.stringify(parsedUser));
+                    } catch (e) {
+                        console.error("Error updating local user:", e);
+                    }
+                }
+
+                toast.success(data.message || "تم حفظ التغييرات بنجاح", {
+                    icon: <FaCheckCircle className="w-5 h-5" />,
+                    style: {
+                        background: "#579BE8",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+
+                // Clear avatar file and reset removeImage flag after successful save
+                setAvatar(null);
+                const wasRemoving = removeImage; // Store before resetting
+                setRemoveImage(false);
+                
+                // Update avatar preview from API response if available (only if not removed)
+                // If image was removed, keep default avatar and don't update from API response
+                if (!wasRemoving) {
+                    const avatarFromResponse = data.data?.user?.avatar || data.data?.avatar;
+                    if (avatarFromResponse && avatarFromResponse.trim() !== "") {
+                        setAvatarPreview(avatarFromResponse);
+                    } else {
+                        // If API returns empty/null avatar, use default
+                        setAvatarPreview(null);
+                    }
+                } else {
+                    // Image was removed, ensure default avatar is shown
+                    setAvatarPreview(null);
+                }
+            } else {
+                toast.error(data.message || "فشل حفظ التغييرات", {
+                    icon: <FaExclamationTriangle className="w-5 h-5" />,
+                    style: {
+                        background: "#F75A65",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            console.error("Error saving profile:", err);
+            toast.error("حدث خطأ أثناء حفظ التغييرات", {
+                icon: <FaExclamationTriangle className="w-5 h-5" />,
                 style: {
-                    background: "#579BE8",
+                    background: "#F75A65",
                     color: "#fff",
                     borderRadius: "12px",
                     padding: "16px",
                 },
             });
-            // Clear form and errors after successful save
-            setFullName("");
-            setPhone("");
-            setLocation("");
-            setErrors({ fullName: "", phone: "", location: "" });
-        }, 1500);
+        }
     };
+
+    // Show spinner while loading
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-sky-50">
+                <div className="text-center">
+                    <Spinner size="xl" className="mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">جاري تحميل البيانات...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col gap-4 sm:gap-6 md:gap-8 fade-in-up px-2 sm:px-0">
             {/* Profile Hero Section with Gradient */}
@@ -710,26 +987,34 @@ export default function MyProfilePage() {
                             <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
                                 <div className="relative">
                                     <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-white/30 relative overflow-hidden">
-                                        <Image
-                                            src="/images/customer.png"
-                                            alt="Customer"
-                                            width={128}
-                                            height={128}
-                                            className="w-full h-full object-cover"
-                                            quality={100}
-                                            priority
-                                            unoptimized
-                                        />
+                                        {avatarPreview ? (
+                                            <Image
+                                                key={avatarPreview}
+                                                src={avatarPreview}
+                                                alt="Customer"
+                                                width={128}
+                                                height={128}
+                                                className="w-full h-full object-cover"
+                                                quality={100}
+                                                priority
+                                                unoptimized
+                                            />
+                                        ) : (
+                                            <FaRegUser className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 text-white/80" />
+                                        )}
                                     </div>
                                     <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-green-500 rounded-full border-2 sm:border-4 border-white dark:border-card shadow-lg"></div>
                                 </div>
                                 <div className="flex flex-col gap-1 sm:gap-2">
-                                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black tracking-tight">سعود بن ناصر المطيري</h2>
-                                    <div className="flex items-center gap-2">
+                                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black tracking-tight">
+                                        {fullName || "سعود بن ناصر المطيري"}
+                                    </h2>
+                                  
+                                        
                                         <span className="bg-white/20 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold border border-white/30">
                                             نشط الآن
                                         </span>
-                                    </div>
+                                   
                                 </div>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
@@ -767,7 +1052,10 @@ export default function MyProfilePage() {
                                     onChange={handleFullNameChange}
                                     onBlur={() => setErrors(prev => ({ ...prev, fullName: validateFullName(fullName) }))}
                                     placeholder="الاسم الكامل"
+                                    disabled={loading}
                                     className={`h-12 sm:h-14 md:h-[60px] pr-10 sm:pr-12 text-foreground text-sm sm:text-base font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all ${
+                                        loading ? "opacity-60 cursor-not-allowed" : ""
+                                    } ${
                                         errors.fullName 
                                             ? "border-destructive/50 focus:border-destructive focus:ring-2 sm:focus:ring-4 focus:ring-destructive/10" 
                                             : "border-border/50 focus:border-primary focus:ring-2 sm:focus:ring-4 focus:ring-primary/10"
@@ -796,13 +1084,14 @@ export default function MyProfilePage() {
                                     />
                                 </div>
                                 <Input
-                                    value={phone}
+                                    value={phone || ""}
                                     onChange={handlePhoneChange}
-                                    onBlur={() => setErrors(prev => ({ ...prev, phone: validatePhone(phone) }))}
+                                    onBlur={() => setErrors(prev => ({ ...prev, phone: "" }))}
                                     placeholder="05xxxxxxxx"
                                     dir="ltr"
                                     maxLength={10}
-                                    className={`text-left pl-20 sm:pl-24 h-12 sm:h-14 md:h-[60px] text-foreground text-sm sm:text-base pr-10 sm:pr-12 font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all ${
+                                    disabled={true}
+                                    className={`text-left pl-20 sm:pl-24 h-12 sm:h-14 md:h-[60px] text-foreground text-sm sm:text-base pr-10 sm:pr-12 font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all opacity-60 cursor-not-allowed ${
                                         errors.phone 
                                             ? "border-destructive/50 focus:border-destructive focus:ring-2 sm:focus:ring-4 focus:ring-destructive/10" 
                                             : "border-border/50 focus:border-primary focus:ring-2 sm:focus:ring-4 focus:ring-primary/10"
@@ -818,7 +1107,7 @@ export default function MyProfilePage() {
                         </div>
 
                         {/* Location */}
-                        <div className="space-y-1 sm:space-y-2 lg:col-span-2">
+                        {/* <div className="space-y-1 sm:space-y-2 lg:col-span-2">
                             <label className="block text-xs sm:text-sm font-bold text-foreground/80 mr-2">الموقع</label>
                             <div className="relative group">
                                 <div className={`absolute top-1/2 -translate-y-1/2 right-3 sm:right-4 transition-colors ${errors.location ? "text-destructive" : "text-muted-foreground/60 group-focus-within:text-primary"}`}>
@@ -829,7 +1118,10 @@ export default function MyProfilePage() {
                                     onChange={handleLocationChange}
                                     onBlur={() => setErrors(prev => ({ ...prev, location: validateLocation(location) }))}
                                     placeholder="الرياض - مستشفى الملك فيصل"
+                                    disabled={loading}
                                     className={`h-12 sm:h-14 md:h-[60px] pr-10 sm:pr-12 text-foreground text-sm sm:text-base font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all ${
+                                        loading ? "opacity-60 cursor-not-allowed" : ""
+                                    } ${
                                         errors.location 
                                             ? "border-destructive/50 focus:border-destructive focus:ring-2 sm:focus:ring-4 focus:ring-destructive/10" 
                                             : "border-border/50 focus:border-primary focus:ring-2 sm:focus:ring-4 focus:ring-primary/10"
@@ -842,7 +1134,7 @@ export default function MyProfilePage() {
                                     {errors.location}
                                 </p>
                             )}
-                        </div>
+                        </div> */}
                     </div>
 
                     <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border/50 flex justify-end">

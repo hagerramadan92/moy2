@@ -22,14 +22,41 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") setUser(parsed);
-    } catch {
-      // ignore
+    function loadUser() {
+      try {
+        const raw = localStorage.getItem("user");
+        if (!raw) {
+          setUser(null);
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          setUser(parsed);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      }
     }
+
+    // Load user on mount
+    loadUser();
+
+    // Listen for storage changes (when user logs in from another tab/window)
+    const handleStorageChange = () => {
+      loadUser();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also listen for custom event (for same-tab login)
+    window.addEventListener("userLogin", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userLogin", handleStorageChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -46,10 +73,35 @@ export default function Navbar() {
     setDropdownOpen(false);
   }, [pathname]);
 
-  function handleLogout() {
-    localStorage.removeItem("user");
-    setUser(null);
-    setDropdownOpen(false);
+  async function handleLogout() {
+    try {
+      // Get access token from localStorage
+      const accessToken = localStorage.getItem("accessToken");
+
+      // Call logout API with token in Authorization header
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          ...(accessToken && { "Authorization": `Bearer ${accessToken}` }),
+        },
+      });
+    } catch (err) {
+      console.error("Logout API error:", err);
+      // Continue with local cleanup even if API call fails
+    } finally {
+      // Clear all local data
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      sessionStorage.removeItem("otpData");
+      setUser(null);
+      setDropdownOpen(false);
+      
+      // Navigate to home page after logout
+      router.push("/");
+    }
   }
 
   const avatarLetter = useMemo(
@@ -200,12 +252,16 @@ export default function Navbar() {
 
                       <div className="h-px bg-slate-200/70" />
 
-                      <MenuItemLink href="/profile" onClick={() => setDropdownOpen(false)}>
+                      <MenuItemLink href="/myProfile" onClick={() => setDropdownOpen(false)}>
                         الملف الشخصي
                       </MenuItemLink>
 
                       <MenuItemLink href="/orders" onClick={() => setDropdownOpen(false)}>
                         طلباتي
+                      </MenuItemLink>
+
+                      <MenuItemLink href="/settings" onClick={() => setDropdownOpen(false)}>
+                        الإعدادات
                       </MenuItemLink>
 
                       <div className="h-px bg-slate-200/70" />
@@ -317,11 +373,18 @@ export default function Navbar() {
                           </div>
                           <div className="mt-1 flex gap-3 text-xs font-semibold">
                             <Link
-                              href="/profile"
+                              href="/myProfile"
                               className="text-sky-600 underline"
                               onClick={() => setMenuOpen(false)}
                             >
                               الملف الشخصي
+                            </Link>
+                            <Link
+                              href="/settings"
+                              className="text-sky-600 underline"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              الإعدادات
                             </Link>
                             <button
                               type="button"

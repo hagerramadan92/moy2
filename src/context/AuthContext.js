@@ -55,16 +55,31 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     console.log('Logging out user...');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    
+    try {
+      // Get access token from localStorage
+      const accessToken = localStorage.getItem('accessToken');
 
-    //remove login data at cookie
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    setUser(null);
+      // Call logout API with token in Authorization header
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        },
+      });
+    } catch (err) {
+      console.error('Logout API error:', err);
+      // Continue with local cleanup even if API call fails
+    } finally {
+      // Clear all local data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('otpData');
+      setUser(null);
+    }
   };
 
   const updateTokens = ({ accessToken, refreshToken }) => {

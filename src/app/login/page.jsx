@@ -8,36 +8,77 @@ import { FaPhoneAlt, FaWater, FaChevronLeft } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { IoWaterOutline } from "react-icons/io5";
 import { IoIosWater } from "react-icons/io";
+import Link from "next/link";
 
 export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("+20");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleChange = (e) => {
-    const value = e.target.value;
+    const value = e.target.value.replace(/\D/g, ""); // Only allow digits
     setPhoneNumber(value);
     
-    // Saudi phone validation: Starts with 05 and followed by 8 digits (Total 10)
-    const regex = /^05\d{8}$/;
-    if (value.length >= 10 && !regex.test(value)) {
-      setError("يرجى إدخال رقم جوال صحيح (يبدأ بـ 05 ويتكون من 10 أرقام)");
+    // Phone validation: Should be at least 9 digits
+    if (value.length > 0 && value.length < 9) {
+      setError("يرجى إدخال رقم جوال صحيح");
     } else {
       setError("");
     }
   };
 
-  const handleNext = () => {
-    const regex = /^05\d{8}$/;
-    if (regex.test(phoneNumber)) {
-      router.push("/otp");
-    } else {
-      setError("يرجى إدخال رقم جوال صحيح (يبدأ بـ 05 ويتكون من 10 أرقام)");
+  const handleNext = async () => {
+    // Validate phone number
+    if (!phoneNumber || phoneNumber.length < 9) {
+      setError("يرجى إدخال رقم جوال صحيح");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          country_code: countryCode,
+          phone_number: phoneNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        // Store OTP data in sessionStorage for OTP verification page
+        sessionStorage.setItem("otpData", JSON.stringify({
+          phone: data.data.phone,
+          method: data.data.method,
+          otp: data.data.otp,
+          countryCode: countryCode,
+          phoneNumber: phoneNumber,
+        }));
+
+        // Navigate to OTP page
+        router.push("/otp");
+      } else {
+        setError(data.message || "فشل إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("حدث خطأ أثناء إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Check if phone number is valid
-  const isValidPhone = /^05\d{8}$/.test(phoneNumber);
+  // Check if phone number is valid (at least 9 digits)
+  const isValidPhone = phoneNumber.length >= 9;
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 sm:p-6 overflow-hidden">
@@ -153,23 +194,37 @@ export default function Login() {
                 {/* <FaPhoneAlt className="text-[#579BE8] w-4 h-4" /> */}
                 رقم الجوال
               </label>
-              <div className="relative">
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 z-10">
-                  <FaPhoneAlt className="w-5 h-5" />
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <Input
+                    type="text"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-full h-14 text-center bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl font-bold text-[#579BE8] shadow-md hover:shadow-lg transition-all duration-300 border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20 focus:ring-4 focus:bg-white"
+                    placeholder="+20"
+                  />
                 </div>
-                <Input
-                  placeholder="05xxxxxxxx"
-                  dir="ltr"
-                  value={phoneNumber}
-                  onChange={handleChange}
-                  className={`w-full h-14 pr-12 pl-4 text-right bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl font-bold text-[#579BE8] tracking-widest shadow-md hover:shadow-lg transition-all duration-300 ${
-                    error
-                      ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
-                      : isValidPhone
-                      ? "border-[#579BE8] shadow-[#579BE8]/20 focus:border-[#579BE8] focus:ring-[#579BE8]/20"
-                      : "border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20"
-                  } focus:ring-4 focus:bg-white placeholder:text-gray-400`}
-                />
+                <div className="relative flex-1">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+                    <FaPhoneAlt className="w-5 h-5" />
+                  </div>
+                  <Input
+                    placeholder="1101727657"
+                    dir="ltr"
+                    value={phoneNumber}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className={`w-full h-14 pr-12 pl-4 text-right bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl font-bold text-[#579BE8] tracking-widest shadow-md hover:shadow-lg transition-all duration-300 ${
+                      error
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
+                        : isValidPhone
+                        ? "border-[#579BE8] shadow-[#579BE8]/20 focus:border-[#579BE8] focus:ring-[#579BE8]/20"
+                        : "border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20"
+                    } focus:ring-4 focus:bg-white placeholder:text-gray-400 ${
+                      loading ? "opacity-60 cursor-not-allowed" : ""
+                    }`}
+                  />
+                </div>
               </div>
               {error && (
                 <motion.p
@@ -215,16 +270,29 @@ export default function Login() {
               >
                 <Button
                   onClick={handleNext}
-                  disabled={!isValidPhone}
+                  disabled={!isValidPhone || loading}
                   className={`w-full h-12 sm:h-14 bg-gradient-to-r from-[#579BE8] via-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#4a8dd8] hover:to-[#0f3d6f] text-white font-black text-base sm:text-lg rounded-lg sm:rounded-xl shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:shadow-[#579BE8]/40 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group ${
-                    !isValidPhone ? "opacity-60 cursor-not-allowed" : ""
+                    !isValidPhone || loading ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
                   />
-                  <span className="relative z-10">متابعة</span>
-                  <FaChevronLeft className="w-4 h-4 relative z-10" />
+                  {loading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full relative z-10"
+                      />
+                      <span className="relative z-10">جاري الإرسال...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="relative z-10">متابعة</span>
+                      <FaChevronLeft className="w-4 h-4 relative z-10" />
+                    </>
+                  )}
                 </Button>
               </motion.div>
             </motion.div>
@@ -242,11 +310,12 @@ export default function Login() {
                 <span>📋</span>
                 بتسجيل الدخول، أنت توافق على
               </p>
-              <button
+              <Link
+                href="/terms"
                 className="text-[#579BE8] font-bold hover:underline hover:bg-[#579BE8]/10 px-3 py-1 rounded-lg transition-colors text-sm"
               >
                 الشروط والأحكام
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>
