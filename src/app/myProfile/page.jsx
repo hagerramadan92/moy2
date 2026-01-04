@@ -1007,11 +1007,11 @@ export default function MyProfilePage() {
                                 </div>
                                 <div className="flex flex-col gap-1 sm:gap-2">
                                     <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black tracking-tight">
-                                        {fullName || "سعود بن ناصر المطيري"}
+                                        {fullName || "   "}
                                     </h2>
                                   
                                         
-                                        <span className="bg-white/20 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold border border-white/30">
+                                        <span className=" w-fit bg-white/20 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold border border-white/30">
                                             نشط الآن
                                         </span>
                                    
