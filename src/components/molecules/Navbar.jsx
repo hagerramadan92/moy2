@@ -48,14 +48,21 @@ export default function Navbar() {
       loadUser();
     };
 
+    // Listen for user update events (when profile is updated in same tab)
+    const handleUserUpdate = () => {
+      loadUser();
+    };
+
     window.addEventListener("storage", handleStorageChange);
     
-    // Also listen for custom event (for same-tab login)
+    // Also listen for custom events (for same-tab login/update)
     window.addEventListener("userLogin", handleStorageChange);
+    window.addEventListener("userUpdate", handleUserUpdate);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("userLogin", handleStorageChange);
+      window.removeEventListener("userUpdate", handleUserUpdate);
     };
   }, []);
 
@@ -104,9 +111,23 @@ export default function Navbar() {
     }
   }
 
-  const avatarLetter = useMemo(
-    () => (user?.name?.trim()?.[0] || "U").toUpperCase(),
+  // Extract first name from full name
+  const getFirstName = (fullName) => {
+    if (!fullName) return "";
+    const trimmed = fullName.trim();
+    // Split by space and take first part
+    const parts = trimmed.split(/\s+/);
+    return parts[0] || trimmed;
+  };
+
+  const firstName = useMemo(
+    () => getFirstName(user?.name),
     [user?.name]
+  );
+
+  const avatarLetter = useMemo(
+    () => (firstName?.[0] || user?.name?.trim()?.[0] || "U").toUpperCase(),
+    [firstName, user?.name]
   );
 
   const activeHref = useMemo(() => {
@@ -223,7 +244,7 @@ export default function Navbar() {
                 >
                   <Avatar user={user} fallbackLetter={avatarLetter} />
                   <span className="max-w-[160px] truncate text-sm font-bold">
-                    {user?.name || "حسابي"}
+                    {firstName || "حسابي"}
                   </span>
                   <motion.span
                     animate={{ rotate: dropdownOpen ? 180 : 0 }}
@@ -246,7 +267,7 @@ export default function Navbar() {
                       <div className="px-4 py-3">
                         <div className="text-xs font-semibold text-slate-500">الحساب</div>
                         <div className="mt-0.5 truncate text-sm font-bold text-slate-800">
-                          {user?.name || "حسابي"}
+                          {firstName || "حسابي"}
                         </div>
                       </div>
 
@@ -369,7 +390,7 @@ export default function Navbar() {
                         <Avatar user={user} fallbackLetter={avatarLetter} />
                         <div className="min-w-0">
                           <div className="truncate text-sm font-extrabold text-slate-900">
-                            {user?.name || "حسابي"}
+                            {firstName || "حسابي"}
                           </div>
                           <div className="mt-1 flex gap-3 text-xs font-semibold">
                             <Link

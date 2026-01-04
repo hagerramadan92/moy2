@@ -897,6 +897,11 @@ export default function MyProfilePage() {
                             }
                         }
                         localStorage.setItem("user", JSON.stringify(parsedUser));
+                        
+                        // Dispatch events to notify navbar and other components of user update
+                        window.dispatchEvent(new Event("storage"));
+                        window.dispatchEvent(new Event("userLogin"));
+                        window.dispatchEvent(new CustomEvent("userUpdate"));
                     } catch (e) {
                         console.error("Error updating local user:", e);
                     }
