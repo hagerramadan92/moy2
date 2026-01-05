@@ -522,3 +522,13 @@ section {
   color: var(--muted-foreground) !important;
   opacity: 0.4 !important;
 }
+
+/* Hide native browser calendar picker icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}

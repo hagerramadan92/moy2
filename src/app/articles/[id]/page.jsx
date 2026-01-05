@@ -15,6 +15,7 @@ import {
   FaChartLine,
   FaHeart
 } from 'react-icons/fa';
+import { useAuth } from '@/context/AuthContext';
 import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSection';
 import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
 import Footer from '@/components/molecules/common/Footer';
@@ -143,15 +144,31 @@ const ArticleDetails = () => {
   const params = useParams();
   const router = useRouter();
   const { scrollYProgress } = useScroll();
+  const authContext = useAuth();
+  const user = authContext?.user || null;
+  const isLoggedIn = !!user;
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [comments, setComments] = useState([]);
+  const [commentsTotal, setCommentsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
   const [error, setError] = useState(null);
+  const [commentForm, setCommentForm] = useState({
+    content: '',
+    guest_name: '',
+    guest_email: ''
+  });
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState(null);
+  const [commentSuccess, setCommentSuccess] = useState(false);
+  const [commentSuccessMessage, setCommentSuccessMessage] = useState('');
+  const [newCommentId, setNewCommentId] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [authorImageError, setAuthorImageError] = useState(false);
   const DEFAULT_IMAGE = "/man.png";
@@ -310,26 +327,18 @@ const ArticleDetails = () => {
           
           setArticle(transformedArticle);
           setLikesCount(transformedArticle.likes || 0);
+          // Initialize comments total with article's comment count
+          setCommentsTotal(transformedArticle.comments || 0);
           
-          // Fetch comments using article ID/slug
+          // Check if article is bookmarked
           try {
-            setLoadingComments(true);
-            const commentsResponse = await fetch(`/api/articles/${encodeURIComponent(validSlug)}/comments`);
-            const commentsData = await commentsResponse.json();
-            
-            if (commentsResponse.ok && commentsData.success && commentsData.data) {
-              setComments(Array.isArray(commentsData.data) ? commentsData.data : []);
-            } else if (Array.isArray(commentsData)) {
-              setComments(commentsData);
-            } else {
-              setComments([]);
-            }
-          } catch (commentsError) {
-            console.error('Error fetching comments:', commentsError);
-            setComments([]);
-          } finally {
-            setLoadingComments(false);
+            const bookmarks = JSON.parse(localStorage.getItem('bookmarkedArticles') || '[]');
+            setIsBookmarked(bookmarks.includes(transformedArticle.id));
+          } catch (err) {
+            console.error('Error checking bookmarks:', err);
           }
+          
+          // Don't fetch comments automatically - only fetch when user clicks comments button
           
           // Fetch related articles
           const relatedResponse = await fetch('/api/articles');
@@ -730,18 +739,148 @@ const ArticleDetails = () => {
                 <span>{likesCount}</span>
               </button>
 
-              <button className="group flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm transition-all duration-300 border border-[#579BE8]/20 hover:border-[#579BE8]/40 hover:shadow-md">
-                <FaComment className="text-[#579BE8] group-hover:scale-110 transition-transform" />
-                <span>{article.comments}</span>
+              <button 
+                onClick={async () => {
+                  if (!showComments && comments.length === 0) {
+                    // Fetch comments when first clicked
+                    try {
+                      setLoadingComments(true);
+                      // Use article ID for comments API
+                      const commentsResponse = await fetch(`/api/articles/${article.id}/comments`);
+                      const commentsData = await commentsResponse.json();
+                      
+                      if (commentsResponse.ok && commentsData.success && commentsData.data) {
+                        setComments(Array.isArray(commentsData.data) ? commentsData.data : []);
+                        // Update total count from meta if available
+                        if (commentsData.meta && commentsData.meta.total !== undefined) {
+                          setCommentsTotal(commentsData.meta.total);
+                        } else {
+                          setCommentsTotal(Array.isArray(commentsData.data) ? commentsData.data.length : 0);
+                        }
+                      } else if (Array.isArray(commentsData)) {
+                        setComments(commentsData);
+                        setCommentsTotal(commentsData.length);
+                      } else {
+                        setComments([]);
+                        setCommentsTotal(0);
+                      }
+                    } catch (commentsError) {
+                      console.error('Error fetching comments:', commentsError);
+                      setComments([]);
+                    } finally {
+                      setLoadingComments(false);
+                    }
+                  }
+                  setShowComments(!showComments);
+                  setShowAllComments(false); // Reset show all when toggling
+                }}
+                className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm transition-all duration-300 border hover:shadow-md ${
+                  showComments 
+                    ? 'bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-[#579BE8]/40' 
+                    : 'bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] border-[#579BE8]/20 hover:border-[#579BE8]/40'
+                }`}
+              >
+                <FaComment className={`${showComments ? 'text-white' : 'text-[#579BE8]'} group-hover:scale-110 transition-transform`} />
+                <span>{commentsTotal > 0 ? commentsTotal : article.comments}</span>
               </button>
 
-              <button className="group flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm transition-all duration-300 border border-[#579BE8]/20 hover:border-[#579BE8]/40 hover:shadow-md">
+              <button 
+                onClick={async (e) => {
+                  const articleUrl = typeof window !== 'undefined' ? window.location.href : '';
+                  const shareData = {
+                    title: article.title,
+                    text: article.description || article.title,
+                    url: articleUrl,
+                  };
+
+                  try {
+                    // Try Web Share API if available
+                    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                      await navigator.share(shareData);
+                    } else {
+                      // Fallback: Copy to clipboard
+                      await navigator.clipboard.writeText(articleUrl);
+                      // Show temporary success message
+                      const button = e.currentTarget;
+                      const span = button.querySelector('span');
+                      if (span) {
+                        const originalText = span.textContent;
+                        span.textContent = 'تم النسخ!';
+                        button.classList.add('bg-green-50', 'text-green-600');
+                        setTimeout(() => {
+                          span.textContent = originalText;
+                          button.classList.remove('bg-green-50', 'text-green-600');
+                        }, 2000);
+                      }
+                    }
+                  } catch (err) {
+                    // If share fails, try clipboard as fallback
+                    if (err.name !== 'AbortError') {
+                      try {
+                        await navigator.clipboard.writeText(articleUrl);
+                        const button = e.currentTarget;
+                        const span = button.querySelector('span');
+                        if (span) {
+                          const originalText = span.textContent;
+                          span.textContent = 'تم النسخ!';
+                          button.classList.add('bg-green-50', 'text-green-600');
+                          setTimeout(() => {
+                            span.textContent = originalText;
+                            button.classList.remove('bg-green-50', 'text-green-600');
+                          }, 2000);
+                        }
+                      } catch (clipboardErr) {
+                        console.error('Failed to copy to clipboard:', clipboardErr);
+                        alert('فشل مشاركة الرابط');
+                      }
+                    }
+                  }
+                }}
+                className="group flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm transition-all duration-300 border border-[#579BE8]/20 hover:border-[#579BE8]/40 hover:shadow-md"
+              >
                 <FaShareAlt className="text-[#579BE8] group-hover:scale-110 transition-transform" />
                 <span>مشاركة</span>
               </button>
 
               <button
-                onClick={() => setIsBookmarked(!isBookmarked)}
+                onClick={async () => {
+                  if (!article || !article.id) return;
+                  
+                  const newBookmarkState = !isBookmarked;
+                  
+                  // If user is logged in, save to API (if endpoint exists)
+                  if (isLoggedIn) {
+                    try {
+                      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+                      if (token) {
+                        // Try to save bookmark via API (if endpoint exists)
+                        // For now, we'll just save locally
+                        // You can add API call here if bookmark endpoint exists
+                      }
+                    } catch (err) {
+                      console.error('Error saving bookmark:', err);
+                    }
+                  }
+                  
+                  // Save to localStorage
+                  try {
+                    const bookmarks = JSON.parse(localStorage.getItem('bookmarkedArticles') || '[]');
+                    if (newBookmarkState) {
+                      // Add to bookmarks
+                      if (!bookmarks.includes(article.id)) {
+                        bookmarks.push(article.id);
+                        localStorage.setItem('bookmarkedArticles', JSON.stringify(bookmarks));
+                      }
+                    } else {
+                      // Remove from bookmarks
+                      const filtered = bookmarks.filter(id => id !== article.id);
+                      localStorage.setItem('bookmarkedArticles', JSON.stringify(filtered));
+                    }
+                    setIsBookmarked(newBookmarkState);
+                  } catch (err) {
+                    console.error('Error saving bookmark to localStorage:', err);
+                  }
+                }}
                 className={`ml-auto group flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-cairo font-semibold text-sm transition-all duration-300 ${
                   isBookmarked 
                     ? 'bg-gradient-to-r from-[#579BE8] to-[#315782] text-white shadow-lg hover:shadow-xl ring-2 ring-[#579BE8]/30' 
@@ -753,6 +892,261 @@ const ArticleDetails = () => {
               </button>
             </div>
           </motion.article>
+
+          {/* Comments Section */}
+          {showComments && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white/80 backdrop-blur-sm rounded-xl p-6 md:p-8 mb-12 border border-gray-200/50 shadow-md"
+            >
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200/50">
+                <FaComment className="text-[#579BE8] text-xl" />
+                <h3 className="font-cairo font-bold text-xl text-gray-900">
+                  التعليقات ({commentsTotal > 0 ? commentsTotal : comments.length})
+                </h3>
+              </div>
+
+              {/* Comment Form */}
+              <div className="mb-8 pb-6 border-b border-gray-200/50">
+                <h4 className="font-cairo font-semibold text-lg text-gray-900 mb-4">أضف تعليقك</h4>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSubmittingComment(true);
+                    setCommentError(null);
+                    setCommentSuccess(false);
+
+                    try {
+                      // Get CSRF token if available
+                      let csrfToken = null;
+                      if (typeof document !== 'undefined') {
+                        const metaToken = document.querySelector('meta[name="csrf-token"]');
+                        if (metaToken) {
+                          csrfToken = metaToken.getAttribute('content');
+                        }
+                      }
+
+                      const headers = {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                      };
+
+                      if (csrfToken) {
+                        headers['X-CSRF-TOKEN'] = csrfToken;
+                        headers['X-XSRF-TOKEN'] = csrfToken;
+                      }
+
+                      // Prepare comment body - only include guest_name and guest_email if not logged in
+                      const commentBody = {
+                        content: commentForm.content.trim(),
+                      };
+                      
+                      // Only add guest_name and guest_email if user is not logged in
+                      if (!isLoggedIn) {
+                        if (commentForm.guest_name.trim()) {
+                          commentBody.guest_name = commentForm.guest_name.trim();
+                        }
+                        if (commentForm.guest_email.trim()) {
+                          commentBody.guest_email = commentForm.guest_email.trim();
+                        }
+                      }
+
+                      const response = await fetch(`/api/articles/${article.id}/comments`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(commentBody),
+                      });
+
+                      const data = await response.json();
+
+                      if (response.ok && data.success !== false) {
+                        // Show success message from API if available
+                        const successMessage = data.message || 'تم إضافة التعليق بنجاح!';
+                        setCommentSuccessMessage(successMessage);
+                        setCommentSuccess(true);
+                        
+                        // Reset form
+                        setCommentForm({ 
+                          content: '', 
+                          guest_name: isLoggedIn ? '' : '', 
+                          guest_email: '' 
+                        });
+                        
+                        // Don't add the comment immediately since it's pending review
+                        // The comment will appear after it's approved and the user refreshes
+
+                        // Hide success message after 5 seconds
+                        setTimeout(() => {
+                          setCommentSuccess(false);
+                          setCommentSuccessMessage('');
+                        }, 5000);
+                      } else {
+                        const errorMsg = data.message || data.error || 'فشل إضافة التعليق';
+                        setCommentError(errorMsg);
+                      }
+                    } catch (err) {
+                      console.error('Error submitting comment:', err);
+                      setCommentError('حدث خطأ أثناء إضافة التعليق');
+                    } finally {
+                      setSubmittingComment(false);
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <textarea
+                      value={commentForm.content}
+                      onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
+                      placeholder="اكتب تعليقك هنا..."
+                      required
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] outline-none font-cairo text-sm md:text-base text-gray-700 resize-none"
+                    />
+                  </div>
+
+                  {!isLoggedIn && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <input
+                          type="text"
+                          value={commentForm.guest_name}
+                          onChange={(e) => setCommentForm({ ...commentForm, guest_name: e.target.value })}
+                          placeholder="الاسم"
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] outline-none font-cairo text-sm md:text-base text-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="email"
+                          value={commentForm.guest_email}
+                          onChange={(e) => setCommentForm({ ...commentForm, guest_email: e.target.value })}
+                          placeholder="البريد الإلكتروني *"
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] outline-none font-cairo text-sm md:text-base text-gray-700"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {commentError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="font-cairo text-sm text-red-600">{commentError}</p>
+                    </div>
+                  )}
+
+                  {commentSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="font-cairo text-sm text-green-600">{commentSuccessMessage || 'تم إضافة التعليق بنجاح!'}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={
+                      submittingComment || 
+                      !commentForm.content.trim() || 
+                      (!isLoggedIn && (!commentForm.guest_name.trim() || !commentForm.guest_email.trim()))
+                    }
+                    className={`w-full md:w-auto px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white font-cairo font-semibold text-sm rounded-lg hover:from-[#4788d5] hover:to-[#2a4a6f] transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                  >
+                    {submittingComment ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>جاري الإرسال...</span>
+                      </>
+                    ) : (
+                      <span>إرسال التعليق</span>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {loadingComments ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-12 h-12 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="text-center py-12">
+                  <FaComment className="text-gray-400 text-4xl mx-auto mb-4" />
+                  <p className="font-cairo font-medium text-gray-600">لا توجد تعليقات بعد</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {(showAllComments ? comments : comments.slice(0, 3)).map((comment) => (
+                    <motion.div
+                      key={comment.id}
+                      id={`comment-${comment.id}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className={`border-b border-gray-200/50 pb-6 last:border-b-0 last:pb-0 transition-all duration-500 ${
+                        newCommentId === comment.id ? 'bg-blue-50/50 border-l-4 border-l-[#579BE8] pl-4' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#579BE8]/20 to-[#315782]/20 flex items-center justify-center flex-shrink-0">
+                          <FaUser className="text-[#579BE8] text-lg" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-cairo font-bold text-sm text-gray-900">
+                              {comment.is_guest && comment.guest_name ? comment.guest_name : 'مستخدم'}
+                            </span>
+                            {comment.is_edited && (
+                              <span className="text-xs text-gray-500 font-cairo">(تم التعديل)</span>
+                            )}
+                          </div>
+                          <p className="font-cairo font-normal text-sm md:text-base text-gray-700 leading-relaxed mb-3">
+                            {comment.content}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="font-cairo">{comment.created_at_human}</span>
+                            {comment.likes_count > 0 && (
+                              <div className="flex items-center gap-1">
+                                <FaHeart className="text-red-500 text-xs" />
+                                <span className="font-cairo">{comment.likes_count}</span>
+                              </div>
+                            )}
+                            {comment.replies_count > 0 && (
+                              <div className="flex items-center gap-1">
+                                <FaComment className="text-[#579BE8] text-xs" />
+                                <span className="font-cairo">{comment.replies_count} رد</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {comments.length > 3 && !showAllComments && (
+                    <div className="pt-4">
+                      <button
+                        onClick={() => setShowAllComments(true)}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm rounded-lg border border-[#579BE8]/20 hover:border-[#579BE8]/40 transition-all duration-300 hover:shadow-md"
+                      >
+                        عرض المزيد ({comments.length - 3} تعليق إضافي)
+                      </button>
+                    </div>
+                  )}
+
+                  {showAllComments && comments.length > 3 && (
+                    <div className="pt-4">
+                      <button
+                        onClick={() => setShowAllComments(false)}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-[#579BE8]/10 to-[#315782]/10 hover:from-[#579BE8]/20 hover:to-[#315782]/20 text-[#579BE8] font-cairo font-semibold text-sm rounded-lg border border-[#579BE8]/20 hover:border-[#579BE8]/40 transition-all duration-300 hover:shadow-md"
+                      >
+                        عرض أقل
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* Author Card */}
           <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 mb-12 border border-gray-200/50 shadow-md">

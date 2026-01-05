@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import api from '@/lib/axios';
+import api from '@/utils/api';
 
 const AuthContext = createContext();
 
@@ -11,15 +11,37 @@ export function AuthProvider({ children }) {
 
   const fetchUser = async () => {
     const access = localStorage.getItem('accessToken');
-    if (!access) return;
+    if (!access) {
+      setLoadingUser(false);
+      return;
+    }
 
     try {
       setLoadingUser(true);
-      const res = await api.get('/auth/me');
-      setUser(res.data);
-      return res.data;
-    } catch {
+      // Use Next.js API route instead of direct axios call
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${access}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Handle different response structures
+        setUser(data.data || data.user || data);
+        return data.data || data.user || data;
+      } else {
+        setUser(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
       setUser(null);
+      return null;
     } finally {
       setLoadingUser(false);
     }
@@ -54,8 +76,6 @@ export function AuthProvider({ children }) {
   };
 
   async function logout() {
-    console.log('Logging out user...');
-    
     try {
       // Get access token from localStorage
       const accessToken = localStorage.getItem('accessToken');
@@ -107,5 +127,19 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    // Return default values if AuthProvider is not available
+    return {
+      user: null,
+      role: 'guest',
+      loadingUser: false,
+      setCurrentUser: () => {},
+      refetchUser: () => {},
+      logout: () => {},
+      login: async () => {},
+      updateTokens: () => {}
+    };
+  }
+  return context;
 }

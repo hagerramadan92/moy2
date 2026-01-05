@@ -163,3 +163,180 @@ export async function GET(req, { params }) {
   }
 }
 
+export async function POST(req, { params }) {
+  try {
+    // Await params as it's a Promise in Next.js 15+
+    const { id } = await params;
+    
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('Post Comment API - Missing or invalid article ID:', id);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'Article ID or slug is required',
+          error: 'Missing ID'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Get request body
+    const body = await req.json();
+    
+    // Validate required fields
+    if (!body.content || !body.content.trim()) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'محتوى التعليق مطلوب',
+          error: 'Content is required'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Decode the ID/slug in case it's URL encoded
+    const decodedId = decodeURIComponent(id);
+    
+    // Use the comments endpoint: http://moya.talaaljazeera.com/api/v1/articles/{id}/comments
+    const articleId = encodeURIComponent(decodedId);
+    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
+    
+    console.log('Post Comment API - Posting to:', apiUrl);
+    console.log('Post Comment API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);
+
+    // Get CSRF token from request headers or cookies
+    const csrfTokenFromHeader = req.headers.get('X-CSRF-TOKEN') || 
+                                req.headers.get('X-XSRF-TOKEN');
+    
+    // Prepare headers for external API
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0',
+    };
+
+    // Add CSRF token if available
+    if (csrfTokenFromHeader) {
+      headers['X-CSRF-TOKEN'] = csrfTokenFromHeader;
+      headers['X-XSRF-TOKEN'] = csrfTokenFromHeader;
+    }
+
+    // Prepare request body
+    const requestBody = {
+      content: body.content.trim(),
+    };
+
+    // Add guest fields if provided
+    if (body.guest_name) {
+      requestBody.guest_name = body.guest_name.trim();
+    }
+    if (body.guest_email) {
+      requestBody.guest_email = body.guest_email.trim();
+    }
+
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout');
+      }
+      throw fetchError;
+    }
+
+    console.log('Post Comment API - Response status:', response.status);
+
+    let data = {};
+    let responseText = '';
+    try {
+      responseText = await response.text();
+      
+      if (responseText && responseText.trim()) {
+        data = JSON.parse(responseText);
+        console.log('Post Comment API - Parsed data keys:', Object.keys(data || {}));
+      } else {
+        console.warn('Post Comment API - Empty response text');
+        data = {};
+      }
+    } catch (parseError) {
+      console.error('Post Comment API - Parse error:', {
+        error: parseError,
+        responseText: responseText?.substring(0, 500),
+        responseTextLength: responseText?.length || 0
+      });
+      data = { error: 'Failed to parse response', raw: responseText?.substring(0, 200) };
+    }
+
+    if (response.ok) {
+      console.log('Post Comment API - Success response');
+      
+      // Return the response as is
+      return NextResponse.json(data, { status: response.status });
+    } else {
+      // Handle error response
+      console.error('Post Comment API - Error response from external API:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data,
+        dataKeys: Object.keys(data || {}),
+        dataString: JSON.stringify(data),
+        responseText: responseText?.substring(0, 500) || 'empty',
+      });
+      
+      // Extract error message from various possible locations
+      const errorMessage = 
+        data?.message || 
+        data?.error?.message ||
+        data?.error ||
+        (typeof data?.error === 'string' ? data.error : null) ||
+        data?.errors?.message ||
+        (response.status === 422 ? 'البيانات المدخلة غير صحيحة' : `فشل إضافة التعليق (${response.status})`);
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          message: errorMessage,
+          error: data?.error || errorMessage,
+          errors: data?.errors,
+          status: response.status,
+        },
+        { status: response.status }
+      );
+    }
+  } catch (error) {
+    console.error('Post Comment API error:', error);
+    
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'انتهت مهلة الاتصال بالخادم', 
+          error: 'Timeout',
+        },
+        { status: 504 }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'حدث خطأ أثناء إضافة التعليق', 
+        error: error.message,
+      },
+      { status: 500 }
+    );
+  }
+}
+

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     FaHardHat, FaTools, FaChevronLeft, FaCheckCircle,
@@ -32,8 +32,13 @@ export default function ContractingPage() {
         phone: '',
         duration: 'شهر واحد',
         address: '',
-        notes: ''
+        notes: '',
+        startDate: new Date().toISOString().split('T')[0], // Default to today
+        totalOrdersLimit: 300,
+        totalAmount: 0
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dateInputRef = useRef(null);
     const [errors, setErrors] = useState({});
     const [expandedId, setExpandedId] = useState(null);
     const [selectedContractId, setSelectedContractId] = useState(null);
@@ -93,27 +98,98 @@ export default function ContractingPage() {
         }
     };
 
+    // Map Arabic duration to API duration_type
+    const mapDurationType = (arabicDuration) => {
+        const durationMap = {
+            'شهر واحد': 'monthly',
+            '3 أشهر (خصم 10%)': 'quarterly',
+            '6 أشهر (خصم 20%)': 'semi_annual',
+            'سنة كاملة': 'yearly'
+        };
+        return durationMap[arabicDuration] || 'monthly';
+    };
+
     const validateForm = () => {
         let newErrors = {};
         if (!formData.name) newErrors.name = activeTab === 'commercial' ? "اسم المؤسسة مطلوب" : "الاسم الكامل مطلوب";
         if (!formData.applicantName) newErrors.applicantName = "اسم مقدم الطلب مطلوب";
         if (!formData.phone) newErrors.phone = "رقم الجوال مطلوب";
         if (!formData.address) newErrors.address = "عنوان الموقع مطلوب";
+        if (!formData.startDate) newErrors.startDate = "تاريخ البدء مطلوب";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validateForm()) {
-            const loadingToast = toast.loading("جاري إرسال طلب التعاقد...", {
-                duration: 2000,
+        if (!validateForm()) {
+            toast.error("يرجى ملء جميع الحقول المطلوبة", {
+                duration: 3000,
+                icon: "❌",
             });
-            
-            setTimeout(() => {
+            return;
+        }
+
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        const loadingToast = toast.loading("جاري إرسال طلب التعاقد...", {
+            duration: Infinity,
+        });
+
+        try {
+            // Get access token from localStorage - required for creating contracts
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
                 toast.dismiss(loadingToast);
-                toast.success("تم إضافة طلب التعاقد بنجاح، وسيتواصل معك فريقنا قريباً.", {
+                toast.error("يجب تسجيل الدخول لإنشاء عقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Prepare API request body
+            const apiBody = {
+                contract_type: activeTab === 'personal' ? 'individual' : 'company',
+                applicant_name: formData.applicantName.trim(),
+                company_name: activeTab === 'commercial' ? formData.name.trim() : formData.name.trim() || null,
+                duration_type: mapDurationType(formData.duration),
+                total_orders_limit: formData.totalOrdersLimit || 300,
+                total_amount: formData.totalAmount || 0,
+                start_date: formData.startDate,
+                delivery_locations: [
+                    {
+                        saved_location_id: 1,
+                        priority: 1
+                    }
+                ],
+                notes: formData.notes.trim() || ''
+            };
+
+            // Prepare headers with Authorization token (required)
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            };
+
+            // Call the API
+            const response = await fetch('/api/contracts', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(apiBody),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم إضافة طلب التعاقد بنجاح، وسيتواصل معك فريقنا قريباً.", {
                     duration: 4000,
                     icon: "✅",
                 });
@@ -125,15 +201,28 @@ export default function ContractingPage() {
                     phone: '',
                     duration: 'شهر واحد',
                     address: '',
-                    notes: ''
+                    notes: '',
+                    startDate: new Date().toISOString().split('T')[0],
+                    totalOrdersLimit: 300,
+                    totalAmount: 0
                 });
                 setErrors({});
-            }, 2000);
-        } else {
-            toast.error("يرجى ملء جميع الحقول المطلوبة", {
-                duration: 3000,
+            } else {
+                // Handle API error
+                const errorMessage = data.message || data.error || 'فشل إرسال طلب التعاقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error("حدث خطأ أثناء إرسال طلب التعاقد. يرجى المحاولة مرة أخرى", {
+                duration: 5000,
                 icon: "❌",
             });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -359,8 +448,48 @@ export default function ContractingPage() {
                                                 <SelectItem value="سنة كاملة">سنة كاملة</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FaCalendarAlt className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10 pointer-events-none" />
                                     </div>
+                                </div>
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>تاريخ البدء</label>
+                                    <div className="relative">
+                                        <input
+                                            ref={dateInputRef}
+                                            type="date"
+                                            name="startDate"
+                                            value={formData.startDate}
+                                            onChange={handleInputChange}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className={`w-full bg-white dark:bg-card border-2 ${errors.startDate ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md cursor-pointer`}
+                                            onClick={(e) => {
+                                                // Try to show the native date picker
+                                                if (e.currentTarget.showPicker) {
+                                                    e.currentTarget.showPicker();
+                                                }
+                                            }}
+                                        />
+                                        <div 
+                                            className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10 cursor-pointer pointer-events-auto flex items-center justify-center"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (dateInputRef.current) {
+                                                    dateInputRef.current.focus();
+                                                    if (dateInputRef.current.showPicker) {
+                                                        dateInputRef.current.showPicker();
+                                                    } else {
+                                                        // Fallback: trigger click on input
+                                                        dateInputRef.current.click();
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <FaCalendarAlt className="w-full h-full" />
+                                        </div>
+                                    </div>
+                                    {errors.startDate && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                        <span>⚠️</span> {errors.startDate}
+                                    </p>}
                                 </div>
                             </div>
 
@@ -400,9 +529,10 @@ export default function ContractingPage() {
                             <div className="pt-2 md:pt-3">
                                 <Button 
                                     type="submit" 
-                                    className="w-full py-3 md:py-4 lg:py-5 cursor-pointer rounded-lg md:rounded-xl text-sm md:text-base lg:text-lg font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-md hover:shadow-lg transition-all"
+                                    disabled={isSubmitting}
+                                    className="w-full py-3 md:py-4 lg:py-5 cursor-pointer rounded-lg md:rounded-xl text-sm md:text-base lg:text-lg font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    تأكيد طلب التعاقد
+                                    {isSubmitting ? "جاري الإرسال..." : "تأكيد طلب التعاقد"}
                                 </Button>
                             </div>
                         </form>
