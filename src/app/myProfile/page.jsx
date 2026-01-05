@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import { FaRegUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaBell, FaHeart, FaChevronLeft, FaStar, FaPlus, FaRegBellSlash, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaShareAlt } from "react-icons/fa";
+import { FaRegUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaBell, FaHeart, FaChevronLeft, FaStar, FaPlus, FaRegBellSlash, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaShareAlt, FaTimes, FaBuilding } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -31,14 +31,25 @@ export default function MyProfilePage() {
     });
 
     // CRUD States for Saved Places
-    const [places, setPlaces] = useState([
-        "الرياض حي الملك فهد 1",
-        "الرياض حي الملك فهد 2",
-        "الرياض حي الملك فهد 3",
-        "الرياض حي الملك فهد 4",
-        "الرياض حي الملك فهد 5",
-        "الرياض حي الملك فهد 6"
-    ]);
+    const [places, setPlaces] = useState([]);
+    const [addresses, setAddresses] = useState([]);
+    const [loadingAddresses, setLoadingAddresses] = useState(false);
+    const [showAddressPopup, setShowAddressPopup] = useState(false);
+    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [loadingAddressDetails, setLoadingAddressDetails] = useState(false);
+    const [isEditingAddress, setIsEditingAddress] = useState(false);
+    const [editAddressForm, setEditAddressForm] = useState({
+        name: '',
+        address: '',
+        city: '',
+        area: '',
+        latitude: '',
+        longitude: '',
+        type: 'home',
+        additional_info: '',
+        is_favorite: false
+    });
+    const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState("");
     const [editingIndex, setEditingIndex] = useState(null);
@@ -161,6 +172,144 @@ export default function MyProfilePage() {
 
         fetchUserData();
     }, []);
+
+    // Fetch addresses on component mount
+    useEffect(() => {
+        const fetchAddresses = async () => {
+            const accessToken = localStorage.getItem("accessToken");
+            if (!accessToken) return;
+
+            try {
+                setLoadingAddresses(true);
+                const response = await fetch("/api/addresses", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${accessToken}`,
+                    },
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status && data.data) {
+                    setAddresses(data.data);
+                    // Set all addresses as saved places
+                    setPlaces(data.data);
+                    // Set only favorite addresses
+                    setFavorites(data.data.filter(addr => addr.is_favorite === true));
+                }
+            } catch (error) {
+                // Silently fail - addresses are optional
+            } finally {
+                setLoadingAddresses(false);
+            }
+        };
+
+        fetchAddresses();
+    }, []);
+
+    // Fetch address details by ID
+    const fetchAddressDetails = async (addressId) => {
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+            toast.error("يرجى تسجيل الدخول أولاً");
+            return;
+        }
+
+        try {
+            setLoadingAddressDetails(true);
+            setShowAddressPopup(true);
+            setSelectedAddress(null);
+
+            const response = await fetch(`/api/addresses/${addressId}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json();
+            if (response.ok && data.status && data.data) {
+                const addressData = data.data;
+                setSelectedAddress(addressData);
+                // Initialize edit form with address data
+                setEditAddressForm({
+                    name: addressData.name || '',
+                    address: addressData.address || '',
+                    city: addressData.city || '',
+                    area: addressData.area || '',
+                    latitude: addressData.latitude || '',
+                    longitude: addressData.longitude || '',
+                    type: addressData.type || 'home',
+                    additional_info: addressData.additional_info || '',
+                    is_favorite: addressData.is_favorite || false
+                });
+            } else {
+                toast.error(data.message || "فشل جلب تفاصيل العنوان");
+                setShowAddressPopup(false);
+            }
+        } catch (error) {
+            toast.error("حدث خطأ أثناء جلب تفاصيل العنوان");
+            setShowAddressPopup(false);
+        } finally {
+            setLoadingAddressDetails(false);
+        }
+    };
+
+    // Update address
+    const handleUpdateAddress = async () => {
+        if (!selectedAddress?.id) return;
+
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+            toast.error("يرجى تسجيل الدخول أولاً");
+            return;
+        }
+
+        try {
+            setIsUpdatingAddress(true);
+            const response = await fetch(`/api/addresses/${selectedAddress.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify(editAddressForm),
+            });
+
+            const data = await response.json();
+            if (response.ok && data.status) {
+                toast.success(data.message || "تم تحديث العنوان بنجاح");
+                setIsEditingAddress(false);
+                // Refresh address details
+                await fetchAddressDetails(selectedAddress.id);
+                // Refresh addresses list
+                const addressesResponse = await fetch("/api/addresses", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${accessToken}`,
+                    },
+                });
+                const addressesData = await addressesResponse.json();
+                if (addressesData.status && addressesData.data) {
+                    setAddresses(addressesData.data);
+                    setPlaces(addressesData.data);
+                    setFavorites(addressesData.data.filter(addr => addr.is_favorite === true));
+                }
+            } else {
+                toast.error(data.message || "فشل تحديث العنوان");
+            }
+        } catch (error) {
+            toast.error("حدث خطأ أثناء تحديث العنوان");
+        } finally {
+            setIsUpdatingAddress(false);
+        }
+    };
 
     const handleAdd = () => {
         if (newName.trim()) {
@@ -383,11 +532,7 @@ export default function MyProfilePage() {
     // CRUD States for Favorite Places
     const [showFavorites, setShowFavorites] = useState(false);
     const [showAllFavorites, setShowAllFavorites] = useState(false);
-    const [favorites, setFavorites] = useState([
-        "مطعم البيك - الرياض",
-        "مقهى هاف مليون",
-        "مكتبة جرير - فرع الحمراء"
-    ]);
+    const [favorites, setFavorites] = useState([]);
     const [isAddingFavorite, setIsAddingFavorite] = useState(false);
     const [newFavoriteName, setNewFavoriteName] = useState("");
     const [editingFavoriteIndex, setEditingFavoriteIndex] = useState(null);
@@ -1231,83 +1376,78 @@ export default function MyProfilePage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsAdding(!isAdding);
-                                        if (!showSavedPlaces) setShowSavedPlaces(true);
-                                    }}
-                                    className="text-[#579BE8] bg-[#579BE8]/10 p-2 sm:p-2.5 rounded-lg sm:rounded-xl hover:bg-[#579BE8] hover:text-white transition-all shadow-sm hover:shadow-md"
-                                    title="اضافة موقع جديد"
-                                >
-                                    <FaPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    <span className="sr-only">اضافة</span>
-                                </button>
                                 <FaChevronLeft className={`text-muted-foreground group-hover:text-primary transition-transform duration-300 text-lg sm:text-xl ${showSavedPlaces ? "rotate-[-90deg]" : ""}`} />
                             </div>
                         </div>
                         {showSavedPlaces && (
                             <div id="savedPlacesItem" className="flex flex-col gap-2 sm:gap-3 mt-2">
-                                {/* Add New Input */}
-                                {isAdding && (
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 sm:p-4 bg-gradient-to-r from-[#579BE8]/10 to-[#579BE8]/5 rounded-xl sm:rounded-2xl border-2 border-[#579BE8]/30 fade-in-up shadow-sm">
-                                        <Input
-                                            value={newName}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                            placeholder="اسم الموقع الجديد..."
-                                            className="h-10 sm:h-11 text-xs sm:text-sm border-border/50 focus:border-primary rounded-lg sm:rounded-xl flex-1"
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2">
-                                            <button onClick={handleAdd} className="bg-[#579BE8] text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold hover:bg-[#579BE8]/90 hover:shadow-lg transition-all">حفظ</button>
-                                            <button onClick={() => setIsAdding(false)} className="text-muted-foreground px-2 sm:px-3 hover:text-foreground transition-colors text-xs sm:text-sm font-medium">إلغاء</button>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* View All Addresses Link */}
+                                <Link
+                                    href="/myProfile/addresses"
+                                    className="w-full p-3 sm:p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl sm:rounded-2xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                >
+                                    <FaMapMarkerAlt className="w-4 h-4" />
+                                    عرض جميع العناوين
+                                </Link>
 
-                                {places.map((place, i) => (
-                                    (i < 5 || showAllPlaces) && (
-                                        <div key={i} className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
-                                            {editingIndex === i ? (
-                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
-                                                    <Input
-                                                        value={editValue}
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        className="h-9 sm:h-10 text-xs sm:text-sm border-border/50 focus:border-primary rounded-lg sm:rounded-xl flex-1"
-                                                        autoFocus
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => handleUpdate(i)} className="text-green-600 font-bold text-xs sm:text-sm hover:text-green-700 px-2 sm:px-3 py-1.5 sm:py-2 bg-green-50 rounded-lg transition-colors">تأكيد</button>
-                                                        <button onClick={() => setEditingIndex(null)} className="text-muted-foreground text-xs sm:text-sm hover:text-foreground px-2 sm:px-3 py-1.5 sm:py-2 bg-secondary rounded-lg transition-colors">إلغاء</button>
+                                {loadingAddresses ? (
+                                    <div className="flex items-center justify-center p-4">
+                                        <Spinner />
+                                    </div>
+                                ) : places.length === 0 ? (
+                                    <div className="text-center p-4 text-muted-foreground text-sm">
+                                        لا توجد أماكن محفوظة
+                                    </div>
+                                ) : (
+                                    places
+                                        .filter((_, i) => i < 5 || showAllPlaces)
+                                        .map((place, i) => {
+                                            const uniqueKey = typeof place === 'object' && place.id 
+                                                ? `place-${place.id}` 
+                                                : `place-${i}-${typeof place === 'string' ? place : place.name || 'unknown'}`;
+                                            
+                                            return typeof place === 'object' && place.id ? (
+                                                <div 
+                                                    key={uniqueKey} 
+                                                    onClick={() => {
+                                                        if (typeof fetchAddressDetails === 'function') {
+                                                            fetchAddressDetails(place.id);
+                                                        }
+                                                    }}
+                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                                                {place.name || place}
+                                                            </h4>
+                                                            {place.is_favorite && (
+                                                                <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            )}
+                                                        </div>
+                                                        {place.address && (
+                                                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                                                {place.address}
+                                                            </p>
+                                                        )}
+                                                        {place.additional_info && (
+                                                            <p className="text-xs text-muted-foreground/70 mt-1">
+                                                                {place.additional_info}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate flex-1">{place}</h4>
-                                                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingIndex(i);
-                                                                setEditValue(place);
-                                                            }}
-                                                            className="p-2 sm:p-2.5 hover:bg-[#579BE8]/10 hover:text-[#579BE8] rounded-lg sm:rounded-xl transition-all"
-                                                            title="تعديل"
-                                                        >
-                                                            <CiEdit className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(i)}
-                                                            className="p-2 sm:p-2.5 hover:bg-destructive/10 hover:text-destructive rounded-lg sm:rounded-xl transition-all"
-                                                            title="حذف"
-                                                        >
-                                                            <FaRegTrashCan className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                        </button>
+                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                                            {typeof place === 'string' ? place : place.name}
+                                                        </h4>
                                                     </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    )
-                                ))}
+                                                </div>
+                                            );
+                                        })
+                                )}
                                 {places.length > 5 && (
                                     <button
                                         onClick={() => setShowAllPlaces(!showAllPlaces)}
@@ -1334,84 +1474,72 @@ export default function MyProfilePage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsAddingFavorite(!isAddingFavorite);
-                                        if (!showFavorites) setShowFavorites(true);
-                                    }}
-                                    className="text-[#579BE8] bg-[#579BE8]/10 p-2 sm:p-2.5 rounded-lg sm:rounded-xl hover:bg-[#579BE8] hover:text-white transition-all shadow-sm hover:shadow-md"
-                                    title="اضافة مفضل جديد"
-                                >
-                                    <FaPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    <span className="sr-only">اضافة</span>
-                                </button>
                                 <FaChevronLeft className={`text-muted-foreground group-hover:text-primary transition-transform duration-300 text-lg sm:text-xl ${showFavorites ? "rotate-[-90deg]" : ""}`} />
                             </div>
                         </div>
 
                         {showFavorites && (
                             <div className="flex flex-col gap-2 sm:gap-3 mt-2">
-                                {/* Add New Input */}
-                                {isAddingFavorite && (
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 sm:p-4 bg-gradient-to-r from-[#579BE8]/10 to-[#579BE8]/5 rounded-xl sm:rounded-2xl border-2 border-[#579BE8]/30 fade-in-up shadow-sm">
-                                        <Input
-                                            value={newFavoriteName}
-                                            onChange={(e) => setNewFavoriteName(e.target.value)}
-                                            placeholder="اسم المكان المفضل..."
-                                            className="h-10 sm:h-11 text-xs sm:text-sm border-border/50 focus:border-primary rounded-lg sm:rounded-xl flex-1"
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2">
-                                            <button onClick={handleAddFavorite} className="bg-[#579BE8] text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold hover:bg-[#579BE8]/90 hover:shadow-lg transition-all">حفظ</button>
-                                            <button onClick={() => setIsAddingFavorite(false)} className="text-muted-foreground px-2 sm:px-3 hover:text-foreground transition-colors text-xs sm:text-sm font-medium">إلغاء</button>
-                                        </div>
-                                    </div>
-                                )}
 
-                                {favorites.map((fav, i) => (
-                                    (i < 5 || showAllFavorites) && (
-                                        <div key={i} className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
-                                            {editingFavoriteIndex === i ? (
-                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
-                                                    <Input
-                                                        value={editFavoriteValue}
-                                                        onChange={(e) => setEditFavoriteValue(e.target.value)}
-                                                        className="h-9 sm:h-10 text-xs sm:text-sm border-border/50 focus:border-primary rounded-lg sm:rounded-xl flex-1"
-                                                        autoFocus
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => handleUpdateFavorite(i)} className="text-green-600 font-bold text-xs sm:text-sm hover:text-green-700 px-2 sm:px-3 py-1.5 sm:py-2 bg-green-50 rounded-lg transition-colors">تأكيد</button>
-                                                        <button onClick={() => setEditingFavoriteIndex(null)} className="text-muted-foreground text-xs sm:text-sm hover:text-foreground px-2 sm:px-3 py-1.5 sm:py-2 bg-secondary rounded-lg transition-colors">إلغاء</button>
+                                {loadingAddresses ? (
+                                    <div className="flex items-center justify-center p-4">
+                                        <Spinner />
+                                    </div>
+                                ) : favorites.length === 0 ? (
+                                    <div className="text-center p-4 text-muted-foreground text-sm">
+                                        لا توجد أماكن مفضلة
+                                    </div>
+                                ) : (
+                                    favorites
+                                        .filter((_, i) => i < 5 || showAllFavorites)
+                                        .map((fav, i) => {
+                                            const uniqueKey = typeof fav === 'object' && fav.id 
+                                                ? `favorite-${fav.id}` 
+                                                : `favorite-${i}-${typeof fav === 'string' ? fav : fav.name || 'unknown'}`;
+                                            
+                                            return typeof fav === 'object' && fav.id ? (
+                                                <div 
+                                                    key={uniqueKey} 
+                                                    onClick={() => {
+                                                        if (typeof fetchAddressDetails === 'function') {
+                                                            fetchAddressDetails(fav.id);
+                                                        }
+                                                    }}
+                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                                                {fav.name || fav}
+                                                            </h4>
+                                                        </div>
+                                                        {fav.address && (
+                                                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                                                {fav.address}
+                                                            </p>
+                                                        )}
+                                                        {fav.additional_info && (
+                                                            <p className="text-xs text-muted-foreground/70 mt-1">
+                                                                {fav.additional_info}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate flex-1">{fav}</h4>
-                                                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingFavoriteIndex(i);
-                                                                setEditFavoriteValue(fav);
-                                                            }}
-                                                            className="p-2 sm:p-2.5 hover:bg-[#579BE8]/10 hover:text-[#579BE8] rounded-lg sm:rounded-xl transition-all"
-                                                            title="تعديل"
-                                                        >
-                                                            <CiEdit className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteFavorite(i)}
-                                                            className="p-2 sm:p-2.5 hover:bg-destructive/10 hover:text-destructive rounded-lg sm:rounded-xl transition-all"
-                                                            title="حذف"
-                                                        >
-                                                            <FaRegTrashCan className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                        </button>
+                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                                                {typeof fav === 'string' ? fav : fav.name}
+                                                            </h4>
+                                                        </div>
                                                     </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    )
-                                ))}
+                                                </div>
+                                            );
+                                        })
+                                )}
                                 {favorites.length > 5 && (
                                     <button
                                         onClick={() => setShowAllFavorites(!showAllFavorites)}
@@ -1513,6 +1641,378 @@ export default function MyProfilePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Address Details Popup - Modern Design */}
+            {showAddressPopup && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+                    onClick={() => {
+                        setShowAddressPopup(false);
+                        setIsEditingAddress(false);
+                    }}
+                >
+                    <div 
+                        className="bg-white dark:bg-card rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header with Gradient Background */}
+                        <div className="relative bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] p-6 sm:p-8 text-white overflow-hidden">
+                            {/* Decorative Elements */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12 blur-2xl"></div>
+                            
+                            <div className="relative z-10 flex items-start justify-between">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                            <FaMapMarkerAlt className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl sm:text-2xl font-black mb-1">تفاصيل العنوان</h3>
+                                            {selectedAddress && !loadingAddressDetails && (
+                                                <p className="text-white/80 text-sm">
+                                                    {selectedAddress.name}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {selectedAddress && !loadingAddressDetails && (
+                                        <button
+                                            onClick={() => {
+                                                setIsEditingAddress(!isEditingAddress);
+                                                if (!isEditingAddress && selectedAddress) {
+                                                    setEditAddressForm({
+                                                        name: selectedAddress.name || '',
+                                                        address: selectedAddress.address || '',
+                                                        city: selectedAddress.city || '',
+                                                        area: selectedAddress.area || '',
+                                                        latitude: selectedAddress.latitude || '',
+                                                        longitude: selectedAddress.longitude || '',
+                                                        type: selectedAddress.type || 'home',
+                                                        additional_info: selectedAddress.additional_info || '',
+                                                        is_favorite: selectedAddress.is_favorite || false
+                                                    });
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all font-bold text-sm flex items-center gap-2 border border-white/30"
+                                        >
+                                            <CiEdit className="w-4 h-4" />
+                                            {isEditingAddress ? 'إلغاء' : 'تعديل'}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setShowAddressPopup(false);
+                                            setIsEditingAddress(false);
+                                        }}
+                                        className="p-2 hover:bg-white/20 rounded-xl transition-colors backdrop-blur-sm border border-white/30"
+                                    >
+                                        <FaTimes className="w-5 h-5 text-white" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
+                            {loadingAddressDetails ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Spinner />
+                                </div>
+                            ) : selectedAddress ? (
+                                isEditingAddress ? (
+                                    <div className="space-y-5">
+                                        {/* Name Field */}
+                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                            <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                                                اسم العنوان
+                                            </label>
+                                            <Input
+                                                value={editAddressForm.name}
+                                                onChange={(e) => setEditAddressForm(prev => ({ ...prev, name: e.target.value }))}
+                                                className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
+                                                placeholder="اسم العنوان"
+                                            />
+                                        </div>
+
+                                        {/* Full Address Field */}
+                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                                                العنوان الكامل
+                                            </label>
+                                            <textarea
+                                                value={editAddressForm.address}
+                                                onChange={(e) => setEditAddressForm(prev => ({ ...prev, address: e.target.value }))}
+                                                className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
+                                                rows="3"
+                                                placeholder="العنوان الكامل"
+                                            />
+                                        </div>
+
+                                        {/* City and Area Grid */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                    <FaBuilding className="text-[#579BE8] w-4 h-4" />
+                                                    المدينة
+                                                </label>
+                                                <Input
+                                                    value={editAddressForm.city}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
+                                                    placeholder="المدينة"
+                                                />
+                                            </div>
+
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                    <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
+                                                    المنطقة
+                                                </label>
+                                                <Input
+                                                    value={editAddressForm.area}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, area: e.target.value }))}
+                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
+                                                    placeholder="المنطقة"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Coordinates Grid */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block">خط العرض</label>
+                                                <Input
+                                                    type="text"
+                                                    value={editAddressForm.latitude}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, latitude: e.target.value }))}
+                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl font-mono"
+                                                    placeholder="24.7136"
+                                                />
+                                            </div>
+
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block">خط الطول</label>
+                                                <Input
+                                                    type="text"
+                                                    value={editAddressForm.longitude}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, longitude: e.target.value }))}
+                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl font-mono"
+                                                    placeholder="46.6753"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Type and Favorite */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block">النوع</label>
+                                                <select
+                                                    value={editAddressForm.type}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, type: e.target.value }))}
+                                                    className="w-full p-3 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8]"
+                                                >
+                                                    <option value="home">🏠 منزل</option>
+                                                    <option value="work">💼 عمل</option>
+                                                    <option value="other">📍 أخرى</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 flex items-center justify-center">
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="is_favorite"
+                                                        checked={editAddressForm.is_favorite}
+                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, is_favorite: e.target.checked }))}
+                                                        className="w-6 h-6 rounded border-2 border-border/50 text-[#579BE8] focus:ring-[#579BE8] cursor-pointer"
+                                                    />
+                                                    <label htmlFor="is_favorite" className="text-sm font-bold text-foreground cursor-pointer flex items-center gap-2">
+                                                        <FaStar className={`w-5 h-5 ${editAddressForm.is_favorite ? 'text-[#579BE8]' : 'text-muted-foreground'}`} />
+                                                        إضافة إلى المفضلة
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Additional Info */}
+                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
+                                                معلومات إضافية
+                                            </label>
+                                            <textarea
+                                                value={editAddressForm.additional_info}
+                                                onChange={(e) => setEditAddressForm(prev => ({ ...prev, additional_info: e.target.value }))}
+                                                className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
+                                                rows="3"
+                                                placeholder="معلومات إضافية"
+                                            />
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-3 pt-2">
+                                            <button
+                                                onClick={handleUpdateAddress}
+                                                disabled={isUpdatingAddress}
+                                                className="flex-1 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white py-3.5 rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            >
+                                                {isUpdatingAddress ? (
+                                                    <>
+                                                        <Spinner />
+                                                        <span>جاري الحفظ...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FaCheckCircle className="w-5 h-5" />
+                                                        <span>حفظ التغييرات</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditingAddress(false);
+                                                    if (selectedAddress) {
+                                                        setEditAddressForm({
+                                                            name: selectedAddress.name || '',
+                                                            address: selectedAddress.address || '',
+                                                            city: selectedAddress.city || '',
+                                                            area: selectedAddress.area || '',
+                                                            latitude: selectedAddress.latitude || '',
+                                                            longitude: selectedAddress.longitude || '',
+                                                            type: selectedAddress.type || 'home',
+                                                            additional_info: selectedAddress.additional_info || '',
+                                                            is_favorite: selectedAddress.is_favorite || false
+                                                        });
+                                                    }
+                                                }}
+                                                className="px-6 py-3.5 bg-secondary text-foreground rounded-xl hover:bg-secondary/80 transition-colors font-bold border border-border/50"
+                                            >
+                                                إلغاء
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 sm:space-y-5">
+                                        {/* Name Card with Favorite Badge */}
+                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
+                                                        <FaMapMarkerAlt className="w-6 h-6 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-lg sm:text-xl font-black text-foreground">
+                                                            {selectedAddress.name}
+                                                        </h4>
+                                                        {selectedAddress.type && (
+                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                                {selectedAddress.type === 'home' ? '🏠 منزل' : 
+                                                                 selectedAddress.type === 'work' ? '💼 عمل' : 
+                                                                 selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {selectedAddress.is_favorite && (
+                                                    <div className="bg-[#579BE8]/20 rounded-xl px-3 py-2 border border-[#579BE8]/30">
+                                                        <FaStar className="text-[#579BE8] w-5 h-5" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Address Card */}
+                                        {selectedAddress.address && (
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-[#579BE8]/10 flex items-center justify-center flex-shrink-0">
+                                                        <FaMapMarkerAlt className="text-[#579BE8] w-5 h-5" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">العنوان الكامل</p>
+                                                        <p className="text-base text-foreground leading-relaxed">{selectedAddress.address}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Location Details Grid */}
+                                        {(selectedAddress.city || selectedAddress.area) && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {selectedAddress.city && (
+                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                                <FaBuilding className="text-[#579BE8] w-4 h-4" />
+                                                            </div>
+                                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المدينة</p>
+                                                        </div>
+                                                        <p className="text-base font-bold text-foreground">{selectedAddress.city}</p>
+                                                    </div>
+                                                )}
+
+                                                {selectedAddress.area && (
+                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                                <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
+                                                            </div>
+                                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المنطقة</p>
+                                                        </div>
+                                                        <p className="text-base font-bold text-foreground">{selectedAddress.area}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Coordinates Card */}
+                                        {(selectedAddress.latitude && selectedAddress.longitude) && (
+                                            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border border-border/50">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                        <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                                                    </div>
+                                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">الإحداثيات الجغرافية</p>
+                                                </div>
+                                                <div className="bg-white dark:bg-card rounded-xl p-3 border border-border/40">
+                                                    <p className="text-sm font-mono text-foreground text-center">
+                                                        <span className="text-muted-foreground">Lat:</span> {selectedAddress.latitude} 
+                                                        <span className="mx-2 text-muted-foreground">|</span>
+                                                        <span className="text-muted-foreground">Lng:</span> {selectedAddress.longitude}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Additional Info Card */}
+                                        {selectedAddress.additional_info && (
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                        <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
+                                                    </div>
+                                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">معلومات إضافية</p>
+                                                </div>
+                                                <p className="text-sm text-foreground leading-relaxed bg-white dark:bg-card rounded-xl p-4 border border-border/40">
+                                                    {selectedAddress.additional_info}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <p>لا توجد تفاصيل متاحة</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     FaHardHat, FaTools, FaChevronLeft, FaCheckCircle,
@@ -42,6 +42,9 @@ export default function ContractingPage() {
     const [errors, setErrors] = useState({});
     const [expandedId, setExpandedId] = useState(null);
     const [selectedContractId, setSelectedContractId] = useState(null);
+    const [addresses, setAddresses] = useState([]);
+    const [selectedDeliveryLocations, setSelectedDeliveryLocations] = useState([]);
+    const [loadingAddresses, setLoadingAddresses] = useState(false);
 
     const toggleRow = (id) => {
         setExpandedId(expandedId === id ? null : id);
@@ -49,6 +52,52 @@ export default function ContractingPage() {
 
     const handleSelectContract = (id) => {
         setSelectedContractId(id);
+    };
+
+    // Fetch addresses on component mount
+    useEffect(() => {
+        const fetchAddresses = async () => {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+            if (!accessToken) return;
+
+            try {
+                setLoadingAddresses(true);
+                const response = await fetch('/api/addresses', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status && data.data) {
+                    setAddresses(data.data);
+                }
+            } catch (error) {
+                // Silently fail - addresses are optional
+            } finally {
+                setLoadingAddresses(false);
+            }
+        };
+
+        fetchAddresses();
+    }, []);
+
+    // Handle selecting/deselecting delivery locations
+    const toggleDeliveryLocation = (addressId) => {
+        setSelectedDeliveryLocations(prev => {
+            const exists = prev.find(loc => loc.saved_location_id === addressId);
+            if (exists) {
+                // Remove if already selected
+                return prev.filter(loc => loc.saved_location_id !== addressId);
+            } else {
+                // Add with next priority
+                const nextPriority = prev.length > 0 ? Math.max(...prev.map(loc => loc.priority)) + 1 : 1;
+                return [...prev, { saved_location_id: addressId, priority: nextPriority }];
+            }
+        });
     };
 
     const tabs = [
@@ -116,6 +165,9 @@ export default function ContractingPage() {
         if (!formData.phone) newErrors.phone = "رقم الجوال مطلوب";
         if (!formData.address) newErrors.address = "عنوان الموقع مطلوب";
         if (!formData.startDate) newErrors.startDate = "تاريخ البدء مطلوب";
+        if (addresses.length > 0 && selectedDeliveryLocations.length === 0) {
+            newErrors.deliveryLocations = "يجب اختيار موقع واحد على الأقل للتوصيل";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -161,12 +213,14 @@ export default function ContractingPage() {
                 total_orders_limit: formData.totalOrdersLimit || 300,
                 total_amount: formData.totalAmount || 0,
                 start_date: formData.startDate,
-                delivery_locations: [
-                    {
-                        saved_location_id: 1,
-                        priority: 1
-                    }
-                ],
+                delivery_locations: selectedDeliveryLocations.length > 0 
+                    ? selectedDeliveryLocations 
+                    : [
+                        {
+                            saved_location_id: addresses[0]?.id || 1,
+                            priority: 1
+                        }
+                    ],
                 notes: formData.notes.trim() || ''
             };
 
@@ -510,6 +564,74 @@ export default function ContractingPage() {
                                     <span>⚠️</span> {errors.address}
                                 </p>}
                             </div>
+
+                            {/* Delivery Locations Selection */}
+                            {addresses.length > 0 && (
+                                <div className="space-y-1.5 md:space-y-2 relative">
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>اختر مواقع التوصيل</label>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto p-3 bg-secondary/20 rounded-lg md:rounded-xl border-2 border-border/40">
+                                        {addresses.map((address) => {
+                                            const isSelected = selectedDeliveryLocations.some(
+                                                loc => loc.saved_location_id === address.id
+                                            );
+                                            const selectedLocation = selectedDeliveryLocations.find(
+                                                loc => loc.saved_location_id === address.id
+                                            );
+                                            return (
+                                                <div
+                                                    key={address.id}
+                                                    onClick={() => toggleDeliveryLocation(address.id)}
+                                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                                                        isSelected
+                                                            ? 'bg-[#579BE8]/10 border-2 border-[#579BE8]'
+                                                            : 'bg-white dark:bg-card border-2 border-border/40 hover:border-[#579BE8]/50'
+                                                    }`}
+                                                >
+                                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                                        isSelected
+                                                            ? 'bg-[#579BE8] border-[#579BE8]'
+                                                            : 'border-border/60'
+                                                    }`}>
+                                                        {isSelected && (
+                                                            <FaCheckCircle className="w-3 h-3 text-white" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs md:text-sm font-bold text-foreground">
+                                                                {address.name}
+                                                            </span>
+                                                            {address.is_favorite && (
+                                                                <span className="text-[#579BE8] text-xs">⭐</span>
+                                                            )}
+                                                            {isSelected && selectedLocation && (
+                                                                <span className="text-xs text-[#579BE8] font-medium">
+                                                                    (الأولوية: {selectedLocation.priority})
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {address.address}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedDeliveryLocations.length === 0 && (
+                                        <p className={`text-[10px] md:text-xs mr-2 ${
+                                            errors.deliveryLocations ? 'text-red-500 font-bold' : 'text-muted-foreground'
+                                        }`}>
+                                            {errors.deliveryLocations || 'اختر موقع واحد على الأقل للتوصيل'}
+                                        </p>
+                                    )}
+                                    {errors.deliveryLocations && selectedDeliveryLocations.length > 0 && (
+                                        <p className="text-[10px] md:text-xs text-red-500 mr-2 font-bold flex items-center gap-1">
+                                            <span>⚠️</span> {errors.deliveryLocations}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="space-y-1.5 md:space-y-2 relative">
                                 <label className={`${labelClasses} text-xs md:text-sm`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
