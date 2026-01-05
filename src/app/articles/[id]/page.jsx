@@ -276,13 +276,13 @@ const ArticleDetails = () => {
         // Extract article data from response
         if (data?.success === true && data?.data) {
           // Standard structure: { success: true, data: {...} }
-          articleData = data.data;
+            articleData = data.data;
         } else if (data?.id || data?.title) {
-          // Response is the article object directly
-          articleData = data;
+            // Response is the article object directly
+            articleData = data;
         } else if (data?.data) {
           // Response has data field
-          articleData = data.data;
+            articleData = data.data;
         }
         
         if (articleData && (articleData.id || articleData.title)) {
@@ -761,13 +761,13 @@ const ArticleDetails = () => {
               {authorImageError || !article.authorAvatar ? (
                 <FaUser className="w-8 h-8 text-[#579BE8]" />
               ) : (
-                <Image
+              <Image
                   src={article.authorAvatar}
-                  alt={article.author2}
-                  fill
-                  className="object-cover"
-                  onError={() => setAuthorImageError(true)}
-                />
+                alt={article.author2}
+                fill
+                className="object-cover"
+                onError={() => setAuthorImageError(true)}
+              />
               )}
               </div>
               

@@ -870,20 +870,20 @@ const ArticlesSection = () => {
             }
             console.log('=====================================');
             
-            setArticles(transformedArticles);
-            
-            // Extract unique categories from articles as fallback
+          setArticles(transformedArticles);
+          
+          // Extract unique categories from articles as fallback
             if (transformedArticles.length > 0) {
-              const uniqueCategories = [...new Set(transformedArticles.map(a => a.category))];
-              setCategories(uniqueCategories);
-              console.log('Categories from articles:', uniqueCategories);
+          const uniqueCategories = [...new Set(transformedArticles.map(a => a.category))];
+          setCategories(uniqueCategories);
+          console.log('Categories from articles:', uniqueCategories);
             }
             
             // Clear error for search results (even if empty)
             if (searchQuery && searchQuery.trim() !== '') {
               setError(null);
             }
-          } else {
+        } else {
             // Could not extract articles data
             console.error('Could not extract articles from response');
             console.error('Response structure:', JSON.stringify(data, null, 2));
@@ -915,7 +915,7 @@ const ArticlesSection = () => {
         setError(err.message);
         // Fallback to static data only if not searching
         if (!searchQuery || searchQuery.trim() === '') {
-          setArticles(ARTICLES_DATA);
+        setArticles(ARTICLES_DATA);
         } else {
           // For search, empty results are acceptable
           setArticles([]);
@@ -938,7 +938,7 @@ const ArticlesSection = () => {
       
       // Wait for user to stop typing before fetching
       searchTimeoutRef.current = setTimeout(() => {
-        fetchArticles();
+    fetchArticles();
       }, 800); // 800ms debounce - wait for user to stop typing
     } else {
       // If no search query, fetch immediately
@@ -969,8 +969,8 @@ const ArticlesSection = () => {
     ? articles 
     : articles.filter(article => article.category === selectedCategory);
 
-  return (
-    <main className="w-full">
+    return (
+      <main className="w-full">
       <MemoizedArticlesHeader 
         selectedCategory={selectedCategory}
         onCategorySelect={setSelectedCategory}

@@ -5,7 +5,8 @@ import Image from "next/image";
 import { FaStar } from "react-icons/fa";
 import { motion, useMotionValue, useTransform, useSpring, useAnimation } from "framer-motion";
 
-const reviews = [
+// Default reviews
+const defaultReviews = [
   {
     id: 1,
     name: "أبو عبدالله",
@@ -24,38 +25,6 @@ const reviews = [
   },
   {
     id: 3,
-    name: "أبو عبدالله",
-    date: "25/05/25",
-    rating: 5,
-    text: "أسرع خدمة تعاملت معها... السواق وصل خلال نص ساعة",
-    image: "/images/customer.png",
-  },
-  {
-    id: 4,
-    name: "أبو عبدالله",
-    date: "25/05/25",
-    rating: 5,
-    text: "أسرع خدمة تعاملت معها... السواق وصل خلال نص ساعة",
-    image: "/images/customer.png",
-  },
-  {
-    id: 5,
-    name: "أبو عبدالله",
-    date: "25/05/25",
-    rating: 5,
-    text: "أسرع خدمة تعاملت معها... السواق وصل خلال نص ساعة",
-    image: "/images/customer.png",
-  },
-  {
-    id: 6,
-    name: "أبو عبدالله",
-    date: "25/05/25",
-    rating: 5,
-    text: "أسرع خدمة تعاملت معها... السواق وصل خلال نص ساعة",
-    image: "/images/customer.png",
-  },
-  {
-    id: 7,
     name: "أبو عبدالله",
     date: "25/05/25",
     rating: 5,
@@ -164,13 +133,28 @@ const ReviewCard = ({ review, x, isDragging }) => {
   );
 };
 
-export default function CustomerReviewsExact() {
+export default function CustomerReviews({ data }) {
   const [width, setWidth] = useState(0);
   const [isRTL, setIsRTL] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const carousel = useRef();
   const carouselContent = useRef();
   const x = useMotionValue(0);
+
+  // Extract reviews from API response
+  const apiReviews = data?.contents?.filter(c => c.key === 'review').map((c, index) => {
+    const reviewData = c.value;
+    return {
+      id: index + 1,
+      name: reviewData.name || "عميل",
+      date: new Date().toLocaleDateString('ar-SA'),
+      rating: reviewData.rating || 5,
+      text: reviewData.comment || "",
+      image: "/images/customer.png",
+    };
+  }) || [];
+
+  const reviews = apiReviews.length > 0 ? apiReviews : defaultReviews;
 
   useEffect(() => {
     // Check for RTL direction

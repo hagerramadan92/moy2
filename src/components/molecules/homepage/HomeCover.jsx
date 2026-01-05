@@ -6,9 +6,20 @@ import WaterTypeSelect from "../homepage/WaterTypeSelect";
 import WaterSizeSelect from "../homepage/WaterSizeSelect";
 import AppDownloadButtons from "../homepage/AppDownloadButtons";
 
-export default function HomeCover() {
+export default function HomeCover({ data }) {
   const [waterType, setWaterType] = React.useState("");
   const [waterSize, setWaterSize] = React.useState("");
+
+  // Extract data from API response
+  const getContentValue = (key) => {
+    if (!data?.contents) return null;
+    const content = data.contents.find(c => c.key === key);
+    return content?.value || null;
+  };
+
+  const title = getContentValue('title');
+  const subtitle = getContentValue('subtitle');
+  const image = getContentValue('image');
 
   return (
     <div className="cover  relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
@@ -44,10 +55,23 @@ export default function HomeCover() {
 
         {/* Content Section - Appears second on small screens */}
         <div className="content-right order-2 md:order-1">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">اسرع خدمة توصيل في الممكلة</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
+            {title || "اسرع خدمة توصيل في الممكلة"}
+          </h1>
           <p className="desc text-base sm:text-lg md:text-xl mb-6 sm:mb-8">
-            حدد الكمية والموقع واستقبل عروض الأسعار من السواقين فورا
+            {subtitle || "حدد الكمية والموقع واستقبل عروض الأسعار من السواقين فورا"}
           </p>
+          {image && (
+            <div className="mb-6 sm:mb-8">
+              <Image
+                src={image}
+                alt={title || "Hero Image"}
+                width={600}
+                height={400}
+                className="rounded-lg"
+              />
+            </div>
+          )}
           <AppDownloadButtons />
         </div>
       </div>

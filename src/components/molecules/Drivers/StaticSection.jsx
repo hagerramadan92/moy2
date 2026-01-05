@@ -3,7 +3,7 @@
 import Image from "next/image";
 import React from "react";
 
-export default function StaticSection() {
+export default function StaticSection({ data }) {
   const stats = [
     {
       label: "متوسط الربح اليومي",
@@ -25,7 +25,21 @@ export default function StaticSection() {
     },
   ];
 
-  const features = [
+  // Extract benefits from API response
+  const apiFeatures = data?.contents?.filter(c => c.key === 'benefit').map((c, index) => {
+    const benefitData = c.value;
+    // Map to default icons based on index
+    const iconMap = ["/Vector (1).png", "/Vector (2).png", "/Vector (13).png"];
+    return {
+      icon: iconMap[index] || "/Vector (1).png",
+      title: benefitData.title || "",
+      description: benefitData.description || "",
+      bgColor: "#579BE8"
+    };
+  }) || [];
+
+  // Default features if no data
+  const defaultFeatures = [
     {
       icon: "/Vector (1).png",
       title: "سريع وسهل",
@@ -46,14 +60,16 @@ export default function StaticSection() {
     }
   ];
 
+  const features = apiFeatures.length > 0 ? apiFeatures : defaultFeatures;
+
   return (
-    <section className="container px-4 sm:px-6 lg:px-8 py-8 lg:py-12 my-4 lg:my-8">
-      <div className="max-w-[1200px] mx-auto">
+    <section className=" px-4 sm:px-6 lg:px-8 py-8 lg:py-12 my-4 lg:my-8">
+      <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12">
           
           {/* Features Section - First on mobile, first on desktop */}
           <div className="flex-1 w-full lg:w-auto order-1 mt-12">
-            <div className="text-center mb-6 lg:mb-8">
+            <div className=" mb-6 lg:mb-8">
               <div className="inline-block mb-2 md:mb-3">
                 <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
                   منصة متكاملة
@@ -62,8 +78,8 @@ export default function StaticSection() {
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
                 <span className="block text-[#579BE8]">منصة شاملة لإدارة أعمالك</span>
               </h2>
-              <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
-              <p className="font-cairo font-normal text-base lg:text-lg text-gray-700 leading-relaxed">
+              <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full"></div>
+              <p className="font-cairo font-normal text-base lg:text-lg text-gray-700 leading-relaxed mt-2">
                 تطبيق السائقين هو حلّك الكامل لتحويل صهريج المياه الخاص بك إلى مصدر دخل مستقر ومجزي.<br />
                 نربطك بآلاف العملاء الذين يحتاجون لخدماتك يومياً في جميع أنحاء المملكة.
               </p>

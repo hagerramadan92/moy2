@@ -6,41 +6,66 @@ import { SlLocationPin } from "react-icons/sl";
 import { FaMoneyBillWave } from "react-icons/fa6";
 import { Package } from "lucide-react";
 
-// Icons map with EXACT user text content
-const steps = [
-  {
-    icon: <IoWaterOutline className="w-8 h-8 md:w-9 md:h-9" />,
-    color: "#579BE8",
-    title: "اختر السعه و نوع المويه",
-    desc: "حدد حجم التنكر و نوع المويه المناسب"
-  },
-  {
-    icon: <SlLocationPin className="w-8 h-8 md:w-9 md:h-9" />,
-    color: "#DF4F3C",
-    title: "حدد موقعك علي الخريطه",
-    desc: "ادخل عنوانك بدقه لتوصيل اسرع"
-  },
-  {
-    icon: <FaMoneyBillWave className="w-8 h-8 md:w-9 md:h-9" />,
-    color: "#44A816",
-    title: "اختر السعر و ادفع",
-    desc: "اختر العرض الأنسب وادفع بأمان"
-  },
-  {
-    icon: <IoEyeOutline className="w-8 h-8 md:w-9 md:h-9" />,
-    color: "#5B72EE",
-    title: "تابع السائق حتى باب بيتك",
-    desc: "تتبع مباشر حتى وصول الطلب"
-  },
-  {
-    icon: <Package className="w-8 h-8 md:w-9 md:h-9" />,
-    color: "#F48C06",
-    title: "حصل على الماء",
-    desc: "احصل علي اسعار من عده سواقين قريبين"
-  }
-];
+// Icon mapping for dynamic icons
+const iconMap = {
+  location: <SlLocationPin className="w-8 h-8 md:w-9 md:h-9" />,
+  truck: <Package className="w-8 h-8 md:w-9 md:h-9" />,
+  pay: <FaMoneyBillWave className="w-8 h-8 md:w-9 md:h-9" />,
+  done: <IoEyeOutline className="w-8 h-8 md:w-9 md:h-9" />,
+};
 
-const HowItWorks = () => {
+// Color mapping for icons (matching default steps colors)
+const colorMap = {
+  location: "#DF4F3C",  // Red - matches default step 2
+  truck: "#44A816",     // Green - matches default step 3
+  pay: "#5B72EE",       // Purple - matches default step 4
+  done: "#F48C06",      // Orange - matches default step 5 (if exists)
+};
+
+// Default steps (4 steps)
+// const defaultSteps = [
+//   {
+//     icon: <SlLocationPin className="w-8 h-8 md:w-9 md:h-9" />,
+//     color: "#DF4F3C",
+//     title: "حدد موقعك",
+//     desc: "اختر موقع التوصيل"
+//   },
+//   {
+//     icon: <Package className="w-8 h-8 md:w-9 md:h-9" />,
+//     color: "#44A816",
+//     title: "اختر السائق",
+//     desc: "استلم عروض متعددة"
+//   },
+//   {
+//     icon: <FaMoneyBillWave className="w-8 h-8 md:w-9 md:h-9" />,
+//     color: "#5B72EE",
+//     title: "ادفع بأمان",
+//     desc: "وسائل دفع متعددة"
+//   },
+//   {
+//     icon: <IoEyeOutline className="w-8 h-8 md:w-9 md:h-9" />,
+//     color: "#F48C06",
+//     title: "تم التوصيل",
+//     desc: "استلم طلبك بسهولة"
+//   }
+// ];
+
+const HowItWorks = ({ data }) => {
+  // Extract steps from API response
+  const apiSteps = data?.contents?.filter(c => c.key === 'step').map((c, index) => {
+    const stepData = c.value;
+    const iconKey = stepData.icon;
+    // Use color from colorMap based on icon, or fallback to defaultSteps colors by index
+    const color = colorMap[iconKey] || (defaultSteps[index]?.color || "#579BE8");
+    return {
+      icon: iconMap[iconKey] || <Package className="w-8 h-8 md:w-9 md:h-9" />,
+      color: color,
+      title: stepData.title || "",
+      desc: stepData.description || ""
+    };
+  }) || [];
+
+  const displaySteps = apiSteps.length > 0 ? apiSteps : defaultSteps;
   return (
     <section
       dir="rtl"
@@ -67,19 +92,18 @@ const HowItWorks = () => {
         </motion.div>
 
         {/* Desktop Wave Line SVG */}
-        {/* Visible only on XL/LG screens where the 5-col grid exists */}
+        {/* Visible only on XL/LG screens where the 4-col grid exists */}
         <div className="hidden xl:block absolute top-[140px] left-0 right-0 w-full h-[150px] pointer-events-none z-0">
           <svg className="w-full h-full" viewBox="0 0 1440 120" preserveAspectRatio="none">
              {/* 
-                Path logic:
-                Start approx 10% width (Step 1 center) at bottom
-                Curve to 30% width (Step 2 center) at top
-                Curve to 50% width (Step 3 center) at bottom
-                Curve to 70% width (Step 4 center) at top
-                Curve to 90% width (Step 5 center) at bottom
+                Path logic for 4 steps:
+                Start approx 12.5% width (Step 1 center) at bottom
+                Curve to 37.5% width (Step 2 center) at top
+                Curve to 62.5% width (Step 3 center) at bottom
+                Curve to 87.5% width (Step 4 center) at top
              */}
              <path 
-                d="M140,100 C280,100 280,20 420,20 S560,100 720,100 S880,20 1020,20 S1160,100 1300,100"
+                d="M180,100 C360,100 360,20 540,20 S720,100 900,100 S1080,20 1260,20"
                 fill="none"
                 stroke="#579BE8"
                 strokeWidth="2"
@@ -89,17 +113,18 @@ const HowItWorks = () => {
           </svg>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8 xl:gap-4 relative z-10">
-          {steps.map((step, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 xl:gap-4 relative z-10">
+          {displaySteps.map((step, index) => {
+            // Add margin bottom for bottom row items (2-column grid: last 2 items)
+            const isBottomRow = index >= 2 && index < 4; // Items 2 and 3 are in bottom row for 2-column grid
+            
+            return (
             <div 
               key={index} 
-              className={`group flex flex-col items-center text-center relative
-                ${/* Add vertical staggering for desktop wave effect */ ""}
-                ${index % 2 === 0 ? "xl:mt-16" : "xl:mt-0"}
-              `}
+              className="group flex flex-col items-center text-center relative"
             >
               <div 
-                className="w-20 h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105"
+                className={`w-20 h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105 ${isBottomRow ? "sm:mb-8 lg:mb-6" : ""}`}
                 style={{ backgroundColor: step.color, boxShadow: `0 10px 25px -5px ${step.color}60` }}
               >
                 {step.icon}
@@ -113,11 +138,12 @@ const HowItWorks = () => {
               </p>
 
               {/* Mobile/Tablet connecting line (vertical or simple) */}
-              {index < steps.length - 1 && (
+              {index < displaySteps.length - 1 && (
                  <div className="xl:hidden absolute top-24 left-1/2 -translate-x-1/2 w-0.5 h-8 bg-gray-200 -z-10 sm:hidden"></div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

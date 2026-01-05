@@ -7,7 +7,58 @@ import { BsLightningCharge } from "react-icons/bs";
 import { FiHeadphones } from "react-icons/fi";
 import { MdOutlineLocalPolice } from "react-icons/md";
 
-export default function ChooseUs() {
+// Icon mapping for dynamic icons
+const iconMap = {
+  price: <HiArrowTrendingDown className="w-8 h-8 md:w-9 md:h-9" />,
+  fast: <BsLightningCharge className="w-8 h-8 md:w-9 md:h-9" />,
+  safe: <MdOutlineLocalPolice className="w-8 h-8 md:w-9 md:h-9" />,
+  support: <FiHeadphones className="w-8 h-8 md:w-9 md:h-9" />,
+};
+
+const gradientMap = {
+  price: "from-[#9CC6F4] to-[#4787D0]",
+  fast: "from-[#E5BD8A] to-[#D57B06]",
+  safe: "from-[#68E62E] to-[#348C0B]",
+  support: "from-[#E0AAF0] to-[#B508E9]",
+};
+
+const shadowColorMap = {
+  price: "shadow-blue-200",
+  fast: "shadow-amber-200",
+  safe: "shadow-green-200",
+  support: "shadow-purple-200",
+};
+
+export default function ChooseUs({ data }) {
+  // Extract features from API response
+  const features = data?.contents?.filter(c => c.key === 'item').map(c => c.value) || [];
+  
+  // Default features if no data
+  const defaultFeatures = [
+    {
+      icon: "price",
+      title: "أسعار تنافسية",
+      description: "نضمن لك أفضل الأسعار في السوق مع عروض حصرية ومتجددة تناسب كافة احتياجاتك اليومية."
+    },
+    {
+      icon: "fast",
+      title: "سرعة في التنفيذ",
+      description: "شبكة توصيل ذكية وسريعة تضمن وصول طلبك في الوقت المحدد وبأعلى كفاءة ممكنة."
+    },
+    {
+      icon: "safe",
+      title: "موثوقية وأمان",
+      description: "جميع السائقين معتمدين وموثقين لضمان خدمة آمنة واحترافية لك ولعائلتك."
+    },
+    {
+      icon: "support",
+      title: "دعم فني",
+      description: "فريق دعم متواجد على مدار الساعة للإجابة على استفساراتك وخدمتك في أي وقت."
+    }
+  ];
+
+  const displayFeatures = features.length > 0 ? features : defaultFeatures;
+
   return (
     <section className="relative py-14 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-gray-50 via-white to-gray-50 overflow-hidden">
       {/* Creative Background Pattern */}
@@ -80,37 +131,16 @@ export default function ChooseUs() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-6 lg:gap-6 pt-8">
-          <Card
-            icon={<HiArrowTrendingDown className="w-8 h-8 md:w-9 md:h-9" />}
-            title="أسعار تنافسية"
-            desc="نضمن لك أفضل الأسعار في السوق مع عروض حصرية ومتجددة تناسب كافة احتياجاتك اليومية."
-            gradient="from-[#9CC6F4] to-[#4787D0]"
-            shadowColor="shadow-blue-200"
-          />
-
-          <Card
-            icon={<BsLightningCharge className="w-8 h-8 md:w-9 md:h-9" />}
-            title="سرعة في التنفيذ"
-            desc="شبكة توصيل ذكية وسريعة تضمن وصول طلبك في الوقت المحدد وبأعلى كفاءة ممكنة."
-            gradient="from-[#E5BD8A] to-[#D57B06]"
-            shadowColor="shadow-amber-200"
-          />
-
-          <Card
-            icon={<MdOutlineLocalPolice className="w-8 h-8 md:w-9 md:h-9" />}
-            title="موثوقية وأمان"
-            desc="جميع السائقين معتمدين وموثقين لضمان خدمة آمنة واحترافية لك ولعائلتك."
-            gradient="from-[#68E62E] to-[#348C0B]"
-            shadowColor="shadow-green-200"
-          />
-
-          <Card
-            icon={<FiHeadphones className="w-8 h-8 md:w-9 md:h-9" />}
-            title="دعم فني"
-            desc="فريق دعم متواجد على مدار الساعة للإجابة على استفساراتك وخدمتك في أي وقت."
-            gradient="from-[#E0AAF0] to-[#B508E9]"
-            shadowColor="shadow-purple-200"
-          />
+          {displayFeatures.map((feature, index) => (
+            <Card
+              key={index}
+              icon={iconMap[feature.icon] || iconMap.price}
+              title={feature.title || "عنوان"}
+              desc={feature.description || "وصف"}
+              gradient={gradientMap[feature.icon] || gradientMap.price}
+              shadowColor={shadowColorMap[feature.icon] || shadowColorMap.price}
+            />
+          ))}
         </div>
       </div>
     </section>

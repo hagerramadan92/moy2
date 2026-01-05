@@ -112,12 +112,70 @@ function StatCard({ stat, index, delay, icon: Icon }) {
   );
 }
 
-export default function StatsSection() {
-  const stats = [
+export default function StatsSection({ data }) {
+  // Extract statistics from API response
+  const apiStats = data?.contents?.filter(c => c.key === 'stat').map(c => {
+    const statData = c.value;
+    const valueStr = statData.value || "";
+    
+    // Determine icon based on label
+    let icon = FaUsers;
+    if (statData.label?.includes("رضا")) {
+      icon = FaHeart;
+    } else if (statData.label?.includes("طلب")) {
+      icon = FaShoppingCart;
+    } else if (statData.label?.includes("سائق")) {
+      icon = FaUsers;
+    }
+    
+    // Parse value string (e.g., "98%", "+15K", "500+")
+    let number = valueStr;
+    let suffix = "";
+    let prefix = "";
+    let numericValue = 500;
+    
+    if (valueStr.includes("%")) {
+      number = valueStr.replace("%", "");
+      suffix = "%";
+      numericValue = parseInt(number) || 98;
+    } else if (valueStr.includes("K")) {
+      const numPart = valueStr.replace("K", "").replace("+", "");
+      number = numPart + "K";
+      prefix = valueStr.startsWith("+") ? "+" : "";
+      suffix = valueStr.includes("+") && !valueStr.startsWith("+") ? "+" : "";
+      numericValue = parseFloat(numPart) * 1000 || 15000;
+    } else if (valueStr.includes("+")) {
+      if (valueStr.startsWith("+")) {
+        prefix = "+";
+        number = valueStr.substring(1);
+      } else {
+        number = valueStr.replace("+", "");
+        suffix = "+";
+      }
+      numericValue = parseInt(number) || 500;
+    } else {
+      numericValue = parseInt(valueStr) || 500;
+      number = valueStr;
+    }
+    
+    return {
+      number: prefix + number + suffix,
+      label: statData.label || "",
+      value: numericValue,
+      suffix: suffix,
+      prefix: prefix,
+      icon: icon
+    };
+  }) || [];
+
+  // Default stats if no data
+  const defaultStats = [
     { number: "+500", label: "سائق نشط", value: 500, suffix: "+", prefix: "+", icon: FaUsers },
     { number: "15K+", label: "طلب شهرياً", value: 15000, suffix: "+", prefix: "", icon: FaShoppingCart },
     { number: "98%", label: "رضا السائقين", value: 98, suffix: "%", prefix: "", icon: FaHeart },
   ];
+
+  const stats = apiStats.length > 0 ? apiStats : defaultStats;
 
   return (
     <section className="relative w-full py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
