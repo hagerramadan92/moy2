@@ -14,7 +14,7 @@ export async function GET(req) {
         },
         { status: 401 }
       );
-    }
+    }  
 
     // Prepare headers for external API
     const headers = {
