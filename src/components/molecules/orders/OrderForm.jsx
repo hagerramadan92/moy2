@@ -2,195 +2,197 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import OrderSchedulePage from './OrderSchedulePage';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Droplets, Scale, Calendar, ArrowRight, Truck } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import OrderSchedulePage from './OrderSchedulePage';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+// Dynamically import the map modal to avoid SSR issues with Leaflet
+const LocationPickerModal = dynamic(
+    () => import('./LocationPickerModal'),
+    { ssr: false }
+);
 
 export default function OrderForm() {
-    // State management for form inputs
+    // State management
     const [waterType, setWaterType] = useState('');
     const [quantity, setQuantity] = useState('');
-    const [location, setLocation] = useState('');
+    const [locationData, setLocationData] = useState(null); // { lat, lng, address }
     const [showSchedule, setShowSchedule] = useState(false);
-    
-    // Router for navigation
+    const [isMapOpen, setIsMapOpen] = useState(false);
+
     const router = useRouter();
 
-    // Navigate to search driver page
     const handleOrderNow = () => {
+        if (!locationData) {
+            toast.error('الرجاء تحديد الموقع أولاً');
+            return;
+        }
+        if (!waterType) {
+            toast.error('الرجاء اختيار نوع المياه');
+            return;
+        }
+        if (!quantity) {
+            toast.error('الرجاء اختيار الكمية');
+            return;
+        }
+        // Proceed
         router.push('/orders/search-driver');
     };
 
-    // Show schedule page
-    const handleSchedule = () => {
-        setShowSchedule(true);
+    const handleLocationSelect = (data) => {
+        setLocationData(data);
     };
 
-    // Return from schedule page
-    const handleBack = () => {
-        setShowSchedule(false);
-    };
-
-    // Render schedule page when toggled
     if (showSchedule) {
-        return <OrderSchedulePage onBack={handleBack} />;
+        return <OrderSchedulePage onBack={() => setShowSchedule(false)} />;
     }
 
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.1 } }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0 }
+    };
+
     return (
-        <div className="min-h-screen p-4 flex flex-col items-center justify-center">
-            {/* Page Title - "تفاصيل الطلب" */}
-            <div className="w-full max-w-6xl mb-6 text-right">
-                <h1 className="font-cairo font-semibold text-2xl text-black pr-4 lg:pr-0">
-                    تفاصيل الطلب
-                </h1>
-            </div>
+        <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 flex justify-center items-start pt-12 md:pt-16">
 
-            <div className="container max-w-6xl bg-white rounded-3xl shadow-lg overflow-hidden">
-                <div className="flex flex-col lg:flex-row">
-                    {/* Left Column - Form Section */}
-                    <div className="lg:w-1/2 p-4 lg:p-8">
-                        <div className="max-w-md mx-auto">
-                            {/* Desktop Car Image */}
-                            <div className="hidden lg:block w-48 h-28 mx-auto mb-8 lg:mb-12 lg:w-56 lg:h-32">
-                                <Image
-                                    src="/images/car.png"
-                                    alt="Delivery Car"
-                                    width={224}
-                                    height={128}
-                                    className="object-contain w-full h-full"
-                                />
-                            </div>
+            <LocationPickerModal
+                isOpen={isMapOpen}
+                onClose={() => setIsMapOpen(false)}
+                onSelect={handleLocationSelect}
+            />
 
-                            {/* Mobile Car Image */}
-                            <div className="lg:hidden relative -mt-16 mb-4">
-                                <div className="flex justify-center">
-                                    <div className="relative">
-                                        <div 
-                                            className="relative w-40 h-40 rounded-full flex items-center justify-center bg-white border border-gray-300 shadow-sm"
-                                        >
-                                            <div className="relative w-28 h-16">
-                                                <Image
-                                                    src="/images/car.png"
-                                                    alt="Delivery Car"
-                                                    fill
-                                                    className="object-contain"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={containerVariants}
+                className="w-full max-w-3xl space-y-6"
+            >
 
-                            {/* Form Content */}
-                            <div className="space-y-4 lg:space-y-4">
-                                {/* Form Instruction */}
-                                <p className="text-right font-semibold text-sm text-gray-800 mb-2 lg:mb-4">
-                                    اطلب الآن أو حدد موعداً للطلب
-                                </p>
-
-                                {/* Location Input Field */}
-                                <div className="relative mb-2 lg:mb-0">
-                                    <input
-                                        type="text"
-                                        value={location}
-                                        onChange={(e) => setLocation(e.target.value)}
-                                        placeholder="ادخل الموقع"
-                                        className="w-full h-12 rounded-lg border-2 border-gray-200 bg-white shadow-sm pr-12 pl-4 text-right text-sm focus:outline-none focus:border-blue-300 placeholder-gray-500"
-                                    />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-black rounded-full"></div>
-                                    </div>
-                                </div>
-
-                                {/* Water Type and Quantity Selection */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-2">
-                                    {/* Water Type Selection */}
-                                    <div className="space-y-1 lg:space-y-2 lg:mt-4">
-                                        <label className="block text-right text-sm font-semibold text-blue-500">
-                                            اختر نوع المياه
-                                        </label>
-                                        <select
-                                            value={waterType}
-                                            onChange={(e) => setWaterType(e.target.value)}
-                                            className="w-full h-11 rounded-lg border-2 border-gray-200 bg-white shadow-sm px-4 text-right text-sm focus:outline-none"
-                                        >
-                                            <option value="">صالح للشرب</option>
-                                            <option value="natural">طبيعي</option>
-                                            <option value="mineral">معدني</option>
-                                            <option value="distilled">مقطر</option>
-                                        </select>
-                                    </div>
-
-                                    {/* Water Quantity Selection */}
-                                    <div className="space-y-1 lg:space-y-2 lg:mt-4">
-                                        <label className="block text-right text-sm font-semibold text-blue-500">
-                                            اختر حجم المياه
-                                        </label>
-                                        <select
-                                            value={quantity}
-                                            onChange={(e) => setQuantity(e.target.value)}
-                                            className="w-full h-11 rounded-lg border-2 border-gray-200 bg-white shadow-sm px-4 text-right text-sm focus:outline-none"
-                                        >
-                                            <option value="">6 طن</option>
-                                            <option value="1">1 طن</option>
-                                            <option value="2">2 طن</option>
-                                            <option value="3">3 طن</option>
-                                            <option value="4">4 طن</option>
-                                            <option value="5">5 طن</option>
-                                            <option value="6">6 طن</option>
-                                            <option value="7">7 طن</option>
-                                            <option value="8">8 طن</option>
-                                            <option value="9">9 طن</option>
-                                            <option value="10">10 طن</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 lg:pt-2 lg:gap-4">
-                                    {/* Order Now Button */}
-                                    <button 
-                                        onClick={handleOrderNow}
-                                        className="w-full h-12 lg:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center"
-                                    >
-                                        <span className="text-white text-base lg:text-lg font-normal">
-                                            اطلب الآن
-                                        </span>
-                                    </button>
-
-                                    {/* Schedule Order Button */}
-                                    <button 
-                                        onClick={handleSchedule}
-                                        className="w-full h-12 lg:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Image
-                                            src="/vector (15).png"
-                                            alt="Calendar"
-                                            width={25}
-                                            height={25}
-                                            className="object-contain"
-                                        />
-                                        <span className="text-white text-base lg:text-lg font-normal">
-                                            جدول طلبك
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                {/* Header */}
+                <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 font-cairo mb-1">تفاصيل الطلب</h1>
+                        <p className="text-gray-500 text-sm">قم بملء البيانات التالية لإتمام طلبك</p>
                     </div>
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                        <Truck size={24} />
+                    </div>
+                </motion.div>
 
-                    {/* Right Column - Map Image */}
-                    <div className="lg:w-1/2 h-56 lg:h-auto relative order-first lg:order-last">
-                        <Image
-                            src="/location1.jpg"
-                            alt="Location Map"
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 1024px) 100vw, 50vw"
-                            priority
-                        />
+                {/* Form Card */}
+                <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl shadow-blue-900/5 border border-gray-100 relative overflow-hidden">
+
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-blue-600" />
+
+                    <div className="space-y-8">
+
+                        {/* Location Section */}
+                        <motion.div variants={itemVariants} className="space-y-3">
+                            <label className="flex items-center gap-2 text-gray-700 font-bold mb-2">
+                                <MapPin size={20} className="text-blue-500" />
+                                موقع التوصيل
+                            </label>
+                            <div
+                                onClick={() => setIsMapOpen(true)}
+                                className="group cursor-pointer relative w-full h-16 rounded-2xl bg-gray-50 hover:bg-white border-2 border-dashed border-gray-300 hover:border-blue-400 transition-all duration-300 flex items-center px-4 overflow-hidden"
+                            >
+                                <div className="flex-1 flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${locationData ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}>
+                                        <MapPin size={20} />
+                                    </div>
+                                    <div className="flex flex-col items-start overflow-hidden">
+                                        <span className={`text-sm font-bold truncate w-full text-right ${locationData ? 'text-gray-900' : 'text-gray-400'}`}>
+                                            {locationData ? locationData.address : 'اضغط لتحديد الموقع على الخريطة'}
+                                        </span>
+                                        {locationData && <span className="text-green-500 text-xs">تم تحديد الموقع</span>}
+                                    </div>
+                                </div>
+                                <div className="bg-blue-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity absolute left-3">
+                                    <ArrowRight size={16} />
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Water Type */}
+                            <motion.div variants={itemVariants} className="space-y-3">
+                                <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                    <Droplets size={20} className="text-blue-500" />
+                                    نوع المياه
+                                </label>
+                                <Select value={waterType} onValueChange={setWaterType} dir="rtl">
+                                    <SelectTrigger className="w-full h-14 rounded-xl border border-[#D1E3FA] bg-white px-4 focus:ring-2 focus:ring-[#579BE8] text-right flex items-center text-[16px] p-6 shadow-sm">
+                                        <SelectValue placeholder="اختر نوع المويه" className="text-[16px]" />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-right">
+                                        <SelectItem value="safe" className="text-[16px] py-2 text-right flex-row-reverse justify-end">صالحة للشرب</SelectItem>
+                                        <SelectItem value="natural" className="text-[16px] py-2 text-right flex-row-reverse justify-end">طبيعي</SelectItem>
+                                        <SelectItem value="mineral" className="text-[16px] py-2 text-right flex-row-reverse justify-end">معدني</SelectItem>
+                                        <SelectItem value="distilled" className="text-[16px] py-2 text-right flex-row-reverse justify-end">مقطر</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </motion.div>
+
+                            {/* Quantity */}
+                            <motion.div variants={itemVariants} className="space-y-3">
+                                <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                    <Scale size={20} className="text-blue-500" />
+                                    الكمية (طن)
+                                </label>
+                                <Select value={quantity} onValueChange={setQuantity} dir="rtl">
+                                    <SelectTrigger className="w-full h-14 rounded-xl border border-[#D1E3FA] bg-white px-4 focus:ring-2 focus:ring-[#579BE8] text-right flex items-center text-[16px] p-6 shadow-sm">
+                                        <SelectValue placeholder="اختر حجم المويه" className="text-[16px]" />
+                                    </SelectTrigger>
+                                    <SelectContent className="text-right">
+                                        {[...Array(10)].map((_, i) => (
+                                            <SelectItem key={i + 1} value={(i + 1).toString()} className="text-[16px] py-2 text-right flex-row-reverse justify-end">{i + 1} طن</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </motion.div>
+                        </div>
+
+                        {/* Actions */}
+                        <motion.div variants={itemVariants} className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                onClick={handleOrderNow}
+                                className="h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold text-lg shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            >
+                                <span>اطلب الآن</span>
+                                <ArrowRight size={20} />
+                            </button>
+
+                            <button
+                                onClick={() => setShowSchedule(true)}
+                                className="h-14 rounded-2xl bg-white border-2 border-blue-100 text-blue-600 font-bold text-lg hover:bg-blue-50 hover:border-blue-200 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            >
+                                <Calendar size={20} />
+                                <span>جدولة الطلب</span>
+                            </button>
+                        </motion.div>
+
                     </div>
                 </div>
-            </div>
+
+            </motion.div>
         </div>
     );
 }
