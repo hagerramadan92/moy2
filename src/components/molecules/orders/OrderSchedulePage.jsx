@@ -2,112 +2,112 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Droplets, Scale, Calendar, ArrowRight, ArrowLeft, Clock, CheckCircle2, AlertCircle, CalendarDays } from 'lucide-react';
+import toast from 'react-hot-toast';
 import PaymentModal2 from '../../ui/PaymentModal2';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+// Dynamically import the map modal to avoid SSR issues with Leaflet
+const LocationPickerModal = dynamic(
+    () => import('./LocationPickerModal'),
+    { ssr: false }
+);
 
 /**
  * Component for scheduling water delivery orders with calendar and time selection
  */
 export default function OrderSchedulePage({ onBack }) {
     // State for form inputs and selections
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedTime, setSelectedTime] = useState('9:41 AM');
-    const [location, setLocation] = useState('');
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [selectedTime, setSelectedTime] = useState('');
+    const [locationData, setLocationData] = useState(null);
     const [waterType, setWaterType] = useState('');
     const [quantity, setQuantity] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Days of week in LTR order: SUN MON WED THU FRI SAT SUN
-    const daysOfWeek = ['SUN', 'MON', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    
-    // Get the column index for each day
-    const getColumnForDay = (dayNum) => {
-        // April 2025 starts on Wednesday (day 1 under WED column)
-        const startColumn = 2; // WED is at index 2
+    // Validation state
+    const [touched, setTouched] = useState({
+        location: false,
+        waterType: false,
+        quantity: false,
+        date: false,
+        time: false
+    });
+    const [attemptedSubmit, setAttemptedSubmit] = useState(false);
         
-        // Calculate which column this day falls under
-        const column = (startColumn + (dayNum - 1)) % 7;
-        return column;
+    // Validation helpers
+    const validation = {
+        location: !!locationData,
+        waterType: !!waterType,
+        quantity: !!quantity,
+        date: !!selectedDate,
+        time: !!selectedTime
     };
 
-    // Create calendar days properly aligned
-    const createCalendarDays = () => {
-        const days = [];
-        
-        // First row (April 1-5, 2025 starts on Wednesday)
-        // April 1st is under WED column (index 2)
-        const firstRow = [
-            { day: null, disabled: true },  // SUN
-            { day: null, disabled: true },  // MON
-            { day: 5, disabled: false },    // WED - April 1
-            { day: 4, disabled: false },    // THU - April 2
-            { day: 3, disabled: false },    // FRI - April 3
-            { day: 2, disabled: false },    // SAT - April 4
-            { day: 1, disabled: false },    // SUN - April 5
-        ];
-        
-        // Second row (April 6-12)
-        const secondRow = [
-            { day: 12, disabled: false },    // SUN - April 6
-            { day: 11, disabled: false },    // MON - April 7
-            { day: 10, disabled: false },    // WED - April 8
-            { day: 9, disabled: false },    // THU - April 9
-            { day: 8, disabled: false },   // FRI - April 10
-            { day: 7, disabled: false },   // SAT - April 11
-            { day: 6, disabled: false },   // SUN - April 12
-        ];
-        
-        // Third row (April 13-19)
-        const thirdRow = [
-            { day: 19, disabled: false },   // SUN - April 13
-            { day: 18, disabled: false },   // MON - April 14
-            { day: 17, disabled: false },   // WED - April 15
-            { day: 16, disabled: false },   // THU - April 16
-            { day: 15, disabled: false },   // FRI - April 17
-            { day: 14, disabled: false },   // SAT - April 18
-            { day: 13, disabled: false },   // SUN - April 19
-        ];
-        
-        // Fourth row (April 20-26)
-        const fourthRow = [
-            { day: 26, disabled: false },   // SUN - April 20
-            { day: 25, disabled: false },   // MON - April 21
-            { day: 24, disabled: false },   // WED - April 22
-            { day: 23, disabled: false },   // THU - April 23
-            { day: 22, disabled: false },   // FRI - April 24
-            { day: 21, disabled: false },   // SAT - April 25
-            { day: 20, disabled: false },   // SUN - April 26
-        ];
-        
-        // Fifth row (April 27-30)
-        const fifthRow = [
-            { day: null, disabled: false },   // SUN - April 27
-            { day: null, disabled: false },   // MON - April 28
-            { day: null, disabled: false },   // WED - April 29
-            { day: 30, disabled: false },   // THU - April 30
-            { day: 29, disabled: false },  // FRI
-            { day: 28, disabled: false },  // SAT
-            { day: 27, disabled: false },  // SUN
-        ];
-        
-        return [...firstRow, ...secondRow, ...thirdRow, ...fourthRow, ...fifthRow];
-    };
+    const showError = (field) => (touched[field] || attemptedSubmit) && !validation[field];
+    const showSuccess = (field) => validation[field];
 
-    const calendarDays = createCalendarDays();
+    const getFieldStatus = (field) => {
+        if (showSuccess(field)) return 'success';
+        if (showError(field)) return 'error';
+        return 'default';
+    };
 
     // Available time slots
-    const times = [
+    const timeSlots = [
         '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
-        '9:41 AM', '10:00 AM', '10:30 AM', '11:00 AM',
-        '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM',
-        '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM',
-        '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM',
-        '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM',
+        '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+        '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
+        '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+        '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM',
+        '6:00 PM', '6:30 PM', '7:00 PM'
     ];
+
+    const handleLocationSelect = (data) => {
+        setLocationData(data);
+        setTouched(prev => ({ ...prev, location: true }));
+    };
 
     /**
      * Opens the payment modal when confirming order
      */
-    const handleConfirmOrder = () => {
+    const handleConfirmOrder = async () => {
+        setAttemptedSubmit(true);
+
+        if (!locationData) {
+            toast.error('الرجاء تحديد الموقع أولاً');
+            return;
+        }
+        if (!waterType) {
+            toast.error('الرجاء اختيار نوع المياه');
+            return;
+        }
+        if (!quantity) {
+            toast.error('الرجاء اختيار الكمية');
+            return;
+        }
+        if (!selectedDate) {
+            toast.error('الرجاء اختيار التاريخ');
+            return;
+        }
+        if (!selectedTime) {
+            toast.error('الرجاء اختيار الوقت');
+            return;
+        }
+
+        setIsLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsLoading(false);
         setShowPaymentModal(true);
     };
 
@@ -126,399 +126,416 @@ export default function OrderSchedulePage({ onBack }) {
         setShowPaymentModal(false);
     };
 
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.1 } }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0 }
+    };
+
+    // Format selected date for display
+    const formatDate = (date) => {
+        if (!date) return '';
+        return date.toLocaleDateString('ar-SA', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
     return (
         <>
-            <link
-                href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap"
-                rel="stylesheet"
+            <LocationPickerModal
+                isOpen={isMapOpen}
+                onClose={() => setIsMapOpen(false)}
+                onSelect={handleLocationSelect}
             />
 
-            <div className="min-h-screen bg-gray-50 p-4 md:p-8 flex items-center justify-center" style={{ fontFamily: "'Cairo', sans-serif" }}>
-                <div className="w-full max-w-[1035px] h-auto min-h-[743px] bg-white rounded-3xl shadow-lg overflow-hidden">
-                    <div className="flex flex-col lg:flex-row h-full">
-                        {/* Left Section - Order Form */}
-                        <div className="lg:w-1/2 p-4 md:p-8 flex items-center justify-center">
-                            <div className="w-full max-w-[466px] flex flex-col items-center gap-7 md:gap-8">
-                                {/* Delivery Car Image */}
-                                <div className="w-full flex justify-center">
-                                    <div className="w-[186px] h-[102px]">
-                                        <Image
-                                            src="/car22.png"
-                                            alt="Delivery Car"
-                                            width={186}
-                                            height={102}
-                                            className="object-contain w-full h-full"
-                                        />
+            <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 flex justify-center items-start pt-12 md:pt-16">
+                <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    variants={containerVariants}
+                    className="w-full max-w-3xl space-y-6 relative"
+                >
+                    {/* Header */}
+                    <motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl p-6 shadow-lg border border-[#579BE8]/20 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]">
+                        {/* Animated background elements */}
+                        <div className="absolute inset-0 overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse" />
+                            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-xl" />
+                        </div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold text-white font-cairo mb-1">جدولة الطلب</h1>
+                                <p className="text-white/80 text-sm">حدد موعداً لتوصيل طلبك في وقت لاحق</p>
                                     </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={onBack}
+                                    className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white border border-white/30 hover:bg-white/30 transition-colors"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white border border-white/30">
+                                    <CalendarDays size={24} />
                                 </div>
+                            </div>
+                        </div>
+                    </motion.div>
 
-                                {/* Form Container */}
-                                <div className="w-full flex flex-col gap-5 md:gap-6">
-                                    {/* Instruction Text */}
-                                    <div className="w-full">
-                                        <p className="text-right font-cairo font-semibold text-sm md:text-base text-black leading-tight">
-                                            اطلب المويه الآن، أو حدِّد موعداً لاجراء الطلب في وقت لاحق
-                                        </p>
-                                    </div>
+                    {/* Form Card */}
+                    <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl shadow-[#124987]/10 border border-[#579BE8]/20 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
 
-                                    {/* Location Input Field */}
-                                    <div className="relative w-full">
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={location}
-                                                onChange={(e) => setLocation(e.target.value)}
-                                                className="w-full h-12 md:h-14 rounded-lg border-2 border-[#E0E0E0] bg-white shadow-sm pr-12 pl-4 text-right text-sm md:text-base focus:outline-none focus:border-blue-300"
-                                                placeholder=""
-                                            />
-                                            {/* Right aligned dot indicator */}
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center">
-                                                <div className="w-2 h-2 bg-black rounded-full"></div>
+                        <div className="space-y-8">
+                                {/* Location Section */}
+                                <motion.div variants={itemVariants} className="space-y-3">
+                                    <label className="flex items-center gap-2 text-gray-700 font-bold mb-2">
+                                        <MapPin size={20} className={getFieldStatus('location') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                                        موقع التوصيل
+                                        {showSuccess('location') && (
+                                            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
+                                                <CheckCircle2 size={18} className="text-[#579BE8]" />
+                                            </motion.span>
+                                        )}
+                                    </label>
+                                    <div
+                                        onClick={() => {
+                                            setTouched(prev => ({ ...prev, location: true }));
+                                            setIsMapOpen(true);
+                                        }}
+                                        className={`group cursor-pointer relative w-full h-16 rounded-2xl transition-all duration-300 flex items-center px-4 overflow-hidden border-2 border-dashed
+                                            ${getFieldStatus('location') === 'success'
+                                                ? 'bg-[#579BE8]/5 border-[#579BE8]/50 hover:border-[#579BE8]/70'
+                                                : getFieldStatus('location') === 'error'
+                                                    ? 'bg-red-50 border-red-300 hover:border-red-400'
+                                                    : 'bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 hover:from-[#579BE8]/10 hover:to-[#124987]/10 border-[#579BE8]/30 hover:border-[#579BE8]/60'
+                                            }`}
+                                    >
+                                        <div className="flex-1 flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors 
+                                                ${getFieldStatus('location') === 'success'
+                                                    ? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white'
+                                                    : getFieldStatus('location') === 'error'
+                                                        ? 'bg-red-100 text-red-500'
+                                                        : 'bg-[#579BE8]/10 text-[#579BE8]'
+                                                }`}>
+                                                <MapPin size={20} />
                                             </div>
-                                            {/* Left aligned placeholder text */}
-                                            <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                                                <span className="text-sm md:text-base text-gray-400">
-                                                    أدخل الموقع
+                                            <div className="flex flex-col items-start overflow-hidden">
+                                                <span className={`text-sm font-bold truncate w-full text-right ${locationData ? 'text-gray-900' : getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'}`}>
+                                                    {locationData ? locationData.address : 'اضغط لتحديد الموقع على الخريطة'}
                                                 </span>
+                                                {locationData && <span className="text-[#579BE8] text-xs">✓ تم تحديد الموقع</span>}
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Schedule Date Display Field */}
-                                    <div className="relative w-full">
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={selectedDate}
-                                                onChange={(e) => setSelectedDate(e.target.value)}
-                                                placeholder=""
-                                                className="w-full h-12 md:h-14 rounded-lg border-2 border-[#E0E0E0] bg-white shadow-sm pr-12 pl-4 text-right text-sm md:text-base focus:outline-none cursor-default"
-                                            />
-                                            {/* Right aligned dot indicator */}
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center">
-                                                <div className="w-2 h-2 bg-black rounded-full"></div>
-                                            </div>
-                                            {/* Left aligned placeholder text */}
-                                            <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                                                <span className="text-sm md:text-base text-gray-400">
-                                                    تاريخ الجدولة
-                                                </span>
-                                            </div>
+                                        <div className="bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity absolute left-3">
+                                            <ArrowRight size={16} />
                                         </div>
                                     </div>
+                                    <AnimatePresence>
+                                        {showError('location') && (
+                                            <motion.p
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="text-red-500 text-xs flex items-center gap-1"
+                                            >
+                                                <AlertCircle size={14} />
+                                                الرجاء تحديد موقع التوصيل
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
 
-                                    {/* Water Type and Quantity Selection */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="block text-right text-sm md:text-base font-semibold text-blue-500">
-                                                اختر نوع المياه
+                                {/* Details Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Water Type */}
+                                    <motion.div variants={itemVariants} className="space-y-3">
+                                        <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                            <Droplets size={20} className={getFieldStatus('waterType') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                                            نوع المياه
+                                            {showSuccess('waterType') && (
+                                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
+                                                    <CheckCircle2 size={18} className="text-[#579BE8]" />
+                                                </motion.span>
+                                            )}
                                             </label>
-                                            <select
+                                        <Select
                                                 value={waterType}
-                                                onChange={(e) => setWaterType(e.target.value)}
-                                                className="w-full h-11 md:h-12 rounded-lg border-2 border-gray-200 bg-white shadow-sm px-4 text-right text-sm md:text-base focus:outline-none"
-                                            >
-                                                <option value="">صالح للشرب</option>
-                                                <option value="natural">طبيعي</option>
-                                                <option value="mineral">معدني</option>
-                                                <option value="distilled">مقطر</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="block text-right text-sm md:text-base font-semibold text-blue-500">
-                                                اختر حجم المياه
-                                            </label>
-                                            <select
-                                                value={quantity}
-                                                onChange={(e) => setQuantity(e.target.value)}
-                                                className="w-full h-11 md:h-12 rounded-lg border-2 border-gray-200 bg-white shadow-sm px-4 text-right text-sm md:text-base focus:outline-none"
-                                            >
-                                                <option value="">6 طن</option>
-                                                <option value="1">1 طن</option>
-                                                <option value="2">2 طن</option>
-                                                <option value="3">3 طن</option>
-                                                <option value="4">4 طن</option>
-                                                <option value="5">5 طن</option>
-                                                <option value="6">6 طن</option>
-                                                <option value="7">7 طن</option>
-                                                <option value="8">8 طن</option>
-                                                <option value="9">9 طن</option>
-                                                <option value="10">10 طن</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Order Now Button */}
-                                    <button
-                                        onClick={handleConfirmOrder}
-                                        className="w-full h-12 md:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center"
-                                    >
-                                        <span className="text-white text-base md:text-lg font-normal">
-                                            اطلب الآن
-                                        </span>
-                                    </button>
-
-                                    {/* Schedule Button */}
-                                    <button
-                                        onClick={handleConfirmOrder}
-                                        className="w-full h-12 md:h-14 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Image
-                                            src="/vector (15).png"
-                                            alt="Calendar"
-                                            width={25}
-                                            height={25}
-                                            className="object-contain"
-                                        />
-                                        <span className="text-white text-base md:text-lg font-normal">
-                                            جدول طلبك
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Section - Calendar and Time Selection */}
-                        <div className="lg:w-1/2 p-4 md:p-8 bg-white">
-                            <div className="h-full flex flex-col items-center lg:mt-16">
-                                {/* Section Title */}
-                                <h2 className="text-center mb-6 md:mb-8 font-cairo font-bold text-lg md:text-xl text-black">
-                                    اختر التاريخ والوقت المناسب
-                                </h2>
-
-                                {/* Calendar Container */}
-                                <div className="flex-1 w-full flex flex-col items-center">
-                                    {/* Calendar Navigation Header - Styled according to specs */}
-                                    <div 
-                                        className="mb-4"
-                                        style={{
-                                            width: '370px',
-                                            height: '40px',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        {/* Left side: Arrow image */}
-                                        <div 
-                                            className="flex items-center gap-7"
-                                            style={{
-                                                position: 'absolute',
-                                                left: '296px',
-                                                top: '7px',
-                                                width: '58px',
-                                                height: '24px'
+                                            onValueChange={(value) => {
+                                                setWaterType(value);
+                                                setTouched(prev => ({ ...prev, waterType: true }));
                                             }}
+                                            onOpenChange={() => setTouched(prev => ({ ...prev, waterType: true }))}
+                                            dir="rtl"
                                         >
-                                            <Image
-                                                src="/Arrows.png"
-                                                alt="Navigation Arrows"
-                                                width={58}
-                                                height={24}
-                                                className="object-contain"
-                                            />
-                                        </div>
-
-                                        {/* Right side: Month navigation */}
-                                        <div 
-                                            className="flex items-center gap-4"
-                                            style={{
-                                                position: 'absolute',
-                                                left: '16px',
-                                                top: '13px',
-                                                width: '98px',
-                                                height: '24px'
-                                            }}
-                                        >
-                                            {/* Less than symbol */}
-                                            <div 
-                                                style={{
-                                                    width: '10px',
-                                                    height: '18px',
-                                                    fontFamily: 'SF Pro',
-                                                    fontWeight: 700,
-                                                    fontSize: '15px',
-                                                    lineHeight: '18px',
-                                                    letterSpacing: '-0.5px',
-                                                    color: '#0088FF',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
-                                            >
-                                                ‹
-                                            </div>
-                                            
-                                            {/* Month and year */}
-                                            <div 
-                                                style={{
-                                                    width: '100px',
-                                                    height: '22px',
-                                                    fontFamily: 'Cairo',
-                                                    fontWeight: 590,
-                                                    fontSize: '17px',
-                                                    lineHeight: '22px',
-                                                    letterSpacing: '-0.43px',
-                                                    color: '#000000',
-                                                    display: 'flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                April 2025
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Days of Week Header */}
-                                    <div 
-                                        className="grid grid-cols-7 mb-4"
-                                        style={{
-                                            width: '370px',
-                                            height: '20px',
-                                            justifyContent: 'space-between',
-                                            paddingRight: '16px',
-                                            paddingLeft: '16px'
-                                        }}
-                                    >
-                                        {daysOfWeek.map((day, index) => (
-                                            <div
-                                                key={index}
-                                                className="text-center font-cairo font-medium text-xs text-gray-500 flex items-center justify-center"
-                                                style={{
-                                                    height: '20px',
-                                                    width: '44px'
-                                                }}
-                                            >
-                                                {day}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Calendar Days Grid - 5 rows of 7 days each */}
-                                    <div 
-                                        className="grid grid-cols-7 gap-0 mb-8"
-                                        style={{
-                                            width: '370px'
-                                        }}
-                                    >
-                                        {calendarDays.map((item, index) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center justify-center"
-                                                style={{
-                                                    width: '44px',
-                                                    height: '44px'
-                                                }}
-                                            >
-                                                {item.day ? (
-                                                    <button
-                                                        onClick={() => setSelectedDate(item.day.toString())}
-                                                        disabled={item.disabled}
-                                                        className={`
-                                                            w-10 h-10 flex items-center justify-center
-                                                            transition-colors duration-200 rounded-full
-                                                            ${selectedDate === item.day.toString()
-                                                                ? 'bg-[#0088FF] text-white'
-                                                                : item.disabled
-                                                                    ? 'text-gray-300 cursor-not-allowed'
-                                                                    : 'bg-white hover:bg-gray-100 text-black'
-                                                            }
-                                                        `}
-                                                        style={{
-                                                            fontFamily: 'SF Pro',
-                                                            fontWeight: 400,
-                                                            fontSize: '20px',
-                                                            lineHeight: '25px',
-                                                            letterSpacing: '-0.45px'
-                                                        }}
-                                                    >
-                                                        {item.day}
-                                                    </button>
-                                                ) : (
-                                                    <div className="w-10 h-10"></div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Time Selection Section - Swapped positions */}
-                                    <div 
-                                        className="flex justify-between items-center"
-                                        style={{
-                                            width: '370px',
-                                            height: '52px',
-                                            paddingRight: '16px',
-                                            paddingLeft: '16px'
-                                        }}
-                                    >
-                                        {/* Time text label (now on left in LTR) */}
-                                        <div 
-                                            style={{
-                                                width: '136px',
-                                                height: '22px',
-                                                fontFamily: 'SF Pro',
-                                                fontWeight: 400,
-                                                fontSize: '17px',
-                                                lineHeight: '22px',
-                                                letterSpacing: '-0.43px',
-                                                color: '#000000',
-                                                display: 'flex',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            Time
-                                        </div>
-
-                                        {/* Time button with dropdown (now on right in LTR) */}
-                                        <div className="relative">
-                                            <div 
-                                                className="flex items-center justify-center cursor-pointer"
-                                                style={{
-                                                    width: '86px',
-                                                    height: '34px',
-                                                    borderRadius: '100px',
-                                                    background: '#7676801F',
-                                                    padding: '6px 11px',
-                                                    gap: '10px'
-                                                }}
-                                            >
-                                                <span 
-                                                    style={{
-                                                        width: '64px',
-                                                        height: '22px',
-                                                        fontFamily: 'SF Pro',
-                                                        fontWeight: 400,
-                                                        fontSize: '17px',
-                                                        lineHeight: '22px',
-                                                        letterSpacing: '-0.43px',
-                                                        color: '#000000',
-                                                        textAlign: 'center'
-                                                    }}
+                                            <SelectTrigger className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right flex items-center text-[16px] p-6 shadow-sm transition-all
+                                                ${getFieldStatus('waterType') === 'success'
+                                                    ? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
+                                                    : getFieldStatus('waterType') === 'error'
+                                                        ? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
+                                                        : 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
+                                                }`}>
+                                                <SelectValue placeholder="اختر نوع المويه" className="text-[16px]" />
+                                            </SelectTrigger>
+                                            <SelectContent className="text-right">
+                                                <SelectItem value="safe" className="text-[16px] py-2 text-right flex-row-reverse justify-end">صالحة للشرب</SelectItem>
+                                                <SelectItem value="natural" className="text-[16px] py-2 text-right flex-row-reverse justify-end">طبيعي</SelectItem>
+                                                <SelectItem value="mineral" className="text-[16px] py-2 text-right flex-row-reverse justify-end">معدني</SelectItem>
+                                                <SelectItem value="distilled" className="text-[16px] py-2 text-right flex-row-reverse justify-end">مقطر</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <AnimatePresence>
+                                            {showError('waterType') && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="text-red-500 text-xs flex items-center gap-1"
                                                 >
-                                                    {selectedTime}
-                                                </span>
-                                            </div>
-                                            
-                                            {/* Hidden select for actual functionality */}
-                                            <select
-                                                value={selectedTime}
-                                                onChange={(e) => setSelectedTime(e.target.value)}
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                style={{
-                                                    width: '86px',
-                                                    height: '34px'
-                                                }}
-                                            >
-                                                {times.map((time) => (
-                                                    <option key={time} value={time}>{time}</option>
+                                                    <AlertCircle size={14} />
+                                                    الرجاء اختيار نوع المياه
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+
+                                    {/* Quantity */}
+                                    <motion.div variants={itemVariants} className="space-y-3">
+                                        <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                            <Scale size={20} className={getFieldStatus('quantity') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                                            الكمية (طن)
+                                            {showSuccess('quantity') && (
+                                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
+                                                    <CheckCircle2 size={18} className="text-[#579BE8]" />
+                                                </motion.span>
+                                            )}
+                                        </label>
+                                        <Select
+                                            value={quantity}
+                                            onValueChange={(value) => {
+                                                setQuantity(value);
+                                                setTouched(prev => ({ ...prev, quantity: true }));
+                                            }}
+                                            onOpenChange={() => setTouched(prev => ({ ...prev, quantity: true }))}
+                                            dir="rtl"
+                                        >
+                                            <SelectTrigger className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right flex items-center text-[16px] p-6 shadow-sm transition-all
+                                                ${getFieldStatus('quantity') === 'success'
+                                                    ? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
+                                                    : getFieldStatus('quantity') === 'error'
+                                                        ? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
+                                                        : 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
+                                                }`}>
+                                                <SelectValue placeholder="اختر حجم المويه" className="text-[16px]" />
+                                            </SelectTrigger>
+                                            <SelectContent className="text-right">
+                                                {[...Array(10)].map((_, i) => (
+                                                    <SelectItem key={i + 1} value={(i + 1).toString()} className="text-[16px] py-2 text-right flex-row-reverse justify-end">{i + 1} طن</SelectItem>
                                                 ))}
-                                            </select>
+                                            </SelectContent>
+                                        </Select>
+                                        <AnimatePresence>
+                                            {showError('quantity') && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="text-red-500 text-xs flex items-center gap-1"
+                                                >
+                                                    <AlertCircle size={14} />
+                                                    الرجاء اختيار الكمية
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                        </div>
+
+                                {/* Date Selection */}
+                                <motion.div variants={itemVariants} className="space-y-3">
+                                    <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                        <CalendarDays size={20} className={getFieldStatus('date') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                                        تاريخ التوصيل
+                                        {showSuccess('date') && (
+                                            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
+                                                <CheckCircle2 size={18} className="text-[#579BE8]" />
+                                            </motion.span>
+                                        )}
+                                            </label>
+                                    <input
+                                        type="date"
+                                        value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                            const date = e.target.value ? new Date(e.target.value) : null;
+                                            setSelectedDate(date);
+                                            setTouched(prev => ({ ...prev, date: true }));
+                                        }}
+                                        onFocus={() => setTouched(prev => ({ ...prev, date: true }))}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right text-[16px] shadow-sm transition-all outline-none
+                                            ${getFieldStatus('date') === 'success'
+                                                ? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
+                                                : getFieldStatus('date') === 'error'
+                                                    ? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
+                                                    : 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
+                                            }`}
+                                        dir="rtl"
+                                    />
+                                    <AnimatePresence>
+                                        {showError('date') && (
+                                            <motion.p
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="text-red-500 text-xs flex items-center gap-1"
+                                            >
+                                                <AlertCircle size={14} />
+                                                الرجاء اختيار تاريخ التوصيل
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+
+                                {/* Time Selection */}
+                                <motion.div variants={itemVariants} className="space-y-3">
+                                    <label className="flex items-center gap-2 text-gray-700 font-bold">
+                                        <Clock size={20} className={getFieldStatus('time') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                                        وقت التوصيل
+                                        {showSuccess('time') && (
+                                            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
+                                                <CheckCircle2 size={18} className="text-[#579BE8]" />
+                                            </motion.span>
+                                        )}
+                                    </label>
+                                    <Select
+                                        value={selectedTime}
+                                        onValueChange={(value) => {
+                                            setSelectedTime(value);
+                                            setTouched(prev => ({ ...prev, time: true }));
+                                        }}
+                                        onOpenChange={() => setTouched(prev => ({ ...prev, time: true }))}
+                                        dir="rtl"
+                                    >
+                                        <SelectTrigger className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right text-[16px] shadow-sm transition-all
+                                            ${getFieldStatus('time') === 'success'
+                                                ? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
+                                                : getFieldStatus('time') === 'error'
+                                                    ? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
+                                                    : 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
+                                            }`}>
+                                            <SelectValue placeholder="اختر وقت التوصيل" />
+                                        </SelectTrigger>
+                                        <SelectContent className="text-right max-h-60">
+                                            {timeSlots.map((time) => (
+                                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <AnimatePresence>
+                                        {showError('time') && (
+                                            <motion.p
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="text-red-500 text-xs flex items-center gap-1"
+                                            >
+                                                <AlertCircle size={14} />
+                                                الرجاء اختيار وقت التوصيل
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+
+                                {/* Actions */}
+                                <motion.div variants={itemVariants} className="pt-4">
+                                    <button
+                                        onClick={handleConfirmOrder}
+                                        disabled={isLoading}
+                                        className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    >
+                                        <span>تأكيد الجدولة</span>
+                                        <Calendar size={20} />
+                                    </button>
+                                </motion.div>
+
+                        </div>
+                    </motion.div>
+                </motion.div>
+
+                {/* Smart Loader Overlay */}
+                <AnimatePresence>
+                    {isLoading && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl shadow-[#579BE8]/20 border border-[#579BE8]/20 min-w-[280px] relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
+
+                                <div className="flex items-center gap-4">
+                                    <div className="relative flex-shrink-0">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                                            className="w-12 h-12 rounded-full border-[#579BE8]/20 border-t-[#579BE8]"
+                                            style={{ borderWidth: '3px', borderStyle: 'solid' }}
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <motion.div
+                                                animate={{ scale: [1, 1.1, 1] }}
+                                                transition={{ duration: 1, repeat: Infinity }}
+                                                className="w-7 h-7 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
+                                            >
+                                                <Calendar size={14} className="text-white" />
+                                            </motion.div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <h3 className="text-sm font-bold text-[#124987] font-cairo">
+                                            جاري تأكيد الجدولة
+                                        </h3>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <p className="text-gray-400 text-xs">
+                                                يرجى الانتظار
+                                            </p>
+                                            <div className="flex gap-0.5">
+                                                {[0, 1, 2].map((i) => (
+                                                    <motion.span
+                                                        key={i}
+                                                        animate={{ opacity: [0.3, 1, 0.3] }}
+                                                        transition={{
+                                                            duration: 0.8,
+                                                            repeat: Infinity,
+                                                            delay: i * 0.2
+                                                        }}
+                                                        className="w-1 h-1 bg-[#579BE8] rounded-full"
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Payment Modal */}
