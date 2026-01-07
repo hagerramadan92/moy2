@@ -1,87 +1,328 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
     FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCalendarAlt,
-    FaArrowRight, FaCheckCircle, FaMoneyBillWave, FaTimes, FaHistory, FaPlus, FaChartLine
+    FaArrowRight, FaCheckCircle, FaMoneyBillWave, FaTimes, FaHistory, FaPlus, FaChartLine, FaSync
 } from 'react-icons/fa';
 import { IoDocumentText } from "react-icons/io5";
 import { MdBusinessCenter } from 'react-icons/md';
 import { motion } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import Swal from "sweetalert2";
+import { toast } from "react-hot-toast";
 
 export default function ContractDetailsPage() {
     const router = useRouter();
     const params = useParams();
     const contractId = params.id;
+    const [contract, setContract] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isRenewing, setIsRenewing] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
 
-    // Mock contract data - in production, fetch based on contractId
-    const contracts = [
-        {
-            id: "882",
-            fullId: "CONT-882",
-            type: "commercial",
-            title: "مؤسسة وايت مياه التجارية",
-            applicant: "فهد السليمان",
-            phone: "0501234567",
-            address: "الرياض، حي الملقا، شارع الأمير محمد بن سعد",
-            date: "15 نوفمبر 2024",
-            duration: "6 أشهر",
-            endDate: "15 مايو 2025",
-            cost: "4,500 ريال",
-            status: "active",
-            notes: "توصيل دوري كل يوم سبت واثنين"
-        },
-        {
-            id: "721",
-            fullId: "CONT-721",
-            type: "personal",
-            title: "منزل حي الملقا",
-            applicant: "عبدالله محمد الفهد",
-            phone: "0559876543",
-            address: "الرياض، حي النرجس، فيلا 12",
-            date: "02 نوفمبر 2024",
-            duration: "شهر واحد",
-            endDate: "02 ديسمبر 2024",
-            cost: "800 ريال",
-            status: "completed",
-            notes: "الاتصال قبل الوصول بـ 15 دقيقة"
-        },
-        {
-            id: "654",
-            fullId: "CONT-654",
-            type: "commercial",
-            title: "شركة النور للتجارة",
-            applicant: "سعد العتيبي",
-            phone: "0551234567",
-            address: "جدة، حي الروضة، شارع الأمير سلطان",
-            date: "20 أكتوبر 2024",
-            duration: "3 أشهر",
-            endDate: "20 يناير 2025",
-            cost: "2,400 ريال",
-            status: "active",
-            notes: "توصيل صباحي فقط"
-        },
-        {
-            id: "543",
-            fullId: "CONT-543",
-            type: "personal",
-            title: "استراحة العليا",
-            applicant: "خالد الدوسري",
-            phone: "0567891234",
-            address: "الرياض، حي العليا، طريق الملك فهد",
-            date: "10 سبتمبر 2024",
-            duration: "شهر واحد",
-            endDate: "10 أكتوبر 2024",
-            cost: "600 ريال",
-            status: "completed",
-            notes: ""
-        },
-    ];
+    useEffect(() => {
+        fetchContract();
+    }, [contractId]);
 
-    const contract = contracts.find(c => c.id === contractId);
+    const mapDurationToArabic = (durationType) => {
+        const durationMap = {
+            'monthly': 'شهر واحد',
+            'quarterly': '3 أشهر',
+            'semi_annual': '6 أشهر',
+            'yearly': 'سنة كاملة'
+        };
+        return durationMap[durationType] || durationType;
+    };
+
+    const fetchContract = async () => {
+        try {
+            setLoading(true);
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.error("يجب تسجيل الدخول لعرض تفاصيل العقد", {
+                    duration: 3000,
+                    icon: "❌",
+                });
+                setLoading(false);
+                return;
+            }
+
+            const response = await fetch(`http://moya.talaaljazeera.com/api/v1/contracts/${contractId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && data.success && data.data && data.data.contract) {
+                const contractData = data.data.contract;
+                const stats = data.data.stats || {};
+                
+                // Format contract ID
+                const fullId = contractData.contract_number || `CONT-${contractData.id}`;
+                
+                // Get address from delivery_locations if available
+                let address = '';
+                if (contractData.delivery_locations && contractData.delivery_locations.length > 0) {
+                    const savedLocation = contractData.delivery_locations[0].saved_location;
+                    if (savedLocation) {
+                        address = savedLocation.address || 
+                                 (savedLocation.city && savedLocation.area 
+                                     ? `${savedLocation.city}, ${savedLocation.area}` 
+                                     : savedLocation.city || savedLocation.area || '');
+                    }
+                }
+
+                // Map API response to component format
+                const mappedContract = {
+                    id: contractData.id.toString(),
+                    fullId: fullId,
+                    type: contractData.contract_type === 'company' ? 'commercial' : 'personal',
+                    title: contractData.company_name || 'عقد بدون اسم',
+                    applicant: contractData.applicant_name || '',
+                    phone: '', // Phone not in API response
+                    address: address,
+                    date: contractData.start_date ? new Date(contractData.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    duration: mapDurationToArabic(contractData.duration_type),
+                    endDate: contractData.end_date ? new Date(contractData.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    cost: `${parseFloat(contractData.total_amount || 0).toLocaleString('ar-SA')} ريال`,
+                    status: contractData.status || 'active',
+                    notes: contractData.notes || '',
+                    // Additional fields
+                    remainingOrders: contractData.remaining_orders,
+                    totalOrdersLimit: contractData.total_orders_limit,
+                    paidAmount: contractData.paid_amount,
+                    remainingAmount: contractData.remaining_amount,
+                    // Stats
+                    totalOrdersUsed: stats.total_orders_used || 0,
+                    paymentProgress: stats.payment_progress || 0,
+                    daysRemaining: stats.days_remaining || 0,
+                    canRenew: stats.can_renew || false
+                };
+                
+                setContract(mappedContract);
+            } else {
+                toast.error(data.message || "فشل تحميل تفاصيل العقد", {
+                    duration: 3000,
+                    icon: "❌",
+                });
+                setContract(null);
+            }
+        } catch (error) {
+            console.error('Error fetching contract:', error);
+            toast.error("حدث خطأ أثناء تحميل تفاصيل العقد", {
+                duration: 3000,
+                icon: "❌",
+            });
+            setContract(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRenew = async () => {
+        const result = await Swal.fire({
+            title: "تجديد العقد",
+            text: "هل أنت متأكد من تجديد هذا العقد؟",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "نعم، تجديد العقد",
+            cancelButtonText: "إلغاء",
+            confirmButtonColor: "#579BE8",
+            cancelButtonColor: "#6b7280",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            customClass: {
+                popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                confirmButton: "rounded-2xl font-black px-10 py-3",
+                cancelButton: "rounded-2xl font-black px-10 py-3",
+            }
+        });
+
+        if (!result.isConfirmed) return;
+
+        setIsRenewing(true);
+        const loadingToast = toast.loading("جاري تجديد العقد...", {
+            duration: Infinity,
+        });
+
+        try {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يجب تسجيل الدخول لتجديد العقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                setIsRenewing(false);
+                return;
+            }
+
+            const response = await fetch(`http://moya.talaaljazeera.com/api/v1/contracts/${contractId}/renew`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم تجديد العقد بنجاح", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+                
+                Swal.fire({
+                    title: "تم التجديد!",
+                    text: data.message || "تم تجديد العقد بنجاح.",
+                    icon: "success",
+                    confirmButtonText: "حسناً",
+                    confirmButtonColor: "#579BE8",
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    customClass: {
+                        popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                        confirmButton: "rounded-2xl font-black px-10 py-3",
+                    }
+                });
+
+                // Refresh contract data
+                await fetchContract();
+            } else {
+                const errorMessage = data.message || data.error || 'فشل تجديد العقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error("حدث خطأ أثناء تجديد العقد. يرجى المحاولة مرة أخرى", {
+                duration: 5000,
+                icon: "❌",
+            });
+        } finally {
+            setIsRenewing(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        const result = await Swal.fire({
+            title: "إلغاء العقد",
+            text: "هل أنت متأكد من إلغاء هذا العقد؟ لا يمكن التراجع عن هذا الإجراء.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "نعم، إلغاء العقد",
+            cancelButtonText: "إلغاء",
+            confirmButtonColor: "#dc2626",
+            cancelButtonColor: "#579BE8",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            customClass: {
+                popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                confirmButton: "rounded-2xl font-black px-10 py-3",
+                cancelButton: "rounded-2xl font-black px-10 py-3",
+            }
+        });
+
+        if (!result.isConfirmed) return;
+
+        setIsCanceling(true);
+        const loadingToast = toast.loading("جاري إلغاء العقد...", {
+            duration: Infinity,
+        });
+
+        try {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يجب تسجيل الدخول لإلغاء العقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                setIsCanceling(false);
+                return;
+            }
+
+            const response = await fetch(`http://moya.talaaljazeera.com/api/v1/contracts/${contractId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم إلغاء العقد بنجاح", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+                
+                Swal.fire({
+                    title: "تم الإلغاء!",
+                    text: data.message || "تم إلغاء العقد بنجاح.",
+                    icon: "success",
+                    confirmButtonText: "حسناً",
+                    confirmButtonColor: "#579BE8",
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    customClass: {
+                        popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                        confirmButton: "rounded-2xl font-black px-10 py-3",
+                    }
+                });
+
+                // Navigate back to contracts list
+                setTimeout(() => {
+                    router.push('/myProfile/contracting/history');
+                }, 1000);
+            } else {
+                const errorMessage = data.message || data.error || 'فشل إلغاء العقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error("حدث خطأ أثناء إلغاء العقد. يرجى المحاولة مرة أخرى", {
+                duration: 5000,
+                icon: "❌",
+            });
+        } finally {
+            setIsCanceling(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="w-12 h-12 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-muted-foreground font-medium">جاري تحميل تفاصيل العقد...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!contract) {
         return (
@@ -404,6 +645,42 @@ export default function ContractDetailsPage() {
                                         <FaArrowRight className="w-3 h-3 md:w-4 md:h-4 rotate-180" />
                                     </button>
                                 </motion.div>
+
+                                {/* Action Buttons */}
+                                {contract.status === 'active' && (
+                                    <>
+                                        <motion.div 
+                                            initial={{ scale: 0.95, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ delay: 0.7 }}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                        >
+                                            <button
+                                                onClick={handleRenew}
+                                                disabled={isRenewing || isCanceling}
+                                                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                            >
+                                                <FaSync className={`w-4 h-4 md:w-5 md:h-5 ${isRenewing ? 'animate-spin' : ''}`} />
+                                                <span>{isRenewing ? 'جاري التجديد...' : 'تجديد العقد'}</span>
+                                            </button>
+                                        </motion.div>
+                                        <motion.div 
+                                            initial={{ scale: 0.95, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ delay: 0.8 }}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                        >
+                                            <button
+                                                onClick={handleCancel}
+                                                disabled={isRenewing || isCanceling}
+                                                className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-red-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                            >
+                                                <FaTimes className={`w-4 h-4 md:w-5 md:h-5 ${isCanceling ? 'animate-pulse' : ''}`} />
+                                                <span>{isCanceling ? 'جاري الإلغاء...' : 'إلغاء العقد'}</span>
+                                            </button>
+                                        </motion.div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.div>

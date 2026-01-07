@@ -93,7 +93,7 @@ const HowItWorks = ({ data }) => {
 
         {/* Desktop Wave Line SVG */}
         {/* Visible only on XL/LG screens where the 4-col grid exists */}
-        <div className="hidden xl:block absolute top-[140px] left-0 right-0 w-full h-[150px] pointer-events-none z-0">
+        <div className="hidden xl:block absolute top-[140px] left-0 right-0 w-full h-[100px] pointer-events-none z-0">
           <svg className="w-full h-full" viewBox="0 0 1440 120" preserveAspectRatio="none">
              {/* 
                 Path logic for 4 steps:

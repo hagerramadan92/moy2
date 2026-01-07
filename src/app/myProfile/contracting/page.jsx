@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     FaHardHat, FaTools, FaChevronLeft, FaCheckCircle,
     FaBuilding, FaUser, FaPhoneAlt, FaMapMarkerAlt,
-    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight, FaChevronDown
+    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight, FaChevronDown, FaGlobe
 } from 'react-icons/fa';
 import { MdOutlineArchitecture, MdBusinessCenter } from 'react-icons/md';
 import { BiBuildingHouse, BiSolidBusiness } from 'react-icons/bi';
@@ -26,12 +26,24 @@ import { toast } from "react-hot-toast";
 export default function ContractingPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('commercial'); // 'commercial' or 'personal'
-    const [formData, setFormData] = useState({
+    const [commercialFormData, setCommercialFormData] = useState({
         name: '',
         applicantName: '',
         phone: '',
         duration: 'شهر واحد',
         address: '',
+        website: '',
+        notes: '',
+        startDate: new Date().toISOString().split('T')[0], // Default to today
+        totalOrdersLimit: 300,
+        totalAmount: 0
+    });
+    const [individualFormData, setIndividualFormData] = useState({
+        applicantName: '',
+        phone: '',
+        duration: 'شهر واحد',
+        address: '',
+        website: '',
         notes: '',
         startDate: new Date().toISOString().split('T')[0], // Default to today
         totalOrdersLimit: 300,
@@ -39,7 +51,8 @@ export default function ContractingPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const dateInputRef = useRef(null);
-    const [errors, setErrors] = useState({});
+    const [commercialErrors, setCommercialErrors] = useState({});
+    const [individualErrors, setIndividualErrors] = useState({});
     const [expandedId, setExpandedId] = useState(null);
     const [selectedContractId, setSelectedContractId] = useState(null);
     const [addresses, setAddresses] = useState([]);
@@ -84,6 +97,12 @@ export default function ContractingPage() {
 
         fetchAddresses();
     }, []);
+
+    // Get current form data and errors based on active tab
+    const formData = activeTab === 'commercial' ? commercialFormData : individualFormData;
+    const errors = activeTab === 'commercial' ? commercialErrors : individualErrors;
+    const setFormData = activeTab === 'commercial' ? setCommercialFormData : setIndividualFormData;
+    const setErrors = activeTab === 'commercial' ? setCommercialErrors : setIndividualErrors;
 
     // Handle selecting/deselecting delivery locations
     const toggleDeliveryLocation = (addressId) => {
@@ -151,8 +170,8 @@ export default function ContractingPage() {
     const mapDurationType = (arabicDuration) => {
         const durationMap = {
             'شهر واحد': 'monthly',
-            '3 أشهر (خصم 10%)': 'quarterly',
-            '6 أشهر (خصم 20%)': 'semi_annual',
+            '3 أشهر ': 'quarterly',
+            '6 أشهر': 'semi_annual',
             'سنة كاملة': 'yearly'
         };
         return durationMap[arabicDuration] || 'monthly';
@@ -160,14 +179,8 @@ export default function ContractingPage() {
 
     const validateForm = () => {
         let newErrors = {};
-        if (!formData.name) newErrors.name = activeTab === 'commercial' ? "اسم المؤسسة مطلوب" : "الاسم الكامل مطلوب";
         if (!formData.applicantName) newErrors.applicantName = "اسم مقدم الطلب مطلوب";
         if (!formData.phone) newErrors.phone = "رقم الجوال مطلوب";
-        if (!formData.address) newErrors.address = "عنوان الموقع مطلوب";
-        if (!formData.startDate) newErrors.startDate = "تاريخ البدء مطلوب";
-        if (addresses.length > 0 && selectedDeliveryLocations.length === 0) {
-            newErrors.deliveryLocations = "يجب اختيار موقع واحد على الأقل للتوصيل";
-        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -208,7 +221,7 @@ export default function ContractingPage() {
             const apiBody = {
                 contract_type: activeTab === 'personal' ? 'individual' : 'company',
                 applicant_name: formData.applicantName.trim(),
-                company_name: activeTab === 'commercial' ? formData.name.trim() : formData.name.trim() || null,
+                company_name: activeTab === 'commercial' ? (formData.name?.trim() || null) : null,
                 duration_type: mapDurationType(formData.duration),
                 total_orders_limit: formData.totalOrdersLimit || 300,
                 total_amount: formData.totalAmount || 0,
@@ -248,19 +261,35 @@ export default function ContractingPage() {
                     icon: "✅",
                 });
                 
-                // Reset form
-                setFormData({
-                    name: '',
-                    applicantName: '',
-                    phone: '',
-                    duration: 'شهر واحد',
-                    address: '',
-                    notes: '',
-                    startDate: new Date().toISOString().split('T')[0],
-                    totalOrdersLimit: 300,
-                    totalAmount: 0
-                });
-                setErrors({});
+                // Reset form based on active tab
+                if (activeTab === 'commercial') {
+                    setCommercialFormData({
+                        name: '',
+                        applicantName: '',
+                        phone: '',
+                        duration: 'شهر واحد',
+                        address: '',
+                        website: '',
+                        notes: '',
+                        startDate: new Date().toISOString().split('T')[0],
+                        totalOrdersLimit: 300,
+                        totalAmount: 0
+                    });
+                    setCommercialErrors({});
+                } else {
+                    setIndividualFormData({
+                        applicantName: '',
+                        phone: '',
+                        duration: 'شهر واحد',
+                        address: '',
+                        website: '',
+                        notes: '',
+                        startDate: new Date().toISOString().split('T')[0],
+                        totalOrdersLimit: 300,
+                        totalAmount: 0
+                    });
+                    setIndividualErrors({});
+                }
             } else {
                 // Handle API error
                 const errorMessage = data.message || data.error || 'فشل إرسال طلب التعاقد. يرجى المحاولة مرة أخرى';
@@ -433,25 +462,27 @@ export default function ContractingPage() {
                     >
                         <form className="space-y-4 md:space-y-5" onSubmit={handleSubmit}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-                                <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>{activeTab === 'commercial' ? "اسم المؤسسة" : "الاسم الكامل"}</label>
-                                    <div className="relative">
-                                        <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            value={formData.name}
-                                            onChange={handleInputChange}
-                                            placeholder={activeTab === 'commercial' ? "مؤسسة وايت مياه التجارية" : "عبدالله محمد الفهد"}
-                                            className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
-                                        />
+                                {activeTab === 'commercial' && (
+                                    <div className="space-y-1.5 md:space-y-2 relative">
+                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة</label>
+                                        <div className="relative">
+                                            <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleInputChange}
+                                                placeholder="مؤسسة وايت مياه التجارية"
+                                                className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
+                                            />
+                                        </div>
+                                        {errors.name && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                            <span>⚠️</span> {errors.name}
+                                        </p>}
                                     </div>
-                                    {errors.name && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
-                                        <span>⚠️</span> {errors.name}
-                                    </p>}
-                                </div>
+                                )}
                                 <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>اسم مقدم الطلب</label>
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>اسم مقدم الطلب <span className="text-red-500">*</span></label>
                                     <div className="relative">
                                         <FaUser className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
@@ -468,7 +499,7 @@ export default function ContractingPage() {
                                     </p>}
                                 </div>
                                 <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>رقم الجوال</label>
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>رقم الجوال <span className="text-red-500">*</span></label>
                                     <div className="relative">
                                         <FaPhoneAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
@@ -497,58 +528,18 @@ export default function ContractingPage() {
                                             </SelectTrigger>
                                             <SelectContent className="text-right">
                                                 <SelectItem value="شهر واحد">شهر واحد</SelectItem>
-                                                <SelectItem value="3 أشهر (خصم 10%)">3 أشهر (خصم 10%)</SelectItem>
-                                                <SelectItem value="6 أشهر (خصم 20%)">6 أشهر (خصم 20%)</SelectItem>
+                                                <SelectItem value="3 أشهر ">3 أشهر </SelectItem>
+                                                <SelectItem value="6 أشهر ">6 أشهر </SelectItem>
                                                 <SelectItem value="سنة كاملة">سنة كاملة</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
-                                <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>تاريخ البدء</label>
-                                    <div className="relative">
-                                        <input
-                                            ref={dateInputRef}
-                                            type="date"
-                                            name="startDate"
-                                            value={formData.startDate}
-                                            onChange={handleInputChange}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            className={`w-full bg-white dark:bg-card border-2 ${errors.startDate ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md cursor-pointer`}
-                                            onClick={(e) => {
-                                                // Try to show the native date picker
-                                                if (e.currentTarget.showPicker) {
-                                                    e.currentTarget.showPicker();
-                                                }
-                                            }}
-                                        />
-                                        <div 
-                                            className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10 cursor-pointer pointer-events-auto flex items-center justify-center"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                if (dateInputRef.current) {
-                                                    dateInputRef.current.focus();
-                                                    if (dateInputRef.current.showPicker) {
-                                                        dateInputRef.current.showPicker();
-                                                    } else {
-                                                        // Fallback: trigger click on input
-                                                        dateInputRef.current.click();
-                                                    }
-                                                }
-                                            }}
-                                        >
-                                            <FaCalendarAlt className="w-full h-full" />
-                                        </div>
-                                    </div>
-                                    {errors.startDate && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
-                                        <span>⚠️</span> {errors.startDate}
-                                    </p>}
-                                </div>
+                               
                             </div>
 
-                            <div className="space-y-1.5 md:space-y-2 relative">
-                                <label className={`${labelClasses} text-xs md:text-sm`}>عنوان مكانك الرئيسي</label>
+                            <div className="space-y-1.5 md:space-y-2 relative mb-5">
+                                <label className={`${labelClasses} text-xs md:text-sm`}>العنوان</label>
                                 <div className="relative">
                                     <FaMapMarkerAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                     <input
@@ -565,75 +556,27 @@ export default function ContractingPage() {
                                 </p>}
                             </div>
 
-                            {/* Delivery Locations Selection */}
-                            {addresses.length > 0 && (
-                                <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>اختر مواقع التوصيل</label>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto p-3 bg-secondary/20 rounded-lg md:rounded-xl border-2 border-border/40">
-                                        {addresses.map((address) => {
-                                            const isSelected = selectedDeliveryLocations.some(
-                                                loc => loc.saved_location_id === address.id
-                                            );
-                                            const selectedLocation = selectedDeliveryLocations.find(
-                                                loc => loc.saved_location_id === address.id
-                                            );
-                                            return (
-                                                <div
-                                                    key={address.id}
-                                                    onClick={() => toggleDeliveryLocation(address.id)}
-                                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
-                                                        isSelected
-                                                            ? 'bg-[#579BE8]/10 border-2 border-[#579BE8]'
-                                                            : 'bg-white dark:bg-card border-2 border-border/40 hover:border-[#579BE8]/50'
-                                                    }`}
-                                                >
-                                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                                        isSelected
-                                                            ? 'bg-[#579BE8] border-[#579BE8]'
-                                                            : 'border-border/60'
-                                                    }`}>
-                                                        {isSelected && (
-                                                            <FaCheckCircle className="w-3 h-3 text-white" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs md:text-sm font-bold text-foreground">
-                                                                {address.name}
-                                                            </span>
-                                                            {address.is_favorite && (
-                                                                <span className="text-[#579BE8] text-xs">⭐</span>
-                                                            )}
-                                                            {isSelected && selectedLocation && (
-                                                                <span className="text-xs text-[#579BE8] font-medium">
-                                                                    (الأولوية: {selectedLocation.priority})
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            {address.address}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    {selectedDeliveryLocations.length === 0 && (
-                                        <p className={`text-[10px] md:text-xs mr-2 ${
-                                            errors.deliveryLocations ? 'text-red-500 font-bold' : 'text-muted-foreground'
-                                        }`}>
-                                            {errors.deliveryLocations || 'اختر موقع واحد على الأقل للتوصيل'}
-                                        </p>
-                                    )}
-                                    {errors.deliveryLocations && selectedDeliveryLocations.length > 0 && (
-                                        <p className="text-[10px] md:text-xs text-red-500 mr-2 font-bold flex items-center gap-1">
-                                            <span>⚠️</span> {errors.deliveryLocations}
-                                        </p>
-                                    )}
+                            <div className="space-y-1.5 md:space-y-2 relative mb-5">
+                                <label className={`${labelClasses} text-xs md:text-sm`}>رابط الموقع الإلكتروني</label>
+                                <div className="relative">
+                                    <FaGlobe className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
+                                    <input
+                                        type="url"
+                                        name="website"
+                                        value={formData.website}
+                                        onChange={handleInputChange}
+                                        placeholder="https://www.example.com"
+                                        className={`w-full bg-white dark:bg-card border-2 ${errors.website ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
+                                    />
                                 </div>
-                            )}
+                                {errors.website && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                    <span>⚠️</span> {errors.website}
+                                </p>}
+                            </div>
 
-                            <div className="space-y-1.5 md:space-y-2 relative">
+                          
+
+                            <div className="space-y-1.5 md:space-y-2 relative ">
                                 <label className={`${labelClasses} text-xs md:text-sm`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
                                 <div className="relative">
                                     <FaEdit className={`absolute right-3 md:right-4 top-3 md:top-4 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />

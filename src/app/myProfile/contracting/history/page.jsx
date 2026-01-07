@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     FaArrowRight, FaChevronRight, FaCalendarAlt, FaFileDownload,
-    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle, FaTimes, FaBan, FaRedoAlt
+    FaUser, FaPhoneAlt, FaMapMarkerAlt, FaCheckCircle, FaTimes, FaBan, FaRedoAlt, FaSync
 } from "react-icons/fa";
 import { MdBusinessCenter, MdFilterList } from "react-icons/md";
 import { IoSearchOutline, IoDocumentText } from "react-icons/io5";
@@ -23,6 +23,7 @@ import flatpickr from "flatpickr";
 import { Arabic } from "flatpickr/dist/l10n/ar.js";
 import "flatpickr/dist/flatpickr.min.css";
 import { toast } from "react-hot-toast";
+import Swal from "sweetalert2";
 
 export default function ContractHistoryPage() {
     const router = useRouter();
@@ -38,72 +39,125 @@ export default function ContractHistoryPage() {
     const [selectedContract, setSelectedContract] = useState(null);
     const [terminationReason, setTerminationReason] = useState("");
     const [mounted, setMounted] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
+    const [contractHistory, setContractHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setMounted(true);
+        fetchContracts();
     }, []);
 
-    // Sample contract history data
-    const contractHistory = [
-        {
-            id: "CONT-882",
-            type: "commercial",
-            title: "مؤسسة وايت مياه التجارية",
-            applicant: "فهد السليمان",
-            phone: "0501234567",
-            address: "الرياض، حي الملقا، شارع الأمير محمد بن سعد",
-            startDate: "15 نوفمبر 2024",
-            duration: "6 أشهر",
-            endDate: "15 مايو 2025",
-            cost: "4,500",
-            status: "active",
-            notes: "توصيل دوري كل يوم سبت واثنين"
-        },
-        {
-            id: "CONT-721",
-            type: "personal",
-            title: "منزل حي الملقا",
-            applicant: "عبدالله محمد الفهد",
-            phone: "0559876543",
-            address: "الرياض، حي النرجس، فيلا 12",
-            startDate: "02 نوفمبر 2024",
-            duration: "شهر واحد",
-            endDate: "02 ديسمبر 2024",
-            cost: "800",
-            status: "completed",
-            notes: "الاتصال قبل الوصول بـ 15 دقيقة"
-        },
-        {
-            id: "CONT-654",
-            type: "commercial",
-            title: "شركة النور للتجارة",
-            applicant: "سعد العتيبي",
-            phone: "0551234567",
-            address: "جدة، حي الروضة، شارع الأمير سلطان",
-            startDate: "20 أكتوبر 2024",
-            duration: "3 أشهر",
-            endDate: "20 يناير 2025",
-            cost: "2,400",
-            status: "active",
-            notes: "توصيل صباحي فقط"
-        },
-        {
-            id: "CONT-543",
-            type: "personal",
-            title: "استراحة العليا",
-            applicant: "خالد الدوسري",
-            phone: "0567891234",
-            address: "الرياض، حي العليا، طريق الملك فهد",
-            startDate: "10 سبتمبر 2024",
-            duration: "شهر واحد",
-            endDate: "10 أكتوبر 2024",
-            cost: "600",
-            status: "completed",
-            notes: ""
-        },
-    ];
+    const fetchContracts = async () => {
+        try {
+            setLoading(true);
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.error("يجب تسجيل الدخول لعرض العقود", {
+                    duration: 3000,
+                    icon: "❌",
+                });
+                setLoading(false);
+                return;
+            }
+
+            const response = await fetch('http://moya.talaaljazeera.com/api/v1/contracts/active', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && data.success && data.data) {
+                // Handle single contract object (active contract endpoint returns single object)
+                const contract = data.data;
+                
+                // Format contract ID - use contract_number if available, otherwise use id
+                let contractId = contract.contract_number || contract.id?.toString() || '';
+                if (contractId && !contractId.startsWith('CONT-') && !contractId.startsWith('CONTRACT-')) {
+                    contractId = `CONT-${contractId}`;
+                }
+                
+                // Get address from delivery_locations if available
+                // Try to get address from saved_location, or construct from city/area if available
+                let address = '';
+                if (contract.delivery_locations && contract.delivery_locations.length > 0) {
+                    const savedLocation = contract.delivery_locations[0].saved_location;
+                    if (savedLocation) {
+                        address = savedLocation.address || 
+                                 (savedLocation.city && savedLocation.area 
+                                     ? `${savedLocation.city}, ${savedLocation.area}` 
+                                     : savedLocation.city || savedLocation.area || '');
+                    }
+                }
+                
+                // Map single contract to array format
+                const mappedContract = {
+                    id: contractId,
+                    type: contract.contract_type === 'company' ? 'commercial' : 'personal',
+                    title: contract.company_name || 'عقد بدون اسم',
+                    applicant: contract.applicant_name || '',
+                    phone: '', // Phone not in API response
+                    address: address,
+                    startDate: contract.start_date ? new Date(contract.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    duration: mapDurationToArabic(contract.duration_type),
+                    endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    cost: contract.total_amount?.toString() || '0',
+                    status: contract.status || 'active',
+                    notes: contract.notes || '',
+                    // Additional fields from API
+                    contractId: contract.id,
+                    contractNumber: contract.contract_number,
+                    remainingOrders: contract.remaining_orders,
+                    totalOrdersLimit: contract.total_orders_limit,
+                    paidAmount: contract.paid_amount,
+                    remainingAmount: contract.remaining_amount
+                };
+                
+                setContractHistory([mappedContract]);
+            } else {
+                // Fallback to empty array if API fails
+                setContractHistory([]);
+                if (!response.ok) {
+                    toast.error(data.message || "فشل تحميل العقود", {
+                        duration: 3000,
+                        icon: "❌",
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching contracts:', error);
+            toast.error("حدث خطأ أثناء تحميل العقود", {
+                duration: 3000,
+                icon: "❌",
+            });
+            setContractHistory([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const mapDurationToArabic = (durationType) => {
+        const durationMap = {
+            'monthly': 'شهر واحد',
+            'quarterly': '3 أشهر',
+            'semi_annual': '6 أشهر',
+            'yearly': 'سنة كاملة'
+        };
+        return durationMap[durationType] || durationType;
+    };
+
 
     const filteredContracts = contractHistory.filter(contract => {
+        // Exclude completed contracts
+        if (contract.status === "completed") {
+            return false;
+        }
         const matchesTab = activeTab === "all" || contract.type === activeTab;
         const matchesStatus = selectedStatus === "all" || contract.status === selectedStatus;
         const matchesSearch = contract.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,37 +253,167 @@ export default function ContractHistoryPage() {
         setTerminationReason("");
     };
 
-    const handleTerminationConfirm = () => {
+    const handleTerminationConfirm = async () => {
         if (!terminationReason.trim()) {
             toast.error("يرجى إدخال سبب الإنهاء");
             return;
         }
 
-        // Here you would typically make an API call to terminate the contract
-        // For now, we'll just show a success message
-        toast.success(`تم إرسال طلب إنهاء العقد ${selectedContract.id} بنجاح`, {
-            duration: 4000,
-            icon: "✅",
+        if (!selectedContract) return;
+
+        setIsCanceling(true);
+        const loadingToast = toast.loading("جاري إلغاء العقد...", {
+            duration: Infinity,
         });
 
-        setShowTerminationModal(false);
-        setSelectedContract(null);
-        setTerminationReason("");
+        try {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يجب تسجيل الدخول لإلغاء العقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                setIsCanceling(false);
+                return;
+            }
+
+            // Extract contract ID - use the numeric contractId field if available, otherwise extract from id string
+            let contractId = selectedContract.contractId || selectedContract.id;
+            if (typeof contractId === 'string') {
+                // Remove CONT- or CONTRACT- prefix if present
+                contractId = contractId.replace(/^(CONT-|CONTRACT-)/, '');
+            }
+
+            const response = await fetch(`http://moya.talaaljazeera.com/api/v1/contracts/${contractId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    reason: terminationReason.trim()
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم إلغاء العقد بنجاح", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+
+                setShowTerminationModal(false);
+                setSelectedContract(null);
+                setTerminationReason("");
+
+                // Refresh contracts list
+                await fetchContracts();
+            } else {
+                const errorMessage = data.message || data.error || 'فشل إلغاء العقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            console.error('Error canceling contract:', error);
+            toast.error("حدث خطأ أثناء إلغاء العقد. يرجى المحاولة مرة أخرى", {
+                duration: 5000,
+                icon: "❌",
+            });
+        } finally {
+            setIsCanceling(false);
+        }
     };
 
     // Handle renew contract
-    const handleRenewClick = (contract, e) => {
+    const handleRenewClick = async (contract, e) => {
         e.stopPropagation();
         
-        // Here you would typically make an API call to renew the contract
-        // For now, we'll show a success message and navigate to the contracting page
-        toast.success(`تم إرسال طلب تجديد العقد ${contract.id} بنجاح`, {
-            duration: 4000,
-            icon: "✅",
+        const result = await Swal.fire({
+            title: "تجديد العقد",
+            text: "هل أنت متأكد من تجديد هذا العقد؟",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "نعم، تجديد العقد",
+            cancelButtonText: "إلغاء",
+            confirmButtonColor: "#579BE8",
+            cancelButtonColor: "#6b7280",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            customClass: {
+                popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                confirmButton: "rounded-2xl font-black px-10 py-3",
+                cancelButton: "rounded-2xl font-black px-10 py-3",
+            }
         });
-        
-        // Optionally navigate to the contracting page to create a new contract
-        // router.push('/contracts');
+
+        if (!result.isConfirmed) return;
+
+        const loadingToast = toast.loading("جاري تجديد العقد...", {
+            duration: Infinity,
+        });
+
+        try {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يجب تسجيل الدخول لتجديد العقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                return;
+            }
+
+            // Extract contract ID - use the numeric contractId field if available, otherwise extract from id string
+            let contractId = contract.contractId || contract.id;
+            if (typeof contractId === 'string') {
+                // Remove CONT- or CONTRACT- prefix if present
+                contractId = contractId.replace(/^(CONT-|CONTRACT-)/, '');
+            }
+            const response = await fetch(`http://moya.talaaljazeera.com/api/v1/contracts/${contractId}/renew`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم تجديد العقد بنجاح", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+                
+                // Refresh contracts list
+                await fetchContracts();
+            } else {
+                const errorMessage = data.message || data.error || 'فشل تجديد العقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error("حدث خطأ أثناء تجديد العقد. يرجى المحاولة مرة أخرى", {
+                duration: 5000,
+                icon: "❌",
+            });
+        }
     };
 
     const tabs = [
@@ -241,21 +425,31 @@ export default function ContractHistoryPage() {
     const statusOptions = [
         { id: "all", label: "جميع الحالات" },
         { id: "active", label: "نشط" },
-        { id: "completed", label: "مكتمل" },
     ];
 
-    // Calculate statistics
+    // Calculate statistics - only for active contracts
     const totalActive = contractHistory.filter(c => c.status === "active").length;
-    const totalCompleted = contractHistory.filter(c => c.status === "completed").length;
     const totalValue = contractHistory.reduce((sum, c) => {
         const cost = typeof c.cost === 'string' ? c.cost.replace(/,/g, '') : c.cost;
         return sum + (Number(cost) || 0);
     }, 0);
 
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="min-h-[400px] flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="w-12 h-12 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-muted-foreground font-medium">جاري تحميل العقود...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
             {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 lg:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-5">
                 {/* Active Contracts */}
                 <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
@@ -277,30 +471,6 @@ export default function ContractHistoryPage() {
                             <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalActive}</h3>
                         </div>
                         <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">عقود قيد التنفيذ</p>
-                    </div>
-                </div>
-
-                {/* Completed Contracts */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
-                    <div className="absolute -right-6 -top-6 opacity-10">
-                        <IoDocumentText size={100} className="-rotate-12" />
-                    </div>
-                    <div className="absolute -left-4 -bottom-4 opacity-10">
-                        <div className="w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
-                    </div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
-                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
-                                <IoDocumentText className="text-sm md:text-base lg:text-lg" />
-                            </div>
-                            <p className="text-xs md:text-sm font-bold opacity-90">العقود المكتملة</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalCompleted}</h3>
-                        </div>
-                        <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">عقود منتهية</p>
                     </div>
                 </div>
 
@@ -395,6 +565,14 @@ export default function ContractHistoryPage() {
                         </SelectContent>
                     </Select>
 
+                    <button 
+                        onClick={fetchContracts}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl md:rounded-2xl hover:shadow-lg md:hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 transition-all duration-200 font-bold text-xs md:text-sm shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FaSync className={`w-3.5 h-3.5 md:w-4 md:h-4 ${loading ? 'animate-spin' : ''}`} />
+                        <span>تحديث</span>
+                    </button>
                     <button className="flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl hover:shadow-lg md:hover:shadow-xl hover:shadow-[#579BE8]/25 hover:-translate-y-0.5 transition-all duration-200 font-bold text-xs md:text-sm shadow-md active:scale-[0.98]">
                         <FaFileDownload className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         <span>تصدير</span>
@@ -458,15 +636,15 @@ export default function ContractHistoryPage() {
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         layout
                                         className="hover:bg-secondary/10 transition-colors group cursor-pointer"
-                                        onClick={() => router.push(`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`)}
+                                        onClick={() => router.push(`/myProfile/contracting/details/${contract.contractId || contract.id.toString().replace(/^(CONT-|CONTRACT-)/, '')}`)}
                                     >
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
                                             <Link 
-                                                href={`/myProfile/contracting/details/${contract.id.replace('CONT-', '')}`} 
+                                                href={`/myProfile/contracting/details/${contract.contractId || contract.id.toString().replace(/^(CONT-|CONTRACT-)/, '')}`} 
                                                 className="font-bold text-[#579BE8] hover:underline text-xs md:text-sm whitespace-nowrap"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
-                                                {contract.id}
+                                                {contract.id.length > 5 ? contract.id.substring(0, 5) + '...' : contract.id}
                                             </Link>
                                         </td>
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
@@ -509,13 +687,9 @@ export default function ContractHistoryPage() {
                                             </div>
                                         </td>
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
-                                            <span className={`inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap ${contract.status === "active"
-                                                ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400"
-                                                : "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"
-                                                }`}>
-                                                <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${contract.status === "active" ? "bg-green-600" : "bg-gray-600"
-                                                    }`}></span>
-                                                {contract.status === "active" ? "نشط" : "مكتمل"}
+                                            <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
+                                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-600"></span>
+                                                نشط
                                             </span>
                                         </td>
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
@@ -527,16 +701,6 @@ export default function ContractHistoryPage() {
                                                 >
                                                     <FaBan className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                                     <span>إنهاء</span>
-                                                </button>
-                                            )}
-                                            {contract.status === "completed" && (
-                                                <button
-                                                    onClick={(e) => handleRenewClick(contract, e)}
-                                                    className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-[#579BE8]/10 hover:bg-[#579BE8]/20 dark:bg-[#579BE8]/20 dark:hover:bg-[#579BE8]/30 text-[#579BE8] dark:text-[#579BE8] transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
-                                                    title="تجديد العقد"
-                                                >
-                                                    <FaRedoAlt className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                                                    <span>تجديد</span>
                                                 </button>
                                             )}
                                         </td>
@@ -676,22 +840,32 @@ export default function ContractHistoryPage() {
                                             onChange={(e) => setTerminationReason(e.target.value)}
                                             placeholder="يرجى كتابة سبب إنهاء العقد..."
                                             rows={4}
-                                            className="w-full px-4 py-3 bg-white dark:bg-card border-2 border-border/60 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all font-medium resize-none placeholder:font-medium"
+                                            disabled={isCanceling}
+                                            className="w-full px-4 py-3 bg-white dark:bg-card border-2 border-border/60 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-500 transition-all font-medium resize-none placeholder:font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
 
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={handleTerminationCancel}
-                                            className="flex-1 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all"
+                                            disabled={isCanceling}
+                                            className="flex-1 px-4 py-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             إلغاء
                                         </button>
                                         <button
                                             onClick={handleTerminationConfirm}
-                                            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold shadow-lg shadow-red-500/30 hover:shadow-xl transition-all"
+                                            disabled={isCanceling}
+                                            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold shadow-lg shadow-red-500/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
-                                            تأكيد
+                                            {isCanceling ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    <span>جاري الإلغاء...</span>
+                                                </>
+                                            ) : (
+                                                'تأكيد'
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -704,3 +878,4 @@ export default function ContractHistoryPage() {
         </div>
     );
 }
+
