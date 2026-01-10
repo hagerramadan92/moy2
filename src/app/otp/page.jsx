@@ -465,36 +465,7 @@ export default function OtpPage() {
 									</Button>
 								</motion.div>
 							</motion.div>
-
-							{/* Footer Note */}
-							<motion.div
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								transition={{ delay: 0.6 }}
-								className="pt-4 border-t border-gray-200"
-							>
-								<div className="flex flex-col items-center gap-2">
-									<p className="text-xs text-center text-gray-500 flex items-center gap-2">
-										<span>❓</span>
-										لم تستلم الرمز؟
-									</p>
-									<div className="flex items-center gap-2 text-xs">
-										<button
-											onClick={handleBack}
-											className="text-[#579BE8] font-bold hover:underline hover:bg-[#579BE8]/10 px-3 py-1 rounded-lg transition-colors"
-										>
-											تحقق من رسائل الواتساب
-										</button>
-										<span className="text-gray-300">|</span>
-										<button
-											onClick={handleBack}
-											className="text-gray-600 font-medium hover:text-[#579BE8] hover:underline transition-colors"
-										>
-											عد للخلف
-										</button>
-									</div>
-								</div>
-							</motion.div>
+ 
 						</>
 					)}
 				</div>

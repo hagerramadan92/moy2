@@ -10,7 +10,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import api from "@/lib/api";
+import api from "@/utils/api";
+import { Scale } from "lucide-react";
 
 export async function getServices() {
 	const res = await api.get("/services");
@@ -24,6 +25,7 @@ export default function ServiceSelect({
 	value,
 	onChange,
 	onTouched,
+	label,
 	status = "default",
 	placeholder = "اختر حجم المويه",
 	dir = "rtl",
@@ -75,34 +77,41 @@ export default function ServiceSelect({
 	}, [onlyActive]);
 
 	return (
-		<Select
-			value={value}
-			onValueChange={(v) => {
-				onTouched?.();
-				onChange?.(v);
-			}}
-			onOpenChange={() => onTouched?.()}
-			dir={dir}
-			disabled={loading}
-		>
-			<SelectTrigger className={triggerClass}>
-				<SelectValue
-					placeholder={loading ? "جاري تحميل الأحجام..." : placeholder}
-					className="text-[16px]"
-				/>
-			</SelectTrigger>
+		<div className="flex flex-col items-start gap-2" >
+			<label className="flex items-center gap-2 text-gray-700 font-bold">
+				<Scale size={20} className={'text-[#579BE8]'} />
+				{label}
+			</label>
 
-			<SelectContent className="text-right">
-				{items.map((it) => (
-					<SelectItem
-						key={it.id}
-						value={String(it.id)} // نخزن ID
-						className="text-[16px] py-2 text-right flex-row-reverse justify-end"
-					>
-						{it.name}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
+			<Select
+				value={value}
+				onValueChange={(v) => {
+					onTouched?.();
+					onChange?.(v);
+				}}
+				onOpenChange={() => onTouched?.()}
+				dir={dir}
+				disabled={loading}
+			>
+				<SelectTrigger className={triggerClass}>
+					<SelectValue
+						placeholder={loading ? "جاري تحميل الأحجام..." : placeholder}
+						className="text-[16px]"
+					/>
+				</SelectTrigger>
+
+				<SelectContent className="text-right">
+					{items.map((it) => (
+						<SelectItem
+							key={it.id}
+							value={String(it.id)} // نخزن ID
+							className="text-[16px] py-2 text-right flex-row-reverse justify-end"
+						>
+							{it.name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</div>
 	);
 }

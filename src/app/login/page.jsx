@@ -21,19 +21,19 @@ import {
 } from "@/components/ui/select";
 
 const COUNTRIES = [
+	{
+		key: "SA",
+		nameAr: "السعودية",
+		dialCode: "+966",
+		phone: { min: 9, max: 9, regex: /^5\d{8}$/ },
+		placeholder: "5xxxxxxxx (مثال: 5XXXXXXXX)",
+	},
   {
     key: "EG",
     nameAr: "مصر",
     dialCode: "+20",
     phone: { min: 10, max: 10, regex: /^(10|11|12|15)\d{8}$/ },
     placeholder: "10xxxxxxxx (مثال: 1101727657)",
-  },
-  {
-    key: "SA",
-    nameAr: "السعودية",
-    dialCode: "+966",
-    phone: { min: 9, max: 9, regex: /^5\d{8}$/ },
-    placeholder: "5xxxxxxxx (مثال: 5XXXXXXXX)",
   },
   {
     key: "AE",
@@ -78,7 +78,7 @@ function digitsOnly(v) {
 
 export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryKey, setCountryKey] = useState("EG");
+  const [countryKey, setCountryKey] = useState("SA");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();

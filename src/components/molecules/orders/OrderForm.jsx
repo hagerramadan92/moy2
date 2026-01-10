@@ -2,8 +2,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Droplets, Scale, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, Search, ArrowLeft } from 'lucide-react';
@@ -17,6 +17,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import api from '@/utils/api';
+import WaterTypeSelect from '@/components/common/WaterTypeSelect';
+import ServiceSelect from '@/components/common/ServiceSelect';
 
 const LocationPickerModal = dynamic(
 	() => import('./LocationPickerModal'),
@@ -30,6 +33,13 @@ export default function OrderForm() {
 	const [locationData, setLocationData] = useState(null);
 	const [showSchedule, setShowSchedule] = useState(false);
 	const [isMapOpen, setIsMapOpen] = useState(false);
+	const searchParams = useSearchParams();
+
+	useEffect(() => {
+		setWaterType(searchParams.get("waterType") || "");
+		setQuantity(searchParams.get("waterSize") || "");
+	}, [searchParams]);
+
 
 	// Validation state - tracks which fields have been interacted with
 	const [touched, setTouched] = useState({
@@ -103,7 +113,6 @@ export default function OrderForm() {
 
 	return (
 		<div className="min-h-screen bg-gray-50/50 p-4 md:p-8 flex justify-center items-start pt-12 md:pt-16">
-
 			<LocationPickerModal
 				isOpen={isMapOpen}
 				onClose={() => setIsMapOpen(false)}
@@ -205,105 +214,19 @@ export default function OrderForm() {
 						{/* Details Grid */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							{/* Water Type */}
-							<motion.div variants={itemVariants} className="space-y-3">
-								<label className="flex items-center gap-2 text-gray-700 font-bold">
-									<Droplets size={20} className={getFieldStatus('waterType') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
-									نوع المياه
-									{showSuccess('waterType') && (
-										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
-										</motion.span>
-									)}
-								</label>
-								<Select
-									value={waterType}
-									onValueChange={(value) => {
-										setWaterType(value);
-										setTouched(prev => ({ ...prev, waterType: true }));
-									}}
-									onOpenChange={() => setTouched(prev => ({ ...prev, waterType: true }))}
-									dir="rtl"
-								>
-									<SelectTrigger className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right flex items-center text-[16px] p-6 shadow-sm transition-all
-                                        ${getFieldStatus('waterType') === 'success'
-											? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
-											: getFieldStatus('waterType') === 'error'
-												? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
-												: 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
-										}`}>
-										<SelectValue placeholder="اختر نوع المويه" className="text-[16px]" />
-									</SelectTrigger>
-									<SelectContent className="text-right">
-										<SelectItem value="safe" className="text-[16px] py-2 text-right flex-row-reverse justify-end">صالحة للشرب</SelectItem>
-										<SelectItem value="natural" className="text-[16px] py-2 text-right flex-row-reverse justify-end">طبيعي</SelectItem>
-										<SelectItem value="mineral" className="text-[16px] py-2 text-right flex-row-reverse justify-end">معدني</SelectItem>
-										<SelectItem value="distilled" className="text-[16px] py-2 text-right flex-row-reverse justify-end">مقطر</SelectItem>
-									</SelectContent>
-								</Select>
-								<AnimatePresence>
-									{showError('waterType') && (
-										<motion.p
-											initial={{ opacity: 0, y: -10 }}
-											animate={{ opacity: 1, y: 0 }}
-											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1"
-										>
-											<AlertCircle size={14} />
-											الرجاء اختيار نوع المياه
-										</motion.p>
-									)}
-								</AnimatePresence>
-							</motion.div>
 
-							{/* Quantity */}
-							<motion.div variants={itemVariants} className="space-y-3">
-								<label className="flex items-center gap-2 text-gray-700 font-bold">
-									<Scale size={20} className={getFieldStatus('quantity') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
-									الكمية (طن)
-									{showSuccess('quantity') && (
-										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
-										</motion.span>
-									)}
-								</label>
-								<Select
-									value={quantity}
-									onValueChange={(value) => {
-										setQuantity(value);
-										setTouched(prev => ({ ...prev, quantity: true }));
-									}}
-									onOpenChange={() => setTouched(prev => ({ ...prev, quantity: true }))}
-									dir="rtl"
-								>
-									<SelectTrigger className={`w-full h-14 rounded-xl bg-white px-4 focus:ring-2 text-right flex items-center text-[16px] p-6 shadow-sm transition-all
-                                        ${getFieldStatus('quantity') === 'success'
-											? 'border-2 border-[#579BE8]/50 focus:ring-[#579BE8]/30 bg-[#579BE8]/5'
-											: getFieldStatus('quantity') === 'error'
-												? 'border-2 border-red-400 focus:ring-red-300 bg-red-50/50'
-												: 'border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50'
-										}`}>
-										<SelectValue placeholder="اختر حجم المويه" className="text-[16px]" />
-									</SelectTrigger>
-									<SelectContent className="text-right">
-										{[...Array(10)].map((_, i) => (
-											<SelectItem key={i + 1} value={(i + 1).toString()} className="text-[16px] py-2 text-right flex-row-reverse justify-end">{i + 1} طن</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<AnimatePresence>
-									{showError('quantity') && (
-										<motion.p
-											initial={{ opacity: 0, y: -10 }}
-											animate={{ opacity: 1, y: 0 }}
-											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1"
-										>
-											<AlertCircle size={14} />
-											الرجاء اختيار الكمية
-										</motion.p>
-									)}
-								</AnimatePresence>
-							</motion.div>
+							<WaterTypeSelect value={waterType}
+								onChange={(value) => {
+									setWaterType(value);
+									setTouched(prev => ({ ...prev, waterType: true }));
+								}} label="	نوع المياه" />
+
+							<ServiceSelect label="الكمية (طن)" value={quantity}
+								onChange={(value) => {
+									setQuantity(value);
+									setTouched(prev => ({ ...prev, quantity: true }));
+								}} />
+
 						</div>
 
 						{/* Actions */}
@@ -406,3 +329,4 @@ export default function OrderForm() {
 		</div>
 	);
 }
+

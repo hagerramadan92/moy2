@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React from "react";
-import WaterTypeSelect from "../homepage/WaterTypeSelect";
-import WaterSizeSelect from "../homepage/WaterSizeSelect";
+import React from "react"; 
 import AppDownloadButtons from "../homepage/AppDownloadButtons";
 
 export default function Cover({ data }) {

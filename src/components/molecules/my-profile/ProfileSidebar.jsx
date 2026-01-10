@@ -78,7 +78,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
+            <aside className="hidden  !mt-[25px] min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
                 <div className="flex flex-col gap-8">
                     {navItems.map((section, idx) => (
                         <div key={idx} className="flex flex-col gap-4">
@@ -181,12 +181,11 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
             </aside>
 
             {/* Mobile Drawer */}
-            <div
-                className={`fixed inset-0 z-[100] min-[1113px]:hidden transition-all duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+            <div className={`fixed  inset-0 z-[10000] min-[1113px]:hidden transition-all duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
             >
                 {/* Backdrop */}
                 <div
-                    className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                    className=" absolute inset-0 bg-black/40 backdrop-blur-sm"
                     onClick={() => setIsOpen(false)}
                 />
 

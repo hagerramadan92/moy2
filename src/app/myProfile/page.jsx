@@ -612,115 +612,8 @@ export default function MyProfilePage() {
             }
         );
     };
-
-    const handleDisableAccount = () => {
-        toast(
-            (t) => (
-                <div className="flex flex-col gap-3 p-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
-                            <FaExclamationTriangle className="w-5 h-5 text-warning" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-foreground">هل أنت متأكد؟</p>
-                            <p className="text-sm text-muted-foreground">سيتم تعطيل حسابك مؤقتاً ولن تتمكن من تلقي الإشعارات.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-secondary hover:bg-secondary/80 text-foreground transition-all"
-                        >
-                            إلغاء
-                        </button>
-                        <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                toast.success("تم تعطيل حسابك بنجاح", {
-                                    icon: <FaCheckCircle className="w-5 h-5" />,
-                                    style: {
-                                        background: "#579BE8",
-                                        color: "#fff",
-                                        borderRadius: "12px",
-                                        padding: "16px",
-                                    },
-                                });
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-[#579BE8] hover:bg-[#579BE8]/90 text-white transition-all"
-                        >
-                            نعم، عطل الحساب
-                        </button>
-                    </div>
-                </div>
-            ),
-            {
-                duration: 5000,
-                style: {
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "16px",
-                    padding: "16px",
-                    maxWidth: "400px",
-                },
-            }
-        );
-    };
-    const handleDeleteAccount = () => {
-        toast(
-            (t) => (
-                <div className="flex flex-col gap-3 p-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                            <FaExclamationTriangle className="w-5 h-5 text-destructive" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-foreground">هل أنت متأكد؟</p>
-                            <p className="text-sm text-muted-foreground">سيتم حذف حسابك نهائياً ولن تتمكن من استخدام التطبيق.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-secondary hover:bg-secondary/80 text-foreground transition-all"
-                        >
-                            إلغاء
-                        </button>
-                        <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                toast.success("تم حذف حسابك بنجاح", {
-                                    icon: <FaCheckCircle className="w-5 h-5" />,
-                                    style: {
-                                        background: "#579BE8",
-                                        color: "#fff",
-                                        borderRadius: "12px",
-                                        padding: "16px",
-                                    },
-                                });
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-destructive hover:bg-destructive/90 text-white transition-all"
-                        >
-                            نعم، حذف الحساب
-                        </button>
-                    </div>
-                </div>
-            ),
-            {
-                duration: 5000,
-                style: {
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "16px",
-                    padding: "16px",
-                    maxWidth: "400px",
-                },
-            }
-        );
-    };
+ 
+ 
 
     const handleDeleteImage = () => {
         toast(
@@ -859,11 +752,6 @@ export default function MyProfilePage() {
         return "";
     };
 
-    const validatePhone = (value) => {
-        // No validation - phone field is always valid
-        return "";
-    };
-
     const validateLocation = (value) => {
         // Field is optional, only validate if it has a value
         if (!value.trim()) {
@@ -891,15 +779,7 @@ export default function MyProfilePage() {
             setErrors(prev => ({ ...prev, phone: "" }));
         }
     };
-
-    const handleLocationChange = (e) => {
-        const value = e.target.value;
-        setLocation(value);
-        if (errors.location) {
-            setErrors(prev => ({ ...prev, location: validateLocation(value) }));
-        }
-    };
-
+ 
     const handleSaveChanges = async () => {
         // Allow saving without changes - user can save name only, avatar only, or both
         // No validation required - just save current state
@@ -1122,7 +1002,7 @@ export default function MyProfilePage() {
     return (
         <div className="flex flex-col gap-4 sm:gap-6 md:gap-8 fade-in-up px-2 sm:px-0">
             {/* Profile Hero Section with Gradient */}
-            <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl shadow-xl overflow-hidden border border-border/60">
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl shadow-xl overflow-hidden border border-border/60">
                 <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white relative overflow-hidden">
                     {/* Decorative Background Elements */}
                     <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 rotate-12">
@@ -1170,13 +1050,13 @@ export default function MyProfilePage() {
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                                 <button 
                                     onClick={handleDeleteImage}
-                                    className="px-3 sm:px-4 md:px-6 cursor-pointer py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm border-2 border-white/30 bg-white/10 backdrop-blur-md text-white hover:bg-white/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                                    className="px-3 sm:px-4 md:px-6 cursor-pointer py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-xl font-bold text-xs sm:text-sm border-2 border-white/30 bg-white/10 backdrop-blur-md text-white hover:bg-white/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
                                 >
                                     حذف الصورة
                                 </button>
                                 <button 
                                     onClick={handleUploadImage}
-                                    className="px-3 sm:px-4 md:px-6 cursor-pointer py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm bg-white text-[#579BE8] hover:shadow-2xl hover:-translate-y-1 transition-all shadow-lg"
+                                    className="px-3 sm:px-4 md:px-6 cursor-pointer py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-xl font-bold text-xs sm:text-sm bg-white text-[#579BE8] hover:shadow-2xl hover:-translate-y-1 transition-all shadow-lg"
                                 >
                                     رفع الصورة
                                 </button>
@@ -1203,7 +1083,7 @@ export default function MyProfilePage() {
                                     onBlur={() => setErrors(prev => ({ ...prev, fullName: validateFullName(fullName) }))}
                                     placeholder="الاسم الكامل"
                                     disabled={loading}
-                                    className={`h-12 sm:h-14 md:h-[60px] pr-10 sm:pr-12 text-foreground text-sm sm:text-base font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all ${
+                                    className={`h-12 sm:h-14 md:h-[60px] pr-10 sm:pr-12 text-foreground text-sm sm:text-base font-medium border-2 rounded-xl sm:rounded-xl bg-secondary/30 transition-all ${
                                         loading ? "opacity-60 cursor-not-allowed" : ""
                                     } ${
                                         errors.fullName 
@@ -1213,7 +1093,7 @@ export default function MyProfilePage() {
                                 />
                             </div>
                             {errors.fullName && (
-                                <p className="text-destructive text-xs sm:text-sm font-medium flex items-center gap-1 bg-destructive/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-destructive/20">
+                                <p className="text-destructive text-xs sm:text-sm font-medium flex items-center gap-1 bg-destructive/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-destructive/20">
                                     <span>⚠</span>
                                     {errors.fullName}
                                 </p>
@@ -1241,7 +1121,7 @@ export default function MyProfilePage() {
                                     dir="ltr"
                                     maxLength={10}
                                     disabled={true}
-                                    className={`text-left pl-20 sm:pl-24 h-12 sm:h-14 md:h-[60px] text-foreground text-sm sm:text-base pr-10 sm:pr-12 font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all opacity-60 cursor-not-allowed ${
+                                    className={`text-left pl-20 sm:pl-24 h-12 sm:h-14 md:h-[60px] text-foreground text-sm sm:text-base pr-10 sm:pr-12 font-medium border-2 rounded-xl sm:rounded-xl bg-secondary/30 transition-all opacity-60 cursor-not-allowed ${
                                         errors.phone 
                                             ? "border-destructive/50 focus:border-destructive focus:ring-2 sm:focus:ring-4 focus:ring-destructive/10" 
                                             : "border-border/50 focus:border-primary focus:ring-2 sm:focus:ring-4 focus:ring-primary/10"
@@ -1249,55 +1129,25 @@ export default function MyProfilePage() {
                                 />
                             </div>
                             {errors.phone && (
-                                <p className="text-destructive text-xs sm:text-sm font-medium flex items-center gap-1 bg-destructive/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-destructive/20">
+                                <p className="text-destructive text-xs sm:text-sm font-medium flex items-center gap-1 bg-destructive/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-destructive/20">
                                     <span>⚠</span>
                                     {errors.phone}
                                 </p>
                             )}
-                        </div>
-
-                        {/* Location */}
-                        {/* <div className="space-y-1 sm:space-y-2 lg:col-span-2">
-                            <label className="block text-xs sm:text-sm font-bold text-foreground/80 mr-2">الموقع</label>
-                            <div className="relative group">
-                                <div className={`absolute top-1/2 -translate-y-1/2 right-3 sm:right-4 transition-colors ${errors.location ? "text-destructive" : "text-muted-foreground/60 group-focus-within:text-primary"}`}>
-                                    <FaMapMarkerAlt className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </div>
-                                <Input
-                                    value={location}
-                                    onChange={handleLocationChange}
-                                    onBlur={() => setErrors(prev => ({ ...prev, location: validateLocation(location) }))}
-                                    placeholder="الرياض - مستشفى الملك فيصل"
-                                    disabled={loading}
-                                    className={`h-12 sm:h-14 md:h-[60px] pr-10 sm:pr-12 text-foreground text-sm sm:text-base font-medium border-2 rounded-xl sm:rounded-2xl bg-secondary/30 transition-all ${
-                                        loading ? "opacity-60 cursor-not-allowed" : ""
-                                    } ${
-                                        errors.location 
-                                            ? "border-destructive/50 focus:border-destructive focus:ring-2 sm:focus:ring-4 focus:ring-destructive/10" 
-                                            : "border-border/50 focus:border-primary focus:ring-2 sm:focus:ring-4 focus:ring-primary/10"
-                                    }`}
-                                />
-                            </div>
-                            {errors.location && (
-                                <p className="text-destructive text-xs sm:text-sm font-medium flex items-center gap-1 bg-destructive/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-destructive/20">
-                                    <span>⚠</span>
-                                    {errors.location}
-                                </p>
-                            )}
-                        </div> */}
+                        </div> 
                     </div>
 
                     <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border/50 flex justify-end">
                         <button 
                             onClick={handleSaveChanges}
-                            className="bg-[#579BE8] text-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base hover:bg-[#579BE8]/90 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#579BE8]/20 transition-all cursor-pointer shadow-lg"
+                            className="bg-[#579BE8] text-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-xl font-bold text-sm sm:text-base hover:bg-[#579BE8]/90 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#579BE8]/20 transition-all cursor-pointer shadow-lg"
                         >
                             حفظ التعديل
                         </button>
                     </div>
                 </div>
             </div>
-            <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-xl border border-border/60">
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl md:rounded-xl overflow-hidden shadow-xl border border-border/60">
                 <div className="p-4 sm:p-6 md:p-8 lg:p-10">
                     <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-4 sm:mb-6 md:mb-8 text-foreground">إعدادات الحساب</h3>
 
@@ -1329,14 +1179,14 @@ export default function MyProfilePage() {
                                     });
                                 }
                             }}
-                            className={`flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group ${
+                            className={`flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border transition-all cursor-pointer group ${
                                 notificationsActive 
                                     ? "border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary/30" 
                                     : "border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30"
                             }`}
                         >
                             <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                                <div className={`p-2.5 sm:p-3 md:p-3.5 rounded-xl sm:rounded-2xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all ${
+                                <div className={`p-2.5 sm:p-3 md:p-3.5 rounded-xl sm:rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all ${
                                     notificationsActive 
                                         ? "bg-gradient-to-br from-[#579BE8] to-[#315782]" 
                                         : "bg-muted-foreground/30"
@@ -1364,10 +1214,10 @@ export default function MyProfilePage() {
                         <div
                             id="savedPlaces"
                             onClick={() => setShowSavedPlaces(!showSavedPlaces)}
-                            className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group"
+                            className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group"
                         >
                             <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                                <div className="bg-gradient-to-br from-[#579BE8] to-[#315782] p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-2xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0">
+                                <div className="bg-gradient-to-br from-[#579BE8] to-[#315782] p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0">
                                     <BiCurrentLocation className="text-white w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1384,7 +1234,7 @@ export default function MyProfilePage() {
                                 {/* View All Addresses Link */}
                                 <Link
                                     href="/myProfile/addresses"
-                                    className="w-full p-3 sm:p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl sm:rounded-2xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                    className="w-full p-3 sm:p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl sm:rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                                 >
                                     <FaMapMarkerAlt className="w-4 h-4" />
                                     عرض جميع العناوين
@@ -1414,7 +1264,7 @@ export default function MyProfilePage() {
                                                             fetchAddressDetails(place.id);
                                                         }
                                                     }}
-                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
+                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
                                                 >
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1">
@@ -1438,7 +1288,7 @@ export default function MyProfilePage() {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
+                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
                                                     <div className="flex-1 min-w-0">
                                                         <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
                                                             {typeof place === 'string' ? place : place.name}
@@ -1451,7 +1301,7 @@ export default function MyProfilePage() {
                                 {places.length > 5 && (
                                     <button
                                         onClick={() => setShowAllPlaces(!showAllPlaces)}
-                                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-lg sm:rounded-xl transition-all"
+                                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-xl sm:rounded-xl transition-all"
                                     >
                                         {showAllPlaces ? "عرض أقل" : "عرض المزيد"}
                                     </button>
@@ -1461,11 +1311,11 @@ export default function MyProfilePage() {
 
                         {/* Favorite Places */}
                         <div
-                            className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group"
+                            className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group"
                             onClick={() => setShowFavorites(!showFavorites)}
                         >
                             <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                                <div className="bg-gradient-to-br from-[#579BE8] to-[#315782] p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-2xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0">
+                                <div className="bg-gradient-to-br from-[#579BE8] to-[#315782] p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0">
                                     <FaStar className="text-white w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1505,7 +1355,7 @@ export default function MyProfilePage() {
                                                             fetchAddressDetails(fav.id);
                                                         }
                                                     }}
-                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
+                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
                                                 >
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1">
@@ -1527,7 +1377,7 @@ export default function MyProfilePage() {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-2xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
+                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
@@ -1543,7 +1393,7 @@ export default function MyProfilePage() {
                                 {favorites.length > 5 && (
                                     <button
                                         onClick={() => setShowAllFavorites(!showAllFavorites)}
-                                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-lg sm:rounded-xl transition-all"
+                                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-xl sm:rounded-xl transition-all"
                                     >
                                         {showAllFavorites ? "عرض أقل" : "عرض المزيد"}
                                     </button>
@@ -1551,34 +1401,21 @@ export default function MyProfilePage() {
                             </div>
                         )}
                     </div>
-
-                    {/* Danger Zone */}
-                    <div className="mt-6 sm:mt-8 md:mt-10 pt-4 sm:pt-6 md:pt-8 border-t border-border/50">
-                        <h3 className="text-base sm:text-lg md:text-xl font-black text-destructive mb-4 sm:mb-6">منطقة الخطر</h3>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 p-4 sm:p-5 md:p-6 bg-gradient-to-r from-destructive/5 to-destructive/10 border-2 border-destructive/30 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all">
-                            <div className="flex-1">
-                                <h4 className="text-sm sm:text-base md:text-lg font-bold text-destructive mb-1 sm:mb-2">تعطيل الحساب مؤقتاً</h4>
-                                <p className="text-xs sm:text-sm text-destructive/80 leading-relaxed">سيتم إخفاء ملفك الشخصي ولن تتلقى أي إشعارات حتى تقوم بتسجيل الدخول مرة أخرى</p>
-                            </div>
-                            <button onClick={handleDisableAccount} className="bg-white dark:bg-card text-destructive border-2 border-destructive/50 px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm hover:bg-destructive hover:text-white hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-sm min-w-fit">
-                                تعطيل الحساب
-                            </button>
-                        </div>
-                    </div>
+ 
                 </div>
             </div>
-            <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-xl border border-border/60">
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl md:rounded-xl overflow-hidden shadow-xl border border-border/60">
                 <div className="p-4 sm:p-6 md:p-8 lg:p-10">
                     <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-4 sm:mb-6 md:mb-8 text-foreground">الخصوصية والأمان</h3>
                     
                     {/* Location Sharing */}
-                    <div className={`flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group mb-3 sm:mb-4 ${
+                    <div className={`flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border transition-all cursor-pointer group mb-3 sm:mb-4 ${
                         locationSharingActive 
                             ? "border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary/30" 
                             : "border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30"
                     }`}>
                         <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                            <div className={`p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-2xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0 ${
+                            <div className={`p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all flex-shrink-0 ${
                                 locationSharingActive 
                                     ? "bg-gradient-to-br from-[#579BE8] to-[#315782]" 
                                     : "bg-muted-foreground/30"
@@ -1609,7 +1446,7 @@ export default function MyProfilePage() {
                     </div>
 
                     {/* Privacy Policy */}
-                    <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group mb-3 sm:mb-4">
+                    <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group mb-3 sm:mb-4">
                         <p className="font-semibold text-xs sm:text-sm md:text-base text-foreground">سياسة الخصوصية</p>
                         <Link href="/privacy" className="text-[#579BE8] font-bold text-xs sm:text-sm hover:text-[#315782] transition-colors flex items-center gap-1 sm:gap-2">
                             عرض التفاصيل
@@ -1618,27 +1455,14 @@ export default function MyProfilePage() {
                     </div>
 
                     {/* Terms of Service */}
-                    <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group">
+                    <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-xl border border-border/50 bg-secondary/5 hover:bg-secondary/10 hover:border-primary/30 transition-all cursor-pointer group">
                         <p className="font-semibold text-xs sm:text-sm md:text-base text-foreground">شروط الاستخدام</p>
                         <Link href="/terms" className="text-[#579BE8] font-bold text-xs sm:text-sm hover:text-[#315782] transition-colors flex items-center gap-1 sm:gap-2">
                             عرض التفاصيل
                             <FaChevronLeft className="text-xs sm:text-sm" />
                         </Link>
                     </div>
-
-                    {/* Danger Zone */}
-                    <div className="mt-6 sm:mt-8 md:mt-10 pt-4 sm:pt-6 md:pt-8 border-t border-border/50">
-                        <h3 className="text-base sm:text-lg md:text-xl font-black text-destructive mb-4 sm:mb-6">منطقة الخطر</h3>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 p-4 sm:p-5 md:p-6 bg-gradient-to-r from-destructive/5 to-destructive/10 border-2 border-destructive/30 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all">
-                            <div className="flex-1">
-                                <h4 className="text-sm sm:text-base md:text-lg font-bold text-destructive mb-1 sm:mb-2">حذف الحساب نهائياً</h4>
-                                <p className="text-xs sm:text-sm text-destructive/80 leading-relaxed">هذا الإجراء لا يمكن التراجع عنه، سيتم حذف جميع بياناتك بشكل دائم</p>
-                            </div>
-                            <button onClick={handleDeleteAccount} className="bg-white dark:bg-card text-destructive border-2 border-destructive/50 px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm hover:bg-destructive hover:text-white hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-sm min-w-fit">
-                                حذف حسابي
-                            </button>
-                        </div>
-                    </div>
+ 
                 </div>
             </div>
 
@@ -1652,7 +1476,7 @@ export default function MyProfilePage() {
                     }}
                 >
                     <div 
-                        className="bg-white dark:bg-card rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
+                        className="bg-white dark:bg-card rounded-xl sm:rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header with Gradient Background */}
@@ -1724,7 +1548,7 @@ export default function MyProfilePage() {
                                 isEditingAddress ? (
                                     <div className="space-y-5">
                                         {/* Name Field */}
-                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-xl p-5 border-2 border-[#579BE8]/20">
                                             <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
                                                 <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
                                                 اسم العنوان
@@ -1738,7 +1562,7 @@ export default function MyProfilePage() {
                                         </div>
 
                                         {/* Full Address Field */}
-                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                        <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                             <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
                                                 <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
                                                 العنوان الكامل
@@ -1754,7 +1578,7 @@ export default function MyProfilePage() {
 
                                         {/* City and Area Grid */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                                 <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
                                                     <FaBuilding className="text-[#579BE8] w-4 h-4" />
                                                     المدينة
@@ -1767,7 +1591,7 @@ export default function MyProfilePage() {
                                                 />
                                             </div>
 
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                                 <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
                                                     <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
                                                     المنطقة
@@ -1783,7 +1607,7 @@ export default function MyProfilePage() {
 
                                         {/* Coordinates Grid */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                                 <label className="text-sm font-bold text-foreground mb-3 block">خط العرض</label>
                                                 <Input
                                                     type="text"
@@ -1794,7 +1618,7 @@ export default function MyProfilePage() {
                                                 />
                                             </div>
 
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                                 <label className="text-sm font-bold text-foreground mb-3 block">خط الطول</label>
                                                 <Input
                                                     type="text"
@@ -1808,7 +1632,7 @@ export default function MyProfilePage() {
 
                                         {/* Type and Favorite */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                                 <label className="text-sm font-bold text-foreground mb-3 block">النوع</label>
                                                 <select
                                                     value={editAddressForm.type}
@@ -1821,7 +1645,7 @@ export default function MyProfilePage() {
                                                 </select>
                                             </div>
 
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 flex items-center justify-center">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 flex items-center justify-center">
                                                 <div className="flex items-center gap-3">
                                                     <input
                                                         type="checkbox"
@@ -1839,7 +1663,7 @@ export default function MyProfilePage() {
                                         </div>
 
                                         {/* Additional Info */}
-                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                        <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
                                             <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
                                                 <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
                                                 معلومات إضافية
@@ -1898,7 +1722,7 @@ export default function MyProfilePage() {
                                 ) : (
                                     <div className="space-y-4 sm:space-y-5">
                                         {/* Name Card with Favorite Badge */}
-                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                        <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-xl p-5 border-2 border-[#579BE8]/20">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
@@ -1927,7 +1751,7 @@ export default function MyProfilePage() {
 
                                         {/* Address Card */}
                                         {selectedAddress.address && (
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
                                                 <div className="flex items-start gap-4">
                                                     <div className="w-10 h-10 rounded-xl bg-[#579BE8]/10 flex items-center justify-center flex-shrink-0">
                                                         <FaMapMarkerAlt className="text-[#579BE8] w-5 h-5" />
@@ -1944,9 +1768,9 @@ export default function MyProfilePage() {
                                         {(selectedAddress.city || selectedAddress.area) && (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 {selectedAddress.city && (
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                    <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
                                                         <div className="flex items-center gap-3 mb-2">
-                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                            <div className="w-8 h-8 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
                                                                 <FaBuilding className="text-[#579BE8] w-4 h-4" />
                                                             </div>
                                                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المدينة</p>
@@ -1956,9 +1780,9 @@ export default function MyProfilePage() {
                                                 )}
 
                                                 {selectedAddress.area && (
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                                    <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
                                                         <div className="flex items-center gap-3 mb-2">
-                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                            <div className="w-8 h-8 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
                                                                 <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
                                                             </div>
                                                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المنطقة</p>
@@ -1971,9 +1795,9 @@ export default function MyProfilePage() {
 
                                         {/* Coordinates Card */}
                                         {(selectedAddress.latitude && selectedAddress.longitude) && (
-                                            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border border-border/50">
+                                            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-xl p-5 border border-border/50">
                                                 <div className="flex items-center gap-3 mb-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                    <div className="w-8 h-8 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
                                                         <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
                                                     </div>
                                                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">الإحداثيات الجغرافية</p>
@@ -1990,9 +1814,9 @@ export default function MyProfilePage() {
 
                                         {/* Additional Info Card */}
                                         {selectedAddress.additional_info && (
-                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
+                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
                                                 <div className="flex items-center gap-3 mb-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                    <div className="w-8 h-8 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
                                                         <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
                                                     </div>
                                                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">معلومات إضافية</p>

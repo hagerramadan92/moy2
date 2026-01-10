@@ -89,8 +89,7 @@ export const metadata = {
     "التعاقدات",
     "السائقين",
   ],
-
-  themeColor: "#579BE8",
+ 
 };
 
 export default function RootLayout({ children }) {
