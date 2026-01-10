@@ -20,6 +20,7 @@ import AppPromotionSection from '@/components/molecules/Drivers/AppPromotionSect
 import CallToActionSection from '@/components/molecules/Drivers/CallToActionSection';
 import Footer from '@/components/molecules/common/Footer';
 import RelatedArticlesSection from '@/components/molecules/articles/RelatedArticlesSection';
+import toast from 'react-hot-toast';
 
 const allArticles = [
   {
@@ -831,7 +832,7 @@ const ArticleDetails = () => {
                         }
                       } catch (clipboardErr) {
                         console.error('Failed to copy to clipboard:', clipboardErr);
-                        alert('فشل مشاركة الرابط');
+                        toast.error('فشل مشاركة الرابط');
                       }
                     }
                   }
