@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +26,8 @@ const LocationPickerModal = dynamic(
 	{ ssr: false }
 );
 
-export default function OrderForm() {
+// Separate component that uses useSearchParams
+function OrderFormContent() {
 	// State management
 	const [waterType, setWaterType] = useState('');
 	const [quantity, setQuantity] = useState('');
@@ -327,6 +328,21 @@ export default function OrderForm() {
 				)}
 			</AnimatePresence>
 		</div>
+	);
+}
+
+// Wrapper component with Suspense boundary
+export default function OrderForm() {
+	return (
+		<Suspense fallback={
+			<div className="flex items-center justify-center py-8">
+				<div className="animate-spin">
+					<div className="w-8 h-8 border-4 border-gray-300 border-t-[#579BE8] rounded-full"></div>
+				</div>
+			</div>
+		}>
+			<OrderFormContent />
+		</Suspense>
 	);
 }
 

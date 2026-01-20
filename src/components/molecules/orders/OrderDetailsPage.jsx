@@ -22,7 +22,6 @@ import {
   Shield,
   Star,
   TrendingUp,
-  AlertCircle,
   ChevronLeft,
   X,
   Eye
