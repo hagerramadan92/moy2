@@ -10,10 +10,10 @@ export default function OrdersPage() {
 	return (
 		<main className="space-y-20">
 			<OrderForm />
-			<SearchDriverPage />
+			{/* <SearchDriverPage />
 			<AvailableDriversPage />
 			<OrderDetailsPage />
-			<CustomerSupportPage />
+			<CustomerSupportPage /> */}
 		</main>
 	);
 }

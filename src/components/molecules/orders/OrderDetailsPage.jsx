@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import CancelOrderModal from '../../ui/CancelOrderModal';
 import CustomerSupportPage from './CustomerSupportPage';
+import ChatWithDriver from './ChatWithDriver';
+import FloatingChatSupport from './FloatingChatSupport';
 
 // Dynamically import map to avoid SSR
 const OrderTrackingMap = dynamic(
@@ -42,7 +44,19 @@ const OrderTrackingMap = dynamic(
 export default function OrderDetailsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [showSupportPage, setShowSupportPage] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [driverId, setDriverId] = useState(null);
   const router = useRouter();
+
+  // Load user and driver IDs from context or localStorage on mount
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    const storedDriverId = localStorage.getItem('currentDriverId');
+    
+    setUserId(storedUserId || 'user-default');
+    setDriverId(storedDriverId || 'driver-default');
+  }, []);
 
   const handleOpenCancelModal = () => {
     setIsCancelModalOpen(true);
@@ -63,6 +77,14 @@ export default function OrderDetailsPage() {
 
   const handleBackFromSupport = () => {
     setShowSupportPage(false);
+  };
+
+  const handleOpenChat = () => {
+    setIsChatOpen(true);
+  };
+
+  const handleCloseChat = () => {
+    setIsChatOpen(false);
   };
 
   const handleContinueOrder = () => {
@@ -529,7 +551,7 @@ export default function OrderDetailsPage() {
                       className="w-full h-11 rounded-xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3d7bc7] hover:to-[#0f3d6f] shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:shadow-[#579BE8]/40 flex items-center justify-center gap-2 transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('دردشة مع السائق');
+                        handleOpenChat();
                       }}
                     >
                       <MessageCircle size={16} className="text-white" />
@@ -553,6 +575,32 @@ export default function OrderDetailsPage() {
         onClose={handleCloseCancelModal}
         onCancelOrder={handleCancelOrder}
         onContinueOrder={handleContinueOrder}
+      />
+
+      {/* Chat with Driver */}
+      <ChatWithDriver
+        isOpen={isChatOpen}
+        onClose={handleCloseChat}
+        driverInfo={{
+          name: 'سعود بن ناصر المطيري',
+          status: 'في الطريق',
+          image: '/image 4.png'
+        }}
+        orderId="112312121"
+        userId={userId || 'user-default'}
+        driverId={driverId || 'driver-default'}
+      />
+
+      {/* Floating Chat Support Button */}
+      <FloatingChatSupport
+        orderId="112312121"
+        userId={userId || 'user-default'}
+        driverId={driverId || 'driver-default'}
+        driverInfo={{
+          name: 'سعود بن ناصر المطيري',
+          status: 'في الطريق',
+          image: '/image 4.png'
+        }}
       />
     </>
   );
