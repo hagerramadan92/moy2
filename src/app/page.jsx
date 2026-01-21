@@ -11,6 +11,7 @@ import Footer from '@/components/molecules/common/Footer';
 import HowItWorks from '@/components/molecules/homepage/HowItWorks';
 import HomeCover from '@/components/molecules/homepage/HomeCover';
 
+
 const page = () => {
 	const [pageData, setPageData] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -123,6 +124,7 @@ const page = () => {
 			<CustomerReviews/>
 			<AppPromotionSection />
 			<CallToActionSection />
+			
 			<Footer/>
 		</>
 	);

@@ -432,6 +432,14 @@ export default function Navbar() {
                           اطلب الآن
                         </button>
                       </motion.div>
+                             <Link
+                              href="/chat"
+                              className="text-sky-600 underline"
+                              onClick={() => setMenuOpen(false)}
+                            >
+                              chat 
+                            </Link>
+
                     </div>
                   )}
                 </div>

@@ -7,6 +7,7 @@ import ContactHero from '@/components/molecules/Contacts/ContactHero';
 import VisionMissionSection from '@/components/molecules/Contacts/VisionMissionSection';
 import SpecialOffersSection from '@/components/molecules/Contacts/SpecialOffersSection';
 import Footer from '@/components/molecules/common/Footer';
+import ChatApp, { Conversation } from '@/components/ui/messages/Message';
 
 const ContactPage = () => {
   return (
@@ -232,6 +233,12 @@ const ContactPage = () => {
         <ContactFormSection />
         <SpecialOffersSection/>
         <Footer />
+          
+     
+      {/* <ChatApp /> */}
+ 
+ 
+        
       </div>
     </main>
   );
