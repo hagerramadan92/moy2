@@ -2,12 +2,15 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { messageService } from "../../../Services/message.service";
 import { pusherClient } from "@/lib/pusherClient";
+import MessageSender from "./MessageSender";
 
 const MessageList = ({ chatId, currentUserId = 39 }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [activeChannel, setActiveChannel] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const messagesEndRef = useRef(null);
   const pusherChannelRef = useRef(null);
 
@@ -23,18 +26,74 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
 
     // تنظيف عند unmount
     return () => {
-      if (pusherChannelRef.current) {
-        pusherChannelRef.current.unbind_all();
-        pusherClient.unsubscribe(`chat.${chatId}`);
-        pusherClient.unsubscribe(`private-chat.${chatId}`);
-      }
+      cleanupPusher();
     };
   }, [chatId]);
+
+  // مراقبة حالة اتصال Pusher
+  useEffect(() => {
+    if (!pusherClient) return;
+
+    const updateStatus = (states) => {
+      setConnectionStatus(states.current);
+     
+    };
+
+    pusherClient.connection.bind('state_change', updateStatus);
+    
+    return () => {
+      if (pusherClient.connection) {
+        pusherClient.connection.unbind('state_change', updateStatus);
+      }
+    };
+  }, []);
 
   // التمرير للأسفل عند تغيير الرسائل
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // معالجة الرسائل المرسلة
+  const handleMessageSent = (message, tempMessageId = null) => {
+   
+    
+    if (!message) {
+      // إزالة الرسالة المؤقتة في حالة الخطأ
+      if (tempMessageId) {
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      }
+      return;
+    }
+
+    if (tempMessageId) {
+      // استبدال الرسالة المؤقتة بالرسالة الحقيقية
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempMessageId ? formatMessage(message) : msg
+        )
+      );
+    } else {
+      // إضافة الرسالة الجديدة
+      const formattedMessage = formatMessage(message);
+      setMessages(prev => [...prev, formattedMessage]);
+    }
+  };
+
+  // تنظيف اشتراكات Pusher
+  const cleanupPusher = () => {
+    if (pusherChannelRef.current) {
+      try {
+       
+        pusherChannelRef.current.unbind_all();
+        pusherClient.unsubscribe(pusherChannelRef.current.name);
+      } catch (error) {
+        console.error('خطأ في التنظيف:', error);
+      }
+      pusherChannelRef.current = null;
+    }
+    setIsSubscribed(false);
+    setActiveChannel(null);
+  };
 
   // تحميل الرسائل من API
   const loadMessages = async () => {
@@ -42,11 +101,10 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
       setLoading(true);
       setError("");
       
-      console.log(`📥 جاري تحميل الرسائل للدردشة ${chatId}...`);
+     
       const response = await messageService.getMessages(chatId);
-      console.log(`✅ تم تحميل الرسائل للدردشة ${chatId}:`, response);
+     
       
-      // تأكد من أن response هو مصفوفة
       if (Array.isArray(response)) {
         const formattedMessages = response.map(msg => formatMessage(msg));
         setMessages(formattedMessages);
@@ -69,7 +127,6 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
 
   // تنسيق الرسالة
   const formatMessage = useCallback((msg) => {
-    // تحديد المرسل بناءً على sender_id
     const isCurrentUser = msg.sender_id && String(msg.sender_id) === String(currentUserId);
     
     return {
@@ -86,10 +143,200 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
     };
   }, [currentUserId]);
 
+  // إعداد اشتراك Pusher للرسائل المباشرة
+  const setupPusherSubscription = () => {
+    if (!pusherClient || !chatId) return;
+
+    // تنظيف الاشتراكات السابقة
+    cleanupPusher();
+
+    // القنوات التي نعرف أنها تعمل بناءً على السجلات
+    const workingChannels = [
+      `chat.${chatId}`,           // ✅ تعمل
+      `chat-app.${chatId}`,       // ✅ تعمل
+      `private-chat.${chatId}`,   // ✅ تعمل
+      `private-chat-app.${chatId}` // ✅ تعمل
+    ];
+
+    // جرب القنوات بالتتابع
+    const trySubscribeToChannel = (channelName) => {
+      return new Promise((resolve) => {
+       
+        
+        try {
+          const channel = pusherClient.subscribe(channelName);
+          
+          // نجاح الاشتراك
+          const onSuccess = () => {
+            
+            channel.unbind('pusher:subscription_succeeded', onSuccess);
+            channel.unbind('pusher:subscription_error', onError);
+            resolve({ success: true, channel });
+          };
+          
+          // خطأ الاشتراك
+          const onError = (error) => {
+           
+            channel.unbind('pusher:subscription_succeeded', onSuccess);
+            channel.unbind('pusher:subscription_error', onError);
+            try {
+              pusherClient.unsubscribe(channelName);
+            } catch (e) {}
+            resolve({ success: false, error });
+          };
+          
+          channel.bind('pusher:subscription_succeeded', onSuccess);
+          channel.bind('pusher:subscription_error', onError);
+          
+          // مهلة زمنية (3 ثواني)
+          setTimeout(() => {
+            if (!channel.subscribed) {
+              channel.unbind('pusher:subscription_succeeded', onSuccess);
+              channel.unbind('pusher:subscription_error', onError);
+              try {
+                pusherClient.unsubscribe(channelName);
+              } catch (e) {}
+              resolve({ success: false, error: { type: 'Timeout' } });
+            }
+          }, 3000);
+          
+        } catch (error) {
+          console.error(`❌ استثناء في الاشتراك في ${channelName}:`, error);
+          resolve({ success: false, error });
+        }
+      });
+    };
+
+    // جرب كل قناة بالتتابع
+    const tryAllChannels = async () => {
+      for (const channelName of workingChannels) {
+        const result = await trySubscribeToChannel(channelName);
+        
+        if (result.success) {
+          // نجحنا! ربط الأحداث وإعداد القناة
+          setupChannelEvents(result.channel);
+          setIsSubscribed(true);
+          setActiveChannel(channelName);
+          pusherChannelRef.current = result.channel;
+          
+          return;
+        }
+      }
+      
+      // إذا فشلت كل المحاولات
+      
+      setIsSubscribed(false);
+      setActiveChannel(null);
+    };
+
+    tryAllChannels();
+  };
+
+  // إعداد أحداث القناة الناجحة
+  const setupChannelEvents = (channel) => {
+    const channelName = channel.name;
+    
+
+    // أحداث الرسائل المختلفة التي قد يستخدمها Laravel
+    const messageEvents = [
+      'new-upcoming-message',
+      'message-sent',
+      'MessageSent',
+      'message-created',
+      'new-message',
+      'chat-message',
+      'message',
+      'MessageCreated'
+    ];
+
+    messageEvents.forEach(eventName => {
+      channel.bind(eventName, (data) => {
+       
+        handleIncomingMessage(data);
+      });
+    });
+
+    // أحداث أخرى
+    channel.bind('message-read', (data) => {
+     
+      handleMessageRead(data);
+    });
+
+    channel.bind('typing', (data) => {
+      
+    });
+
+    // حدث لعرض جميع الأحداث (للتشخيص)
+    channel.bind('.', (eventName, data) => {
+      if (!eventName.startsWith('pusher:')) {
+       
+      }
+    });
+
+    // أحداث Pusher الخاصة
+    channel.bind('pusher:subscription_count', (data) => {
+      
+    });
+  };
+
+  // معالجة الرسائل الواردة من Pusher
+  const handleIncomingMessage = useCallback((data) => {
+    // تحقق مما إذا كانت الرسالة تخص هذه الدردشة
+    const messageChatId = data.chat_id || data.chatId || data.chat?.id || data.chat_id;
+    if (messageChatId && String(messageChatId) !== String(chatId)) {
+      
+      return;
+    }
+    
+    
+    
+    const newMessage = formatMessage({
+      ...data,
+      id: data.id || data.message_id,
+      message: data.message || data.text || data.content,
+      sender_id: data.sender_id || data.user_id,
+      created_at: data.created_at || data.timestamp || new Date().toISOString(),
+      is_read: data.is_read || false
+    });
+
+    setMessages(prev => {
+      // منع التكرار
+      const exists = prev.some(msg => msg.id === newMessage.id);
+      if (exists) {
+        
+        return prev;
+      }
+      
+     ;
+      return [...prev, newMessage];
+    });
+
+    // إذا كانت الرسالة من شخص آخر، حددها كـ مقروءة
+    if (!newMessage.isCurrentUser && newMessage.id) {
+      setTimeout(() => {
+        markSingleAsRead(newMessage.id);
+      }, 1000);
+    }
+  }, [chatId, formatMessage]);
+
+  // معالجة حدث قراءة الرسالة
+  const handleMessageRead = useCallback((data) => {
+    if (data.message_id && data.chat_id == chatId) {
+      
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id == data.message_id 
+            ? { ...msg, is_read: true, read_at: new Date().toISOString() }
+            : msg
+        )
+      );
+    }
+  }, [chatId]);
+
   // تحديد الرسائل غير المقروءة كـ مقروءة
   const markUnreadAsRead = async (messages) => {
     try {
-      // تحديد الرسائل غير المقروءة التي لم نرسلها
       const unreadMessages = messages.filter(
         msg => !msg.is_read && 
                !msg.isCurrentUser &&
@@ -97,15 +344,13 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
                !msg.id.toString().startsWith('temp-')
       );
       
-      console.log('📋 الرسائل غير المقروءة لتحديدها كـ مقروءة:', unreadMessages.length);
       
-      // تحديث حالة القراءة
+      
       for (const msg of unreadMessages) {
         try {
           await messageService.markAsRead(msg.id);
-          console.log(`✅ تم تحديد الرسالة ${msg.id} كـ مقروءة`);
           
-          // تحديث الحالة المحلية
+          
           setMessages(prev => 
             prev.map(m => 
               m.id === msg.id ? { ...m, is_read: true, read_at: new Date().toISOString() } : m
@@ -119,140 +364,6 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
       console.error('❌ خطأ في markUnreadAsRead:', error);
     }
   };
-
-  // إعداد اشتراك Pusher للرسائل المباشرة
-  const setupPusherSubscription = () => {
-    if (!pusherClient || !chatId) return;
-
-    // تنظيف الاشتراكات السابقة
-    if (pusherChannelRef.current) {
-      pusherChannelRef.current.unbind_all();
-      pusherClient.unsubscribe(`chat.${chatId}`);
-      pusherClient.unsubscribe(`private-chat.${chatId}`);
-    }
-
-    // محاولة الاشتراك في قنوات مختلفة (Laravel قد يستخدم أسماء مختلفة)
-    const possibleChannels = [
-      `private-chat.${chatId}`,
-      `presence-chat.${chatId}`,
-      `chat.${chatId}`,
-      `private-chat-app.${chatId}`,
-      `chat-app.${chatId}`
-    ];
-
-    let subscribed = false;
-
-    possibleChannels.forEach(channelName => {
-      try {
-        console.log(`📡 محاولة الاشتراك في القناة: ${channelName}`);
-        
-        const channel = pusherClient.subscribe(channelName);
-        
-        channel.bind('pusher:subscription_succeeded', () => {
-          console.log(`✅ تم الاشتراك في القناة: ${channelName}`);
-          setIsSubscribed(true);
-          pusherChannelRef.current = channel;
-          subscribed = true;
-        });
-
-        channel.bind('pusher:subscription_error', (error) => {
-          console.log(`⚠️ خطأ في الاشتراك في ${channelName}:`, error);
-        });
-
-        // الاستماع للأحداث المختلفة
-        channel.bind('new-upcoming-message', (data) => {
-          console.log('📨 رسالة جديدة من Pusher (new-upcoming-message):', data);
-          handleIncomingMessage(data);
-        });
-
-        channel.bind('message-sent', (data) => {
-          console.log('📤 حدث message-sent من Pusher:', data);
-          handleIncomingMessage(data);
-        });
-
-        channel.bind('MessageSent', (data) => {
-          console.log('📤 حدث MessageSent من Pusher:', data);
-          handleIncomingMessage(data);
-        });
-
-        channel.bind('message-read', (data) => {
-          console.log('👁️ حدث message-read من Pusher:', data);
-          handleMessageRead(data);
-        });
-
-        channel.bind('typing', (data) => {
-          console.log('⌨️ حدث typing من Pusher:', data);
-          // يمكنك إضافة منطق عرض مؤشر الكتابة هنا
-        });
-
-        // استمع لأي حدث عام
-        channel.bind('.', (eventName, data) => {
-          if (!eventName.startsWith('pusher:')) {
-            console.log(`📨 حدث عام [${channelName}.${eventName}]:`, data);
-          }
-        });
-
-      } catch (error) {
-        console.log(`❌ فشل الاشتراك في ${channelName}:`, error.message);
-      }
-    });
-
-    // إذا لم ننجح في الاشتراك في أي قناة
-    if (!subscribed) {
-      console.log('⚠️ لم يتم الاشتراك في أي قناة Pusher للدردشة');
-    }
-  };
-
-  // معالجة الرسائل الواردة من Pusher
-  const handleIncomingMessage = useCallback((data) => {
-    // تحقق مما إذا كانت الرسالة تخص هذه الدردشة
-    if (data.chat_id == chatId || data.chatId == chatId) {
-      console.log('📩 معالجة رسالة واردة للدردشة الحالية:', data);
-      
-      const newMessage = formatMessage({
-        ...data,
-        id: data.id || data.message_id,
-        message: data.message || data.text,
-        sender_id: data.sender_id || data.user_id,
-        created_at: data.created_at || data.timestamp || new Date().toISOString(),
-        is_read: data.is_read || false
-      });
-
-      setMessages(prev => {
-        // منع التكرار
-        const exists = prev.some(msg => msg.id === newMessage.id);
-        if (exists) {
-          console.log('⏭️ تم تجاهل رسالة مكررة:', newMessage.id);
-          return prev;
-        }
-        
-        console.log('➕ إضافة رسالة جديدة:', newMessage);
-        return [...prev, newMessage];
-      });
-
-      // إذا كانت الرسالة من شخص آخر، حددها كـ مقروءة
-      if (!newMessage.isCurrentUser) {
-        setTimeout(() => {
-          markSingleAsRead(newMessage.id);
-        }, 1000);
-      }
-    }
-  }, [chatId, formatMessage]);
-
-  // معالجة حدث قراءة الرسالة
-  const handleMessageRead = useCallback((data) => {
-    if (data.message_id && data.chat_id == chatId) {
-      console.log('👁️ تحديث حالة القراءة للرسالة:', data.message_id);
-      
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id == data.message_id 
-            ? { ...msg, is_read: true, read_at: new Date().toISOString() }
-            : msg
-        )
-      );
-    }
-  }, [chatId]);
 
   // تحديد رسالة واحدة كـ مقروءة
   const markSingleAsRead = async (messageId) => {
@@ -269,45 +380,27 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
         )
       );
       
-      console.log(`✅ تم تحديد الرسالة ${messageId} كـ مقروءة`);
+      
     } catch (error) {
       console.error(`❌ فشل في تحديد الرسالة ${messageId} كـ مقروءة:`, error);
     }
   };
 
-  // إضافة رسالة مؤقتة (لـ optimistic updates)
-  const addTempMessage = useCallback((messageText) => {
-    const tempMessage = {
-      id: `temp-${Date.now()}`,
-      message: messageText,
-      text: messageText,
-      sender_id: currentUserId,
-      isCurrentUser: true,
-      is_temp: true,
-      time: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      is_read: false,
-      read_at: null,
-      sender_name: 'أنت',
-      sender_avatar: null
-    };
-
-    setMessages(prev => [...prev, formatMessage(tempMessage)]);
-    return tempMessage.id;
-  }, [currentUserId, formatMessage]);
-
-  // استبدال الرسالة المؤقتة بالرسالة الحقيقية
-  const replaceTempMessage = useCallback((tempId, realMessage) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === tempId ? formatMessage(realMessage) : msg
-      )
-    );
-  }, [formatMessage]);
-
   // التمرير للأسفل
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // إعادة تحميل الرسائل
+  const handleRetryLoad = () => {
+    setError("");
+    loadMessages();
+  };
+
+  // إعادة الاتصال بـ Pusher
+  const handleReconnectPusher = () => {
+    cleanupPusher();
+    setupPusherSubscription();
   };
 
   // تنسيق وقت الرسالة
@@ -403,9 +496,62 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
     return groups;
   };
 
-  const handleRetryLoad = () => {
-    setError("");
-    loadMessages();
+  // عرض حالة الاتصال
+  const renderConnectionStatus = () => {
+    if (!chatId) return null;
+
+    return (
+      <div className="px-4 py-2 bg-white border-b">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">دردشة #{chatId}</span>
+                <div className="flex items-center gap-1">
+                  <span className={`w-2 h-2 rounded-full ${
+                    isSubscribed ? 'bg-green-500' : 'bg-red-500'
+                  }`}></span>
+                  <span className="text-gray-400">
+                    {isSubscribed ? 'متصل' : 'غير متصل'}
+                  </span>
+                </div>
+              </div>
+              {activeChannel && (
+                <div className="text-xs text-gray-500 mt-1">
+                  📡 القناة: <span className="font-medium">{activeChannel}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">{messages.length} رسالة</span>
+            {!isSubscribed && (
+              <button
+                onClick={handleReconnectPusher}
+                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors"
+              >
+                إعادة الاتصال
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* معلومات الحالة */}
+        <div className="mt-1 text-xs text-gray-500">
+          <span>حالة Pusher: </span>
+          <span className={`font-medium ${
+            connectionStatus === 'connected' ? 'text-green-600' :
+            connectionStatus === 'connecting' ? 'text-yellow-600' :
+            'text-red-600'
+          }`}>
+            {connectionStatus === 'connected' ? '✅ متصل' :
+             connectionStatus === 'connecting' ? '🔄 جاري الاتصال' :
+             '❌ مقطوع'}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   // إذا لم يكن هناك chatId
@@ -469,48 +615,16 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
     );
   }
 
-  // إذا لم تكن هناك رسائل
-  if (messages.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md px-4">
-          <div className="text-gray-300 mb-4">
-            <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </div>
-          <h3 className="text-gray-700 text-lg font-medium mb-2">لا توجد رسائل بعد</h3>
-          <p className="text-gray-500 text-sm mb-6">
-            هذه بداية المحادثة. أرسل رسالة لبدء المحادثة مع الطرف الآخر.
-          </p>
-          <div className="text-xs text-gray-400">
-            <p>💡 تلميح: يمكنك استخدام Pusher للرسائل المباشرة</p>
-            <p className="mt-1">حالة Pusher: {isSubscribed ? '✅ متصل' : '❌ غير متصل'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // عرض الرسائل
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
-      {/* حالة Pusher */}
-      <div className="px-4 py-2 bg-white border-b">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">دردشة #{chatId}</span>
-            <span className={`w-2 h-2 rounded-full ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            <span className="text-gray-400">{isSubscribed ? 'متصل بالبث المباشر' : 'غير متصل'}</span>
-          </div>
-          <span className="text-gray-400">{messages.length} رسالة</span>
-        </div>
-      </div>
+    <div className="h-full flex flex-col">
+      {/* حالة الاتصال */}
+      {renderConnectionStatus()}
 
       {/* قائمة الرسائل */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
         {messageGroups.map((group, groupIndex) => (
           <div key={groupIndex} className="mb-6">
             {/* تاريخ المجموعة */}
@@ -601,31 +715,18 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
           </div>
         ))}
         
-        {/* العنصر للتمرير إليه */}
+      
         <div ref={messagesEndRef} className="h-4" />
       </div>
 
-      {/* معلومات التصحيح (فقط في وضع التطوير) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="px-4 py-2 bg-gray-800 text-gray-300 text-xs border-t">
-          <div className="flex justify-between items-center">
-            <div>
-              <span>رسائل: {messages.length}</span>
-              <span className="mx-2">•</span>
-              <span>Pusher: {isSubscribed ? '✅' : '❌'}</span>
-            </div>
-            <button
-              onClick={() => {
-                console.log('🔍 تفاصيل الرسائل:', messages);
-                console.log('🔍 حالة Pusher:', pusherClient?.connection);
-              }}
-              className="text-gray-400 hover:text-white"
-            >
-              🔍
-            </button>
-          </div>
-        </div>
-      )}
+      {/* مكون إرسال الرسائل */}
+      <MessageSender 
+        chatId={chatId}
+        currentUserId={currentUserId}
+        onMessageSent={handleMessageSent}
+      />
+
+  
     </div>
   );
 };

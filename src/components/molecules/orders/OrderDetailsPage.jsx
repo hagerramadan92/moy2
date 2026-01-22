@@ -29,7 +29,8 @@ import {
 import CancelOrderModal from '../../ui/CancelOrderModal';
 import CustomerSupportPage from './CustomerSupportPage';
 import ChatWithDriver from './ChatWithDriver';
-import FloatingChatSupport from './FloatingChatSupport';
+import FloatingChatIcon from '@/components/Chat/FloatingChatIcon';
+import ChatModal from '@/components/Chat/ChatModal';
 
 // Dynamically import map to avoid SSR
 const OrderTrackingMap = dynamic(
@@ -44,8 +45,10 @@ export default function OrderDetailsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [showSupportPage, setShowSupportPage] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [userId, setUserId] = useState(null);
   const [driverId, setDriverId] = useState(null);
+  const [activeChatId, setActiveChatId] = useState(null);
   const router = useRouter();
 
   // Load user and driver IDs from context or localStorage on mount
@@ -56,6 +59,34 @@ export default function OrderDetailsPage() {
     setUserId(storedUserId || 'user-default');
     setDriverId(storedDriverId || 'driver-default');
   }, []);
+
+  // فتح المودال عند الضغط على زر الدردشة
+  const handleOpenChatModal = () => {
+    setIsChatModalOpen(true);
+  };
+
+  // بدء محادثة جديدة مع السائق
+  const handleStartChatWithDriver = () => {
+    setIsChatModalOpen(false);
+    setIsChatOpen(true); // افتح نافذة الدردشة مع السائق
+  };
+
+  // بدء محادثة مع الدعم
+  const handleStartSupportChat = () => {
+    setIsChatModalOpen(false);
+    setShowSupportPage(true);
+  };
+
+  // فتح دردشة محددة
+  const handleOpenSpecificChat = (chatId) => {
+    setIsChatModalOpen(false);
+    setActiveChatId(chatId);
+    setIsChatOpen(true);
+  };
+
+  const handleCloseChatModal = () => {
+    setIsChatModalOpen(false);
+  };
 
   const handleOpenCancelModal = () => {
     setIsCancelModalOpen(true);
@@ -291,11 +322,8 @@ export default function OrderDetailsPage() {
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-
             {/* Right Column - Main Content */}
             <div className="lg:col-span-8 space-y-6">
-
               {/* Order Details Card - Professional Layout */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -391,25 +419,6 @@ export default function OrderDetailsPage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Action Buttons */}
-                  {/* <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={handleOpenCancelModal}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl h-12 font-semibold transition-all border-2 border-red-200 hover:border-red-300"
-                    >
-                      <X size={20} />
-                      <span>إلغاء الطلب</span>
-                    </button>
-
-                    <button
-                      onClick={handleHelpClick}
-                      className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white rounded-xl h-12 font-semibold transition-all shadow-lg shadow-[#579BE8]/30"
-                    >
-                      <HelpCircle size={20} />
-                      <span>مساعدة</span>
-                    </button>
-                  </div> */}
                 </div>
               </motion.div>
 
@@ -443,6 +452,7 @@ export default function OrderDetailsPage() {
                 </div>
               </motion.div>
             </div>
+
             {/* Left Sidebar - Driver Card */}
             <div className="lg:col-span-4 space-y-6">
               {/* Driver Card - Clean White Design */}
@@ -462,7 +472,6 @@ export default function OrderDetailsPage() {
                           <span className="text-[10px] font-medium text-green-700">في الطريق</span>
                         </div>
                       </div>
-                 
                     </div>
                     <button
                       onClick={handleDriverCardClick}
@@ -546,11 +555,13 @@ export default function OrderDetailsPage() {
                       <Phone size={16} className="text-[#579BE8]" />
                       <span className="text-sm font-bold text-[#579BE8]">اتصال</span>
                     </button>
+                    
+                    {/* زر الدردشة المعدل - يفتح المودال */}
                     <button
                       className="w-full h-11 rounded-xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3d7bc7] hover:to-[#0f3d6f] shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:shadow-[#579BE8]/40 flex items-center justify-center gap-2 transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenChat();
+                        handleOpenChatModal();
                       }}
                     >
                       <MessageCircle size={16} className="text-white" />
@@ -559,48 +570,34 @@ export default function OrderDetailsPage() {
                   </div>
                 </div>
               </motion.div>
-
-
-
-
             </div>
           </div>
         </div>
       </div>
 
+      {/* Floating Chat Icon */}
+   
+      {/* Chat Modal */}
+     
+
+      {/* Chat with Driver Window */}
+      {isChatOpen && (
+        <div className="fixed bottom-24 right-4 z-50 w-96 h-[600px]">
+          <ChatWithDriver 
+            driverId={driverId}
+            userId={userId}
+            chatId={activeChatId}
+            onClose={handleCloseChat}
+          />
+        </div>
+      )}
+
       {/* Cancel Order Modal */}
-      <CancelOrderModal
+      {/* <CancelOrderModal
         isOpen={isCancelModalOpen}
         onClose={handleCloseCancelModal}
-        onCancelOrder={handleCancelOrder}
-        onContinueOrder={handleContinueOrder}
-      />
-
-      {/* Chat with Driver */}
-      <ChatWithDriver
-        isOpen={isChatOpen}
-        onClose={handleCloseChat}
-        driverInfo={{
-          name: 'سعود بن ناصر المطيري',
-          status: 'في الطريق',
-          image: '/image 4.png'
-        }}
-        orderId="112312121"
-        userId={userId || 'user-default'}
-        driverId={driverId || 'driver-default'}
-      />
-
-      {/* Floating Chat Support Button */}
-      <FloatingChatSupport
-        orderId="112312121"
-        userId={userId || 'user-default'}
-        driverId={driverId || 'driver-default'}
-        driverInfo={{
-          name: 'سعود بن ناصر المطيري',
-          status: 'في الطريق',
-          image: '/image 4.png'
-        }}
-      />
+        onConfirm={handleCancelOrder}
+      /> */}
     </>
   );
 }

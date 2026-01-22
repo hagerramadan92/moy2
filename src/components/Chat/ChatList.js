@@ -16,9 +16,9 @@ const ChatList = ({ onSelectChat, selectedChatId }) => {
       setLoading(true);
       setError("");
       
-      console.log('Loading chats...');
+    
       const response = await messageService.getChats();
-      console.log('Chats loaded:', response);
+    
       
       // تأكد من أن response هو مصفوفة
       if (Array.isArray(response)) {

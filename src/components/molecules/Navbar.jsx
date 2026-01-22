@@ -149,22 +149,22 @@ export default function Navbar() {
         <div className="absolute inset-0 -z-10 border-b border-white/20 bg-white/70 backdrop-blur-xl" />
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-sky-100/70 to-transparent" />
 
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-1 md:px-4">
           <Link href="/" className="group flex items-center gap-3">
             <motion.div
               whileHover={{ rotate: -6, scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sm ring-1 ring-white/40"
+              className="relative flex md:h-11 md:w-11 w-9 h-9 items-center justify-center rounded-lg md:rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sm ring-1 ring-white/40"
             >
               <div className="absolute -inset-1 rounded-[18px] bg-gradient-to-br from-sky-500/25 to-blue-600/25 blur-md" />
-              <DropletIcon className="relative h-6 w-6" />
+              <DropletIcon className="relative h-6 w-6 " />
             </motion.div>
 
             <div className="leading-tight">
-              <div className="text-2xl font-extrabold tracking-tight text-slate-900">
+              <div className="sm:text-2xl text-lg font-extrabold tracking-tight text-slate-900">
                 وايت مياة
               </div>
-              <div className="text-sm font-medium text-slate-500">
+              <div className="sm:text-sm text-xs font-medium text-slate-500">
                 خدمة توصيل سريعة
               </div>
             </div>
@@ -209,14 +209,14 @@ export default function Navbar() {
               <button
                 onClick={handleOrderNow}
                 className={[
-                  "relative inline-flex items-center justify-center rounded-full px-6 py-3",
+                  "relative inline-flex items-center justify-center rounded-full p-1 md:px-6 md:py-3",
                   "text-sm font-bold text-white shadow-md",
                   "bg-gradient-to-r from-sky-500 to-blue-600",
                   "ring-1 ring-white/40 transition hover:brightness-110",
                 ].join(" ")}
               >
                 <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-sky-500/25 to-blue-600/25 blur-md" />
-                <span className="relative">اطلب الآن</span>
+                <span className="relative text-[10px] md:text-xs">اطلب الآن</span>
               </button>
             </motion.div>
 
@@ -400,13 +400,13 @@ export default function Navbar() {
                             >
                               الملف الشخصي
                             </Link>
-                            <Link
+                            {/* <Link
                               href="/settings"
                               className="text-sky-600 underline"
                               onClick={() => setMenuOpen(false)}
                             >
                               الإعدادات
-                            </Link>
+                            </Link> */}
                             <button
                               type="button"
                               onClick={() => {
@@ -421,24 +421,18 @@ export default function Navbar() {
                         </div>
                       </div>
 
-                      <motion.div whileTap={{ scale: 0.98 }}>
+                      {/* <motion.div whileTap={{ scale: 0.98 }}>
                         <button
                           onClick={() => {
                             handleOrderNow();
                             setMenuOpen(false);
                           }}
-                          className="rounded-full bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-xs font-extrabold text-white shadow-md ring-1 ring-white/40"
+                          className="rounded-full bg-gradient-to-r from-sky-500 to-blue-600 px-1 py-0.5  md:py-2.5 md:px-5 text-xs font-extrabold text-white shadow-md ring-1 ring-white/40"
                         >
                           اطلب الآن
                         </button>
-                      </motion.div>
-                             <Link
-                              href="/chat"
-                              className="text-sky-600 underline"
-                              onClick={() => setMenuOpen(false)}
-                            >
-                              chat 
-                            </Link>
+                      </motion.div> */}
+                          
 
                     </div>
                   )}

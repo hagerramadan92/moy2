@@ -14,7 +14,7 @@ if (isLocalLaravelBroadcasting) {
     wssPort: 6001,
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
-    authEndpoint: '/broadcasting/auth', // Laravel مباشرة
+    authEndpoint: 'http://moya.talaaljazeera.com/api/v1/broadcasting/auth', // Laravel مباشرة
     auth: {
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('accessToken') : ''}`
@@ -29,7 +29,7 @@ if (isLocalLaravelBroadcasting) {
     forceTLS: true,
     
     // استخدام authEndpoint الخاص بـ Next.js الذي يتصل بـ Laravel
-    authEndpoint: '/api/broadcasting/auth',
+    authEndpoint: 'http://moya.talaaljazeera.com/api/v1/broadcasting/auth',
     
     auth: {
       headers: {
@@ -42,11 +42,7 @@ if (isLocalLaravelBroadcasting) {
   };
 }
 
-console.log('🔧 Pusher Config:', {
-  type: isLocalLaravelBroadcasting ? 'Local Laravel' : 'Pusher Cloud',
-  ...pusherConfig,
-  appKey: pusherConfig.appKey ? '••••' + pusherConfig.appKey.slice(-4) : 'MISSING'
-});
+
 
 let pusherClient = null;
 
@@ -71,16 +67,15 @@ if (typeof window !== 'undefined') {
 
     // إضافة مستمعات للأحداث للتصحيح
     pusherClient.connection.bind('state_change', (states) => {
-      console.log('🔌 Pusher State:', states.previous, '→', states.current);
+     
     });
 
     pusherClient.connection.bind('connected', () => {
-      console.log('✅ Pusher Connected!');
-      console.log('📡 Socket ID:', pusherClient.connection.socket_id);
+  
     });
 
     pusherClient.connection.bind('disconnected', () => {
-      console.log('❌ Pusher Disconnected');
+  
     });
 
     pusherClient.connection.bind('error', (err) => {
@@ -90,13 +85,13 @@ if (typeof window !== 'undefined') {
     // إضافة خاصية الاشتراك الآمن
     pusherClient.safeSubscribe = (channelName, callbacks = {}) => {
       try {
-        console.log(`📡 Attempting to subscribe to: ${channelName}`);
+       
         
         const channel = pusherClient.subscribe(channelName);
         
         // الأحداث القياسية
         channel.bind('pusher:subscription_succeeded', (data) => {
-          console.log(`✅ Subscribed to ${channelName}`, data);
+         
           if (callbacks.onSubscribed) callbacks.onSubscribed(data);
         });
 
@@ -109,7 +104,7 @@ if (typeof window !== 'undefined') {
         if (callbacks.events) {
           Object.entries(callbacks.events).forEach(([eventName, callback]) => {
             channel.bind(eventName, (data) => {
-              console.log(`📨 Event [${channelName}.${eventName}]:`, data);
+              
               callback(data);
             });
           });
@@ -122,13 +117,13 @@ if (typeof window !== 'undefined') {
       }
     };
 
-    console.log('🎯 Pusher Client initialized successfully');
+   
 
   } catch (error) {
     console.error('❌ Failed to initialize Pusher:', error);
   }
 } else {
-  console.log('🌐 Server-side: Pusher not initialized');
+  
 }
 
 export { pusherClient };
