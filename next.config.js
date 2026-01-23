@@ -53,19 +53,27 @@ const nextConfig = {
     ];
   },
   async rewrites() {
+    
+    
+  
     return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://moya.talaaljazeera.com/api/v1/:path*',
-      },
-      {
-        source: '/type-water',
-        destination: 'http://moya.talaaljazeera.com/api/v1/type-water',
-      },
-      {
-        source: '/services',
-        destination: 'http://moya.talaaljazeera.com/api/v1/services',
-      },
+  {
+        source: '/api/proxy/:path*',
+        destination: 'http://moya.talaaljazeera.com/api/v1/:path*'
+      }
+,
+      // {
+      //   source: '/api/v1/:path*',
+      //   destination: 'http://moya.talaaljazeera.com/api/v1/:path*',
+      // },
+      // {
+      //   source: '/type-water',
+      //   destination: 'http://moya.talaaljazeera.com/api/v1/type-water',
+      // },
+      // {
+      //   source: '/services',
+      //   destination: 'http://moya.talaaljazeera.com/api/v1/services',
+      // },
     ];
   },
 };

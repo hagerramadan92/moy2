@@ -1,6 +1,7 @@
-import api, { BASE_URL } from './axios-config';
+// api.js
+import api, { REAL_API_URL } from './axios-config';
 
-// وظائف API الخاصة بالمياه
+// وظائف API الخاصة بالمياه مع دعم Proxy
 export const waterApi = {
   // جلب أنواع المياه
   async getWaterTypes() {
@@ -25,41 +26,86 @@ export const waterApi = {
     }
   },
 
-  // جلب أحجام / خدمات المياه
+  // جلب أحجام / خدمات المياه - مع دعم Proxy
   async getWaterServices() {
     try {
-      console.log('Fetching water services from API');
+      console.log('🔄 Fetching water services...');
+      
       const response = await api.get('/services');
-      console.log('Water services response:', response.data);
-      return response.data;
+      
+      console.log('✅ Water services response:', {
+        success: response.data.status,
+        count: response.data.data?.length || 0,
+        message: response.data.message
+      });
+      
+      // التأكد من تنسيق الـ response
+      const result = response.data;
+      
+      // إذا كان الـ response به data مباشرة
+      if (result.data !== undefined) {
+        return {
+          status: result.status !== undefined ? result.status : true,
+          message: result.message || 'تم جلب الخدمات بنجاح',
+          data: Array.isArray(result.data) ? result.data : []
+        };
+      }
+      
+      // إذا كان الـ response مصفوفة مباشرة
+      if (Array.isArray(result)) {
+        return {
+          status: true,
+          message: 'تم جلب الخدمات بنجاح',
+          data: result
+        };
+      }
+      
+      // إرجاع كما هو مع ضمان وجود الحقول المطلوبة
+      return {
+        status: result.status !== undefined ? result.status : true,
+        message: result.message || 'تم جلب الخدمات بنجاح',
+        data: Array.isArray(result) ? result : []
+      };
+      
     } catch (error) {
-      console.error('Error fetching water services:', error);
+      console.error('❌ Error fetching water services:', error);
       
       // إرجاع بيانات افتراضية في حالة الخطأ
       return {
-        success: false,
+        status: false,
         message: error.response?.data?.message || error.message || 'فشل في جلب الخدمات',
         data: [
           { 
             id: 1, 
-            name: 'عبوة صغيرة', 
-            size: '500 مل',
-            price: 5,
-            description: 'عبوة مياه صغيرة للاستخدام الشخصي'
+            name: '6 طن',
+            image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
+            is_active: 1,
+            start_price: 'يبدا من 30',
+            title: 'افضل سعر'
           },
           { 
             id: 2, 
-            name: 'عبوة متوسطة', 
-            size: '1 لتر',
-            price: 8,
-            description: 'عبوة مياه متوسطة الحجم'
+            name: '8 طن',
+            image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
+            is_active: 1,
+            start_price: 'يبدا من 30',
+            title: 'افضل سعر'
           },
           { 
             id: 3, 
-            name: 'عبوة كبيرة', 
-            size: '5 لتر',
-            price: 20,
-            description: 'عبوة مياه كبيرة للعائلة'
+            name: '16 طن',
+            image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
+            is_active: 1,
+            start_price: 'يبدا من 30',
+            title: 'افضل سعر'
+          },
+          { 
+            id: 4, 
+            name: '3 طن',
+            image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
+            is_active: 1,
+            start_price: 'يبدا من 30',
+            title: 'افضل سعر'
           }
         ]
       };
@@ -573,6 +619,68 @@ export const saveAuthToken = (token) => {
   }
 };
 
+// دالة مساعدة للتحقق من الـ environment
+export const getApiConfig = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isBrowser = typeof window !== 'undefined';
+  
+  return {
+    isProduction,
+    isBrowser,
+    shouldUseProxy: isProduction && isBrowser,
+    apiUrl: REAL_API_URL
+  };
+};
+
+// دالة لاختبار الـ proxy
+export const testProxyConnection = async () => {
+  try {
+    const response = await api.get('/services');
+    return {
+      success: true,
+      data: response.data,
+      proxyUsed: response.config.url.includes('/api/proxy/'),
+      config: {
+        url: response.config.url,
+        baseURL: response.config.baseURL,
+        method: response.config.method
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      proxyUsed: error.config?.url?.includes('/api/proxy/') || false,
+      config: {
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        method: error.config?.method
+      }
+    };
+  }
+};
+
+// دالة للحصول على الـ services مباشرة (بدون proxy)
+export const getServicesDirect = async () => {
+  try {
+    const response = await fetch('http://moya.talaaljazeera.com/api/v1/services', {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Direct fetch error:', error);
+    throw error;
+  }
+};
+
 // Default export للـ axios instance للتوافق مع الكود الحالي
 export default api;
 
@@ -591,5 +699,8 @@ export {
   checkAuthToken,
   removeAuthToken,
   saveAuthToken,
-  BASE_URL
+  REAL_API_URL,
+  getApiConfig,
+  testProxyConnection,
+  getServicesDirect
 };
