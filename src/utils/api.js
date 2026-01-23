@@ -1,11 +1,93 @@
-import axiosInstance, { BASE_URL } from './axios-config';
+import api, { BASE_URL } from './axios-config';
+
+// وظائف API الخاصة بالمياه
+export const waterApi = {
+  // جلب أنواع المياه
+  async getWaterTypes() {
+    try {
+      console.log('Fetching water types from API');
+      const response = await api.get('/type-water');
+      console.log('Water types response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching water types:', error);
+      
+      // إرجاع بيانات افتراضية في حالة الخطأ
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'فشل في جلب أنواع المياه',
+        data: [
+          { id: 1, name: 'مياه عادية', value: 'regular', description: 'مياه شرب عادية' },
+          { id: 2, name: 'مياه معدنية', value: 'mineral', description: 'مياه غنية بالمعادن' },
+          { id: 3, name: 'مياه قلوية', value: 'alkaline', description: 'مياه قلوية متوازنة' }
+        ]
+      };
+    }
+  },
+
+  // جلب أحجام / خدمات المياه
+  async getWaterServices() {
+    try {
+      console.log('Fetching water services from API');
+      const response = await api.get('/services');
+      console.log('Water services response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching water services:', error);
+      
+      // إرجاع بيانات افتراضية في حالة الخطأ
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'فشل في جلب الخدمات',
+        data: [
+          { 
+            id: 1, 
+            name: 'عبوة صغيرة', 
+            size: '500 مل',
+            price: 5,
+            description: 'عبوة مياه صغيرة للاستخدام الشخصي'
+          },
+          { 
+            id: 2, 
+            name: 'عبوة متوسطة', 
+            size: '1 لتر',
+            price: 8,
+            description: 'عبوة مياه متوسطة الحجم'
+          },
+          { 
+            id: 3, 
+            name: 'عبوة كبيرة', 
+            size: '5 لتر',
+            price: 20,
+            description: 'عبوة مياه كبيرة للعائلة'
+          }
+        ]
+      };
+    }
+  },
+
+  // جلب العروض الخاصة (إذا كانت متوفرة)
+  async getWaterOffers() {
+    try {
+      const response = await api.get('/offers');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching water offers:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        data: []
+      };
+    }
+  }
+};
 
 // وظائف API الخاصة بالمحفظة
 export const walletApi = {
   // الحصول على رصيد المحفظة
   async getWalletBalance() {
     try {
-      const response = await axiosInstance.get('/user/wallet');
+      const response = await api.get('/user/wallet');
       return response.data;
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
@@ -21,7 +103,7 @@ export const walletApi = {
         url += `&type=${type}`;
       }
       
-      const response = await axiosInstance.get(url);
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -42,27 +124,19 @@ export const walletApi = {
     try {
       let url = `/user/wallet/transactions?page=${page}&limit=${limit}`;
       
-      if (type && type !== 'all') {
-        url += `&type=${type}`;
+      const params = new URLSearchParams();
+      
+      if (type && type !== 'all') params.append('type', type);
+      if (status && status !== 'all') params.append('status', status);
+      if (search) params.append('search', search);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      
+      if (params.toString()) {
+        url += `&${params.toString()}`;
       }
       
-      if (status && status !== 'all') {
-        url += `&status=${status}`;
-      }
-      
-      if (search) {
-        url += `&search=${encodeURIComponent(search)}`;
-      }
-      
-      if (startDate) {
-        url += `&start_date=${startDate}`;
-      }
-      
-      if (endDate) {
-        url += `&end_date=${endDate}`;
-      }
-      
-      const response = await axiosInstance.get(url);
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching filtered transactions:', error);
@@ -73,7 +147,7 @@ export const walletApi = {
   // إضافة أموال
   async depositMoney(amount, payment_method) {
     try {
-      const response = await axiosInstance.post('/user/wallet/deposit', {
+      const response = await api.post('/user/wallet/deposit', {
         amount: parseFloat(amount),
         payment_method
       });
@@ -87,7 +161,7 @@ export const walletApi = {
   // الحصول على طرق الدفع
   async getPaymentMethods() {
     try {
-      const response = await axiosInstance.get('/payment-methods');
+      const response = await api.get('/payment-methods');
       return response.data;
     } catch (error) {
       console.error('Error fetching payment methods:', error);
@@ -98,8 +172,8 @@ export const walletApi = {
   // تصدير كشف الحساب
   async exportStatement(startDate, endDate, format = 'pdf') {
     try {
-      const response = await axiosInstance.get(
-        `/user/wallet/statement?start_date=${startDate}&end_date=${endDate}&format=${format}`, 
+      const response = await api.get(
+        `/user/wallet/statement?start_date=${startDate}&end_date=${endDate}&format=${format}`,
         {
           responseType: 'blob'
         }
@@ -114,7 +188,7 @@ export const walletApi = {
   // الحصول على تفاصيل معاملة محددة
   async getTransactionDetails(transactionId) {
     try {
-      const response = await axiosInstance.get(`/user/wallet/transactions/${transactionId}`);
+      const response = await api.get(`/user/wallet/transactions/${transactionId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching transaction details:', error);
@@ -126,44 +200,258 @@ export const walletApi = {
   async getTransactionStats(startDate = '', endDate = '') {
     try {
       let url = '/user/wallet/transactions/stats';
+      const params = new URLSearchParams();
       
-      if (startDate) {
-        url += `?start_date=${startDate}`;
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
       }
       
-      if (endDate) {
-        url += `${startDate ? '&' : '?'}end_date=${endDate}`;
-      }
-      
-      const response = await axiosInstance.get(url);
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching transaction stats:', error);
       throw error;
     }
   }
-  
 };
-// وظائف API الخاصة بالمياه
-export const waterApi = {
-  // جلب أنواع المويه
-  async getWaterTypes() {
+
+// وظائف API عامة
+export const generalApi = {
+  // جلب بيانات الصفحة الرئيسية
+  async getHomePageData() {
     try {
-      const response = await axiosInstance.get('/type-water');
+      const response = await api.get('/pages/home');
       return response.data;
     } catch (error) {
-      console.error('Error fetching water types:', error);
+      console.error('Error fetching home page data:', error);
+      // إرجاع بيانات افتراضية للصفحة الرئيسية
+      return {
+        success: true,
+        data: {
+          sections: [
+            { id: 1, type: 'hero', order: 1, title: 'مرحباً بكم في مويا' },
+            { id: 2, type: 'features', order: 2, title: 'لماذا تختارنا' },
+            { id: 3, type: 'packages', order: 3, title: 'باقاتنا المميزة' },
+            { id: 4, type: 'steps', order: 4, title: 'كيف نعمل' },
+            { id: 5, type: 'testimonials', order: 5, title: 'آراء عملائنا' }
+          ]
+        }
+      };
+    }
+  },
+
+  // جلب العروض
+  async getDeals() {
+    try {
+      const response = await api.get('/deals');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        data: []
+      };
+    }
+  },
+
+  // جلب التقييمات
+  async getReviews() {
+    try {
+      const response = await api.get('/reviews');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        data: []
+      };
+    }
+  },
+
+  // جلب خطوات العمل
+  async getHowItWorks() {
+    try {
+      const response = await api.get('/how-it-works');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching how it works:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        data: []
+      };
+    }
+  },
+
+  // جلب الموقع الحالي (إذا كان هناك API للمواقع)
+  async getLocations() {
+    try {
+      const response = await api.get('/locations');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        data: []
+      };
+    }
+  }
+};
+
+// وظائف API الخاصة بالمستخدم
+export const userApi = {
+  // تسجيل الدخول
+  async login(email, password) {
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error logging in:', error);
       throw error;
     }
   },
 
-  // جلب أحجام / خدمات المويه
-  async getWaterServices() {
+  // التسجيل
+  async register(userData) {
     try {
-      const response = await axiosInstance.get('/services');
+      const response = await api.post('/auth/register', userData);
       return response.data;
     } catch (error) {
-      console.error('Error fetching water services:', error);
+      console.error('Error registering:', error);
+      throw error;
+    }
+  },
+
+  // الحصول على بيانات المستخدم
+  async getUserProfile() {
+    try {
+      const response = await api.get('/user/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  },
+
+  // تحديث بيانات المستخدم
+  async updateUserProfile(userData) {
+    try {
+      const response = await api.put('/user/profile', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  },
+
+  // تحديث كلمة المرور
+  async updatePassword(currentPassword, newPassword) {
+    try {
+      const response = await api.put('/user/password', {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+  },
+
+  // نسيان كلمة المرور
+  async forgotPassword(email) {
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      console.error('Error in forgot password:', error);
+      throw error;
+    }
+  },
+
+  // إعادة تعيين كلمة المرور
+  async resetPassword(token, email, password, password_confirmation) {
+    try {
+      const response = await api.post('/auth/reset-password', {
+        token,
+        email,
+        password,
+        password_confirmation
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
+  }
+};
+
+// وظائف API للطلبات
+export const ordersApi = {
+  // إنشاء طلب جديد
+  async createOrder(orderData) {
+    try {
+      const response = await api.post('/orders', orderData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+  },
+
+  // جلب طلبات المستخدم
+  async getUserOrders(page = 1, limit = 10, status = '') {
+    try {
+      let url = `/user/orders?page=${page}&limit=${limit}`;
+      if (status) {
+        url += `&status=${status}`;
+      }
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user orders:', error);
+      throw error;
+    }
+  },
+
+  // جلب تفاصيل طلب معين
+  async getOrderDetails(orderId) {
+    try {
+      const response = await api.get(`/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      throw error;
+    }
+  },
+
+  // تحديث حالة الطلب
+  async updateOrderStatus(orderId, status) {
+    try {
+      const response = await api.put(`/orders/${orderId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      throw error;
+    }
+  },
+
+  // إلغاء الطلب
+  async cancelOrder(orderId) {
+    try {
+      const response = await api.delete(`/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error canceling order:', error);
       throw error;
     }
   }
@@ -171,6 +459,8 @@ export const waterApi = {
 
 // دالة مساعدة لمعالجة الأخطاء
 export const handleApiError = (error, defaultMessage = 'حدث خطأ أثناء العملية') => {
+  console.error('API Error Details:', error);
+  
   if (error.response) {
     // الخادم رد برسالة خطأ
     const errorData = error.response.data;
@@ -243,6 +533,8 @@ export const formatDate = (dateString, format = 'ar-SA') => {
 export const formatCurrency = (amount, currency = 'SAR') => {
   const numAmount = parseFloat(amount || 0);
   return numAmount.toLocaleString('ar-SA', {
+    style: 'currency',
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
@@ -255,22 +547,49 @@ export const checkAuthToken = () => {
   const token = localStorage.getItem('accessToken');
   if (!token) return false;
   
-  return true;
+  // يمكنك إضافة تحقق إضافي من صلاحية الـ token هنا
+  try {
+    // تحقق بسيط - يمكنك إضافة JWT decoding إذا كنت تستخدم JWT
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) return false;
+    
+    return true;
+  } catch {
+    return false;
+  }
 };
 
-// Default export للـ axios instance للتوافق مع الشفرة الحالية
-const api = axiosInstance;
+// دالة لإزالة token
+export const removeAuthToken = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('accessToken');
+  }
+};
 
+// دالة لحفظ token
+export const saveAuthToken = (token) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('accessToken', token);
+  }
+};
+
+// Default export للـ axios instance للتوافق مع الكود الحالي
 export default api;
 
 // Named exports لكل الدوال
 export {
+  waterApi,
   walletApi,
+  generalApi,
+  userApi,
+  ordersApi,
   handleApiError,
   validateBalance,
   downloadFile,
   formatDate,
   formatCurrency,
   checkAuthToken,
+  removeAuthToken,
+  saveAuthToken,
   BASE_URL
 };

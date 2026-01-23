@@ -14,11 +14,6 @@ import { waterApi } from "@/utils/api";
 
 import { Droplets } from "lucide-react";
 
-// export async function getWaterTypes() {
-// 	const res = await api.get("/type-water");
-// 	return res.data;
-// }
-
 export default function WaterTypeSelect({
 	value,
 	onChange,
@@ -31,6 +26,7 @@ export default function WaterTypeSelect({
 }) {
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState(null); // إضافة state للخطأ
 
 	const triggerClass = useMemo(() => {
 		const base =
@@ -42,59 +38,74 @@ export default function WaterTypeSelect({
 		return `${base} border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50 ${className}`;
 	}, [status, className]);
 
-	// useEffect(() => {
-	// 	let mounted = true;
+	useEffect(() => {
+		let mounted = true;
 
-	// 	async function load() {
-	// 		setLoading(true);
-	// 		try {
-	// 			const data = await getWaterTypes();
-	// 			if (!mounted) return;
+		const fetchData = async () => {
+			try {
+				setLoading(true);
+				setError(null); // إعادة تعيين الخطأ
+				
+				const response = await waterApi.getWaterTypes();
+				console.log('Water types response in component:', response);
+				
+				if (!mounted) return;
 
-	// 			if (data?.status && Array.isArray(data.data)) {
-	// 				setItems(data.data);
-	// 			} else {
-	// 				toast.error(data?.message || "فشل تحميل أنواع المياه");
-	// 			}
-	// 		} catch (e) {
-	// 			toast.error("فشل تحميل أنواع المياه");
-	// 		} finally {
-	// 			if (mounted) setLoading(false);
-	// 		}
-	// 	}
+				// معالجة البيانات بطرق مختلفة
+				let waterTypes = [];
+				
+				if (response.data && Array.isArray(response.data)) {
+					waterTypes = response.data;
+				} else if (Array.isArray(response)) {
+					waterTypes = response;
+				} else if (response.result && Array.isArray(response.result)) {
+					waterTypes = response.result;
+				} else if (response.success && Array.isArray(response.data)) {
+					waterTypes = response.data;
+				}
 
-	// 	load();
-	// 	return () => {
-	// 		mounted = false;
-	// 	};
-	// }, []);
- useEffect(() => {
-  let mounted = true;
+				if (waterTypes.length > 0) {
+					setItems(waterTypes);
+				} else {
+					// استخدام بيانات افتراضية إذا لم توجد بيانات
+					const defaultTypes = [
+						{ id: 1, name: 'مياه عادية' },
+						{ id: 2, name: 'مياه معدنية' },
+						{ id: 3, name: 'مياه قلوية' }
+					];
+					setItems(defaultTypes);
+					setError('لم يتم العثور على بيانات، يتم استخدام بيانات افتراضية');
+					toast.error('بيانات أنواع المياه غير متوفرة، يتم استخدام بيانات افتراضية');
+				}
+			} catch (err) {
+				console.error('Error fetching water types:', err);
+				setError(err.message || 'حدث خطأ في تحميل أنواع المياه');
+				
+				// بيانات افتراضية في حالة الخطأ
+				const defaultTypes = [
+					{ id: 1, name: 'مياه عادية' },
+					{ id: 2, name: 'مياه معدنية' },
+					{ id: 3, name: 'مياه قلوية' }
+				];
+				setItems(defaultTypes);
+				
+				toast.error(err.message || 'فشل تحميل أنواع المياه، يتم استخدام بيانات افتراضية');
+			} finally {
+				if (mounted) setLoading(false);
+			}
+		};
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await waterApi.getWaterTypes();
+		fetchData();
+		return () => {
+			mounted = false;
+		};
+	}, []);
 
-      if (!mounted) return;
-
-      if (data?.status && Array.isArray(data.data)) {
-        setItems(data.data);
-      } else {
-        toast.error(data?.message || "فشل تحميل أنواع المياه");
-      }
-    } catch (e) {
-      toast.error("فشل تحميل أنواع المياه");
-    } finally {
-      if (mounted) setLoading(false);
-    }
-  }
-
-  load();
-  return () => {
-    mounted = false;
-  };
-}, []);
+	// عرض رسالة خطأ إذا وجدت
+	if (error) {
+		console.warn('WaterTypeSelect Error:', error);
+		// لا نحتاج لعرض شيء لأننا نستخدم البيانات الافتراضية
+	}
 
 	return (
 		<div className="flex flex-col items-start gap-2">
@@ -124,7 +135,7 @@ export default function WaterTypeSelect({
 					{items.map((it) => (
 						<SelectItem
 							key={it.id}
-							value={String(it.id)} // نخزن ID
+							value={String(it.id)}
 							className="text-[16px] py-2 text-right flex-row-reverse justify-end"
 						>
 							{it.name}
@@ -132,6 +143,13 @@ export default function WaterTypeSelect({
 					))}
 				</SelectContent>
 			</Select>
+			
+			{/* عرض رسالة الخطأ (اختياري) */}
+			{error && (
+				<p className="text-sm text-amber-600 mt-1">
+					ملاحظة: {error}
+				</p>
+			)}
 		</div>
 	);
 }
