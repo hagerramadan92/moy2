@@ -144,6 +144,30 @@ export const walletApi = {
   }
   
 };
+// وظائف API الخاصة بالمياه
+export const waterApi = {
+  // جلب أنواع المويه
+  async getWaterTypes() {
+    try {
+      const response = await axiosInstance.get('/type-water');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching water types:', error);
+      throw error;
+    }
+  },
+
+  // جلب أحجام / خدمات المويه
+  async getWaterServices() {
+    try {
+      const response = await axiosInstance.get('/services');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching water services:', error);
+      throw error;
+    }
+  }
+};
 
 // دالة مساعدة لمعالجة الأخطاء
 export const handleApiError = (error, defaultMessage = 'حدث خطأ أثناء العملية') => {

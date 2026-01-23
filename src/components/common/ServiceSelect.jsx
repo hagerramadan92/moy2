@@ -10,13 +10,14 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import api from "@/utils/api";
+// import api from "@/utils/api";
+import { waterApi } from "@/utils/api";
 import { Scale } from "lucide-react";
 
-export async function getServices() {
-	const res = await api.get("/services");
-	return res.data;
-}
+// export async function getServices() {
+// 	const res = await api.get("/services");
+// 	return res.data;
+// }
 
 
 
@@ -45,36 +46,68 @@ export default function ServiceSelect({
 		return `${base} border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50 ${className}`;
 	}, [status, className]);
 
-	useEffect(() => {
-		let mounted = true;
+	// useEffect(() => {
+	// 	let mounted = true;
 
-		async function load() {
-			setLoading(true);
-			try {
-				const data = await getServices();
-				if (!mounted) return;
+	// 	async function load() {
+	// 		setLoading(true);
+	// 		try {
+	// 			const data = await getServices();
+	// 			if (!mounted) return;
 
-				if (data?.status && Array.isArray(data.data)) {
-					const list = onlyActive
-						? data.data.filter((x) => String(x.is_active) === "1")
-						: data.data;
+	// 			if (data?.status && Array.isArray(data.data)) {
+	// 				const list = onlyActive
+	// 					? data.data.filter((x) => String(x.is_active) === "1")
+	// 					: data.data;
 
-					setItems(list);
-				} else {
-					toast.error(data?.message || "فشل تحميل الخدمات");
-				}
-			} catch (e) {
-				toast.error("فشل تحميل الخدمات");
-			} finally {
-				if (mounted) setLoading(false);
+	// 				setItems(list);
+	// 			} else {
+	// 				toast.error(data?.message || "فشل تحميل الخدمات");
+	// 			}
+	// 		} catch (e) {
+	// 			toast.error("فشل تحميل الخدمات");
+	// 		} finally {
+	// 			if (mounted) setLoading(false);
+	// 		}
+	// 	}
+
+	// 	load();
+	// 	return () => {
+	// 		mounted = false;
+	// 	};
+	// }, [onlyActive]);
+useEffect(() => {
+	let mounted = true;
+
+	async function loadServices() {
+		setLoading(true);
+		try {
+			const data = await waterApi.getWaterServices();
+
+			if (!mounted) return;
+
+			if (data?.status && Array.isArray(data.data)) {
+				const list = onlyActive
+					? data.data.filter((x) => String(x.is_active) === "1")
+					: data.data;
+
+				setItems(list);
+			} else {
+				toast.error(data?.message || "فشل تحميل أحجام المويه");
 			}
+		} catch (error) {
+			toast.error("فشل تحميل أحجام المويه");
+		} finally {
+			if (mounted) setLoading(false);
 		}
+	}
 
-		load();
-		return () => {
-			mounted = false;
-		};
-	}, [onlyActive]);
+	loadServices();
+
+	return () => {
+		mounted = false;
+	};
+}, [onlyActive]);
 
 	return (
 		<div className="flex flex-col items-start gap-2" >

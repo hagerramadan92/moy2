@@ -13,6 +13,8 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useRouter } from 'next/navigation';
 import LoginFlowDialog from '@/components/molecules/order-now/LoginFlowDialog';
+import { waterApi } from "@/utils/api";
+
 
 export default function AvailableSize() {
   const router = useRouter();
@@ -51,37 +53,39 @@ export default function AvailableSize() {
 
   // Fetch services from API
   useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('http://moya.talaaljazeera.com/api/v1/services');
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch services');
-        }
-        
-        const data = await response.json();
-        
-        // Handle different possible response structures
-        const servicesData = Array.isArray(data) ? data : (data.data || data.services || []);
-        
-        if (servicesData.length > 0) {
-          setServices(servicesData);
-        } else {
-          setServices([]);
-        }
-      } catch (err) {
-        console.error('Error fetching services:', err);
-        setError(err.message);
-        setServices([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+	let mounted = true;
 
-    fetchServices();
-  }, []);
+	const fetchServices = async () => {
+		try {
+			setLoading(true);
+			setError(null);
+
+			const data = await waterApi.getWaterServices();
+
+			if (!mounted) return;
+
+			if (data?.status && Array.isArray(data.data)) {
+				setServices(data.data);
+			} else {
+				setServices([]);
+				setError(data?.message || "فشل تحميل السعات");
+			}
+		} catch (err) {
+			console.error("Error fetching services:", err);
+			setError("فشل تحميل السعات");
+			setServices([]);
+		} finally {
+			if (mounted) setLoading(false);
+		}
+	};
+
+	fetchServices();
+
+	return () => {
+		mounted = false;
+	};
+}, []);
+
 
   return (
     <section dir="rtl" className="py-8 sm:py-12 container mx-auto md:py-16 lg:py-20 bg-white">

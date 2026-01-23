@@ -10,13 +10,14 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import api from "@/utils/api";
+import { waterApi } from "@/utils/api";
+
 import { Droplets } from "lucide-react";
 
-export async function getWaterTypes() {
-	const res = await api.get("/type-water");
-	return res.data;
-}
+// export async function getWaterTypes() {
+// 	const res = await api.get("/type-water");
+// 	return res.data;
+// }
 
 export default function WaterTypeSelect({
 	value,
@@ -41,32 +42,59 @@ export default function WaterTypeSelect({
 		return `${base} border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50 ${className}`;
 	}, [status, className]);
 
-	useEffect(() => {
-		let mounted = true;
+	// useEffect(() => {
+	// 	let mounted = true;
 
-		async function load() {
-			setLoading(true);
-			try {
-				const data = await getWaterTypes();
-				if (!mounted) return;
+	// 	async function load() {
+	// 		setLoading(true);
+	// 		try {
+	// 			const data = await getWaterTypes();
+	// 			if (!mounted) return;
 
-				if (data?.status && Array.isArray(data.data)) {
-					setItems(data.data);
-				} else {
-					toast.error(data?.message || "فشل تحميل أنواع المياه");
-				}
-			} catch (e) {
-				toast.error("فشل تحميل أنواع المياه");
-			} finally {
-				if (mounted) setLoading(false);
-			}
-		}
+	// 			if (data?.status && Array.isArray(data.data)) {
+	// 				setItems(data.data);
+	// 			} else {
+	// 				toast.error(data?.message || "فشل تحميل أنواع المياه");
+	// 			}
+	// 		} catch (e) {
+	// 			toast.error("فشل تحميل أنواع المياه");
+	// 		} finally {
+	// 			if (mounted) setLoading(false);
+	// 		}
+	// 	}
 
-		load();
-		return () => {
-			mounted = false;
-		};
-	}, []);
+	// 	load();
+	// 	return () => {
+	// 		mounted = false;
+	// 	};
+	// }, []);
+ useEffect(() => {
+  let mounted = true;
+
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await waterApi.getWaterTypes();
+
+      if (!mounted) return;
+
+      if (data?.status && Array.isArray(data.data)) {
+        setItems(data.data);
+      } else {
+        toast.error(data?.message || "فشل تحميل أنواع المياه");
+      }
+    } catch (e) {
+      toast.error("فشل تحميل أنواع المياه");
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  }
+
+  load();
+  return () => {
+    mounted = false;
+  };
+}, []);
 
 	return (
 		<div className="flex flex-col items-start gap-2">
