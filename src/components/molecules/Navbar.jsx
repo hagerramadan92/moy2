@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-
+import { GoBell } from "react-icons/go";
+import NotificationBell from "../Notifications/NotificationBell";
 const NAV_LINKS = [
   { href: "/", label: "الرئيسية" },
   { href: "/contact", label: "تواصل معنا" },
@@ -202,10 +203,18 @@ export default function Navbar() {
               );
             })}
           </nav>
-
+          
           <div className="flex items-center gap-2">
             {/* زر اطلب الآن - يذهب إلى صفحة الطلب */}
-            <motion.div whileTap={{ scale: 0.98 }}>
+            <motion.div whileTap={{ scale: 0.98 }} className="flex items-center gap-1 md:gap-4">
+                <div>
+                    <NotificationBell />
+              {/* <Link href="/notifications"> */}
+              {/* <GoBell size={22} className="text-blue-900 font-extrabold"/> */}
+                
+
+              {/* </Link> */}
+            </div>
               <button
                 onClick={handleOrderNow}
                 className={[
@@ -215,6 +224,7 @@ export default function Navbar() {
                   "ring-1 ring-white/40 transition hover:brightness-110",
                 ].join(" ")}
               >
+                
                 <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-sky-500/25 to-blue-600/25 blur-md" />
                 <span className="relative text-[10px] md:text-xs">اطلب الآن</span>
               </button>

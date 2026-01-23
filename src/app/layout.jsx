@@ -3,6 +3,9 @@ import Layout from "@/components/molecules/Layout";
 import "./globals.css";
 import { Almarai } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import { NotificationProvider } from "@/context/NotificationContext";
+import NotificationPopup from "@/components/Notifications/NotificationPopup";
+import NotificationToast from "@/components/Notifications/NotificationToast";
 
 // ✅ Font
 export const almarai = Almarai({
@@ -96,8 +99,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={almarai.className}>
-        <Layout>{children}</Layout>
+        <NotificationProvider>
+     <Layout>{children}</Layout>
+        <NotificationPopup />
+
 				<Toaster  position="top-center" />
+        <NotificationToast />
+        </NotificationProvider>
+   
       </body>
     </html>
   );

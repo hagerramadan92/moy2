@@ -1,0 +1,143 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Bell } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
+
+export default function NotificationPopup() {
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { registerDevice, fcmToken } = useNotification();
+
+  useEffect(() => {
+    // الانتظار 2 ثانية ثم التحقق
+    const timer = setTimeout(() => {
+      if (typeof window === 'undefined') return;
+      
+      const permission = Notification.permission;
+      const skipped = localStorage.getItem('notifications_skipped');
+      const shown = sessionStorage.getItem('popup_shown');
+      const deviceRegistered = localStorage.getItem('device_registered');
+      
+      // إذا كان الإذن default ولم يتم التخطي ولم يسجل الجهاز
+      if (permission === 'default' && !skipped && !shown) {
+        setShow(true);
+        sessionStorage.setItem('popup_shown', 'true');
+      }
+      // إذا كان الإذن granted ولكن الجهاز لم يسجل
+      else if (permission === 'granted' && !deviceRegistered && !skipped) {
+        setShow(true);
+        sessionStorage.setItem('popup_shown', 'true');
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleAllow = async () => {
+    try {
+      setLoading(true);
+      
+      let permission = Notification.permission;
+      
+      // إذا كان الإذن default، اطلبه
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      
+      if (permission !== 'granted') {
+        setShow(false);
+        localStorage.setItem('notifications_skipped', 'true');
+        return;
+      }
+      
+      // تسجيل الجهاز
+      const tokenToUse = fcmToken || "dH1mrzhPREm1_5kM0HCgAO:APA91bFAVRVaXceYnMqYJG7yeHMVYGAU1GSuQgOOkAyn8ZnLk5ZQIYCdbh7ze2rR8kefbRjEMWUqxgKOqpus1rE9NaPHqtqtnNma7wHmQ33g5VpBLxAD9VI";
+      
+      try {
+        await registerDevice(tokenToUse);
+        
+        // إخفاء البوب أب بعد نجاح التسجيل
+        setTimeout(() => {
+          setShow(false);
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Error registering device:', error);
+        setShow(false);
+      }
+      
+    } catch (error) {
+      console.error('💥 Error in handleAllow:', error);
+      setShow(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkip = () => {
+    localStorage.setItem('notifications_skipped', 'true');
+    setShow(false);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999999] p-2 md:p-5 animate-fadeIn">
+      <div className="bg-white rounded-2xl p-3 md:p-8 max-w-md w-full text-center shadow-2xl animate-slideUp">
+        <div className="mb-2 md:mb-7">
+          {/* أيقونة الجرس */}
+          <div className="md:w-20 md:h-20 w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-blue-100">
+            <Bell size={30} className="text-blue-500" />
+          </div>
+          
+          {/* السؤال */}
+          <h2 className="md:text-2xl font-bold text-blue-800 md:mb-3 mb-1 text-lg">
+            هل تريد تفعيل الإشعارات؟
+          </h2>
+          
+          {/* الوصف البسيط */}
+          <p className="text-gray-600 text-sm md:text-base leading-relaxed">
+            اسمح لنا بإرسال إشعارات إليك لتبقى على اطلاع دائم بآخر التحديثات.
+          </p>
+        </div>
+        
+        {/* الأزرار */}
+        <div className="flex flex-col gap-2 md:gap-3 md:mt-6 mt-2">
+          <button 
+            onClick={handleAllow}
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold
+             md:py-4 md:px-6 py-2 px-2 rounded-md md:rounded-xl transition-all duration-200 
+             hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-blue-500/30 
+             hover:shadow-blue-500/40 disabled:opacity-70 disabled:cursor-not-allowed 
+             disabled:hover:transform-none"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                جاري التحميل...
+              </span>
+            ) : 'سماح بالإشعارات'}
+          </button>
+          
+          <button 
+            onClick={handleSkip}
+            disabled={loading}
+            className="bg-transparent hover:bg-gray-50
+             text-gray-500 font-medium md:py-4 md:px-6 py-1 px-2 
+             rounded-md md:rounded-xl border-2 border-gray-200 
+             transition-all duration-200 hover:-translate-y-0.5 
+             active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed 
+             disabled:hover:transform-none"
+          >
+            لاحقاً
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
