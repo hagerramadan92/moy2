@@ -1,254 +1,335 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { IoDocumentText, IoWalletOutline } from "react-icons/io5";
-import { FaArrowUp, FaArrowDown, FaCalendarAlt, FaPlus, FaChevronRight } from "react-icons/fa";
+import { IoWalletOutline, IoReceiptOutline, IoCheckmarkCircle, IoAlertCircle, IoTime } from "react-icons/io5";
+import { FaArrowUp, FaArrowDown, FaPlus, FaHistory, FaShieldAlt, FaChartLine } from "react-icons/fa";
+import { MdTrendingUp, MdSpeed, MdOutlineVerified } from "react-icons/md";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RxDotsHorizontal } from "react-icons/rx";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import Swal from "sweetalert2";
+import { walletApi, handleApiError, formatCurrency } from "@/utils/api";
 
 export default function WalletPage() {
-    const [activeTab, setActiveTab] = useState("all");
+    const [walletData, setWalletData] = useState(null);
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [transactionLoading, setTransactionLoading] = useState(false);
     const router = useRouter();
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
 
-    const transactions = [
-        { id: "456789356", type: "deposit", title: "إضافة ", date: "الثلاثاء - 10 نوفمبر 1.13ص", amount: "2,134", status: "completed" },
-        { id: "456789357", type: "spend", title: "صرف", date: "الاثنين - 09 نوفمبر 4.20م", amount: "150", status: "completed" },
-        { id: "456789358", type: "deposit", title: "إضافة ", date: "الأحد - 08 نوفمبر 10:30ص", amount: "75", status: "completed" },
-    ];
-
-    const filteredTransactions = transactions.filter(t => {
-        if (activeTab === "deposit") return t.type === "deposit";
-        if (activeTab === "spend") return t.type === "spend";
-        return true;
-    });
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentTransactions = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
-
-    const onPageChange = (page) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+    // جلب بيانات المحفظة
+    const fetchWalletData = async () => {
+        try {
+            setLoading(true);
+            const response = await walletApi.getWalletBalance();
+            
+            if (response.status) {
+                setWalletData(response.data);
+            } else {
+                Swal.fire({
+                    title: "خطأ",
+                    text: response.message || "فشل في تحميل بيانات المحفظة",
+                    icon: "error",
+                    confirmButtonColor: "#579BE8",
+                });
+            }
+        } catch (error) {
+            const errorInfo = handleApiError(error, "حدث خطأ أثناء تحميل بيانات المحفظة");
+            Swal.fire({
+                title: "خطأ",
+                text: errorInfo.message,
+                icon: "error",
+                confirmButtonColor: "#579BE8",
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Reset to first page when filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [activeTab]);
+    // جلب المعاملات
+    const fetchTransactions = async () => {
+        try {
+            setTransactionLoading(true);
+            const response = await walletApi.getTransactions(1, 5);
+            
+            if (response.status) {
+                setTransactions(response.data.transactions || []);
+            }
+        } catch (error) {
+            console.error("Error fetching transactions:", error);
+        } finally {
+            setTransactionLoading(false);
+        }
+    };
 
-    const tabs = [
-        { id: "all", label: "الكل" },
-        { id: "deposit", label: "الإيداع" },
-        { id: "spend", label: "المصروفات" },
-    ];
+    useEffect(() => {
+        fetchWalletData();
+        fetchTransactions();
+    }, []);
+
+    // تنسيق التاريخ
+    const formatDate = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            return 'اليوم ' + date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            return 'أمس ' + date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            return date.toLocaleDateString('ar-SA', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    };
+
+    // تحديد لون وأيقونة الحالة
+    const getStatusConfig = (status) => {
+        switch(status) {
+            case 'completed': 
+                return {
+                    color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+                    bg: 'bg-emerald-100',
+                    icon: <IoCheckmarkCircle className="w-4 h-4" />,
+                    text: 'مكتمل'
+                };
+            case 'pending': 
+                return {
+                    color: 'text-amber-600 bg-amber-50 border-amber-100',
+                    bg: 'bg-amber-100',
+                    icon: <IoTime className="w-4 h-4" />,
+                    text: 'قيد الانتظار'
+                };
+            case 'failed': 
+                return {
+                    color: 'text-rose-600 bg-rose-50 border-rose-100',
+                    bg: 'bg-rose-100',
+                    icon: <IoAlertCircle className="w-4 h-4" />,
+                    text: 'فشل'
+                };
+            default: 
+                return {
+                    color: 'text-slate-600 bg-slate-50 border-slate-100',
+                    bg: 'bg-slate-100',
+                    icon: null,
+                    text: status
+                };
+        }
+    };
+
+    // تحديد أيقونة ونوع المعاملة
+    const getTransactionConfig = (transaction) => {
+        const isDeposit = transaction.type === "deposit" || transaction.amount > 0;
+        
+        if (isDeposit) {
+            return {
+                icon: <FaArrowDown className="w-4 h-4" />,
+                bg: 'bg-emerald-50',
+                color: 'text-emerald-600',
+                sign: '+'
+            };
+        } else {
+            return {
+                icon: <FaArrowUp className="w-4 h-4" />,
+                bg: 'bg-rose-50',
+                color: 'text-rose-600',
+                sign: '-'
+            };
+        }
+    };
+
+    // حساب نسبة استخدام الحد اليومي
+    const calculateUsagePercentage = () => {
+        if (!walletData) return 0;
+        const used = parseFloat(walletData.total_deposits_today) + parseFloat(walletData.total_withdrawals_today);
+        const limit = parseFloat(walletData.daily_limit);
+        return Math.min((used / limit) * 100, 100);
+    };
+
+    const usagePercentage = calculateUsagePercentage();
 
     return (
-        <div className="space-y-6 fade-in-up">
-            {/* Cards Row */}
-            <div className="">
-                <div className="flex py-5 flex-col gap-6 sm:py-10 sm:flex-row sm:items-center justify-between bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-primary-foreground p-8 rounded-3xl shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
-                        <IoWalletOutline size={160} />
+        <div className="space-y-6 fade-in-up mt-1 p-4 md:p-6">
+            {/* بطاقة الرصيد الرئيسية */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden"
+            >
+                <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                    <IoWalletOutline size={120} />
+                </div>
+                
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">رصيد المحفظة</h2>
+                        <p className="text-white/90 text-sm">الرصيد المتاح للاستخدام</p>
                     </div>
-
-                    <div className="flex flex-col gap-3 relative z-10">
-                        <p className="text-sm opacity-90 font-medium">رصيد محفظتك الحالي</p>
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-5xl md:text-6xl font-bold tracking-tight">2,134</h3>
-                            <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-xl">
-                                <Image src="/images/RS.png" alt="RS" width={32} height={32} quality={100}
-                                    priority unoptimized className="w-8 h-8 object-contain" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <button
-                        id="addMoney"
-                        onClick={() => router.push("/myProfile/wallet/add-money")}
-                        className="flex py-3 px-6 items-center gap-3 bg-white text-[#579BE8] font-bold rounded-2xl cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all group relative z-10 shadow-lg"
-                    >
-                        <div className="bg-[#579BE8]/10 p-1.5 rounded-lg group-hover:bg-[#579BE8] group-hover:text-white transition-colors">
-                            <FaPlus className="text-sm" />
-                        </div>
-                        <p>شحن المحفظة</p>
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex gap-4 sm:flex-row flex-col">
-                <div className="flex items-center gap-3 bg-white dark:bg-card p-3 rounded-2xl text-[15px] text-[#737375] border border-border/50 shadow-sm hover:border-primary/30 transition-colors cursor-pointer w-fit">
-                    <FaCalendarAlt className="text-primary/60" />
-                    <span className="font-medium">9 سبتمبر 2024 - 15 سبتمبر 2024</span>
-                </div>
-                <div className="flex items-center gap-3 bg-white dark:bg-card p-3 rounded-2xl text-[15px] text-[#737375] border border-border/50 shadow-sm hover:border-primary/30 transition-colors cursor-pointer w-fit">
-                    <IoDocumentText className="text-primary/60" />
-                    <span className="font-medium">تصدير كشف حساب</span>
-                </div>
-            </div>
-
-            {/* Transactions Section */}
-            <div id="totalInfo" className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                {/* Tabs Header */}
-                <div className="p-6 border-b border-border/50 flex items-center justify-between">
-                    <h3 className="font-black text-xl text-foreground">المعاملات</h3>
-                    <div className="flex items-center gap-3">
-                        <div className="flex bg-secondary/30 p-1 rounded-2xl">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all relative ${activeTab === tab.id
-                                        ? "bg-[#579BE8] text-white shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                        }`}
-                                >
-                                    {activeTab === tab.id && (
-                                        <motion.div
-                                            layoutId="activeTab"
-                                            className="absolute inset-0 bg-[#579BE8] rounded-xl shadow-sm"
-                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                        />
-                                    )}
-                                    <span className="relative z-10">{tab.label}</span>
-                                </button>
-                            ))}
-                        </div>
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                        <IoWalletOutline className="w-7 h-7" />
                     </div>
                 </div>
 
-                {/* Transactions Content */}
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[600px] text-right border-collapse">
-                        <thead>
-                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4 text-right">رقم المعاملة</th>
-                                <th className="px-6 py-4 text-right">تفاصيل المعاملة</th>
-                                <th className="px-6 py-4 hidden lg:table-cell">التاريخ والوقت</th>
-                                <th className="px-6 py-4 text-center">المبلغ</th>
-                                <th className="px-6 py-4 text-center">الإجراء</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/50">
-                            <AnimatePresence mode="popLayout">
-                                {currentTransactions.map((transaction) => (
-                                    <motion.tr
-                                        key={transaction.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        layout
-                                        className="hover:bg-secondary/10 transition-colors group"
-                                    >
-                                        <td className="px-6 py-5">
-                                            <span className="text-xs font-mono bg-secondary/40 px-2 py-1 rounded-lg text-muted-foreground">
-                                                #{transaction.id}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-xl ${transaction.type === "deposit"
-                                                    ? "bg-green-100/50 text-green-600 dark:bg-green-500/10"
-                                                    : "bg-orange-100/50 text-orange-600 dark:bg-orange-500/10"
-                                                    }`}>
-                                                    {transaction.type === "deposit" ? <FaArrowDown size={14} /> : <FaArrowUp size={14} />}
-                                                </div>
-                                                <span className="font-bold text-foreground">{transaction.title}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-muted-foreground text-sm hidden lg:table-cell">{transaction.date}</td>
-                                        <td className="px-6 py-5">
-                                            <div className={`flex items-center justify-center gap-1 font-black text-lg ${transaction.type === "deposit" ? "text-green-600" : "text-foreground"
-                                                }`}>
-                                                {transaction.type === "deposit" ? "+" : "-"} {transaction.amount}
-                                                <Image src="/images/RS.png" alt="RS" width={16} height={16}
-                                                    priority unoptimized className="w-4 h-4 opacity-70" />
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-center">
-                                            <button className="p-2 hover:bg-white dark:hover:bg-card rounded-lg transition-all border border-transparent hover:border-border hover:shadow-sm text-muted-foreground group-hover:text-[#579BE8]">
-                                                <RxDotsHorizontal className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </AnimatePresence>
-                            {currentTransactions.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="px-6 py-10 text-center text-muted-foreground">
-                                        لا توجد معاملات تطابق البحث
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Footer / Pagination */}
-                {filteredTransactions.length > 0 && (
-                    <div className="p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="text-sm font-medium text-muted-foreground">
-                            عرض <span className="text-foreground font-bold">{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)}</span> من أصل <span className="text-foreground font-bold">{filteredTransactions.length}</span> معاملة
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <button 
-                                disabled={currentPage === 1}
-                                onClick={() => onPageChange(currentPage - 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                            >
-                                <FaChevronRight className="w-3 h-3" />
-                            </button>
-
-                            <div className="flex items-center gap-1">
-                                {[...Array(totalPages)].map((_, idx) => {
-                                    const pageNum = idx + 1;
-                                    if (
-                                        pageNum === 1 || 
-                                        pageNum === totalPages || 
-                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                                    ) {
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => onPageChange(pageNum)}
-                                                className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
-                                                    currentPage === pageNum 
-                                                    ? "bg-[#579BE8] text-white shadow-lg shadow-[#579BE8]/20" 
-                                                    : "hover:bg-secondary/50 text-muted-foreground"
-                                                }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    } else if (
-                                        pageNum === currentPage - 2 || 
-                                        pageNum === currentPage + 2
-                                    ) {
-                                        return <span key={pageNum} className="px-1 text-muted-foreground">...</span>;
-                                    }
-                                    return null;
-                                })}
-                            </div>
-
-                            <button 
-                                disabled={currentPage === totalPages}
-                                onClick={() => onPageChange(currentPage + 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-secondary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all rotate-180"
-                            >
-                                <FaChevronRight className="w-3 h-3" />
-                            </button>
+                {loading ? (
+                    <div className="h-14 bg-white/10 rounded-lg animate-pulse"></div>
+                ) : walletData ? (
+                    <div className="flex items-center gap-3 mb-8 relative z-10">
+                        <h1 className="text-5xl font-black tracking-tight">
+                            {formatCurrency(walletData.balance)}
+                        </h1>
+                        <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                            <Image 
+                                src="/images/RS.png" 
+                                alt="ريال سعودي" 
+                                width={32} 
+                                height={32}
+                                className="w-8 h-8"
+                                quality={100}
+                                unoptimized
+                            />
                         </div>
                     </div>
+                ) : (
+                    <p className="text-white/70 relative z-10">لا توجد بيانات</p>
                 )}
+
+                {/* أزرار الإجراءات الرئيسية */}
+                <div className="flex gap-3 relative z-10">
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => router.push("/myProfile/wallet/add-money")}
+                        className="flex-1 bg-white text-[#579BE8] font-black py-3.5 rounded-2xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 shadow-lg"
+                    >
+                        <div className="p-1.5 bg-[#579BE8]/10 rounded-lg">
+                            <FaPlus className="w-4 h-4" />
+                        </div>
+                        <span>شحن المحفظة</span>
+                    </motion.button>
+                    
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => router.push("/myProfile/wallet/payment-history")}
+                        className="flex-1 bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold py-3.5 rounded-2xl hover:bg-white/30 hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    >
+                        <FaHistory className="w-4 h-4" />
+                        <span>سجل المعاملات</span>
+                    </motion.button>
+                </div>
+            </motion.div>
+
+            {/* معلومات الحد اليومي والإحصائيات */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* بطاقة الحد اليومي */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="bg-white border border-border/60 rounded-3xl p-6 shadow-sm"
+                >
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold">الحد اليومي</h3>
+                        <div className="p-2 bg-[#579BE8]/10 rounded-xl">
+                            <MdSpeed className="w-5 h-5 text-[#579BE8]" />
+                        </div>
+                    </div>
+                    
+                    {walletData && (
+                        <>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">المستخدم اليوم</p>
+                                        <p className="text-xl font-bold text-foreground mt-1">
+                                            {formatCurrency(parseFloat(walletData.total_deposits_today) + parseFloat(walletData.total_withdrawals_today))}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-muted-foreground">الحد الأقصى</p>
+                                        <p className="text-xl font-bold text-foreground mt-1">
+                                            {formatCurrency(walletData.daily_limit)}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="relative pt-2">
+                                    <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                                        <span>0%</span>
+                                        <span>100%</span>
+                                    </div>
+                                    <div className="w-full bg-secondary/20 rounded-full h-2.5 overflow-hidden">
+                                        <motion.div 
+                                            className="bg-gradient-to-r from-[#579BE8] to-[#315782] h-full rounded-full shadow-sm"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${usagePercentage}%` }}
+                                            transition={{ duration: 1, ease: "easeOut" }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between mt-2">
+                                        <span className="text-xs text-muted-foreground">متبقي</span>
+                                        <span className="text-xs font-medium text-[#579BE8]">{usagePercentage.toFixed(1)}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </motion.div>
+
+                {/* بطاقة الإحصائيات السريعة */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                    className="bg-gradient-to-br from-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                        <FaChartLine size={80} />
+                    </div>
+                    
+                    <div className="flex items-center justify-between mb-6 relative z-10">
+                        <h3 className="text-lg font-bold">مؤشرات الأداء</h3>
+                        <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                            <FaChartLine className="w-5 h-5" />
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-1.5 bg-white/20 rounded-lg">
+                                    <FaArrowDown className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="text-xs opacity-90">الإيداعات</span>
+                            </div>
+                            <p className="text-2xl font-bold">
+                                {walletData ? formatCurrency(parseFloat(walletData.total_deposits_today)) : '0.00'}
+                            </p>
+                        </div>
+                        
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-1.5 bg-white/20 rounded-lg">
+                                    <FaArrowUp className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="text-xs opacity-90">السحوبات</span>
+                            </div>
+                            <p className="text-2xl font-bold">
+                                {walletData ? formatCurrency(parseFloat(walletData.total_withdrawals_today)) : '0.00'}
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
+
+           
         </div>
     );
 }
