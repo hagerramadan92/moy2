@@ -21,8 +21,8 @@ const getRequestURL = (path) => {
   const isBrowser = typeof window !== 'undefined';
   
   if (isProduction && isBrowser) {
-    // استخدم الـ proxy للمسارات التي تبدأ بـ /chats أو /messages
-    if (path.startsWith('/chats') || path.startsWith('/messages')) {
+    // استخدم الـ proxy للمسارات التي تبدأ بـ /chats أو /messages أو /notifications
+    if (path.startsWith('/chats') || path.startsWith('/messages') || path.startsWith('/notifications')) {
       return `/api/proxy${path}`;
     }
   }
@@ -31,7 +31,7 @@ const getRequestURL = (path) => {
 };
 
 const axiosInstance = axios.create({
-  baseURL: '',
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -48,13 +48,22 @@ axiosInstance.interceptors.request.use((config) => {
   // تحويل الـ URL في الإنتاج
   if (isProduction && isBrowser && config.url) {
     const originalUrl = config.url;
-    config.url = getRequestURL(config.url);
+    const proxyUrl = getRequestURL(config.url);
     
-    console.log('💬 Message Service Request:', {
-      originalUrl,
-      finalUrl: config.url,
+    // إذا كان الـ URL مختلف، غيره
+    if (proxyUrl !== config.url) {
+      config.url = proxyUrl;
+      // إذا استخدمنا proxy، إزالة الـ baseURL
+      if (proxyUrl.startsWith('/api/proxy')) {
+        config.baseURL = '';
+      }
+    }
+    
+    console.log('📱 API Request:', {
+      originalUrl: originalUrl,
+      finalUrl: config.baseURL ? `${config.baseURL}${config.url}` : config.url,
       method: config.method,
-      usingProxy: config.url.includes('/api/proxy/')
+      usingProxy: config.url?.includes('/api/proxy/') || false
     });
   }
   
@@ -64,28 +73,29 @@ axiosInstance.interceptors.request.use((config) => {
   
   return config;
 }, (error) => {
-  console.error('💬 Message Service Request Error:', error);
+  console.error('📱 API Request Error:', error);
   return Promise.reject(error);
 });
 
 // معالج الاستجابة
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log('💬 Message Service Response:', {
+    console.log('✅ API Response:', {
       url: response.config.url,
       status: response.status,
       usingProxy: response.config.url?.includes('/api/proxy/') || false
     });
     
-    return response.data;
+    return response;
   },
   async (error) => {
-    console.error('💬 Message API Error:', {
+    console.error('❌ API Error:', {
       url: error.config?.url,
       status: error.response?.status,
       message: error.message,
       code: error.code,
-      usingProxy: error.config?.url?.includes('/api/proxy/') || false
+      usingProxy: error.config?.url?.includes('/api/proxy/') || false,
+      responseData: error.response?.data
     });
     
     if (error.response?.status === 401) {
@@ -96,59 +106,109 @@ axiosInstance.interceptors.response.use(
       }
     }
     
-    // إذا كان خطأ في الـ proxy، جرب الاتصال المباشر (فقط للتطوير)
-    if (error.code === 'ERR_NETWORK' && error.config?.url?.includes('/api/proxy/')) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ Proxy failed, trying direct connection for development...');
-        // يمكن إضافة retry logic هنا
-      }
-    }
-    
     throw error;
   }
 );
 
 class MessageService {
-  async getChats() {
+  // جلب الإشعارات (الملف الأصلي فيه getChats لكن الصحيح getNotifications)
+  async getNotifications(params = {}) {
     try {
-      console.log('📨 Fetching chats...');
-      const response = await axiosInstance.get('/chats');
+      console.log('🔔 Fetching notifications...');
+      const response = await axiosInstance.get('/notifications', { params });
       
-      console.log('📨 Chats response:', response);
+      console.log('🔔 Notifications raw response:', response.data);
       
-      // تنسيق الـ response بناءً على الهيكل المتوقع
-      if (response.status === "success" && response.chats && response.chats.data) {
-        return response.chats.data;
+      // معالجة الـ response
+      const result = response.data;
+      
+      // تحقق من تنسيق الـ response وعدّل له
+      if (result && typeof result === 'object') {
+        // الحالة 1: {status: true, message: "...", data: [...]}
+        if (result.status !== undefined && result.data !== undefined) {
+          return {
+            status: result.status,
+            message: result.message || 'تم جلب الإشعارات بنجاح',
+            data: Array.isArray(result.data) ? result.data : []
+          };
+        }
+        
+        // الحالة 2: {success: true, data: [...]}
+        if (result.success !== undefined && result.data !== undefined) {
+          return {
+            status: result.success,
+            message: result.message || 'تم جلب الإشعارات بنجاح',
+            data: Array.isArray(result.data) ? result.data : []
+          };
+        }
+        
+        // الحالة 3: {data: [...]} مباشرة
+        if (result.data && Array.isArray(result.data)) {
+          return {
+            status: true,
+            message: 'تم جلب الإشعارات بنجاح',
+            data: result.data
+          };
+        }
+        
+        // الحالة 4: مصفوفة مباشرة
+        if (Array.isArray(result)) {
+          return {
+            status: true,
+            message: 'تم جلب الإشعارات بنجاح',
+            data: result
+          };
+        }
       }
       
-      if (response.status === "success" && response.data) {
-        return Array.isArray(response.data) ? response.data : [];
-      }
+      // إذا كان الـ response غير معروف، رجع مصفوفة فارغة
+      return {
+        status: false,
+        message: 'تنسيق البيانات غير معروف',
+        data: []
+      };
       
-      if (Array.isArray(response)) {
-        return response;
-      }
-      
-      if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-      }
-      
-      if (response?.chats && Array.isArray(response.chats)) {
-        return response.chats;
-      }
-      
-      return [];
     } catch (error) {
-      console.error('❌ Error getting chats:', error);
+      console.error('❌ Error getting notifications:', error);
       
       // Fallback للـ development
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Using fallback chat data for development');
-        return [];
+        console.warn('Using fallback notifications data for development');
+        return {
+          status: true,
+          message: 'تطوير: بيانات افتراضية',
+          data: [
+            {
+              id: 1,
+              title: 'ترحيب',
+              message: 'مرحباً بك في تطبيق مويا',
+              type: 'info',
+              is_read: false,
+              created_at: new Date().toISOString(),
+              data: {}
+            },
+            {
+              id: 2,
+              title: 'طلب جديد',
+              message: 'تم استلام طلبك رقم 12345',
+              type: 'success',
+              is_read: true,
+              created_at: new Date(Date.now() - 3600000).toISOString(), // قبل ساعة
+              data: { order_id: 12345 }
+            }
+          ]
+        };
       }
       
+      // في الإنتاج، أرجِع error
       throw error;
     }
+  }
+
+  // الاحتفاظ بـ getChats للتوافق مع الكود القديم (لكن يرجع بيانات افتراضية)
+  async getChats() {
+    console.warn('⚠️ getChats() is deprecated, use getNotifications() instead');
+    return this.getNotifications();
   }
 
   // الحصول على رسائل دردشة معينة
@@ -157,28 +217,30 @@ class MessageService {
       console.log(`💬 Fetching messages for chat ${chatId}...`);
       const response = await axiosInstance.get(`/chats/${chatId}/messages`);
     
-      console.log(`💬 Messages response for chat ${chatId}:`, response);
+      console.log(`💬 Messages response for chat ${chatId}:`, response.data);
+      
+      const result = response.data;
       
       // بناءً على هيكل الرد الجديد: {status: "success", messages: {data: [...]}}
-      if (response.status === "success" && response.messages && response.messages.data) {
-        return response.messages.data;
+      if (result.status === "success" && result.messages && result.messages.data) {
+        return result.messages.data;
       }
       
-      if (response.status === "success" && response.data) {
-        return Array.isArray(response.data) ? response.data : [];
+      if (result.status === "success" && result.data) {
+        return Array.isArray(result.data) ? result.data : [];
       }
       
       // محاولات احتياطية
-      if (Array.isArray(response)) {
-        return response;
+      if (Array.isArray(result)) {
+        return result;
       }
       
-      if (response?.data && Array.isArray(response.data)) {
-        return response.data;
+      if (result?.data && Array.isArray(result.data)) {
+        return result.data;
       }
       
-      if (response?.messages && Array.isArray(response.messages)) {
-        return response.messages;
+      if (result?.messages && Array.isArray(result.messages)) {
+        return result.messages;
       }
       
       return [];
@@ -207,20 +269,21 @@ class MessageService {
         metadata: ["text"]
       });
       
-      console.log(`✅ Message sent response for chat ${chatId}:`, response);
+      console.log(`✅ Message sent response for chat ${chatId}:`, response.data);
       
+      const result = response.data;
       let messageData = null;
       
-      if (response.status === "success") {
-        if (response.message) {
-          messageData = response.message;
-        } else if (response.data) {
-          messageData = response.data;
+      if (result.status === "success") {
+        if (result.message) {
+          messageData = result.message;
+        } else if (result.data) {
+          messageData = result.data;
         } else {
-          messageData = response;
+          messageData = result;
         }
-      } else if (response.message) {
-        messageData = response;
+      } else if (result.message) {
+        messageData = result;
       }
       
       if (messageData && !messageData.chat_id) {
@@ -234,7 +297,7 @@ class MessageService {
       return {
         success: true,
         message: messageData,
-        rawResponse: response
+        rawResponse: result
       };
       
     } catch (error) {
@@ -264,20 +327,22 @@ class MessageService {
         type: "user_driver"
       });
       
-      console.log('✅ Create chat response:', response);
+      console.log('✅ Create chat response:', response.data);
       
-      if (response.status === "success") {
+      const result = response.data;
+      
+      if (result.status === "success") {
         return {
           success: true,
-          chat: response.data || response.chat || response,
-          rawResponse: response
+          chat: result.data || result.chat || result,
+          rawResponse: result
         };
       }
       
       return {
         success: true,
-        chat: response,
-        rawResponse: response
+        chat: result,
+        rawResponse: result
       };
     } catch (error) {
       console.error('❌ Error creating chat:', error);
@@ -299,8 +364,8 @@ class MessageService {
       return {
         success: true,
         messageId: messageId,
-        data: response,
-        rawResponse: response
+        data: response.data,
+        rawResponse: response.data
       };
     } catch (error) {
       console.error(`❌ Error marking message ${messageId} as read:`, error);
@@ -351,6 +416,58 @@ class MessageService {
     }
   }
 
+  // تحديد الإشعار كمقروء (دالة جديدة)
+  async markNotificationAsRead(notificationId) {
+    try {
+      console.log(`👁️ Marking notification ${notificationId} as read...`);
+      
+      const response = await axiosInstance.post(`/notifications/${notificationId}/read`);
+      
+      console.log(`✅ Notification marked as read:`, response.data);
+      
+      return {
+        success: true,
+        notificationId: notificationId,
+        data: response.data,
+        rawResponse: response.data
+      };
+    } catch (error) {
+      console.error(`❌ Error marking notification ${notificationId} as read:`, error);
+      
+      return {
+        success: false,
+        notificationId: notificationId,
+        error: error.message,
+        status: error.response?.status
+      };
+    }
+  }
+
+  // حذف إشعار (دالة جديدة)
+  async deleteNotification(notificationId) {
+    try {
+      console.log(`🗑️ Deleting notification ${notificationId}...`);
+      
+      const response = await axiosInstance.delete(`/notifications/${notificationId}`);
+      
+      console.log(`✅ Notification deleted:`, response.data);
+      
+      return {
+        success: true,
+        notificationId: notificationId,
+        data: response.data,
+        rawResponse: response.data
+      };
+    } catch (error) {
+      console.error(`❌ Error deleting notification ${notificationId}:`, error);
+      return {
+        success: false,
+        notificationId: notificationId,
+        error: error.message
+      };
+    }
+  }
+
   // حذف رسالة
   async deleteMessage(messageId) {
     try {
@@ -361,8 +478,8 @@ class MessageService {
       return {
         success: true,
         messageId: messageId,
-        data: response,
-        rawResponse: response
+        data: response.data,
+        rawResponse: response.data
       };
     } catch (error) {
       console.error(`❌ Error deleting message ${messageId}:`, error);
@@ -386,8 +503,8 @@ class MessageService {
       return {
         success: true,
         messageId: messageId,
-        message: response.data || response,
-        rawResponse: response
+        message: response.data || response.data,
+        rawResponse: response.data
       };
     } catch (error) {
       console.error(`❌ Error updating message ${messageId}:`, error);
@@ -412,7 +529,7 @@ class MessageService {
         success: true,
         chatId: chatId,
         isTyping: isTyping,
-        data: response
+        data: response.data
       };
     } catch (error) {
       console.error(`❌ Error sending typing indicator for chat ${chatId}:`, error);
@@ -433,14 +550,15 @@ class MessageService {
         params: { q: query }
       });
       
+      const result = response.data;
       let messages = [];
       
-      if (response.status === "success" && response.messages && response.messages.data) {
-        messages = response.messages.data;
-      } else if (Array.isArray(response)) {
-        messages = response;
-      } else if (response?.data && Array.isArray(response.data)) {
-        messages = response.data;
+      if (result.status === "success" && result.messages && result.messages.data) {
+        messages = result.messages.data;
+      } else if (Array.isArray(result)) {
+        messages = result;
+      } else if (result?.data && Array.isArray(result.data)) {
+        messages = result.data;
       }
       
       return {
@@ -472,7 +590,7 @@ class MessageService {
       return {
         success: true,
         chatId: chatId,
-        stats: response.data || response
+        stats: response.data || response.data
       };
     } catch (error) {
       console.error(`❌ Error getting stats for chat ${chatId}:`, error);
@@ -485,25 +603,25 @@ class MessageService {
     }
   }
 
-  // دالة مساعدة للاختبار
+  // اختبار الاتصال
   async testConnection() {
     try {
-      console.log('🔗 Testing message service connection...');
+      console.log('🔗 Testing API connection...');
       
-      // اختبار بسيط - جلب الـ chats
-      const response = await axiosInstance.get('/chats');
+      // اختبار بسيط - جلب الإشعارات
+      const response = await axiosInstance.get('/notifications');
       
       return {
         success: true,
         status: 'connected',
-        data: response,
+        data: response.data,
         environment: {
           isProduction: process.env.NODE_ENV === 'production',
           isBrowser: typeof window !== 'undefined'
         }
       };
     } catch (error) {
-      console.error('❌ Message service connection test failed:', error);
+      console.error('❌ API connection test failed:', error);
       
       return {
         success: false,
@@ -525,12 +643,12 @@ class MessageService {
     
     try {
       // محاولة الاتصال عبر الـ proxy
-      const response = await axiosInstance.get('/chats');
+      const response = await axiosInstance.get('/notifications');
       
       return {
         success: true,
         usingProxy: true,
-        data: response
+        data: response.data
       };
     } catch (error) {
       console.error('Proxy test failed:', error);
@@ -538,7 +656,7 @@ class MessageService {
       // محاولة الاتصال المباشر (فقط للـ debugging)
       if (process.env.NEXT_PUBLIC_API_BASE_URL) {
         try {
-          const directResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/chats`);
+          const directResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/notifications`);
           return {
             success: false,
             proxyFailed: true,
