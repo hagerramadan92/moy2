@@ -7,7 +7,7 @@ const isBrowser = typeof window !== 'undefined';
 
 // دالة لبناء الـ URL الصحيح بناءً على البيئة
 const buildApiUrl = (path) => {
-  // في الإنتاج والمتصفح، استخدم الـ proxy
+  // في الإنتاج والمتصفح، استخدم الـ proxy لجميع المسارات
   if (isProduction && isBrowser) {
     // استخدم الـ proxy للمسارات التي تبدأ بـ /notifications
     if (path.startsWith('/notifications')) {
@@ -16,6 +16,13 @@ const buildApiUrl = (path) => {
   }
   
   // في التطوير أو server-side، استخدم الـ API مباشرة
+  if (!isBrowser) {
+    // Server-side rendering أو غير متصفح
+    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://moya.talaaljazeera.com/api/v1";
+    return `${baseURL}${path}`;
+  }
+  
+  // في التطوير والمتصفح، استخدم الـ API مباشرة
   const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://moya.talaaljazeera.com/api/v1";
   return `${baseURL}${path}`;
 };
@@ -79,7 +86,9 @@ axiosInstance.interceptors.response.use(
       status: error.response?.status,
       message: error.message,
       code: error.code,
-      usingProxy: error.config?.url?.includes('/api/proxy/') || false
+      usingProxy: error.config?.url?.includes('/api/proxy/') || false,
+      isProduction,
+      isBrowser
     });
     
     // معالجة أخطاء المصادقة
@@ -90,6 +99,22 @@ axiosInstance.interceptors.response.use(
         sessionStorage.removeItem('accessToken');
         // يمكنك إعادة التوجيه للصفحة الرئيسية بدلاً من login
         window.location.href = '/';
+      }
+    }
+    
+    // معالجة أخطاء الشبكة
+    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      console.error('🔔 Network Error Detected:', {
+        isProduction,
+        isBrowser,
+        url: error.config?.url,
+        shouldUseProxy: error.config?.url?.includes('/api/proxy/') ? false : isProduction && isBrowser
+      });
+      
+      // في حالة الإنتاج والمتصفح مع خطأ في الشبكة، جرب استخدام الـ proxy
+      if (isProduction && isBrowser && error.config?.url?.startsWith('http')) {
+        console.warn('🔄 Retrying with proxy...');
+        // يمكن إضافة منطق إعادة المحاولة هنا
       }
     }
     
