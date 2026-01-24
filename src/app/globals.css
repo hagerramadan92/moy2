@@ -227,7 +227,36 @@ section {
   height: auto;
   margin: 0 auto;
 }
+/* يمكن إضافته في ملف global.css */
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.message-outgoing {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.message-incoming {
+  animation: slideInLeft 0.3s ease-out;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; }

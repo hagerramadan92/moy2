@@ -181,7 +181,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
           ) : (
             <>
               <MessageCircle size={24} className="text-white" />
-              {hasUnreadMessages && (
+              {/* {hasUnreadMessages && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -189,7 +189,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                 >
                   {messageCount > 9 ? '9+' : messageCount}
                 </motion.span>
-              )}
+              )} */}
             </>
           )}
         </motion.button>
@@ -228,9 +228,9 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                   <div className="flex items-center justify-between mt-3 text-xs">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${hasUnreadMessages ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                      <span className={hasUnreadMessages ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                      {/* <span className={hasUnreadMessages ? 'text-red-600 font-medium' : 'text-gray-500'}>
                         {hasUnreadMessages ? `${messageCount} رسالة جديدة` : 'لا توجد رسائل جديدة'}
-                      </span>
+                      </span> */}
                     </div>
                     {unreadNotifications > 0 && (
                       <div className="flex items-center gap-2">
@@ -252,20 +252,20 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-100 transition-all duration-200 shadow-sm">
                       <Users size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
                     </div>
-                    {hasUnreadMessages && (
+                    {/* {hasUnreadMessages && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white shadow-sm font-bold">
                         {messageCount > 9 ? '9+' : messageCount}
                       </div>
-                    )}
+                    )} */}
                   </div>
                   <div className="flex-1 text-right">
                     <h4 className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors">محادثاتي</h4>
                     <p className="text-xs text-gray-500">عرض جميع المحادثات</p>
-                    {hasUnreadMessages && (
+                    {/* {hasUnreadMessages && (
                       <p className="text-xs text-red-600 mt-1 font-medium">
                         {messageCount} رسالة جديدة
                       </p>
-                    )}
+                    )} */}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                         مباشر
@@ -281,7 +281,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                 </button>
 
                 {/* Notifications Option */}
-                {unreadNotifications > 0 && (
+                {/* {unreadNotifications > 0 && (
                   <button
                     onClick={handleNotificationsClick}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-orange-50 transition-all duration-200 group border border-transparent hover:border-orange-200 active:scale-[0.98]"
@@ -305,10 +305,10 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                )}
+                )} */}
 
                 {/* Support Option */}
-                <button
+                {/* <button
                   onClick={handleOpenSupportModal}
                   className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 transition-all duration-200 group border border-transparent hover:border-green-200 active:scale-[0.98]"
                 >
@@ -326,7 +326,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                   <svg className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </button> */}
 
                 {/* Quick Actions */}
                 <div className="pt-3 border-t border-gray-100">
@@ -384,7 +384,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
       </motion.div>
       
       {/* تلميح عند التمرير فوق الأيقونة */}
-      {!isExpanded && hasUnreadMessages && (
+      {/* {!isExpanded && hasUnreadMessages && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -393,7 +393,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
           {messageCount} رسالة جديدة
           <div className="absolute right-[-4px] top-1/2 transform -translate-y-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
         </motion.div>
-      )}
+      )} */}
     </>
   );
 };
