@@ -1,23 +1,14 @@
- 
-// const nextConfig = {
-//   devIndicators: false,
-//   reactStrictMode: false,
-//   images: {
-//     remotePatterns: [],
-//   },
-// };
-
-// module.exports = nextConfig
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // تعطيل Turbopack
+  
+  // أضف هذا السطر لحل مشكلة Turbopack
   experimental: {
-    turbo: undefined
+    turbo: {}
   },
+  
   images: {
-		qualities: [75, 90],
+    qualities: [75, 90],
     remotePatterns: [
       {
         protocol: 'https',
@@ -39,7 +30,9 @@ const nextConfig = {
       },
     ],
   },
-   async headers() {
+  
+  // إعدادات CORS
+  async headers() {
     return [
       {
         source: '/api/:path*',
@@ -50,32 +43,40 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
         ],
       },
-    ];
-  },
-  async rewrites() {
-    
-    
-  
-    return [
-  {
+      {
         source: '/api/proxy/:path*',
-        destination: 'http://moya.talaaljazeera.com/api/v1/:path*'
-      }
-,
-      // {
-      //   source: '/api/v1/:path*',
-      //   destination: 'http://moya.talaaljazeera.com/api/v1/:path*',
-      // },
-      // {
-      //   source: '/type-water',
-      //   destination: 'http://moya.talaaljazeera.com/api/v1/type-water',
-      // },
-      // {
-      //   source: '/services',
-      //   destination: 'http://moya.talaaljazeera.com/api/v1/services',
-      // },
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
+        ],
+      },
     ];
   },
+  
+  // إعدادات Rewrites
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: 'https://moya.talaaljazeera.com/api/v1/:path*',
+      },
+    ];
+  },
+  
+  // إزالة إعدادات webpack أو تحويلها إلى turbopack
+  // webpack: (config, { isServer }) => {
+  //   if (!isServer) {
+  //     config.resolve.fallback = {
+  //       ...config.resolve.fallback,
+  //       fs: false,
+  //       net: false,
+  //       tls: false,
+  //     };
+  //   }
+  //   return config;
+  // },
 };
 
 module.exports = nextConfig;
