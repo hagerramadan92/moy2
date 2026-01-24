@@ -1,28 +1,60 @@
 // services/message.service.js
 import axios from 'axios';
 
-// 1. استخدام API مباشرة مع CORS proxy في جميع البيئات
-const getBaseURL = () => {
-  return 'https://moya.talaaljazeera.com/api/v1';
-};
+// ==================== إعدادات أساسية ====================
+const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
 
-// 2. الحصول على التوكن
+// تحقق إذا كنا في Production أم Development
+const isProduction = typeof window !== 'undefined' && 
+                     !window.location.hostname.includes('localhost') && 
+                     !window.location.hostname.includes('127.0.0.1');
+
+console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
+
+// ==================== قائمة CORS Proxies ====================
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/'
+];
+
+// ==================== دوال مساعدة ====================
 const getToken = () => {
   try {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
+      console.log('🔑 Token status:', token ? 'Exists' : 'Missing');
+      return token;
     }
   } catch (e) {
-    console.error('❌ خطأ في قراءة التوكن:', e);
+    console.error('❌ Error getting token:', e);
   }
   return null;
 };
 
-// 3. إنشاء axios instance مع CORS headers
+// دالة لإنشاء URL مع CORS Proxy في Production
+const createRequestURL = (endpoint) => {
+  // في التطوير، استخدم الـ API مباشرة
+  if (!isProduction) {
+    return `${API_BASE}${endpoint}`;
+  }
+  
+  // في Production، استخدم CORS Proxy
+  // اختيار proxy عشوائي لتوزيع الحمل
+  const randomProxy = CORS_PROXIES[Math.floor(Math.random() * CORS_PROXIES.length)];
+  const apiUrl = `${API_BASE}${endpoint}`;
+  
+  if (randomProxy.includes('allorigins.win')) {
+    return `${randomProxy}${encodeURIComponent(apiUrl)}`;
+  }
+  
+  return `${randomProxy}${apiUrl}`;
+};
+
+// ==================== إنشاء Axios Instance ====================
 const createAxiosInstance = () => {
   const instance = axios.create({
-    baseURL: getBaseURL(),
-    timeout: 20000, // 20 ثانية
+    timeout: 25000, // 25 ثانية
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -30,7 +62,7 @@ const createAxiosInstance = () => {
     }
   });
 
-  // Request interceptor
+  // Request Interceptor
   instance.interceptors.request.use((config) => {
     const token = getToken();
     
@@ -38,13 +70,24 @@ const createAxiosInstance = () => {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // إضافة معلومات إضافية للتصحيح
-    config.headers['X-Client-Source'] = 'moya-web-app';
-    
-    // تسجيل الطلب في التطوير
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    // في Production، استخدم CORS Proxy URL
+    if (isProduction && config.url && !config.url.includes('corsproxy.io') && 
+        !config.url.includes('allorigins.win') && !config.url.includes('cors-anywhere')) {
+      
+      // إذا كان baseURL موجود، اجمعها مع url
+      const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+      
+      // إذا كان الرابط يشير إلى API الخاص بنا
+      if (fullUrl.includes(API_BASE)) {
+        // استخرج الـ endpoint فقط
+        const endpoint = fullUrl.replace(API_BASE, '');
+        config.url = createRequestURL(endpoint);
+        config.baseURL = undefined; // لا نحتاج baseURL عند استخدام proxy
+      }
     }
+    
+    // تسجيل الطلب
+    console.log(`🚀 ${config.method?.toUpperCase()} ${config.url || (config.baseURL + config.url)}`);
     
     return config;
   }, (error) => {
@@ -52,12 +95,10 @@ const createAxiosInstance = () => {
     return Promise.reject(error);
   });
 
-  // Response interceptor
+  // Response Interceptor
   instance.interceptors.response.use(
     (response) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`✅ Response: ${response.status} ${response.config.url}`);
-      }
+      console.log(`✅ ${response.status} ${response.config.url}`);
       return response;
     },
     (error) => {
@@ -70,20 +111,14 @@ const createAxiosInstance = () => {
       
       // معالجة أخطاء المصادقة
       if (error.response?.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          // تأخير التوجيه لتجنب مشاكل React
-          setTimeout(() => {
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken');
             if (!window.location.pathname.includes('/login')) {
               window.location.href = '/login';
             }
-          }, 100);
-        }
-      }
-      
-      // معالجة أخطاء CORS
-      if (error.message?.includes('CORS') || error.code === 'ERR_NETWORK') {
-        console.warn('⚠️ CORS/Network error detected');
+          }
+        }, 100);
       }
       
       return Promise.reject(error);
@@ -93,47 +128,70 @@ const createAxiosInstance = () => {
   return instance;
 };
 
-// 4. دالة fetch بديلة باستخدام CORS proxy
-const fetchWithCorsProxy = async (endpoint, options = {}) => {
-  try {
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      ...options.headers
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+// ==================== دالة Fetch مع Retry ====================
+const fetchWithRetry = async (endpoint, options = {}, maxRetries = 3) => {
+  const token = getToken();
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // جرب كل proxy في كل محاولة
+    for (const proxy of CORS_PROXIES) {
+      try {
+        const apiUrl = `${API_BASE}${endpoint}`;
+        let proxyUrl;
+        
+        if (proxy.includes('allorigins.win')) {
+          proxyUrl = `${proxy}${encodeURIComponent(apiUrl)}`;
+        } else {
+          proxyUrl = `${proxy}${apiUrl}`;
+        }
+        
+        console.log(`🔄 Attempt ${attempt} with ${proxy}`);
+        
+        const headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...options.headers
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(proxyUrl, {
+          ...options,
+          headers,
+          mode: 'cors'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`✅ Success with ${proxy} (attempt ${attempt})`);
+        
+        return {
+          data,
+          status: response.status,
+          proxyUsed: proxy
+        };
+        
+      } catch (error) {
+        console.warn(`❌ Failed with ${proxy} (attempt ${attempt}):`, error.message);
+        // انتظر قليلاً قبل المحاولة التالية
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
     }
-    
-    // استخدام CORS proxy
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1${endpoint}`;
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-    
-    console.log('🔄 Using CORS proxy:', apiUrl);
-    
-    const response = await fetch(proxyUrl, {
-      ...options,
-      headers,
-      mode: 'cors'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('❌ CORS proxy fetch error:', error);
-    throw error;
   }
+  
+  throw new Error(`All ${maxRetries} attempts failed`);
 };
 
-// 5. إدارة التخزين المؤقت
+// ==================== التخزين المؤقت ====================
 const cacheManager = {
-  set: (key, data, ttl = 300000) => { // 5 دقائق افتراضياً
+  set: (key, data, ttl = 300000) => {
     try {
       if (typeof window !== 'undefined') {
         const cacheItem = {
@@ -157,7 +215,6 @@ const cacheManager = {
         const cacheItem = JSON.parse(cached);
         const now = Date.now();
         
-        // تحقق من انتهاء الصلاحية
         if (now - cacheItem.timestamp > cacheItem.ttl) {
           localStorage.removeItem(`cache_${key}`);
           return null;
@@ -179,42 +236,48 @@ const cacheManager = {
     } catch (e) {
       console.warn('⚠️ Cache clear error:', e);
     }
+  },
+  
+  clearAll: () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('cache_')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('⚠️ Cache clear all error:', e);
+    }
   }
 };
 
-// 6. الفئة الرئيسية للخدمة
+// ==================== الفئة الرئيسية ====================
 class MessageService {
   constructor() {
-    this._axiosInstance = null;
-  }
-  
-  get axiosInstance() {
-    if (!this._axiosInstance) {
-      this._axiosInstance = createAxiosInstance();
-    }
-    return this._axiosInstance;
+    this.axiosInstance = createAxiosInstance();
   }
 
-  // الحصول على قائمة الدردشات
+  // ==================== المحادثات ====================
   async getChats(params = {}) {
-    const cacheKey = `chats_${JSON.stringify(params)}`;
+    console.log('📞 getChats called');
     
-    // محاولة الحصول من التخزين المؤقت
+    const cacheKey = `chats_${JSON.stringify(params)}`;
     const cached = cacheManager.get(cacheKey);
+    
     if (cached) {
       console.log('📦 Using cached chats');
       return cached;
     }
     
     try {
-      // المحاولة الأولى: استخدام axios مباشرة
-      console.log('🔄 Attempt 1: Direct axios request');
+      // المحاولة الأولى: axios
       const response = await this.axiosInstance.get('/chats', { params });
       
-      let result;
-      
       if (response.data.status === "success" && response.data.chats) {
-        result = {
+        const result = {
           success: true,
           data: response.data.chats.data || [],
           pagination: {
@@ -223,82 +286,66 @@ class MessageService {
             per_page: response.data.chats.per_page,
             last_page: response.data.chats.last_page
           },
-          source: 'direct-api'
+          source: 'axios'
         };
-      } else {
-        result = {
-          success: false,
-          data: [],
-          error: 'تنسيق البيانات غير صحيح',
-          source: 'direct-api'
-        };
-      }
-      
-      // تخزين في الذاكرة المؤقتة
-      if (result.success) {
+        
         cacheManager.set(cacheKey, result);
+        return result;
       }
       
-      return result;
+      return {
+        success: false,
+        data: [],
+        error: 'تنسيق البيانات غير صحيح',
+        source: 'axios'
+      };
       
     } catch (error) {
-      console.error('❌ Direct API failed:', error.message);
+      console.error('❌ Axios failed for getChats:', error.message);
       
-      // المحاولة الثانية: استخدام CORS proxy
-      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS') || error.message.includes('Network')) {
-        console.log('🔄 Attempt 2: Using CORS proxy');
-        
+      // المحاولة الثانية: fetch مع retry (فقط في Production)
+      if (isProduction || error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
           const queryString = new URLSearchParams(params).toString();
           const endpoint = queryString ? `/chats?${queryString}` : '/chats';
           
-          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
+          const result = await fetchWithRetry(endpoint, { method: 'GET' });
           
-          if (data.status === "success" && data.chats) {
-            const result = {
+          if (result.data.status === "success" && result.data.chats) {
+            const finalResult = {
               success: true,
-              data: data.chats.data || [],
+              data: result.data.chats.data || [],
               pagination: {
-                current_page: data.chats.current_page,
-                total: data.chats.total,
-                per_page: data.chats.per_page,
-                last_page: data.chats.last_page
+                current_page: result.data.chats.current_page,
+                total: result.data.chats.total,
+                per_page: result.data.chats.per_page,
+                last_page: result.data.chats.last_page
               },
-              source: 'cors-proxy'
+              source: `fetch-${result.proxyUsed}`,
+              proxyUsed: result.proxyUsed
             };
             
-            cacheManager.set(cacheKey, result);
-            return result;
+            cacheManager.set(cacheKey, finalResult);
+            return finalResult;
           }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy also failed:', proxyError);
+        } catch (fetchError) {
+          console.error('❌ Fetch retry also failed:', fetchError);
         }
       }
       
-      // المحاولة الثالثة: استخدام البيانات المخزنة سابقاً
-      const fallbackCache = cacheManager.get('chats_fallback');
-      if (fallbackCache) {
-        console.log('🔄 Using fallback cached data');
-        return {
-          ...fallbackCache,
-          source: 'fallback-cache',
-          isFallback: true,
-          error: 'الاتصال بالخادم غير متاح، استخدام البيانات المخزنة'
-        };
-      }
-      
-      // إذا فشلت كل المحاولات
       return {
         success: false,
         data: [],
-        error: error.response?.data?.message || error.message || 'فشل الاتصال بالخادم',
+        error: 'فشل تحميل المحادثات',
         source: 'failed'
       };
     }
   }
 
-  // الحصول على رسائل دردشة معينة
+  // ==================== الرسائل ====================
   async getMessages(chatId, params = {}) {
+    console.log(`📞 getMessages for chat ${chatId}`);
+    
     const cacheKey = `messages_${chatId}_${JSON.stringify(params)}`;
     const cached = cacheManager.get(cacheKey);
     
@@ -309,70 +356,167 @@ class MessageService {
     try {
       const response = await this.axiosInstance.get(`/chats/${chatId}/messages`, { params });
       
-      let result;
-      
       if (response.data.status === "success") {
-        result = {
+        const result = {
           success: true,
           data: response.data.messages?.data || response.data.messages || [],
           pagination: response.data.messages?.meta || {},
-          source: 'direct-api'
+          source: 'axios'
         };
-      } else {
-        result = {
-          success: false,
-          data: [],
-          error: 'تنسيق البيانات غير صحيح',
-          source: 'direct-api'
-        };
-      }
-      
-      if (result.success) {
+        
         cacheManager.set(cacheKey, result, 60000); // 1 دقيقة
+        return result;
       }
       
-      return result;
+      return {
+        success: false,
+        data: [],
+        error: 'تنسيق البيانات غير صحيح',
+        source: 'axios'
+      };
       
     } catch (error) {
-      console.error(`❌ Error getting messages for chat ${chatId}:`, error.message);
+      console.error(`❌ Axios failed for getMessages ${chatId}:`, error.message);
       
-      // محاولة CORS proxy
-      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+      // المحاولة الثانية: fetch مع retry
+      if (isProduction || error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
           const queryString = new URLSearchParams(params).toString();
           const endpoint = queryString 
             ? `/chats/${chatId}/messages?${queryString}` 
             : `/chats/${chatId}/messages`;
           
-          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
+          const result = await fetchWithRetry(endpoint, { method: 'GET' });
           
-          if (data.status === "success") {
-            const result = {
+          if (result.data.status === "success") {
+            const finalResult = {
               success: true,
-              data: data.messages?.data || data.messages || [],
-              pagination: data.messages?.meta || {},
-              source: 'cors-proxy'
+              data: result.data.messages?.data || result.data.messages || [],
+              pagination: result.data.messages?.meta || {},
+              source: `fetch-${result.proxyUsed}`,
+              proxyUsed: result.proxyUsed
             };
             
-            cacheManager.set(cacheKey, result, 60000);
-            return result;
+            cacheManager.set(cacheKey, finalResult, 60000);
+            return finalResult;
           }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
+        } catch (fetchError) {
+          console.error('❌ Fetch retry failed:', fetchError);
         }
       }
       
       return {
         success: false,
         data: [],
-        error: error.message,
+        error: 'فشل تحميل الرسائل',
         source: 'failed'
       };
     }
   }
 
-  // الحصول على الإشعارات
+  // ==================== إرسال الرسائل ====================
+  async sendMessage(chatId, messageData) {
+    console.log(`📤 sendMessage to chat ${chatId}:`, messageData);
+    
+    const payload = {
+      message: messageData.message || messageData.text || messageData,
+      message_type: messageData.message_type || "text",
+      metadata: messageData.metadata || ["text"]
+    };
+    
+    // دالة معالجة الاستجابة
+    const handleResponse = (data, source, proxyUsed = null) => {
+      if (data.status === "success" && data.message) {
+        // مسح ذاكرة التخزين المؤقت للرسائل
+        cacheManager.clear(`messages_${chatId}`);
+        
+        return {
+          success: true,
+          message: data.message,
+          data: data,
+          source: source,
+          ...(proxyUsed && { proxyUsed })
+        };
+      }
+      
+      return {
+        success: false,
+        error: data.message || 'فشل إرسال الرسالة',
+        source: source,
+        ...(proxyUsed && { proxyUsed })
+      };
+    };
+    
+    try {
+      // المحاولة الأولى: axios
+      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, payload);
+      return handleResponse(response.data, 'axios');
+      
+    } catch (error) {
+      console.error(`❌ Axios failed for sendMessage ${chatId}:`, error.message);
+      
+      // المحاولة الثانية: fetch مع retry (خاصة في Production)
+      try {
+        const result = await fetchWithRetry(`/chats/${chatId}/send`, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        
+        return handleResponse(result.data, 'fetch', result.proxyUsed);
+        
+      } catch (fetchError) {
+        console.error('❌ Fetch retry failed:', fetchError);
+        
+        // المحاولة الأخيرة: axios بدون baseURL (للمشاكل الخاصة)
+        if (isProduction) {
+          try {
+            console.log('🔄 Last attempt: Direct axios with manual URL');
+            
+            const token = getToken();
+            const headers = {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            };
+            
+            if (token) {
+              headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            // استخدم proxy مباشرة مع axios
+            const apiUrl = `${API_BASE}/chats/${chatId}/send`;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+            
+            const lastResponse = await axios.post(proxyUrl, payload, { headers });
+            return handleResponse(lastResponse.data, 'direct-axios');
+            
+          } catch (lastError) {
+            console.error('❌ Last attempt failed:', lastError);
+          }
+        }
+        
+        return {
+          success: false,
+          error: 'فشل إرسال الرسالة. تحقق من اتصالك بالإنترنت.',
+          source: 'failed'
+        };
+      }
+    }
+  }
+
+  // ==================== الإشعارات ====================
   async getNotifications(params = {}) {
+    console.log('📞 getNotifications called');
+    
+    // في Production، نتجاهل الإشعارات غير المقروءة إذا كانت تسبب مشاكل
+    if (isProduction && params.read === false) {
+      console.log('📭 Skipping unread notifications in production');
+      return {
+        success: true,
+        data: [],
+        source: 'skipped'
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.get('/notifications', { params });
       
@@ -381,7 +525,7 @@ class MessageService {
           success: true,
           data: response.data.notifications?.data || [],
           pagination: response.data.notifications?.meta || {},
-          source: 'direct-api'
+          source: 'axios'
         };
       }
       
@@ -389,216 +533,118 @@ class MessageService {
         success: false,
         data: [],
         error: 'تنسيق البيانات غير صحيح',
-        source: 'direct-api'
+        source: 'axios'
       };
       
     } catch (error) {
-      console.error('❌ Error getting notifications:', error.message);
+      console.error('❌ Failed to get notifications:', error.message);
       
-      // محاولة CORS proxy
-      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+      // في Production، لا نحاول fetch retry للإشعارات
+      if (!isProduction) {
         try {
-          const queryString = new URLSearchParams(params).toString();
-          const endpoint = queryString ? `/notifications?${queryString}` : '/notifications';
+          const result = await fetchWithRetry('/notifications', { 
+            method: 'GET' 
+          }, 2); // محاولتين فقط للإشعارات
           
-          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
-          
-          if (data.status === "success") {
+          if (result.data.status === "success") {
             return {
               success: true,
-              data: data.notifications?.data || [],
-              pagination: data.notifications?.meta || {},
-              source: 'cors-proxy'
+              data: result.data.notifications?.data || [],
+              pagination: result.data.notifications?.meta || {},
+              source: `fetch-${result.proxyUsed}`,
+              proxyUsed: result.proxyUsed
             };
           }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
+        } catch (fetchError) {
+          console.error('❌ Fetch retry failed for notifications:', fetchError);
         }
       }
       
       return {
         success: false,
         data: [],
-        error: error.message,
+        error: 'لا يمكن تحميل الإشعارات حالياً',
         source: 'failed'
       };
     }
   }
 
-  // إرسال رسالة جديدة
- async sendMessage(chatId, messageData) {
-  console.log('📤 Sending message to chat:', chatId);
-  
-  const payload = {
-    message: messageData.message || messageData.text || messageData,
-    message_type: messageData.message_type || "text",
-    metadata: messageData.metadata || ["text"]
-  };
-  
-  // جرب الطريقة التي تعمل في Development أولاً
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, payload);
-      
-      if (response.data.status === "success" && response.data.message) {
-        cacheManager.clear(`messages_${chatId}`);
-        return {
-          success: true,
-          message: response.data.message,
-          data: response.data
-        };
-      }
-    } catch (error) {
-      console.error('Development send error:', error);
-    }
-  }
-  
-  // في Production، استخدم fetch مع CORS proxy مباشرة
-  try {
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    // استخدم CORS proxy مباشرة
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/chats/${chatId}/send`;
-    
-    // جرب عدة CORS proxies
-    const proxyServices = [
-      `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-      `https://cors-anywhere.herokuapp.com/${apiUrl}`
-    ];
-    
-    let lastError = null;
-    
-    for (const proxyUrl of proxyServices) {
-      try {
-        console.log('🔄 Trying proxy:', proxyUrl);
-        
-        const response = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(payload),
-          mode: 'cors'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.status === "success" && data.message) {
-          cacheManager.clear(`messages_${chatId}`);
-          console.log('✅ Message sent via proxy');
-          
-          return {
-            success: true,
-            message: data.message,
-            data: data
-          };
-        }
-      } catch (proxyError) {
-        lastError = proxyError;
-        console.error('❌ Proxy failed:', proxyUrl, proxyError.message);
-        continue; // جرب الـ proxy التالي
-      }
-    }
-    
-    // إذا فشلت جميع الـ proxies
-    throw lastError || new Error('All proxies failed');
-    
-  } catch (error) {
-    console.error('❌ All send attempts failed:', error);
-    
-    return {
-      success: false,
-      error: 'فشل إرسال الرسالة. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.'
-    };
-  }
-}
-
-  // إنشاء دردشة جديدة
+  // ==================== باقي الدوال ====================
   async createChat(participantId, type = "user_user") {
+    console.log(`📞 createChat with ${participantId}`);
+    
+    const payload = {
+      participant_id: participantId,
+      type: type
+    };
+    
     try {
-      const response = await this.axiosInstance.post('/chats/create', {
-        participant_id: participantId,
-        type: type
-      });
+      const response = await this.axiosInstance.post('/chats/create', payload);
       
       if (response.data.status === "success") {
-        // مسح التخزين المؤقت للدردشات
-        cacheManager.clear('chats_');
+        // مسح ذاكرة التخزين المؤقت للمحادثات
+        cacheManager.clearAll();
         
         return {
           success: true,
           chat: response.data.chat,
           data: response.data,
-          source: 'direct-api'
+          source: 'axios'
         };
       }
       
       return {
         success: false,
         error: response.data.message || 'فشل إنشاء المحادثة',
-        source: 'direct-api'
+        source: 'axios'
       };
       
     } catch (error) {
-      console.error('❌ Error creating chat:', error.message);
+      console.error('❌ Failed to create chat:', error.message);
       
-      // محاولة CORS proxy
-      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+      if (isProduction || error.code === 'ERR_NETWORK') {
         try {
-          const data = await fetchWithCorsProxy('/chats/create', {
+          const result = await fetchWithRetry('/chats/create', {
             method: 'POST',
-            body: JSON.stringify({
-              participant_id: participantId,
-              type: type
-            })
+            body: JSON.stringify(payload)
           });
           
-          if (data.status === "success") {
-            cacheManager.clear('chats_');
+          if (result.data.status === "success") {
+            cacheManager.clearAll();
             
             return {
               success: true,
-              chat: data.chat,
-              data: data,
-              source: 'cors-proxy'
+              chat: result.data.chat,
+              data: result.data,
+              source: `fetch-${result.proxyUsed}`,
+              proxyUsed: result.proxyUsed
             };
           }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
+        } catch (fetchError) {
+          console.error('❌ Fetch retry failed for createChat:', fetchError);
         }
       }
       
       return {
         success: false,
-        error: error.response?.data?.message || error.message,
+        error: 'فشل إنشاء المحادثة',
         source: 'failed'
       };
     }
   }
 
-  // تحديث حالة الرسالة كمقروءة
   async markMessageAsRead(messageId) {
+    console.log(`📞 markMessageAsRead ${messageId}`);
+    
     try {
       const response = await this.axiosInstance.put(`/messages/${messageId}/read`);
-      
       return {
         success: true,
         data: response.data,
-        source: 'direct-api'
+        source: 'axios'
       };
     } catch (error) {
-      console.error(`❌ Error marking message ${messageId} as read:`, error.message);
+      console.error(`❌ Failed to mark message ${messageId} as read:`, error.message);
       return {
         success: false,
         error: error.message,
@@ -607,8 +653,9 @@ class MessageService {
     }
   }
 
-  // الحصول على تفاصيل دردشة معينة
   async getChatDetails(chatId) {
+    console.log(`📞 getChatDetails ${chatId}`);
+    
     const cacheKey = `chat_details_${chatId}`;
     const cached = cacheManager.get(cacheKey);
     
@@ -623,7 +670,7 @@ class MessageService {
         const result = {
           success: true,
           data: response.data.chat,
-          source: 'direct-api'
+          source: 'axios'
         };
         
         cacheManager.set(cacheKey, result, 300000); // 5 دقائق
@@ -633,10 +680,10 @@ class MessageService {
       return {
         success: false,
         error: 'تنسيق البيانات غير صحيح',
-        source: 'direct-api'
+        source: 'axios'
       };
     } catch (error) {
-      console.error(`❌ Error getting chat details ${chatId}:`, error.message);
+      console.error(`❌ Failed to get chat details ${chatId}:`, error.message);
       return {
         success: false,
         error: error.message,
@@ -645,8 +692,9 @@ class MessageService {
     }
   }
 
-  // البحث عن دردشات أو مستخدمين
   async searchChats(query, params = {}) {
+    console.log(`📞 searchChats for "${query}"`);
+    
     try {
       const response = await this.axiosInstance.get('/chats/search', {
         params: { query, ...params }
@@ -656,7 +704,7 @@ class MessageService {
         return {
           success: true,
           data: response.data.results || [],
-          source: 'direct-api'
+          source: 'axios'
         };
       }
       
@@ -664,10 +712,10 @@ class MessageService {
         success: false,
         data: [],
         error: 'تنسيق البيانات غير صحيح',
-        source: 'direct-api'
+        source: 'axios'
       };
     } catch (error) {
-      console.error('❌ Error searching chats:', error.message);
+      console.error('❌ Failed to search chats:', error.message);
       return {
         success: false,
         data: [],
@@ -677,23 +725,53 @@ class MessageService {
     }
   }
 
-  // مسح جميع التخزين المؤقت
   clearCache() {
+    cacheManager.clearAll();
+    console.log('🧹 Cache cleared');
+  }
+  
+  // دالة لاختبار الاتصال
+  testConnection = async () => {
+    console.log('🔍 Testing API connection...');
+    
     try {
-      if (typeof window !== 'undefined') {
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-          if (key.startsWith('cache_')) {
-            localStorage.removeItem(key);
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('⚠️ Error clearing cache:', e);
+      const response = await this.axiosInstance.get('/chats', { params: { limit: 1 } });
+      const isConnected = response.status === 200;
+      console.log(`🔍 Connection test: ${isConnected ? '✅ Success' : '❌ Failed'}`);
+      return isConnected;
+    } catch (error) {
+      console.error('🔍 Connection test failed:', error.message);
+      return false;
     }
   }
 }
 
-// تصدير الخدمة
+// ==================== تصدير ====================
 export const messageService = new MessageService();
+
+// دالة لاختبار CORS Proxy
+export const testProxy = async () => {
+  console.log('🔍 Testing CORS proxies...');
+  
+  const testUrl = 'https://moya.talaaljazeera.com/api/v1/chats';
+  
+  for (const proxy of CORS_PROXIES) {
+    try {
+      let proxyUrl;
+      if (proxy.includes('allorigins.win')) {
+        proxyUrl = `${proxy}${encodeURIComponent(testUrl)}`;
+      } else {
+        proxyUrl = `${proxy}${testUrl}`;
+      }
+      
+      console.log(`🔍 Testing: ${proxy}`);
+      const response = await fetch(proxyUrl, { method: 'GET' });
+      console.log(`🔍 ${proxy}: ${response.ok ? '✅ Works' : '❌ Fails'}`);
+      
+    } catch (error) {
+      console.log(`🔍 ${proxy}: ❌ Error - ${error.message}`);
+    }
+  }
+};
+
 export default messageService;
