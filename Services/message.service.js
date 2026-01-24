@@ -1,49 +1,36 @@
 // services/message.service.js
 import axios from 'axios';
 
-// دالة لإنشاء Base URL ديناميكي بناءً على البيئة
+// 1. استخدام API مباشرة مع CORS proxy في جميع البيئات
 const getBaseURL = () => {
-  // تحقق أولاً من المتغير البيئي المخصص للـ API
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  // في Production، استخدم المسار النسبي للـ Proxy
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-    return '/api/proxy';
-  }
-  
-  // في التطوير المحلي، استخدم الخادم المباشر
   return 'https://moya.talaaljazeera.com/api/v1';
 };
 
-// الحصول على التوكن من localStorage - إصدار آمن للبناء
+// 2. الحصول على التوكن
 const getToken = () => {
   try {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('accessToken');
     }
   } catch (e) {
-    // تجنب الأخطاء أثناء البناء
-    return null;
+    console.error('❌ خطأ في قراءة التوكن:', e);
   }
   return null;
 };
 
-// إنشاء instance لـ axios - إصدار مبسط
+// 3. إنشاء axios instance مع CORS headers
 const createAxiosInstance = () => {
-  const baseURL = getBaseURL();
-  
   const instance = axios.create({
-    baseURL,
-    timeout: 15000,
+    baseURL: getBaseURL(),
+    timeout: 20000, // 20 ثانية
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
     }
   });
 
-  // إضافة interceptor للطلبات
+  // Request interceptor
   instance.interceptors.request.use((config) => {
     const token = getToken();
     
@@ -51,32 +38,52 @@ const createAxiosInstance = () => {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // إضافة معلومات إضافية للتصحيح
+    config.headers['X-Client-Source'] = 'moya-web-app';
+    
+    // تسجيل الطلب في التطوير
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    }
+    
     return config;
   }, (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   });
 
-  // معالج الاستجابات
+  // Response interceptor
   instance.interceptors.response.use(
     (response) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Response: ${response.status} ${response.config.url}`);
+      }
       return response;
     },
     (error) => {
+      console.error('❌ Response error:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        url: error.config?.url
+      });
+      
+      // معالجة أخطاء المصادقة
       if (error.response?.status === 401) {
-        // تأخير التوجيه لتجنب مشاكل React
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('accessToken');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          // تأخير التوجيه لتجنب مشاكل React
+          setTimeout(() => {
             if (!window.location.pathname.includes('/login')) {
               window.location.href = '/login';
             }
-          }
-        }, 100);
+          }, 100);
+        }
       }
       
-      // تسجيل الخطأ
-      if (process.env.NODE_ENV === 'development') {
-        console.error('❌ Axios Error:', error.message);
+      // معالجة أخطاء CORS
+      if (error.message?.includes('CORS') || error.code === 'ERR_NETWORK') {
+        console.warn('⚠️ CORS/Network error detected');
       }
       
       return Promise.reject(error);
@@ -86,24 +93,14 @@ const createAxiosInstance = () => {
   return instance;
 };
 
-// إنشاء instance واحد لاستخدامه في كل مكان
-let axiosInstance;
-
-// دالة للحصول على instance بأمان
-const getAxiosInstance = () => {
-  if (!axiosInstance) {
-    axiosInstance = createAxiosInstance();
-  }
-  return axiosInstance;
-};
-
-// دالة بديلة مبسطة تستخدم fetch مباشرة
-const simpleFetchWithFallback = async (endpoint, options = {}) => {
+// 4. دالة fetch بديلة باستخدام CORS proxy
+const fetchWithCorsProxy = async (endpoint, options = {}) => {
   try {
     const token = getToken();
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...options.headers
     };
     
@@ -111,35 +108,32 @@ const simpleFetchWithFallback = async (endpoint, options = {}) => {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // بناء URL بناءً على البيئة
-    let url;
-    if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-      // في Production، استخدم المسار النسبي
-      url = `/api/proxy${endpoint}`;
-    } else {
-      // في التطوير، استخدم CORS proxy
-      const apiUrl = `https://moya.talaaljazeera.com/api/v1${endpoint}`;
-      url = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-    }
+    // استخدام CORS proxy
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1${endpoint}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
     
-    const response = await fetch(url, {
+    console.log('🔄 Using CORS proxy:', apiUrl);
+    
+    const response = await fetch(proxyUrl, {
       ...options,
-      headers
+      headers,
+      mode: 'cors'
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     return await response.json();
   } catch (error) {
+    console.error('❌ CORS proxy fetch error:', error);
     throw error;
   }
 };
 
-// دالة للتخزين المؤقت - إصدار آمن
+// 5. إدارة التخزين المؤقت
 const cacheManager = {
-  set: (key, data, ttl = 300000) => {
+  set: (key, data, ttl = 300000) => { // 5 دقائق افتراضياً
     try {
       if (typeof window !== 'undefined') {
         const cacheItem = {
@@ -150,7 +144,7 @@ const cacheManager = {
         localStorage.setItem(`cache_${key}`, JSON.stringify(cacheItem));
       }
     } catch (e) {
-      // تجاهل أخطاء localStorage
+      console.warn('⚠️ Cache set error:', e);
     }
   },
   
@@ -163,6 +157,7 @@ const cacheManager = {
         const cacheItem = JSON.parse(cached);
         const now = Date.now();
         
+        // تحقق من انتهاء الصلاحية
         if (now - cacheItem.timestamp > cacheItem.ttl) {
           localStorage.removeItem(`cache_${key}`);
           return null;
@@ -171,7 +166,7 @@ const cacheManager = {
         return cacheItem.data;
       }
     } catch (e) {
-      // تجاهل أخطاء localStorage
+      console.warn('⚠️ Cache get error:', e);
     }
     return null;
   },
@@ -182,33 +177,17 @@ const cacheManager = {
         localStorage.removeItem(`cache_${key}`);
       }
     } catch (e) {
-      // تجاهل الأخطاء
-    }
-  },
-  
-  clearAll: () => {
-    try {
-      if (typeof window !== 'undefined') {
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-          if (key.startsWith('cache_')) {
-            localStorage.removeItem(key);
-          }
-        });
-      }
-    } catch (e) {
-      // تجاهل الأخطاء
+      console.warn('⚠️ Cache clear error:', e);
     }
   }
 };
 
+// 6. الفئة الرئيسية للخدمة
 class MessageService {
   constructor() {
-    // تأخير إنشاء axiosInstance حتى يتم استدعاؤه فعلياً
     this._axiosInstance = null;
   }
   
-  // خاصية getter لـ axiosInstance
   get axiosInstance() {
     if (!this._axiosInstance) {
       this._axiosInstance = createAxiosInstance();
@@ -220,14 +199,16 @@ class MessageService {
   async getChats(params = {}) {
     const cacheKey = `chats_${JSON.stringify(params)}`;
     
-    // محاولة الحصول من التخزين المؤقت أولاً
+    // محاولة الحصول من التخزين المؤقت
     const cached = cacheManager.get(cacheKey);
     if (cached) {
+      console.log('📦 Using cached chats');
       return cached;
     }
     
     try {
-      // المحاولة الأولى: استخدام axios
+      // المحاولة الأولى: استخدام axios مباشرة
+      console.log('🔄 Attempt 1: Direct axios request');
       const response = await this.axiosInstance.get('/chats', { params });
       
       let result;
@@ -242,14 +223,14 @@ class MessageService {
             per_page: response.data.chats.per_page,
             last_page: response.data.chats.last_page
           },
-          source: 'axios'
+          source: 'direct-api'
         };
       } else {
         result = {
           success: false,
           data: [],
           error: 'تنسيق البيانات غير صحيح',
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
@@ -261,15 +242,17 @@ class MessageService {
       return result;
       
     } catch (error) {
-      console.error('❌ Error in getChats:', error.message);
+      console.error('❌ Direct API failed:', error.message);
       
-      // المحاولة الثانية: استخدام fetch fallback
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Network')) {
+      // المحاولة الثانية: استخدام CORS proxy
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS') || error.message.includes('Network')) {
+        console.log('🔄 Attempt 2: Using CORS proxy');
+        
         try {
           const queryString = new URLSearchParams(params).toString();
           const endpoint = queryString ? `/chats?${queryString}` : '/chats';
           
-          const data = await simpleFetchWithFallback(endpoint, { method: 'GET' });
+          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
           
           if (data.status === "success" && data.chats) {
             const result = {
@@ -281,20 +264,21 @@ class MessageService {
                 per_page: data.chats.per_page,
                 last_page: data.chats.last_page
               },
-              source: 'fetch-fallback'
+              source: 'cors-proxy'
             };
             
             cacheManager.set(cacheKey, result);
             return result;
           }
-        } catch (fallbackError) {
-          console.error('❌ Fetch fallback failed:', fallbackError);
+        } catch (proxyError) {
+          console.error('❌ CORS proxy also failed:', proxyError);
         }
       }
       
       // المحاولة الثالثة: استخدام البيانات المخزنة سابقاً
       const fallbackCache = cacheManager.get('chats_fallback');
       if (fallbackCache) {
+        console.log('🔄 Using fallback cached data');
         return {
           ...fallbackCache,
           source: 'fallback-cache',
@@ -303,12 +287,12 @@ class MessageService {
         };
       }
       
-      // أخيراً: إرجاع خطأ
+      // إذا فشلت كل المحاولات
       return {
         success: false,
         data: [],
         error: error.response?.data?.message || error.message || 'فشل الاتصال بالخادم',
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -332,49 +316,49 @@ class MessageService {
           success: true,
           data: response.data.messages?.data || response.data.messages || [],
           pagination: response.data.messages?.meta || {},
-          source: 'axios'
+          source: 'direct-api'
         };
       } else {
         result = {
           success: false,
           data: [],
           error: 'تنسيق البيانات غير صحيح',
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
       if (result.success) {
-        cacheManager.set(cacheKey, result, 60000);
+        cacheManager.set(cacheKey, result, 60000); // 1 دقيقة
       }
       
       return result;
       
     } catch (error) {
-      console.error(`❌ Error in getMessages for chat ${chatId}:`, error.message);
+      console.error(`❌ Error getting messages for chat ${chatId}:`, error.message);
       
-      // محاولة fallback
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Network')) {
+      // محاولة CORS proxy
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
           const queryString = new URLSearchParams(params).toString();
           const endpoint = queryString 
             ? `/chats/${chatId}/messages?${queryString}` 
             : `/chats/${chatId}/messages`;
           
-          const data = await simpleFetchWithFallback(endpoint, { method: 'GET' });
+          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
           
           if (data.status === "success") {
             const result = {
               success: true,
               data: data.messages?.data || data.messages || [],
               pagination: data.messages?.meta || {},
-              source: 'fetch-fallback'
+              source: 'cors-proxy'
             };
             
             cacheManager.set(cacheKey, result, 60000);
             return result;
           }
-        } catch (fallbackError) {
-          console.error('❌ Fetch fallback failed:', fallbackError);
+        } catch (proxyError) {
+          console.error('❌ CORS proxy failed:', proxyError);
         }
       }
       
@@ -382,7 +366,7 @@ class MessageService {
         success: false,
         data: [],
         error: error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -397,7 +381,7 @@ class MessageService {
           success: true,
           data: response.data.notifications?.data || [],
           pagination: response.data.notifications?.meta || {},
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
@@ -405,30 +389,30 @@ class MessageService {
         success: false,
         data: [],
         error: 'تنسيق البيانات غير صحيح',
-        source: 'axios'
+        source: 'direct-api'
       };
       
     } catch (error) {
-      console.error('❌ Error in getNotifications:', error.message);
+      console.error('❌ Error getting notifications:', error.message);
       
-      // محاولة fallback
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Network')) {
+      // محاولة CORS proxy
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
           const queryString = new URLSearchParams(params).toString();
           const endpoint = queryString ? `/notifications?${queryString}` : '/notifications';
           
-          const data = await simpleFetchWithFallback(endpoint, { method: 'GET' });
+          const data = await fetchWithCorsProxy(endpoint, { method: 'GET' });
           
           if (data.status === "success") {
             return {
               success: true,
               data: data.notifications?.data || [],
               pagination: data.notifications?.meta || {},
-              source: 'fetch-fallback'
+              source: 'cors-proxy'
             };
           }
-        } catch (fallbackError) {
-          console.error('❌ Fetch fallback failed:', fallbackError);
+        } catch (proxyError) {
+          console.error('❌ CORS proxy failed:', proxyError);
         }
       }
       
@@ -436,7 +420,7 @@ class MessageService {
         success: false,
         data: [],
         error: error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -453,30 +437,30 @@ class MessageService {
       const response = await this.axiosInstance.post(`/chats/${chatId}/send`, payload);
       
       if (response.data.status === "success" && response.data.message) {
-        // مسح التخزين المؤقت للرسائل بعد الإرسال
+        // مسح التخزين المؤقت للرسائل
         cacheManager.clear(`messages_${chatId}`);
         
         return {
           success: true,
           message: response.data.message,
           data: response.data,
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
       return {
         success: false,
         error: response.data.message || 'فشل إرسال الرسالة',
-        source: 'axios'
+        source: 'direct-api'
       };
       
     } catch (error) {
       console.error(`❌ Error sending message to chat ${chatId}:`, error.message);
       
-      // محاولة fallback
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Network')) {
+      // محاولة CORS proxy
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
-          const data = await simpleFetchWithFallback(`/chats/${chatId}/send`, {
+          const data = await fetchWithCorsProxy(`/chats/${chatId}/send`, {
             method: 'POST',
             body: JSON.stringify(payload)
           });
@@ -488,18 +472,18 @@ class MessageService {
               success: true,
               message: data.message,
               data: data,
-              source: 'fetch-fallback'
+              source: 'cors-proxy'
             };
           }
-        } catch (fallbackError) {
-          console.error('❌ Fetch fallback failed:', fallbackError);
+        } catch (proxyError) {
+          console.error('❌ CORS proxy failed:', proxyError);
         }
       }
       
       return {
         success: false,
         error: error.response?.data?.message || error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -520,23 +504,23 @@ class MessageService {
           success: true,
           chat: response.data.chat,
           data: response.data,
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
       return {
         success: false,
         error: response.data.message || 'فشل إنشاء المحادثة',
-        source: 'axios'
+        source: 'direct-api'
       };
       
     } catch (error) {
       console.error('❌ Error creating chat:', error.message);
       
-      // محاولة fallback
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Network')) {
+      // محاولة CORS proxy
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
         try {
-          const data = await simpleFetchWithFallback('/chats/create', {
+          const data = await fetchWithCorsProxy('/chats/create', {
             method: 'POST',
             body: JSON.stringify({
               participant_id: participantId,
@@ -551,18 +535,18 @@ class MessageService {
               success: true,
               chat: data.chat,
               data: data,
-              source: 'fetch-fallback'
+              source: 'cors-proxy'
             };
           }
-        } catch (fallbackError) {
-          console.error('❌ Fetch fallback failed:', fallbackError);
+        } catch (proxyError) {
+          console.error('❌ CORS proxy failed:', proxyError);
         }
       }
       
       return {
         success: false,
         error: error.response?.data?.message || error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -575,14 +559,14 @@ class MessageService {
       return {
         success: true,
         data: response.data,
-        source: 'axios'
+        source: 'direct-api'
       };
     } catch (error) {
       console.error(`❌ Error marking message ${messageId} as read:`, error.message);
       return {
         success: false,
         error: error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -603,24 +587,24 @@ class MessageService {
         const result = {
           success: true,
           data: response.data.chat,
-          source: 'axios'
+          source: 'direct-api'
         };
         
-        cacheManager.set(cacheKey, result, 300000);
+        cacheManager.set(cacheKey, result, 300000); // 5 دقائق
         return result;
       }
       
       return {
         success: false,
         error: 'تنسيق البيانات غير صحيح',
-        source: 'axios'
+        source: 'direct-api'
       };
     } catch (error) {
       console.error(`❌ Error getting chat details ${chatId}:`, error.message);
       return {
         success: false,
         error: error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
@@ -636,7 +620,7 @@ class MessageService {
         return {
           success: true,
           data: response.data.results || [],
-          source: 'axios'
+          source: 'direct-api'
         };
       }
       
@@ -644,7 +628,7 @@ class MessageService {
         success: false,
         data: [],
         error: 'تنسيق البيانات غير صحيح',
-        source: 'axios'
+        source: 'direct-api'
       };
     } catch (error) {
       console.error('❌ Error searching chats:', error.message);
@@ -652,21 +636,28 @@ class MessageService {
         success: false,
         data: [],
         error: error.message,
-        source: 'error'
+        source: 'failed'
       };
     }
   }
 
   // مسح جميع التخزين المؤقت
   clearCache() {
-    cacheManager.clearAll();
+    try {
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('cache_')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('⚠️ Error clearing cache:', e);
+    }
   }
 }
 
-// إنشاء نسخة من الخدمة
+// تصدير الخدمة
 export const messageService = new MessageService();
-
-// تصدير أدوات مساعدة
-export { cacheManager };
-
 export default messageService;
