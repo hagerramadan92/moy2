@@ -426,67 +426,103 @@ class MessageService {
   }
 
   // إرسال رسالة جديدة
-  async sendMessage(chatId, messageData) {
+ async sendMessage(chatId, messageData) {
+  console.log('📤 Sending message to chat:', chatId);
+  
+  const payload = {
+    message: messageData.message || messageData.text || messageData,
+    message_type: messageData.message_type || "text",
+    metadata: messageData.metadata || ["text"]
+  };
+  
+  // جرب الطريقة التي تعمل في Development أولاً
+  if (process.env.NODE_ENV === 'development') {
     try {
-      const payload = {
-        message: messageData.message || messageData.text || messageData,
-        message_type: messageData.message_type || "text",
-        metadata: messageData.metadata || ["text"]
-      };
-      
       const response = await this.axiosInstance.post(`/chats/${chatId}/send`, payload);
       
       if (response.data.status === "success" && response.data.message) {
-        // مسح التخزين المؤقت للرسائل
         cacheManager.clear(`messages_${chatId}`);
-        
         return {
           success: true,
           message: response.data.message,
-          data: response.data,
-          source: 'direct-api'
+          data: response.data
         };
       }
-      
-      return {
-        success: false,
-        error: response.data.message || 'فشل إرسال الرسالة',
-        source: 'direct-api'
-      };
-      
     } catch (error) {
-      console.error(`❌ Error sending message to chat ${chatId}:`, error.message);
-      
-      // محاولة CORS proxy
-      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
-        try {
-          const data = await fetchWithCorsProxy(`/chats/${chatId}/send`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-          
-          if (data.status === "success" && data.message) {
-            cacheManager.clear(`messages_${chatId}`);
-            
-            return {
-              success: true,
-              message: data.message,
-              data: data,
-              source: 'cors-proxy'
-            };
-          }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
-        }
-      }
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message,
-        source: 'failed'
-      };
+      console.error('Development send error:', error);
     }
   }
+  
+  // في Production، استخدم fetch مع CORS proxy مباشرة
+  try {
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // استخدم CORS proxy مباشرة
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1/chats/${chatId}/send`;
+    
+    // جرب عدة CORS proxies
+    const proxyServices = [
+      `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+      `https://cors-anywhere.herokuapp.com/${apiUrl}`
+    ];
+    
+    let lastError = null;
+    
+    for (const proxyUrl of proxyServices) {
+      try {
+        console.log('🔄 Trying proxy:', proxyUrl);
+        
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(payload),
+          mode: 'cors'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === "success" && data.message) {
+          cacheManager.clear(`messages_${chatId}`);
+          console.log('✅ Message sent via proxy');
+          
+          return {
+            success: true,
+            message: data.message,
+            data: data
+          };
+        }
+      } catch (proxyError) {
+        lastError = proxyError;
+        console.error('❌ Proxy failed:', proxyUrl, proxyError.message);
+        continue; // جرب الـ proxy التالي
+      }
+    }
+    
+    // إذا فشلت جميع الـ proxies
+    throw lastError || new Error('All proxies failed');
+    
+  } catch (error) {
+    console.error('❌ All send attempts failed:', error);
+    
+    return {
+      success: false,
+      error: 'فشل إرسال الرسالة. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.'
+    };
+  }
+}
 
   // إنشاء دردشة جديدة
   async createChat(participantId, type = "user_user") {
