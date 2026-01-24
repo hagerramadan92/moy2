@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { messageService } from "../../../Services/message.service";
+import MessageSender from "./MessageSender";
 
 const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaultParticipantId = null }) => {
   // States
@@ -44,8 +45,10 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
   const [creatingChat, setCreatingChat] = useState(false);
   const [participantId, setParticipantId] = useState(defaultParticipantId || "");
   const [showParticipantInput, setShowParticipantInput] = useState(false);
+  const [messageSent, setMessageSent] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // دعم فني افتراضي (مثل شخص عادي)
   const supportUser = {
@@ -141,8 +144,8 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
   const loadMessages = async (chatId) => {
     try {
       if (chatId === "support-chat") {
-        // رسائل افتراضية للدعم (مرتبة من الأقدم للأحدث)
-        const supportMessages = [
+        // رسائل افتراضية للدعم
+        setMessages([
           {
             id: 1,
             message: "مرحباً! كيف يمكنني مساعدتك؟",
@@ -163,20 +166,11 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
             is_read: true,
             sender_name: "الدعم الفني"
           }
-        ];
-        // ترتيب من الأقدم للأحدث
-        setMessages(supportMessages);
+        ]);
       } else {
         const msgs = await messageService.getMessages(chatId);
         if (Array.isArray(msgs)) {
-          // ترتيب الرسائل من الأقدم للأحدث
-          const sortedMessages = msgs.sort((a, b) => {
-            const timeA = new Date(a.time || a.created_at || 0).getTime();
-            const timeB = new Date(b.time || b.created_at || 0).getTime();
-            return timeA - timeB; // ترتيب تصاعدي (من الأقدم للأحدث)
-          });
-          
-          const formattedMsgs = sortedMessages.map(msg => ({
+          const formattedMsgs = msgs.map(msg => ({
             ...msg,
             time: msg.time || msg.created_at,
             is_read: msg.is_read || false,
@@ -187,6 +181,8 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
           setMessages([]);
         }
       }
+      // تمرير علامة بعد تحميل الرسائل
+      setMessageSent(true);
     } catch (error) {
       console.error('خطأ في تحميل الرسائل:', error);
       setMessages([]);
@@ -256,58 +252,57 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
     await createNewChat(participantId);
   };
 
-  // إرسال رسالة
-  const sendMessage = async () => {
-    if (!newMessage.trim() || sending || !selectedChat) return;
-
-    try {
-      setSending(true);
-      
-      // رسالة مؤقتة باللون الأزرق (للمستخدم الحالي)
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        message: newMessage,
-        sender_id: currentUserId,
-        isCurrentUser: true,
-        is_temp: true,
-        time: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        is_read: false,
-        sender_name: 'أنت'
-      };
-
-      // إضافة الرسالة المؤقتة مع الحفاظ على الترتيب (الأقدم للأحدث)
-      setMessages(prev => [...prev, tempMessage]);
-      setNewMessage("");
-      scrollToBottom();
-
-      // إرسال حقيقي إذا لم يكن دعم
-      if (selectedChat.id !== "support-chat") {
-        const result = await messageService.sendMessage(selectedChat.id, newMessage);
-        if (result.success) {
-          // استبدال الرسالة المؤقتة بالرسالة الحقيقية مع الحفاظ على الترتيب
-          setMessages(prev => {
-            const newMessages = prev.map(msg => 
-              msg.id === tempMessage.id ? result.message : msg
-            );
-            // إعادة الترتيب من الأقدم للأحدث
-            return newMessages.sort((a, b) => {
-              const timeA = new Date(a.time || a.created_at || 0).getTime();
-              const timeB = new Date(b.time || b.created_at || 0).getTime();
-              return timeA - timeB;
-            });
-          });
-        }
-      } else {
-        // محاكاة رد الدعم الفني
-        simulateSupportReply();
+  // معالج إرسال الرسالة من MessageSender
+  const handleMessageSent = async (newMessageData, tempMessageId = null) => {
+    if (!newMessageData) {
+      // إزالة الرسالة المؤقتة في حالة الخطأ
+      if (tempMessageId) {
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
       }
-
-    } catch (error) {
-      console.error('خطأ في إرسال الرسالة:', error);
-    } finally {
-      setSending(false);
+      return;
     }
+
+    if (tempMessageId) {
+      // استبدال الرسالة المؤقتة بالرسالة الحقيقية
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempMessageId ? {
+            ...newMessageData,
+            isCurrentUser: true
+          } : msg
+        )
+      );
+    } else {
+      // إضافة رسالة جديدة
+      setMessages(prev => [
+        ...prev,
+        {
+          ...newMessageData,
+          isCurrentUser: newMessageData.sender_id == currentUserId
+        }
+      ]);
+    }
+
+    // تحديث آخر رسالة في قائمة المحادثات
+    if (selectedChat) {
+      setChats(prev => 
+        prev.map(chat => 
+          chat.id === selectedChat.id 
+            ? {
+                ...chat,
+                last_message: {
+                  message: newMessageData.message,
+                  time: newMessageData.time || newMessageData.created_at
+                },
+                last_message_time: "الآن"
+              }
+            : chat
+        )
+      );
+    }
+
+    // تمرير علامة بعد إرسال الرسالة
+    setMessageSent(true);
   };
 
   const simulateSupportReply = () => {
@@ -335,16 +330,7 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
         is_read: false,
         sender_name: "الدعم الفني"
       };
-      // إضافة رسالة الدعم مع الحفاظ على الترتيب
-      setMessages(prev => {
-        const newMessages = [...prev, supportMessage];
-        // ترتيب من الأقدم للأحدث
-        return newMessages.sort((a, b) => {
-          const timeA = new Date(a.time || a.created_at || 0).getTime();
-          const timeB = new Date(b.time || b.created_at || 0).getTime();
-          return timeA - timeB;
-        });
-      });
+      setMessages(prev => [...prev, supportMessage]);
       scrollToBottom();
       
       // زيادة عدد الرسائل غير المقروءة
@@ -364,20 +350,19 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (messagesEndRef.current && chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
     }, 100);
   };
 
+  // التمرير إلى الأسفل عند إرسال رسالة جديدة أو تحميل الرسائل
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (messageSent) {
+      scrollToBottom();
+      setMessageSent(false);
     }
-  };
+  }, [messageSent, messages]);
 
   // تنسيق الوقت
   const formatChatTime = (timestamp) => {
@@ -459,17 +444,10 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
     }
   };
 
-  // تجميع الرسائل حسب التاريخ مع الحفاظ على الترتيب
+  // تجميع الرسائل حسب التاريخ
   const groupMessagesByDate = () => {
     const groups = {};
-    // التأكد من أن الرسائل مرتبة من الأقدم للأحدث
-    const sortedMessages = [...messages].sort((a, b) => {
-      const timeA = new Date(a.time || a.created_at || 0).getTime();
-      const timeB = new Date(b.time || b.created_at || 0).getTime();
-      return timeA - timeB;
-    });
-    
-    sortedMessages.forEach(message => {
+    messages.forEach(message => {
       const date = getMessageDate(message.time);
       if (!groups[date]) groups[date] = [];
       groups[date].push(message);
@@ -477,24 +455,34 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
     return groups;
   };
 
-  // دالة لعرض الرسالة بشكل ثابت مع التاريخ
+  // دالة لتنسيق الرسالة مع التاريخ
   const MessageWithDate = ({ message, isCurrentUser }) => {
     const messageDate = formatMessageDate(message.time);
+    const isToday = getMessageDate(message.time) === 'اليوم';
     
     return (
-      <div className="mb-3">
+      <div className={`mb-4 ${isCurrentUser ? 'pr-2' : 'pl-2'}`}>
+        {/* التاريخ */}
+        <div className={`text-xs text-gray-500 mb-1 ${isCurrentUser ? 'text-right pr-3' : 'text-left pl-3'}`}>
+          {isToday ? 'اليوم' : messageDate}
+        </div>
+        
+        {/* الرسالة */}
         <div
-          className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${isCurrentUser
-            ? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-br-none ml-auto'
-            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-          } ${message.is_temp ? 'opacity-90' : ''}`}
+          className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
+            isCurrentUser
+              ? 'ml-auto bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-tr-none'
+              : 'mr-auto bg-white text-gray-800 border border-gray-200 rounded-tl-none'
+          } ${message.is_temp ? 'opacity-80' : ''}`}
         >
-          {/* نص الرسالة الكامل بدون تقطيع */}
-          <div className="whitespace-pre-wrap break-words text-sm">
-            {message.message}
+          {/* نص الرسالة */}
+          <div className="mb-2">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {message.message}
+            </p>
           </div>
           
-          {/* وقت الرسالة */}
+          {/* وقت الرسالة والحالة */}
           <div className="flex items-center justify-end gap-2 mt-2">
             <span className={`text-xs ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
               {formatMessageTime(message.time)}
@@ -503,17 +491,10 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
               message.is_read ? (
                 <CheckCheck size={12} className="text-blue-100" />
               ) : (
-                <Check size={12} className="text-blue-100 opacity-60" />
+                <Check size={12} className="text-blue-100 opacity-50" />
               )
             )}
           </div>
-        </div>
-        
-        {/* التاريخ تحت الرسالة - يظهر دائماً */}
-        <div className={`mt-1 px-2 ${isCurrentUser ? 'text-right' : 'text-left'}`}>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            {messageDate}
-          </span>
         </div>
       </div>
     );
@@ -532,12 +513,12 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
       />
 
-      {/* Modal Content - تصميم شبيه بالواتساب */}
+      {/* Modal Content */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-6xl mx-4 h-[85vh] overflow-hidden"
+        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-6xl mx-4 h-[90vh] overflow-hidden"
       >
         <div className="flex h-full">
           {/* الجانب الأيسر - قائمة المحادثات */}
@@ -790,7 +771,10 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-gray-100 p-4">
+                <div 
+                  ref={chatContainerRef}
+                  className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-gray-100 p-4"
+                >
                   {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8">
                       <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mb-4">
@@ -814,37 +798,35 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-1">
                       {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
                         <div key={date}>
                           {/* Date Separator */}
                           <div className="flex justify-center my-6">
-                            <div className="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-full font-medium">
+                            <div className="bg-gray-200 text-gray-600 text-xs px-4 py-2 rounded-full">
                               {date}
                             </div>
                           </div>
                           
-                          {/* عرض جميع رسائل هذا اليوم مرتبة من الأقدم للأحدث */}
-                          <div className="space-y-4">
-                            {dateMessages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex ${message.isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                              >
-                                <MessageWithDate 
-                                  message={message} 
-                                  isCurrentUser={message.isCurrentUser} 
-                                />
-                              </div>
-                            ))}
-                          </div>
+                          {/* Messages */}
+                          {dateMessages.map((message) => (
+                            <div
+                              key={message.id}
+                              className={`flex ${message.isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <MessageWithDate 
+                                message={message} 
+                                isCurrentUser={message.isCurrentUser} 
+                              />
+                            </div>
+                          ))}
                         </div>
                       ))}
 
                       {/* Typing Indicator */}
                       {typing && (
                         <div className="flex justify-start">
-                          <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
+                          <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3">
                             <div className="flex items-center gap-1">
                               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -859,44 +841,85 @@ const ChatModal = ({ isOpen, onClose, currentUserId = 39, onStartSupport, defaul
                   )}
                 </div>
 
-                {/* Input Area */}
-                <div className="border-t border-gray-200 bg-white p-4">
-                  <div className="flex items-center gap-2">
-                    {/* Message Input */}
-                    <div className="flex-1 relative">
-                      <textarea
-                        ref={inputRef}
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="اكتب رسالة..."
-                        className="w-full p-3 pr-12 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 resize-none min-h-[44px] max-h-[120px]"
-                        rows="1"
-                        disabled={sending}
-                      />
-                      <div className="absolute bottom-2 right-3 text-xs text-gray-400">
-                        {newMessage.length}/1000
-                      </div>
-                    </div>
+                {/* استخدام مكون MessageSender لإرسال الرسائل */}
+                {selectedChat && selectedChat.id !== "support-chat" && (
+                  <MessageSender
+                    chatId={selectedChat.id}
+                    currentUserId={currentUserId}
+                    onMessageSent={handleMessageSent}
+                  />
+                )}
 
-                    {/* Send Button */}
-                    <button
-                      onClick={sendMessage}
-                      disabled={sending || !newMessage.trim()}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                        sending || !newMessage.trim()
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white hover:shadow-lg'
-                      }`}
-                    >
-                      {sending ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {/* Input Area للدعم الفني */}
+                {selectedChat && selectedChat.id === "support-chat" && (
+                  <div className="border-t border-gray-200 bg-white p-4">
+                    <div className="flex items-center gap-2">
+                      <button className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                        <Paperclip size={20} className="text-gray-600" />
+                      </button>
+
+                      <button className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                        <Smile size={20} className="text-gray-600" />
+                      </button>
+
+                      <div className="flex-1 relative">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendMessage();
+                            }
+                          }}
+                          placeholder="اكتب رسالة للدعم الفني..."
+                          className="w-full p-3 pr-12 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
+                          disabled={sending}
+                        />
+                      </div>
+
+                      {newMessage.trim() ? (
+                        <button
+                          onClick={() => {
+                            // إرسال رسالة للدعم الفني
+                            const tempMessage = {
+                              id: `temp-${Date.now()}`,
+                              message: newMessage,
+                              sender_id: currentUserId,
+                              isCurrentUser: true,
+                              is_temp: true,
+                              time: new Date().toISOString(),
+                              created_at: new Date().toISOString(),
+                              is_read: false,
+                              sender_name: 'أنت'
+                            };
+                            setMessages(prev => [...prev, tempMessage]);
+                            setNewMessage("");
+                            simulateSupportReply();
+                          }}
+                          disabled={sending}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                            sending
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white hover:shadow-lg'
+                          }`}
+                        >
+                          {sending ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Send size={20} />
+                          )}
+                        </button>
                       ) : (
-                        <Send size={20} />
+                        <button className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                          <Mic size={20} className="text-gray-600" />
+                        </button>
                       )}
-                    </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             ) : (
               /* Empty State - عند عدم وجود محادثة محددة */

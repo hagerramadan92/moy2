@@ -1,9 +1,8 @@
-// pages/api/proxy/[...path].js
 export default async function handler(req, res) {
   const { path, ...queryParams } = req.query;
   
-  // Base URL للـ API الأصلية
-  const API_BASE = 'http://moya.talaaljazeera.com/api/v1';
+  // Base URL للـ API الأصلية - غيرت إلى HTTPS
+  const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
   
   // بناء الـ endpoint
   const endpoint = Array.isArray(path) ? path.join('/') : path || '';
@@ -25,6 +24,11 @@ export default async function handler(req, res) {
     contentType: req.headers['content-type']
   });
 
+  // التحقق من أن الـ targetUrl تستخدم HTTPS
+  if (targetUrl.startsWith('http://')) {
+    console.warn('⚠️ Warning: Target URL uses HTTP, not HTTPS. This may cause Mixed Content errors.');
+  }
+
   // تحسين معالجة الأخطاء لـ Notifications و Chats
   if (endpoint.startsWith('notifications') || endpoint.startsWith('chats')) {
     console.log('📱 Handling notifications/chats endpoint via proxy');
@@ -39,7 +43,8 @@ export default async function handler(req, res) {
         'Accept': 'application/json',
         'X-Forwarded-For': req.headers['x-forwarded-for'] || req.socket.remoteAddress,
         'X-Proxy-Timestamp': Date.now().toString(),
-        'User-Agent': 'Moya-Proxy-Server/1.0'
+        'User-Agent': 'Moya-Proxy-Server/1.0',
+        'X-Forwarded-Proto': 'https' // أضفت هذا header
       };
       
       // إضافة authorization header إذا موجود
@@ -92,7 +97,21 @@ export default async function handler(req, res) {
         } catch (fetchError) {
           retryCount++;
           if (retryCount > maxRetries) {
-            throw fetchError;
+            // حاول مع HTTP إذا فشل HTTPS (fallback)
+            if (targetUrl.startsWith('https://')) {
+              console.log('🔄 Trying HTTP fallback...');
+              const httpUrl = targetUrl.replace('https://', 'http://');
+              try {
+                response = await fetch(httpUrl, options);
+                console.log('✅ HTTP fallback succeeded');
+                break;
+              } catch (httpError) {
+                console.error('❌ HTTP fallback also failed:', httpError.message);
+                throw fetchError;
+              }
+            } else {
+              throw fetchError;
+            }
           }
           console.log(`🔄 Retry ${retryCount} after fetch error:`, fetchError.message);
           await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // انتظر ثانية بين المحاولات
@@ -107,6 +126,8 @@ export default async function handler(req, res) {
       console.log(`✅ Backend response received in ${responseTime}ms:`, {
         status: response.status,
         statusText: response.statusText,
+        urlUsed: response.url,
+        usingHTTPS: response.url.startsWith('https://'),
         headers: Object.fromEntries(response.headers.entries())
       });
       
@@ -148,7 +169,8 @@ export default async function handler(req, res) {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // 24 ساعة
         'X-Proxy-Response-Time': `${responseTime}ms`,
-        'X-Proxy-Endpoint': endpoint
+        'X-Proxy-Endpoint': endpoint,
+        'X-Proxy-Protocol': response.url.startsWith('https://') ? 'HTTPS' : 'HTTP'
       };
 
       // إضافة headers من الـ response الأصلية
@@ -169,7 +191,8 @@ export default async function handler(req, res) {
           timestamp: new Date().toISOString(),
           endpoint: endpoint,
           response_time: `${responseTime}ms`,
-          via: 'vercel-proxy'
+          via: 'vercel-proxy',
+          protocol: response.url.startsWith('https://') ? 'https' : 'http'
         };
       }
 
@@ -192,7 +215,8 @@ export default async function handler(req, res) {
         error: error.message,
         stack: error.stack,
         timeElapsed: `${errorTime}ms`,
-        targetUrl: targetUrl
+        targetUrl: targetUrl,
+        isHTTPS: targetUrl.startsWith('https://')
       });
       
       // إعداد CORS headers حتى في حالة الخطأ
@@ -211,7 +235,8 @@ export default async function handler(req, res) {
           error: true,
           endpoint: endpoint,
           timestamp: new Date().toISOString(),
-          response_time: `${errorTime}ms`
+          response_time: `${errorTime}ms`,
+          attempted_url: targetUrl
         }
       });
     }
@@ -221,6 +246,7 @@ export default async function handler(req, res) {
       const headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Forwarded-Proto': 'https' // أضفت هذا header
       };
 
       if (req.headers.authorization) {

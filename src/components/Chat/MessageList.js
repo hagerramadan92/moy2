@@ -715,7 +715,7 @@ const MessageList = ({ chatId, currentUserId = 39 }) => {
           </div>
         ))}
         
-      
+        {/* العنصر للتمرير إليه */}
         <div ref={messagesEndRef} className="h-4" />
       </div>
 

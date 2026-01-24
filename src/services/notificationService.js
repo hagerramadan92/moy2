@@ -7,23 +7,16 @@ const isBrowser = typeof window !== 'undefined';
 
 // دالة لبناء الـ URL الصحيح بناءً على البيئة
 const buildApiUrl = (path) => {
-  // في الإنتاج والمتصفح، استخدم الـ proxy لجميع المسارات
-  if (isProduction && isBrowser) {
+  // في المتصفح، استخدم دائمًا الـ proxy للإشعارات
+  if (isBrowser) {
     // استخدم الـ proxy للمسارات التي تبدأ بـ /notifications
     if (path.startsWith('/notifications')) {
       return `/api/proxy${path}`;
     }
   }
   
-  // في التطوير أو server-side، استخدم الـ API مباشرة
-  if (!isBrowser) {
-    // Server-side rendering أو غير متصفح
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://moya.talaaljazeera.com/api/v1";
-    return `${baseURL}${path}`;
-  }
-  
-  // في التطوير والمتصفح، استخدم الـ API مباشرة
-  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://moya.talaaljazeera.com/api/v1";
+  // في server-side، استخدم الـ API مباشرة
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://moya.talaaljazeera.com/api/v1"; // غيرت إلى HTTPS
   return `${baseURL}${path}`;
 };
 
@@ -102,19 +95,20 @@ axiosInstance.interceptors.response.use(
       }
     }
     
-    // معالجة أخطاء الشبكة
+    // معالجة أخطاء Mixed Content
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-      console.error('🔔 Network Error Detected:', {
-        isProduction,
-        isBrowser,
-        url: error.config?.url,
-        shouldUseProxy: error.config?.url?.includes('/api/proxy/') ? false : isProduction && isBrowser
-      });
-      
-      // في حالة الإنتاج والمتصفح مع خطأ في الشبكة، جرب استخدام الـ proxy
-      if (isProduction && isBrowser && error.config?.url?.startsWith('http')) {
-        console.warn('🔄 Retrying with proxy...');
-        // يمكن إضافة منطق إعادة المحاولة هنا
+      if (isBrowser && error.config?.url?.startsWith('http:')) {
+        console.error('⚠️ Mixed Content Error Detected! Trying to use HTTPS or proxy...');
+        
+        // إذا كان الـ URL يستخدم HTTP، حاول استخدام HTTPS بدلاً منه
+        const httpUrl = error.config.url;
+        if (httpUrl.startsWith('http://')) {
+          const httpsUrl = httpUrl.replace('http://', 'https://');
+          console.warn(`🔄 Retrying with HTTPS: ${httpsUrl}`);
+          
+          // يمكنك إضافة منطق إعادة المحاولة هنا
+          // أو توجيه المستخدم إلى استخدام HTTPS
+        }
       }
     }
     
@@ -122,6 +116,7 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+// باقي الكود كما هو...
 class NotificationService {
   // تسجيل الجهاز
   async registerDevice(deviceData) {
