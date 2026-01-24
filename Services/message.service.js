@@ -51,10 +51,10 @@ class MessageService {
   // الحصول على قائمة الدردشات
   async getChats(params = {}) {
     try {
-      console.log('📱 جلب المحادثات...');
+      
       const response = await axiosInstance.get('/chats', { params });
       
-      console.log('📱 استجابة المحادثات:', response.data);
+      
       
       if (response.data.status === "success" && response.data.chats) {
         return {
@@ -88,11 +88,11 @@ class MessageService {
   // الحصول على رسائل دردشة معينة
   async getMessages(chatId, params = {}) {
     try {
-      console.log(`📱 جلب رسائل الدردشة ${chatId}...`);
+      
       
       const response = await axiosInstance.get(`/chats/${chatId}/messages`, { params });
       
-      console.log(`📱 استجابة رسائل الدردشة ${chatId}:`, response.data);
+      
       
       if (response.data.status === "success") {
         return {
@@ -121,7 +121,7 @@ class MessageService {
   // إرسال رسالة جديدة
   async sendMessage(chatId, messageData) {
     try {
-      console.log(`📤 إرسال رسالة للدردشة ${chatId}:`, messageData);
+     
       
       const payload = {
         message: messageData.message || messageData.text || messageData,
@@ -131,7 +131,7 @@ class MessageService {
       
       const response = await axiosInstance.post(`/chats/${chatId}/send`, payload);
       
-      console.log(`📤 استجابة إرسال رسالة للدردشة ${chatId}:`, response.data);
+      
       
       if (response.data.status === "success" && response.data.message) {
         return {
@@ -158,14 +158,14 @@ class MessageService {
   // إنشاء دردشة جديدة
   async createChat(participantId, type = "user_user") {
     try {
-      console.log(`➕ إنشاء دردشة مع المشارك ${participantId}...`);
+      
       
       const response = await axiosInstance.post('/chats/create', {
         participant_id: participantId,
         type: type
       });
       
-      console.log(`➕ استجابة إنشاء دردشة مع ${participantId}:`, response.data);
+
       
       if (response.data.status === "success") {
         return {

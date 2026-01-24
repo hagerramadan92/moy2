@@ -50,7 +50,7 @@ const MessageSender = ({ chatId, currentUserId = 39, onMessageSent }) => {
       // إرسال الرسالة إلى API
       const response = await messageService.sendMessage(chatId, message);
       
-      console.log('📨 [MessageSender] استجابة API:', response);
+    
 
       if (response && response.success && response.message) {
         // إرسال الرسالة النهائية للمكون الأب

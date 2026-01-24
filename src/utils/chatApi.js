@@ -5,7 +5,7 @@
 
 import { getCsrfToken } from './csrf';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://moya.talaaljazeera.com/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1';
 
 /**
  * Get authorization headers with access token and CSRF token
@@ -123,7 +123,6 @@ export const sendChatMessage = async (messageData) => {
       throw new Error('Chat ID is required to send message');
     }
 
-    console.log('Sending message with data:', messageData);
     
     const response = await fetch(`${API_BASE_URL}/chats/${chatId}/send`, {
       method: 'POST',
@@ -147,7 +146,6 @@ export const sendChatMessage = async (messageData) => {
       throw new Error(`Failed to send message: ${errorMessage}`);
     }
 
-    console.log('Message sent successfully:', data);
     return data.data || data;
   } catch (error) {
     console.error('Error sending message:', error);

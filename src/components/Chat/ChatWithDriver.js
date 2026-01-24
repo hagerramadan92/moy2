@@ -248,7 +248,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
   };
 
   const handleCallDriver = () => {
-    console.log('الاتصال بالسائق:', driverInfo?.phoneNumber);
+    
     // يمكن فتح تطبيق الهاتف هنا
     window.open(`tel:${driverInfo?.phoneNumber}`, '_blank');
   };

@@ -26,7 +26,7 @@ const NewChatModal = ({ isOpen, onClose, currentUserId, onChatCreated }) => {
       setLoading(true);
       setError("");
 
-      console.log(`بدء محادثة مع المستخدم: ${userId}`);
+     
       
       const result = await messageService.createChat(userId);
       
@@ -45,7 +45,7 @@ const NewChatModal = ({ isOpen, onClose, currentUserId, onChatCreated }) => {
             await messageService.sendMessage(chatId, initialMessage);
           }
           
-          console.log(`✅ تم إنشاء دردشة جديدة: ${chatId}`);
+          
           
           if (onChatCreated) {
             onChatCreated(chatId);

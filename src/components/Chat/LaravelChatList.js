@@ -59,10 +59,10 @@ const LaravelChatList = ({ onSelectChat, selectedChatId, userId = 39 }) => {
       
       const channel = pusherClient.subscribeToLaravelChannel(channelName, {
         onSubscribed: (data) => {
-          console.log('✅ Subscribed to user channel:', data);
+          
         },
         onEvent: (eventName, data) => {
-          console.log(`📨 Laravel chat event: ${eventName}`, data);
+          
           
           // تحديث قائمة المحادثات عند استقبال حدث جديد
           if (eventName === '.message.sent' || eventName === 'MessageSent') {
@@ -72,11 +72,11 @@ const LaravelChatList = ({ onSelectChat, selectedChatId, userId = 39 }) => {
         events: {
           // يمكنك ربط أحداث محددة هنا
           'chat.created': (data) => {
-            console.log('New chat created:', data);
+           
             loadChats(); // إعادة تحميل القائمة
           },
           'message.sent': (data) => {
-            console.log('Message sent event:', data);
+            
             handleNewMessage(data);
           }
         }

@@ -48,14 +48,7 @@ axiosInstance.interceptors.request.use((config) => {
     }
   }
   
-  console.log('🔔 Notification Service Request:', {
-    originalUrl,
-    finalUrl: config.url,
-    method: config.method,
-    usingProxy: config.url?.includes('/api/proxy/') || false,
-    isProduction,
-    isBrowser
-  });
+ 
   
   return config;
 }, (error) => {
@@ -66,11 +59,7 @@ axiosInstance.interceptors.request.use((config) => {
 // Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log('🔔 Notification Service Response:', {
-      url: response.config.url,
-      status: response.status,
-      usingProxy: response.config.url?.includes('/api/proxy/') || false
-    });
+   
     return response;
   },
   async (error) => {
@@ -121,11 +110,9 @@ class NotificationService {
   // تسجيل الجهاز
   async registerDevice(deviceData) {
     try {
-      console.log('📱 Registering device:', deviceData);
       
       const response = await axiosInstance.post('/notifications/register-device', deviceData);
       
-      console.log('✅ Device registered:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Error registering device:', error);
@@ -147,11 +134,9 @@ class NotificationService {
   // تحديث حالة الجهاز
   async updateDevice(deviceId, data) {
     try {
-      console.log(`🔄 Updating device ${deviceId}:`, data);
       
       const response = await axiosInstance.put(`/notifications/devices/${deviceId}`, data);
       
-      console.log(`✅ Device ${deviceId} updated:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating device ${deviceId}:`, error);
@@ -162,11 +147,10 @@ class NotificationService {
   // إلغاء تفعيل الجهاز
   async deactivateDevice(deviceId) {
     try {
-      console.log(`🚫 Deactivating device ${deviceId}`);
       
       const response = await axiosInstance.delete(`/notifications/devices/${deviceId}`);
       
-      console.log(`✅ Device ${deviceId} deactivated:`, response.data);
+    
       return response.data;
     } catch (error) {
       console.error(`❌ Error deactivating device ${deviceId}:`, error);
@@ -177,14 +161,11 @@ class NotificationService {
   // الحصول على الأجهزة المسجلة
   async getRegisteredDevices() {
     try {
-      console.log('📱 Getting registered devices...');
+    
       
       const response = await axiosInstance.get('/notifications/devices');
       
-      console.log('✅ Registered devices:', {
-        count: response.data?.data?.length || response.data?.length || 0,
-        success: response.data?.success || response.data?.status
-      });
+     
       return response.data;
     } catch (error) {
       console.error('❌ Error getting devices:', error);
@@ -213,14 +194,10 @@ class NotificationService {
   // الحصول على الإشعارات
   async getNotifications(params = {}) {
     try {
-      console.log('🔔 Getting notifications with params:', params);
       
       const response = await axiosInstance.get('/notifications', { params });
       
-      console.log('✅ Notifications response:', {
-        count: response.data?.data?.length || response.data?.length || 0,
-        success: response.data?.success || response.data?.status
-      });
+    
       
       return response.data;
     } catch (error) {
@@ -243,11 +220,9 @@ class NotificationService {
   // تحديد الإشعار كمقروء
   async markAsRead(notificationId) {
     try {
-      console.log(`👁️ Marking notification ${notificationId} as read`);
       
       const response = await axiosInstance.post(`/notifications/${notificationId}/read`);
       
-      console.log(`✅ Notification ${notificationId} marked as read:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error marking notification ${notificationId} as read:`, error);
@@ -258,11 +233,11 @@ class NotificationService {
   // تحديد جميع الإشعارات كمقروءة
   async markAllAsRead() {
     try {
-      console.log('👁️ Marking all notifications as read');
+    
       
       const response = await axiosInstance.post('/notifications/mark-all-read');
       
-      console.log('✅ All notifications marked as read:', response.data);
+   
       return response.data;
     } catch (error) {
       console.error('❌ Error marking all notifications as read:', error);
@@ -273,11 +248,11 @@ class NotificationService {
   // حذف الإشعار
   async deleteNotification(notificationId) {
     try {
-      console.log(`🗑️ Deleting notification ${notificationId}`);
+      
       
       const response = await axiosInstance.delete(`/notifications/${notificationId}`);
       
-      console.log(`✅ Notification ${notificationId} deleted:`, response.data);
+
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting notification ${notificationId}:`, error);
@@ -288,11 +263,10 @@ class NotificationService {
   // حذف جميع الإشعارات
   async deleteAllNotifications() {
     try {
-      console.log('🗑️ Deleting all notifications');
+      
       
       const response = await axiosInstance.delete('/notifications/clear-all');
-      
-      console.log('✅ All notifications deleted:', response.data);
+     
       return response.data;
     } catch (error) {
       console.error('❌ Error deleting all notifications:', error);
@@ -303,11 +277,9 @@ class NotificationService {
   // الحصول على عدد الإشعارات غير المقروءة
   async getUnreadCount() {
     try {
-      console.log('🔢 Getting unread notifications count');
       
       const response = await axiosInstance.get('/notifications/unread-count');
       
-      console.log('✅ Unread count:', response.data);
       
       // معالجة الـ response
       const result = response.data;
@@ -339,15 +311,12 @@ class NotificationService {
   // الحصول على الإشعارات الجديدة منذ وقت محدد
   async getNewNotifications(sinceTimestamp) {
     try {
-      console.log(`🆕 Getting new notifications since: ${new Date(sinceTimestamp).toLocaleString()}`);
       
       const response = await axiosInstance.get('/notifications/new', {
         params: { since: sinceTimestamp }
       });
       
-      console.log(`✅ New notifications since ${sinceTimestamp}:`, {
-        count: response.data?.data?.length || response.data?.length || 0
-      });
+     
       return response.data;
     } catch (error) {
       console.error(`❌ Error getting new notifications since ${sinceTimestamp}:`, error);
@@ -368,7 +337,6 @@ class NotificationService {
   // اختبار الاتصال
   async testConnection() {
     try {
-      console.log('🔗 Testing notification service connection...');
       
       // محاولة جلب عدد الإشعارات غير المقروءة (طريقة خفيفة)
       const response = await axiosInstance.get('/notifications/unread-count');
@@ -461,7 +429,6 @@ class NotificationService {
     if (!isBrowser) return;
     
     try {
-      console.log('🚀 Initializing notification service...');
       
       // تسجيل الجهاز إذا لزم الأمر
       const deviceId = localStorage.getItem('notification_device_id');
@@ -480,7 +447,6 @@ class NotificationService {
         const registration = await this.registerDevice(deviceData);
         if (registration.success && registration.device_id) {
           localStorage.setItem('notification_device_id', registration.device_id);
-          console.log('📱 Device registered with ID:', registration.device_id);
         }
       }
       

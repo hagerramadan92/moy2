@@ -33,33 +33,33 @@ const Layout = ({ children }) => {
                         localStorage.getItem('id') ||
                         '39'; // Default fallback
     
-    console.log('🔍 تم تحميل userId:', storedUserId);
+   
     setUserId(storedUserId);
   }, []);
 
   // Handle opening chat modal
   const handleOpenChatModal = (participantId = null) => {
-    console.log('فتح نافذة المحادثات', participantId ? `مع المشارك: ${participantId}` : '');
+    
     setIsChatModalOpen(true);
     setShowSupportModal(false);
     
     // إذا كان هناك participantId، نقوم بتخزينه لتستخدمه ChatModal
     if (participantId) {
       // يمكنك تمريره مباشرة إلى ChatModal أو تخزينه
-      console.log('سيتم فتح محادثة مع:', participantId);
+      
     }
   };
 
   // Handle opening support modal
   const handleOpenSupportModal = () => {
-    console.log('فتح نافذة الدعم الفني');
+    
     setShowSupportModal(true);
     setIsChatModalOpen(true);
   };
 
   // Handle closing chat modal
   const handleCloseChatModal = () => {
-    console.log('إغلاق نافذة المحادثات');
+   
     setIsChatModalOpen(false);
     setShowSupportModal(false);
     setSelectedChatId(null);
@@ -67,7 +67,7 @@ const Layout = ({ children }) => {
 
   // Handle opening a specific chat (from notifications or elsewhere)
   const handleOpenSpecificChat = (chatId) => {
-    console.log(`فتح محادثة محددة: ${chatId}`);
+    
     setSelectedChatId(chatId);
     setIsChatModalOpen(true);
     setShowSupportModal(false);
@@ -75,7 +75,7 @@ const Layout = ({ children }) => {
 
   // Handle starting a new chat with specific user/driver
   const handleStartNewChat = (participantId) => {
-    console.log(`بدء محادثة جديدة مع: ${participantId}`);
+    
     setIsChatModalOpen(true);
     setShowSupportModal(false);
     setSelectedChatId(null);
@@ -128,13 +128,13 @@ const Layout = ({ children }) => {
   useEffect(() => {
     const handleStartNewChatEvent = (e) => {
       const { participantId } = e.detail;
-      console.log('حدث بدء محادثة جديدة:', participantId);
+  
       handleStartNewChat(participantId);
     };
 
     const handleOpenSpecificChatEvent = (e) => {
       const { chatId } = e.detail;
-      console.log('حدث فتح محادثة محددة:', chatId);
+     
       handleOpenSpecificChat(chatId);
     };
 
@@ -225,7 +225,7 @@ const GlobalChatEvents = ({ onOpenChat, onOpenSpecificChat, onStartNewChat }) =>
     // Support events
     window.addEventListener('open-support-modal', () => {
       // يمكنك تنفيذ خاصية الدعم هنا
-      console.log('فتح الدعم الفني عبر الحدث');
+     
     });
 
     // Notification click events

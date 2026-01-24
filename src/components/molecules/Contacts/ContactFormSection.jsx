@@ -225,7 +225,6 @@ const ContactFormSection = () => {
             }
           }
         } catch (csrfError) {
-          console.log('CSRF token setup failed, continuing without it');
         }
       }
 
@@ -249,8 +248,6 @@ const ContactFormSection = () => {
       }
 
       // Log request details for debugging
-      console.log('Sending request to:', '/api/contact');
-      console.log('Request body:', requestBody);
 
       // Send POST request to Next.js API route (proxy to avoid CORS issues)
       let response;
@@ -268,8 +265,6 @@ const ContactFormSection = () => {
           body: JSON.stringify(requestBody),
         });
         
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       } catch (fetchError) {
         // Dismiss loading toast
         toast.dismiss(loadingToast);
@@ -305,7 +300,6 @@ const ContactFormSection = () => {
           data = await response.json();
         } catch (jsonError) {
           // If response is not JSON, still consider it success
-          console.log('Response is not JSON, but status is OK');
         }
         
         // Show success toast

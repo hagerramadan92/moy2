@@ -54,7 +54,6 @@ export const registerDevice = async () => {
       });
 
       if (token) {
-        console.log('FCM Token:', token);
         return token;
       } else {
         console.warn('لم يتم الحصول على token من Firebase');
@@ -74,7 +73,6 @@ export const onMessageListener = () => {
   if (!messaging) return () => {};
 
   return onMessage(messaging, (payload) => {
-    console.log('تم استلام إشعار:', payload);
     return payload;
   });
 };

@@ -6,9 +6,7 @@ export const waterApi = {
   // جلب أنواع المياه
   async getWaterTypes() {
     try {
-      console.log('Fetching water types from API');
       const response = await api.get('/type-water');
-      console.log('Water types response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching water types:', error);
@@ -29,15 +27,10 @@ export const waterApi = {
   // جلب أحجام / خدمات المياه - مع دعم Proxy
   async getWaterServices() {
     try {
-      console.log('🔄 Fetching water services...');
       
       const response = await api.get('/services');
       
-      console.log('✅ Water services response:', {
-        success: response.data.status,
-        count: response.data.data?.length || 0,
-        message: response.data.message
-      });
+    
       
       // التأكد من تنسيق الـ response
       const result = response.data;
@@ -663,7 +656,7 @@ export const testProxyConnection = async () => {
 // دالة للحصول على الـ services مباشرة (بدون proxy)
 export const getServicesDirect = async () => {
   try {
-    const response = await fetch('http://moya.talaaljazeera.com/api/v1/services', {
+    const response = await fetch('https://moya.talaaljazeera.com/api/v1/services', {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'

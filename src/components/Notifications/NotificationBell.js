@@ -40,10 +40,7 @@ const NotificationBell = () => {
 
   const handleNotificationClick = (notification) => {
     // تحديد الإشعار كمقروء
-    if (!notification.is_read) {
-      // يمكنك إضافة دالة markAsRead هنا إذا كانت موجودة في الـ context
-      console.log('Mark as read:', notification.id);
-    }
+   
     
     // إغلاق القائمة
     setIsOpen(false);
@@ -55,7 +52,7 @@ const NotificationBell = () => {
   const handleNotificationAction = (notification) => {
     const { type, data, action_url } = notification;
     
-    console.log('Notification clicked:', notification);
+    
     
     if (action_url) {
       window.location.href = action_url;

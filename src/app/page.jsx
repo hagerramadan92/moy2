@@ -28,7 +28,6 @@ const page = () => {
 				const response = await fetch('/api/pages/home');
 				const data = await response.json();
 				
-				console.log('Home Page - API Response:', data);
 				
 				if (response.ok && (data.success || data.status)) {
 					setPageData(data.data);

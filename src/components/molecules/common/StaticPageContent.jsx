@@ -25,7 +25,6 @@ export default function StaticPageContent({
           throw new Error('Slug is required');
         }
         
-        console.log('Fetching static page with slug:', slug);
         
         // Use Next.js API route as proxy to avoid CORS issues
         const apiUrl = `/api/static-page?slug=${encodeURIComponent(slug)}`;
@@ -37,17 +36,14 @@ export default function StaticPageContent({
           },
         });
         
-        console.log('Static page response status:', response.status);
         
         // Get response text first
         const responseText = await response.text();
-        console.log('Static page response text (first 500 chars):', responseText.substring(0, 500));
         
         let responseData = {};
         try {
           if (responseText) {
             responseData = JSON.parse(responseText);
-            console.log('Static page response data:', responseData);
           } else {
             console.warn('Static page response is empty');
           }
@@ -86,7 +82,6 @@ export default function StaticPageContent({
           throw new Error('الاستجابة من الخادم فارغة أو غير صحيحة');
         }
         
-        console.log('Static page data received:', responseData);
         setContent(responseData);
       } catch (err) {
         console.error('Error fetching static page content:', err);

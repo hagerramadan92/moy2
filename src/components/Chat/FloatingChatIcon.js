@@ -58,7 +58,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
           setUnreadNotifications(notificationsResponse.data?.length || 0);
         }
       } catch (notifError) {
-        console.log('الإشعارات غير متاحة:', notifError);
+        
       }
       
       // تحديث وقت آخر تحديث
@@ -127,7 +127,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
   const handleNotificationsClick = () => {
     setIsExpanded(false);
     // يمكنك توجيه المستخدم لصفحة الإشعارات هنا
-    console.log('فتح الإشعارات');
+    
     // window.location.href = '/notifications';
   };
 
@@ -140,7 +140,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
   const handleNewChat = () => {
     setIsExpanded(false);
     // هنا يمكنك فتح نموذج لإنشاء محادثة جديدة
-    console.log('فتح نموذج محادثة جديدة');
+    
     // أو يمكنك فتح ChatModal مع وضع خاص لإنشاء محادثة
     if (onOpenChat) {
       onOpenChat('new');
@@ -150,7 +150,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
   // دالة لفتح صفحة البحث
   const handleSearch = () => {
     setIsExpanded(false);
-    console.log('فتح صفحة البحث عن محادثات');
+   
     // يمكنك تنفيذ البحث هنا
   };
 

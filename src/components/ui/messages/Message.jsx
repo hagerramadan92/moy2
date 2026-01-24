@@ -51,7 +51,6 @@ const ChatApp = () => {
    
       // Check CSRF token before making any requests
       const hasCsrfToken = apiService.checkCsrfToken();
-      console.log('CSRF Token available:', hasCsrfToken);
       
       if (!hasCsrfToken) {
         console.warn('CSRF token not found in cookies. Some POST requests might fail.');
@@ -92,7 +91,6 @@ const ChatApp = () => {
         chatsArray = chatsResponse.chats;
       }
       
-      console.log('Loaded chats:', chatsArray);
       setChats(chatsArray);
       
       // Auto-select first chat if available and no chat is selected
@@ -145,7 +143,6 @@ const ChatApp = () => {
         messagesArray = messagesData.messages;
       }
       
-      console.log('Loaded messages for chat', chatId, ':', messagesArray);
       
       // Determine sender for each message
       const formattedMessages = messagesArray.map(msg => ({
@@ -173,7 +170,6 @@ const ChatApp = () => {
       const channel = pusherClient.subscribe("chat-app");
       
       channel.bind("new-upcoming-message", (data) => {
-        console.log('New message via Pusher:', data);
         
         // Check if message belongs to current chat
         if (data.chat_id === chatId || data.chatId === chatId) {
@@ -244,7 +240,6 @@ const ChatApp = () => {
         text: messageText
       });
       
-      console.log('Message sent successfully:', sentMessage);
       
       // Update the message in the chats list
       updateChatLastMessage(chatId, messageText);

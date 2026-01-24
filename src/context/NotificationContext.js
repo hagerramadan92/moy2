@@ -18,7 +18,7 @@ export function NotificationProvider({ children }) {
   const processedNotificationIds = useRef(new Set()); // تخزين IDs الإشعارات التي تم معالجتها
   const toastNotificationIds = useRef(new Set()); // تخزين IDs الإشعارات المعروضة كـ Toast
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://moya.talaaljazeera.com/api/v1';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1';
 
   const getAuthToken = () => {
     if (typeof window !== 'undefined') {
@@ -65,7 +65,6 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (!authToken) {
-        console.log('⚠️ No auth token available');
         setNotifications([]);
         setUnreadCount(0);
         return;
@@ -77,17 +76,14 @@ export function NotificationProvider({ children }) {
         'Accept': 'application/json'
       };
 
-      console.log('🔄 Loading notifications from:', `${API_BASE_URL}/notifications`);
       const response = await axios.get(
         `${API_BASE_URL}/notifications`,
         { headers }
       );
 
-      console.log('📨 API Response:', response.data);
 
       if (response.data.status) {
         const notificationsData = response.data.data || [];
-        console.log(`📊 Processing ${notificationsData.length} notifications`);
         
         // معالجة البيانات
         const processedNotifications = notificationsData.map(processNotification);
@@ -104,7 +100,6 @@ export function NotificationProvider({ children }) {
           processedNotificationIds.current.add(notification.id);
         });
         
-        console.log(`✅ Loaded ${processedNotifications.length} notifications, ${unread} unread`);
       } else {
         console.error('❌ Error loading notifications:', response.data.message);
       }
@@ -136,14 +131,12 @@ export function NotificationProvider({ children }) {
       const timestamp = lastUpdate ? Math.floor(lastUpdate.getTime() / 1000) : 0;
       const url = `${API_BASE_URL}/notifications?since=${timestamp}`;
       
-      console.log('🔄 Checking for new notifications since:', new Date(timestamp * 1000));
       const response = await axios.get(url, { headers });
 
       if (response.data.status) {
         const newNotificationsData = response.data.data || [];
         
         if (newNotificationsData.length > 0) {
-          console.log(`🔄 Found ${newNotificationsData.length} potential new notifications`);
           
           // تصفية الإشعارات التي لم يتم معالجتها من قبل
           const trulyNewData = newNotificationsData.filter(notification => 
@@ -151,12 +144,10 @@ export function NotificationProvider({ children }) {
           );
           
           if (trulyNewData.length === 0) {
-            console.log('📭 No truly new notifications (all already processed)');
             setLastUpdate(new Date());
             return;
           }
           
-          console.log(`✅ Found ${trulyNewData.length} truly new notifications`);
           
           // معالجة الإشعارات الجديدة الحقيقية
           const processedNewNotifications = trulyNewData.map(processNotification);
@@ -226,7 +217,6 @@ export function NotificationProvider({ children }) {
       clearInterval(pollIntervalRef.current);
     }
     
-    console.log(`🔄 Starting auto-refresh every ${interval/1000} seconds`);
     
     // التحقق الأولي فوري
     checkForNewNotifications();
@@ -242,7 +232,6 @@ export function NotificationProvider({ children }) {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
-      console.log('⏹️ Auto-refresh stopped');
     }
   }, []);
 
@@ -252,7 +241,6 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (!authToken) {
-        console.log('⚠️ No auth token available');
         return;
       }
 
@@ -262,7 +250,6 @@ export function NotificationProvider({ children }) {
         'Accept': 'application/json'
       };
 
-      console.log('📝 Marking all notifications as read...');
       
       try {
         const response = await axios.post(
@@ -272,10 +259,8 @@ export function NotificationProvider({ children }) {
         );
         
         if (response.data.status) {
-          console.log('✅ All notifications marked as read');
         }
       } catch (apiError) {
-        console.log('⚠️ Mark-all-read API failed, updating locally only');
       }
       
       // تحديث الحالة المحلية
@@ -303,7 +288,6 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (!authToken) {
-        console.log('⚠️ No auth token available');
         return;
       }
 
@@ -313,7 +297,6 @@ export function NotificationProvider({ children }) {
         'Accept': 'application/json'
       };
 
-      console.log(`📝 Marking notification ${id} as read...`);
       
       try {
         const response = await axios.post(
@@ -323,12 +306,9 @@ export function NotificationProvider({ children }) {
         );
         
         if (response.data.status) {
-          console.log(`✅ Notification ${id} marked as read`);
         } else {
-          console.log(`⚠️ Mark-read API returned error for ${id}`);
         }
       } catch (apiError) {
-        console.log(`⚠️ Mark-read API failed for ${id}, updating locally only`);
       }
       
       // تحديث الحالة المحلية
@@ -365,7 +345,6 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (!authToken) {
-        console.log('⚠️ No auth token available');
         return;
       }
 
@@ -375,7 +354,6 @@ export function NotificationProvider({ children }) {
         'Accept': 'application/json'
       };
 
-      console.log(`🗑️ Deleting notification ${id}...`);
       
       try {
         const response = await axios.delete(
@@ -384,10 +362,8 @@ export function NotificationProvider({ children }) {
         );
         
         if (response.data.status) {
-          console.log(`✅ Notification ${id} deleted`);
         }
       } catch (apiError) {
-        console.log(`⚠️ Delete API failed for ${id}, updating locally only`);
       }
       
       const notificationToDelete = notifications.find(n => n.id === id);
@@ -418,7 +394,6 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (!authToken) {
-        console.log('⚠️ No auth token available');
         return;
       }
 
@@ -428,7 +403,6 @@ export function NotificationProvider({ children }) {
         'Accept': 'application/json'
       };
 
-      console.log('🗑️ Clearing all notifications...');
       
       try {
         const response = await axios.delete(
@@ -437,10 +411,8 @@ export function NotificationProvider({ children }) {
         );
         
         if (response.data.status) {
-          console.log('✅ All notifications cleared');
         }
       } catch (apiError) {
-        console.log('⚠️ Clear-all API failed, updating locally only');
       }
       
       setNotifications([]);
@@ -459,7 +431,6 @@ export function NotificationProvider({ children }) {
   // دالة تسجيل الجهاز
   const registerDevice = async (token) => {
     try {
-      console.log('📱 Registering device with token:', token.substring(0, 20) + '...');
       
       const deviceInfo = {
         token: token,
@@ -478,17 +449,14 @@ export function NotificationProvider({ children }) {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      console.log('Registering device at:', `${API_BASE_URL}/notifications/register-device`);
       const response = await axios.post(
         `${API_BASE_URL}/notifications/register-device`,
         deviceInfo,
         { headers }
       );
 
-      console.log('Register device response:', response.data);
 
       if (response.data.status) {
-        console.log('✅ Device registered successfully');
         
         localStorage.setItem('fcm_token', token);
         localStorage.setItem('device_registered', 'true');
@@ -580,7 +548,6 @@ export function NotificationProvider({ children }) {
     const initNotifications = async () => {
       const authToken = getAuthToken();
       if (authToken) {
-        console.log('🚀 Initializing notification system...');
         
         // تحميل الإشعارات الأولية
         await loadNotifications();
@@ -588,7 +555,6 @@ export function NotificationProvider({ children }) {
         // بدء التحديث التلقائي كل 30 ثانية
         startAutoRefresh(30000);
       } else {
-        console.log('⏸️ No auth token, skipping notification initialization');
       }
     };
 

@@ -69,7 +69,6 @@ export default function WaterTypeSelect({
 				}
 
 				const response = await waterApi.getWaterTypes();
-				console.log('Water types response in component:', response);
 				
 				if (!mounted) return;
 
@@ -78,7 +77,6 @@ export default function WaterTypeSelect({
 				
 				// إذا كانت الاستجابة تحتوي على بيانات افتراضية (من axios interceptor)
 				if (response.isFallback) {
-					console.log('Using fallback data from interceptor');
 					waterTypes = response.data || [];
 				} 
 				// معالجة البنية العادية للاستجابة
@@ -94,11 +92,9 @@ export default function WaterTypeSelect({
 
 				// إذا كان هناك بيانات، استخدمها
 				if (waterTypes && waterTypes.length > 0) {
-					console.log(`Loaded ${waterTypes.length} water types`);
 					setItems(waterTypes);
 				} else {
 					// استخدام بيانات افتراضية إذا لم توجد بيانات
-					console.log('No data found, using default types');
 					const defaultTypes = [
 						{ id: 1, name: 'مياه عادية', description: 'مياه شرب عادية' },
 						{ id: 2, name: 'مياه معدنية', description: 'مياه غنية بالمعادن' },
@@ -153,7 +149,6 @@ export default function WaterTypeSelect({
 		// إعادة المحاولة عند عودة الاتصال
 		const handleOnlineRetry = () => {
 			if (!isOnline && navigator.onLine) {
-				console.log('Connection restored, retrying...');
 				fetchData();
 			}
 		};
