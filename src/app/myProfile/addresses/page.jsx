@@ -1,14 +1,278 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle } from "react-icons/fa";
+import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import { BiCurrentLocation } from "react-icons/bi";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
 import Spinner from "@/components/ui/spinner";
 import { motion } from "framer-motion";
+import dynamic from 'next/dynamic';
+
+// Dynamic import for Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
+
+const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+
+// Saudi Arabia coordinates and cities data
+const SAUDI_CITIES = [
+  { name: "الرياض", lat: 24.7136, lng: 46.6753, districts: ["حي النرجس", "حي العليا", "حي الملز", "حي الصحافة"] },
+  { name: "جدة", lat: 21.4858, lng: 39.1925, districts: ["حي الزمالك", "حي السلامة", "حي الشرفية", "حي البغداديه"] },
+  { name: "مكة المكرمة", lat: 21.3891, lng: 39.8579, districts: ["حي العزيزية", "حي الشوقية", "حي المعابدة"] },
+  { name: "المدينة المنورة", lat: 24.5247, lng: 39.5692, districts: ["حي العيون", "حي قباء", "حي السيح"] },
+  { name: "الدمام", lat: 26.3927, lng: 50.1925, districts: ["حي الشاطئ", "حي الروضة", "حي الفيصلية"] },
+  { name: "الخبر", lat: 26.2172, lng: 50.1971, districts: ["حي الحزام الذهبي", "حي الراكة", "حي الجسر"] },
+  { name: "الطائف", lat: 21.2757, lng: 40.4063, districts: ["حي الشفا", "حي قروى", "حي الهدا"] },
+  { name: "تبوك", lat: 28.3835, lng: 36.5662, districts: ["حي المصيف", "حي العليا", "حي الفيصلية"] },
+  { name: "بريدة", lat: 26.3591, lng: 43.9818, districts: ["حي الروضة", "حي الازدهار", "حي العليا"] },
+  { name: "حائل", lat: 27.5114, lng: 41.7208, districts: ["حي المليداء", "حي القاع", "حي السماح"] }
+];
+
+// Enhanced Reverse Geocoding function with better Arabic support
+const reverseGeocode = async (lat, lng) => {
+  try {
+    // First try with Arabic language
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1&accept-language=ar`,
+      {
+        headers: {
+          'User-Agent': 'MoyaApp/1.0',
+          'Accept-Language': 'ar'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch address');
+    }
+
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    
+    // Fallback: Use coordinates to determine nearest Saudi city
+    return getNearestSaudiCity(lat, lng);
+  }
+};
+
+// Get nearest Saudi city based on coordinates
+const getNearestSaudiCity = (lat, lng) => {
+  let nearestCity = SAUDI_CITIES[0];
+  let minDistance = Infinity;
+
+  for (const city of SAUDI_CITIES) {
+    const distance = Math.sqrt(Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2));
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestCity = city;
+    }
+  }
+
+  return {
+    address: {
+      city: nearestCity.name,
+      town: nearestCity.name,
+      suburb: nearestCity.districts[0] || "حي عام",
+      road: "شارع رئيسي",
+      state: "السعودية",
+      country: "السعودية"
+    },
+    display_name: `${nearestCity.name} - ${nearestCity.districts[0] || "حي عام"}`
+  };
+};
+
+// Smart address extraction with Saudi-specific logic
+const extractAddressComponents = (nominatimData, lat, lng) => {
+  if (!nominatimData || !nominatimData.address) {
+    // Fallback to nearest Saudi city
+    const nearestCity = getNearestSaudiCity(lat, lng);
+    return extractAddressComponents(nearestCity, lat, lng);
+  }
+
+  const address = nominatimData.address;
+  
+  const extracted = {
+    name: '',
+    address: '',
+    city: '',
+    area: '',
+    type: 'home'
+  };
+
+  // Smart name generation based on location type and time of day
+  const hour = new Date().getHours();
+  let locationType = "موقع";
+  
+  if (hour >= 6 && hour < 12) locationType = "موقع الصباح";
+  else if (hour >= 12 && hour < 18) locationType = "موقع الظهيرة";
+  else locationType = "موقع المساء";
+
+  // Try to get meaningful name
+  if (address.road) {
+    extracted.name = `${locationType} في ${address.road}`;
+  } else if (address.suburb) {
+    extracted.name = `${locationType} في ${address.suburb}`;
+  } else if (address.city) {
+    extracted.name = `${locationType} في ${address.city}`;
+  } else {
+    extracted.name = 'البيت'; // Default to 'البيت'
+  }
+
+  // Build address with Saudi format
+  const addressParts = [];
+  
+  if (address.road) {
+    // Clean road name
+    const roadName = address.road.replace(/^شارع\s*/i, '');
+    addressParts.push(`شارع ${roadName}`);
+  }
+  
+  if (address.suburb) {
+    addressParts.push(address.suburb);
+  }
+  
+  if (address.city) {
+    addressParts.push(address.city);
+  }
+
+  extracted.address = addressParts.join(' - ') || `${getNearestSaudiCity(lat, lng).address.city} - موقع عام`;
+
+  // City - prioritize Saudi cities
+  extracted.city = address.city || address.town || address.county || 
+                   getNearestSaudiCity(lat, lng).address.city || '';
+
+  // Area/Neighborhood - clean up the name
+  if (address.suburb) {
+    extracted.area = address.suburb.replace(/حي\s*/i, 'حي ');
+  } else if (address.neighbourhood) {
+    extracted.area = address.neighbourhood.replace(/حي\s*/i, 'حي ');
+  } else if (address.city_district) {
+    extracted.area = address.city_district.replace(/حي\s*/i, 'حي ');
+  } else {
+    // Get random district from nearest city
+    const nearestCity = getNearestSaudiCity(lat, lng);
+    extracted.area = nearestCity.districts[Math.floor(Math.random() * nearestCity.districts.length)] || 'حي عام';
+  }
+
+  return extracted;
+};
+
+// Simple Map Component
+function SimpleMapPicker({ initialPosition, onLocationSelect }) {
+  const [position, setPosition] = useState([initialPosition.lat, initialPosition.lng]);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [isFetchingAddress, setIsFetchingAddress] = useState(false);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    setMapLoaded(true);
+  }, []);
+
+  const handleMapClick = async (e) => {
+    const { lat, lng } = e.latlng;
+    setPosition([lat, lng]);
+    
+    setIsFetchingAddress(true);
+    
+    try {
+      onLocationSelect({ 
+        lat, 
+        lng,
+        address: `جاري تحديد العنوان...`,
+        isProcessing: true
+      });
+
+      const nominatimData = await reverseGeocode(lat, lng);
+      const addressComponents = extractAddressComponents(nominatimData, lat, lng);
+      
+      onLocationSelect({ 
+        lat, 
+        lng,
+        address: addressComponents?.address || `موقع مختار`,
+        addressComponents: addressComponents || {}
+      });
+      
+      toast.success("تم تحديد العنوان بنجاح!");
+    } catch (error) {
+      console.error('Error:', error);
+      const fallbackComponents = extractAddressComponents(null, lat, lng);
+      onLocationSelect({ 
+        lat, 
+        lng,
+        address: fallbackComponents.address,
+        addressComponents: fallbackComponents
+      });
+      toast.info("تم تحديد الموقع مع اقتراح عنوان");
+    } finally {
+      setIsFetchingAddress(false);
+    }
+  };
+
+  if (!mapLoaded) {
+    return (
+      <div className="h-[300px] rounded-xl bg-secondary/30 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner />
+          <p className="text-muted-foreground mt-2">جاري تحميل الخريطة...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border/50 relative">
+      {isFetchingAddress && (
+        <div className="absolute top-2 left-2 right-2 z-[1000] bg-blue-600 text-white p-2 rounded-lg text-center text-sm animate-pulse">
+          <FaSearchLocation className="inline ml-2" />
+          جاري تحديد العنوان...
+        </div>
+      )}
+      <MapContainer
+        center={position}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
+        className="rounded-xl"
+        whenCreated={(map) => {
+          map.on('click', handleMapClick);
+        }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={position} ref={markerRef}>
+          <Popup>
+            الموقع المحدد<br />
+            {position[0].toFixed(6)}, {position[1].toFixed(6)}
+          </Popup>
+        </Marker>
+      </MapContainer>
+    </div>
+  );
+}
 
 export default function AddressesPage() {
     const router = useRouter();
@@ -17,20 +281,29 @@ export default function AddressesPage() {
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [loadingAddressDetails, setLoadingAddressDetails] = useState(false);
     const [isEditingAddress, setIsEditingAddress] = useState(false);
+    const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
     const [editAddressForm, setEditAddressForm] = useState({
-        name: '',
-        address: '',
-        city: '',
-        area: '',
-        latitude: '',
-        longitude: '',
+        name: 'البيت',
+        address: 'الرياض - حي النرجس',
+        city: 'الرياض',
+        area: 'حي النرجس',
+        latitude: '24.7136',
+        longitude: '46.6753',
         type: 'home',
-        additional_info: '',
-        is_favorite: false
+        additional_info: 'البيت الرئيسي',
+        is_favorite: true
     });
     const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
+    const [isAddingAddress, setIsAddingAddress] = useState(false);
+    const [showMapPicker, setShowMapPicker] = useState(false);
+    const [isMapAvailable, setIsMapAvailable] = useState(false);
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+    const [locationName, setLocationName] = useState('');
 
-    // Fetch addresses on component mount
+    useEffect(() => {
+        setIsMapAvailable(typeof window !== 'undefined');
+    }, []);
+
     useEffect(() => {
         const fetchAddresses = async () => {
             const accessToken = localStorage.getItem("accessToken");
@@ -42,7 +315,7 @@ export default function AddressesPage() {
 
             try {
                 setLoadingAddresses(true);
-                const response = await fetch("/api/addresses", {
+                const response = await fetch(`${API_BASE_URL}/addresses`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -67,7 +340,6 @@ export default function AddressesPage() {
         fetchAddresses();
     }, [router]);
 
-    // Fetch address details by ID
     const fetchAddressDetails = async (addressId) => {
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) {
@@ -79,8 +351,9 @@ export default function AddressesPage() {
             setLoadingAddressDetails(true);
             setSelectedAddress(null);
             setIsEditingAddress(false);
+            setIsAddingNewAddress(false);
 
-            const response = await fetch(`/api/addresses/${addressId}`, {
+            const response = await fetch(`${API_BASE_URL}/addresses/${addressId}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -94,14 +367,14 @@ export default function AddressesPage() {
                 const addressData = data.data;
                 setSelectedAddress(addressData);
                 setEditAddressForm({
-                    name: addressData.name || '',
-                    address: addressData.address || '',
-                    city: addressData.city || '',
-                    area: addressData.area || '',
-                    latitude: addressData.latitude || '',
-                    longitude: addressData.longitude || '',
+                    name: addressData.name || 'البيت',
+                    address: addressData.address || 'الرياض - حي النرجس',
+                    city: addressData.city || 'الرياض',
+                    area: addressData.area || 'حي النرجس',
+                    latitude: addressData.latitude || '24.7136',
+                    longitude: addressData.longitude || '46.6753',
                     type: addressData.type || 'home',
-                    additional_info: addressData.additional_info || '',
+                    additional_info: addressData.additional_info || 'البيت الرئيسي',
                     is_favorite: addressData.is_favorite || false
                 });
             } else {
@@ -114,7 +387,6 @@ export default function AddressesPage() {
         }
     };
 
-    // Update address
     const handleUpdateAddress = async () => {
         if (!selectedAddress?.id) return;
 
@@ -126,34 +398,31 @@ export default function AddressesPage() {
 
         try {
             setIsUpdatingAddress(true);
-            const response = await fetch(`/api/addresses/${selectedAddress.id}`, {
+            const response = await fetch(`${API_BASE_URL}/addresses/${selectedAddress.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     "Accept": "application/json",
                     "Authorization": `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify(editAddressForm),
+                body: JSON.stringify({
+                    name: editAddressForm.name,
+                    address: editAddressForm.address,
+                    city: editAddressForm.city,
+                    area: editAddressForm.area,
+                    latitude: parseFloat(editAddressForm.latitude) || 0,
+                    longitude: parseFloat(editAddressForm.longitude) || 0,
+                    type: editAddressForm.type,
+                    is_favorite: editAddressForm.is_favorite,
+                    additional_info: editAddressForm.additional_info
+                }),
             });
 
             const data = await response.json();
             if (response.ok && data.status) {
                 toast.success(data.message || "تم تحديث العنوان بنجاح");
                 setIsEditingAddress(false);
-                // Refresh addresses list
-                const addressesResponse = await fetch("/api/addresses", {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "Authorization": `Bearer ${accessToken}`,
-                    },
-                });
-                const addressesData = await addressesResponse.json();
-                if (addressesData.status && addressesData.data) {
-                    setAddresses(addressesData.data);
-                }
-                // Refresh selected address
+                await refreshAddressesList(accessToken);
                 await fetchAddressDetails(selectedAddress.id);
             } else {
                 toast.error(data.message || "فشل تحديث العنوان");
@@ -165,9 +434,257 @@ export default function AddressesPage() {
         }
     };
 
+    const handleAddNewAddress = async () => {
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+            toast.error("يرجى تسجيل الدخول أولاً");
+            return;
+        }
+
+        if (!editAddressForm.name.trim()) {
+            toast.error("يرجى إدخال اسم العنوان");
+            return;
+        }
+
+        try {
+            setIsAddingAddress(true);
+            const response = await fetch(`${API_BASE_URL}/addresses`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    name: editAddressForm.name || 'البيت',
+                    address: editAddressForm.address || 'الرياض - حي النرجس',
+                    city: editAddressForm.city || 'الرياض',
+                    area: editAddressForm.area || 'حي النرجس',
+                    latitude: parseFloat(editAddressForm.latitude) || 24.7136,
+                    longitude: parseFloat(editAddressForm.longitude) || 46.6753,
+                    type: editAddressForm.type || 'home',
+                    is_favorite: editAddressForm.is_favorite || false,
+                    additional_info: editAddressForm.additional_info || 'البيت الرئيسي'
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok && data.status && data.data) {
+                toast.success("تم إضافة العنوان بنجاح");
+                setIsAddingNewAddress(false);
+                setShowMapPicker(false);
+                await refreshAddressesList(accessToken);
+                await fetchAddressDetails(data.data.id);
+                setEditAddressForm({
+                    name: 'البيت',
+                    address: 'الرياض - حي النرجس',
+                    city: 'الرياض',
+                    area: 'حي النرجس',
+                    latitude: '24.7136',
+                    longitude: '46.6753',
+                    type: 'home',
+                    additional_info: 'البيت الرئيسي',
+                    is_favorite: true
+                });
+            } else {
+                toast.error(data.message || "فشل إضافة العنوان");
+            }
+        } catch (error) {
+            toast.error("حدث خطأ أثناء إضافة العنوان");
+        } finally {
+            setIsAddingAddress(false);
+        }
+    };
+
+    const refreshAddressesList = async (accessToken) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/addresses`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${accessToken}`,
+                },
+            });
+
+            const data = await response.json();
+            if (response.ok && data.status && data.data) {
+                setAddresses(data.data);
+            }
+        } catch (error) {
+            console.error("Error refreshing addresses:", error);
+        }
+    };
+
+    const handleLocationSelect = async (location) => {
+        const { lat, lng, addressComponents = {} } = location;
+        
+        const updatedForm = {
+            name: addressComponents.name || 'البيت',
+            address: addressComponents.address || `الرياض - حي النرجس`,
+            city: addressComponents.city || 'الرياض',
+            area: addressComponents.area || 'حي النرجس',
+            latitude: lat.toString(),
+            longitude: lng.toString(),
+            type: addressComponents.type || 'home',
+            additional_info: 'البيت الرئيسي',
+            is_favorite: editAddressForm.is_favorite
+        };
+
+        setEditAddressForm(updatedForm);
+        setShowMapPicker(false);
+        
+        if (addressComponents.name) {
+            setLocationName(addressComponents.name);
+        }
+    };
+
+    const getCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            toast.error("متصفحك لا يدعم خدمة تحديد الموقع");
+            return;
+        }
+
+        setIsFetchingLocation(true);
+        toast.loading("جاري تحديد موقعك...", { id: "location" });
+        
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                
+                let updatedForm = {
+                    ...editAddressForm,
+                    latitude: latitude.toString(),
+                    longitude: longitude.toString()
+                };
+
+                setEditAddressForm(updatedForm);
+                
+                try {
+                    const nominatimData = await reverseGeocode(latitude, longitude);
+                    const addressComponents = extractAddressComponents(nominatimData, latitude, longitude);
+                    
+                    if (addressComponents) {
+                        updatedForm = {
+                            ...updatedForm,
+                            name: addressComponents.name || 'البيت',
+                            address: addressComponents.address || `الرياض - حي النرجس`,
+                            city: addressComponents.city || 'الرياض',
+                            area: addressComponents.area || 'حي النرجس',
+                            type: addressComponents.type || 'home'
+                        };
+                        
+                        setEditAddressForm(updatedForm);
+                        setLocationName(addressComponents.name || 'موقعي الحالي');
+                        toast.success("تم تحديد العنوان تلقائياً!", { id: "location" });
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    toast.success("تم تحديد الموقع!", { id: "location" });
+                }
+                
+                setShowMapPicker(true);
+                setIsFetchingLocation(false);
+            },
+            (error) => {
+                let errorMessage = "حدث خطأ أثناء تحديد الموقع";
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = "تم رفض الإذن لتحديد الموقع";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = "معلومات الموقع غير متوفرة";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = "انتهت مهلة طلب الموقع";
+                        break;
+                }
+                toast.error(errorMessage, { id: "location" });
+                setIsFetchingLocation(false);
+            }
+        );
+    };
+
+    const startAddingNewAddress = () => {
+        setIsAddingNewAddress(true);
+        setIsEditingAddress(true);
+        setSelectedAddress(null);
+        setEditAddressForm({
+            name: 'البيت',
+            address: 'الرياض - حي النرجس',
+            city: 'الرياض',
+            area: 'حي النرجس',
+            latitude: '24.7136',
+            longitude: '46.6753',
+            type: 'home',
+            additional_info: 'البيت الرئيسي',
+            is_favorite: true
+        });
+        setLocationName('');
+    };
+
+    const handleCancel = () => {
+        if (isAddingNewAddress) {
+            setIsAddingNewAddress(false);
+            setIsEditingAddress(false);
+            setEditAddressForm({
+                name: 'البيت',
+                address: 'الرياض - حي النرجس',
+                city: 'الرياض',
+                area: 'حي النرجس',
+                latitude: '24.7136',
+                longitude: '46.6753',
+                type: 'home',
+                additional_info: 'البيت الرئيسي',
+                is_favorite: true
+            });
+        } else {
+            setIsEditingAddress(false);
+            if (selectedAddress) {
+                setEditAddressForm({
+                    name: selectedAddress.name || 'البيت',
+                    address: selectedAddress.address || 'الرياض - حي النرجس',
+                    city: selectedAddress.city || 'الرياض',
+                    area: selectedAddress.area || 'حي النرجس',
+                    latitude: selectedAddress.latitude || '24.7136',
+                    longitude: selectedAddress.longitude || '46.6753',
+                    type: selectedAddress.type || 'home',
+                    additional_info: selectedAddress.additional_info || 'البيت الرئيسي',
+                    is_favorite: selectedAddress.is_favorite || false
+                });
+            }
+        }
+        setShowMapPicker(false);
+        setLocationName('');
+    };
+
+    // Quick location buttons
+    const setQuickLocation = (city, district) => {
+        const cityData = SAUDI_CITIES.find(c => c.name === city);
+        if (cityData) {
+            setEditAddressForm(prev => ({
+                ...prev,
+                city: city,
+                area: district,
+                address: `${city} - ${district}`,
+                latitude: cityData.lat.toString(),
+                longitude: cityData.lng.toString()
+            }));
+            toast.success(`تم تعيين العنوان: ${city} - ${district}`);
+        }
+    };
+
+    const setQuickName = (name, type = 'home') => {
+        setEditAddressForm(prev => ({
+            ...prev,
+            name: name,
+            type: type
+        }));
+        toast.success(`تم تعيين الاسم: ${name}`);
+    };
+
     return (
         <div className="space-y-6 fade-in-up">
-            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -185,6 +702,13 @@ export default function AddressesPage() {
                         <p className="text-sm text-muted-foreground mt-1">إدارة عناوينك المحفوظة والمفضلة</p>
                     </div>
                 </div>
+                <button
+                    onClick={startAddingNewAddress}
+                    className="px-4 py-2 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold flex items-center gap-2"
+                >
+                    <FaPlus className="w-4 h-4" />
+                    <span>إضافة عنوان جديد</span>
+                </button>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -205,192 +729,241 @@ export default function AddressesPage() {
                             <div className="text-center py-12 text-muted-foreground flex-1 flex flex-col items-center justify-center">
                                 <FaMapMarkerAlt className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                 <p>لا توجد عناوين محفوظة</p>
+                                <button
+                                    onClick={startAddingNewAddress}
+                                    className="mt-4 px-4 py-2 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold flex items-center gap-2"
+                                >
+                                    <FaPlus className="w-4 h-4" />
+                                    <span>إضافة أول عنوان</span>
+                                </button>
                             </div>
                         ) : (
                             <div className="space-y-3 flex-1 overflow-y-auto">
-                                    {addresses.map((address) => (
-                                        <div
-                                            key={address.id}
-                                            onClick={() => fetchAddressDetails(address.id)}
-                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                                selectedAddress?.id === address.id
-                                                    ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8] shadow-lg'
-                                                    : 'bg-secondary/30 border-border/50 hover:border-[#579BE8]/50 hover:shadow-md'
-                                            }`}
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <h4 className="font-bold text-sm text-foreground truncate">
-                                                            {address.name}
-                                                        </h4>
-                                                        {address.is_favorite && (
-                                                            <FaStar className="text-[#579BE8] w-4 h-4 flex-shrink-0" />
-                                                        )}
-                                                    </div>
-                                                    {address.address && (
-                                                        <p className="text-xs text-muted-foreground truncate">
-                                                            {address.address}
-                                                        </p>
-                                                    )}
-                                                    {address.type && (
-                                                        <span className="inline-block mt-2 text-xs px-2 py-1 rounded-lg bg-[#579BE8]/10 text-[#579BE8]">
-                                                            {address.type === 'home' ? '🏠 منزل' : 
-                                                             address.type === 'work' ? '💼 عمل' : 
-                                                             address.type === 'other' ? '📍 أخرى' : address.type}
-                                                        </span>
+                                {addresses.map((address) => (
+                                    <div
+                                        key={address.id}
+                                        onClick={() => fetchAddressDetails(address.id)}
+                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                            selectedAddress?.id === address.id
+                                                ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8] shadow-lg'
+                                                : 'bg-secondary/30 border-border/50 hover:border-[#579BE8]/50 hover:shadow-md'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h4 className="font-bold text-sm text-foreground truncate">
+                                                        {address.name}
+                                                    </h4>
+                                                    {address.is_favorite && (
+                                                        <FaStar className="text-[#579BE8] w-4 h-4 flex-shrink-0" />
                                                     )}
                                                 </div>
+                                                {address.address && (
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {address.address}
+                                                    </p>
+                                                )}
+                                                {address.type && (
+                                                    <span className="inline-block mt-2 text-xs px-2 py-1 rounded-lg bg-[#579BE8]/10 text-[#579BE8]">
+                                                        {address.type === 'home' ? '🏠 منزل' : 
+                                                         address.type === 'work' ? '💼 عمل' : 
+                                                         address.type === 'other' ? '📍 أخرى' : address.type}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </motion.div>
                 </div>
 
-                {/* Address Details */}
+                {/* Address Details / Add New */}
                 <div className="lg:col-span-2">
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 overflow-hidden h-full min-h-[600px] flex flex-col"
                     >
-                        {!selectedAddress ? (
+                        {!selectedAddress && !isAddingNewAddress ? (
                             <div className="p-12 text-center flex-1 flex flex-col items-center justify-center">
                                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#579BE8]/20 to-[#124987]/20 flex items-center justify-center">
                                     <FaMapMarkerAlt className="w-10 h-10 text-[#579BE8]" />
                                 </div>
                                 <h3 className="text-xl font-bold text-foreground mb-2">اختر عنواناً لعرض التفاصيل</h3>
                                 <p className="text-sm text-muted-foreground">انقر على أي عنوان من القائمة لعرض وتعديل تفاصيله</p>
+                                <button
+                                    onClick={startAddingNewAddress}
+                                    className="mt-6 px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold flex items-center gap-2"
+                                >
+                                    <FaPlus className="w-5 h-5" />
+                                    <span>إضافة عنوان جديد</span>
+                                </button>
                             </div>
                         ) : (
                             <>
-                                {/* Header with Gradient */}
                                 <div className="relative bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] p-6 sm:p-8 text-white overflow-hidden flex-shrink-0">
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-                                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12 blur-2xl"></div>
-                                        
-                                        <div className="relative z-10 flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                                        <FaMapMarkerAlt className="w-6 h-6" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="text-xl sm:text-2xl font-black mb-1">
-                                                            {selectedAddress.name}
-                                                        </h3>
-                                                        {selectedAddress.type && (
-                                                            <p className="text-white/80 text-sm">
-                                                                {selectedAddress.type === 'home' ? '🏠 منزل' : 
-                                                                 selectedAddress.type === 'work' ? '💼 عمل' : 
-                                                                 selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
-                                                            </p>
-                                                        )}
-                                                    </div>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12 blur-2xl"></div>
+                                    
+                                    <div className="relative z-10 flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                    <FaMapMarkerAlt className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl sm:text-2xl font-black mb-1">
+                                                        {isAddingNewAddress ? "إضافة عنوان جديد" : selectedAddress.name}
+                                                    </h3>
+                                                    {!isAddingNewAddress && selectedAddress.type && (
+                                                        <p className="text-white/80 text-sm">
+                                                            {selectedAddress.type === 'home' ? '🏠 منزل' : 
+                                                             selectedAddress.type === 'work' ? '💼 عمل' : 
+                                                             selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                {selectedAddress.is_favorite && (
-                                                    <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/30">
-                                                        <FaStar className="w-5 h-5" />
-                                                    </div>
-                                                )}
-                                                {!loadingAddressDetails && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsEditingAddress(!isEditingAddress);
-                                                            if (!isEditingAddress) {
-                                                                setEditAddressForm({
-                                                                    name: selectedAddress.name || '',
-                                                                    address: selectedAddress.address || '',
-                                                                    city: selectedAddress.city || '',
-                                                                    area: selectedAddress.area || '',
-                                                                    latitude: selectedAddress.latitude || '',
-                                                                    longitude: selectedAddress.longitude || '',
-                                                                    type: selectedAddress.type || 'home',
-                                                                    additional_info: selectedAddress.additional_info || '',
-                                                                    is_favorite: selectedAddress.is_favorite || false
-                                                                });
-                                                            }
-                                                        }}
-                                                        className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all font-bold text-sm flex items-center gap-2 border border-white/30"
-                                                    >
-                                                        <CiEdit className="w-4 h-4" />
-                                                        {isEditingAddress ? 'إلغاء' : 'تعديل'}
-                                                    </button>
-                                                )}
-                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {!isAddingNewAddress && selectedAddress.is_favorite && (
+                                                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/30">
+                                                    <FaStar className="w-5 h-5" />
+                                                </div>
+                                            )}
+                                            {!loadingAddressDetails && !isAddingNewAddress && (
+                                                <button
+                                                    onClick={() => {
+                                                        setIsEditingAddress(!isEditingAddress);
+                                                        if (!isEditingAddress) {
+                                                            setEditAddressForm({
+                                                                name: selectedAddress.name || 'البيت',
+                                                                address: selectedAddress.address || 'الرياض - حي النرجس',
+                                                                city: selectedAddress.city || 'الرياض',
+                                                                area: selectedAddress.area || 'حي النرجس',
+                                                                latitude: selectedAddress.latitude || '24.7136',
+                                                                longitude: selectedAddress.longitude || '46.6753',
+                                                                type: selectedAddress.type || 'home',
+                                                                additional_info: selectedAddress.additional_info || 'البيت الرئيسي',
+                                                                is_favorite: selectedAddress.is_favorite || false
+                                                            });
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all font-bold text-sm flex items-center gap-2 border border-white/30"
+                                                >
+                                                    <CiEdit className="w-4 h-4" />
+                                                    {isEditingAddress ? 'إلغاء' : 'تعديل'}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
 
-                                {/* Content */}
                                 <div className="p-6 sm:p-8 overflow-y-auto flex-1">
-                                        {loadingAddressDetails ? (
-                                            <div className="flex items-center justify-center py-12">
-                                                <Spinner />
-                                            </div>
-                                        ) : isEditingAddress ? (
-                                            <div className="space-y-5">
-                                                <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
-                                                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                    {loadingAddressDetails && !isAddingNewAddress ? (
+                                        <div className="flex items-center justify-center py-12">
+                                            <Spinner />
+                                        </div>
+                                    ) : (isEditingAddress || isAddingNewAddress) ? (
+                                        <div className="space-y-5">
+                                            {/* اسم العنوان مع اقتراحات سريعة */}
+                                            <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <label className="text-sm font-bold text-foreground flex items-center gap-2">
                                                         <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
                                                         اسم العنوان
                                                     </label>
-                                                    <Input
-                                                        value={editAddressForm.name}
-                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, name: e.target.value }))}
-                                                        className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
-                                                        placeholder="اسم العنوان"
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setQuickName('البيت', 'home')}
+                                                            className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                                                        >
+                                                            <FaHome className="w-3 h-3" />
+                                                            البيت
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setQuickName('العمل', 'work')}
+                                                            className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                                                        >
+                                                            <FaBriefcase className="w-3 h-3" />
+                                                            العمل
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setQuickName('مكان آخر', 'other')}
+                                                            className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                                                        >
+                                                            <FaMapMarkedAlt className="w-3 h-3" />
+                                                            آخر
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                <Input
+                                                    value={editAddressForm.name}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, name: e.target.value }))}
+                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl mt-2"
+                                                    placeholder="اسم العنوان"
+                                                />
+                                            </div>
 
-                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                            {/* العنوان الكامل */}
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                    <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                                                    العنوان الكامل
+                                                </label>
+                                                <textarea
+                                                    value={editAddressForm.address}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, address: e.target.value }))}
+                                                    className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
+                                                    rows="2"
+                                                    placeholder="العنوان الكامل"
+                                                />
+                                            </div>
+
+                                            {/* تحديد الموقع على الخريطة */}
+                                            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border-2 border-border/50">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <label className="text-sm font-bold text-foreground flex items-center gap-2">
                                                         <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
-                                                        العنوان الكامل
+                                                        تحديد الموقع على الخريطة
                                                     </label>
-                                                    <textarea
-                                                        value={editAddressForm.address}
-                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, address: e.target.value }))}
-                                                        className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
-                                                        rows="3"
-                                                        placeholder="العنوان الكامل"
-                                                    />
+                                                    <button
+                                                        onClick={getCurrentLocation}
+                                                        disabled={isFetchingLocation}
+                                                        className="px-3 py-2 bg-[#579BE8] text-white rounded-lg hover:bg-[#4a8dd8] transition-colors text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                                                    >
+                                                        <FaCrosshairs className="w-4 h-4" />
+                                                        {isFetchingLocation ? 'جاري...' : 'موقعي الحالي'}
+                                                    </button>
                                                 </div>
-
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                        <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
-                                                            <FaBuilding className="text-[#579BE8] w-4 h-4" />
-                                                            المدينة
-                                                        </label>
-                                                        <Input
-                                                            value={editAddressForm.city}
-                                                            onChange={(e) => setEditAddressForm(prev => ({ ...prev, city: e.target.value }))}
-                                                            className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
-                                                            placeholder="المدينة"
+                                                
+                                                {showMapPicker ? (
+                                                    <div className="mb-4">
+                                                        <SimpleMapPicker
+                                                            initialPosition={{
+                                                                lat: parseFloat(editAddressForm.latitude) || 24.7136,
+                                                                lng: parseFloat(editAddressForm.longitude) || 46.6753
+                                                            }}
+                                                            onLocationSelect={handleLocationSelect}
                                                         />
                                                     </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setShowMapPicker(true)}
+                                                        className="w-full p-4 bg-white dark:bg-card border-2 border-dashed border-border/50 rounded-xl hover:border-[#579BE8] hover:bg-[#579BE8]/5 transition-all flex flex-col items-center justify-center gap-2"
+                                                    >
+                                                        <FaMapMarkerAlt className="w-8 h-8 text-[#579BE8]" />
+                                                        <span className="text-foreground font-bold">اضغط هنا لفتح الخريطة وتحديد الموقع</span>
+                                                        <span className="text-sm text-muted-foreground">انقر على الخريطة لتحديد الموقع وسيتم ملء البيانات تلقائياً</span>
+                                                    </button>
+                                                )}
 
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                        <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
-                                                            <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
-                                                            المنطقة
-                                                        </label>
-                                                        <Input
-                                                            value={editAddressForm.area}
-                                                            onChange={(e) => setEditAddressForm(prev => ({ ...prev, area: e.target.value }))}
-                                                            className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
-                                                            placeholder="المنطقة"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                        <label className="text-sm font-bold text-foreground mb-3 block">خط العرض</label>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                                    <div>
+                                                        <label className="text-sm font-bold text-foreground mb-2 block">خط العرض</label>
                                                         <Input
                                                             type="text"
                                                             value={editAddressForm.latitude}
@@ -400,8 +973,8 @@ export default function AddressesPage() {
                                                         />
                                                     </div>
 
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                        <label className="text-sm font-bold text-foreground mb-3 block">خط الطول</label>
+                                                    <div>
+                                                        <label className="text-sm font-bold text-foreground mb-2 block">خط الطول</label>
                                                         <Input
                                                             type="text"
                                                             value={editAddressForm.longitude}
@@ -411,201 +984,239 @@ export default function AddressesPage() {
                                                         />
                                                     </div>
                                                 </div>
+                                            </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                        <label className="text-sm font-bold text-foreground mb-3 block">النوع</label>
-                                                        <select
-                                                            value={editAddressForm.type}
-                                                            onChange={(e) => setEditAddressForm(prev => ({ ...prev, type: e.target.value }))}
-                                                            className="w-full p-3 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8]"
-                                                        >
-                                                            <option value="home">🏠 منزل</option>
-                                                            <option value="work">💼 عمل</option>
-                                                            <option value="other">📍 أخرى</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 flex items-center justify-center">
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                id="is_favorite"
-                                                                checked={editAddressForm.is_favorite}
-                                                                onChange={(e) => setEditAddressForm(prev => ({ ...prev, is_favorite: e.target.checked }))}
-                                                                className="w-6 h-6 rounded border-2 border-border/50 text-[#579BE8] focus:ring-[#579BE8] cursor-pointer"
-                                                            />
-                                                            <label htmlFor="is_favorite" className="text-sm font-bold text-foreground cursor-pointer flex items-center gap-2">
-                                                                <FaStar className={`w-5 h-5 ${editAddressForm.is_favorite ? 'text-[#579BE8]' : 'text-muted-foreground'}`} />
-                                                                إضافة إلى المفضلة
-                                                            </label>
+                                            {/* المدينة والمنطقة مع اقتراحات */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <label className="text-sm font-bold text-foreground flex items-center gap-2">
+                                                            <FaBuilding className="text-[#579BE8] w-4 h-4" />
+                                                            المدينة
+                                                        </label>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => setQuickLocation('الرياض', 'حي النرجس')}
+                                                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                            >
+                                                                الرياض
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setQuickLocation('جدة', 'حي الزمالك')}
+                                                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                            >
+                                                                جدة
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                </div>
-
-                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
-                                                        <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
-                                                        معلومات إضافية
-                                                    </label>
-                                                    <textarea
-                                                        value={editAddressForm.additional_info}
-                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, additional_info: e.target.value }))}
-                                                        className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
-                                                        rows="3"
-                                                        placeholder="معلومات إضافية"
+                                                    <Input
+                                                        value={editAddressForm.city}
+                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                                                        className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
+                                                        placeholder="المدينة"
                                                     />
                                                 </div>
 
-                                                <div className="flex gap-3 pt-2">
-                                                    <button
-                                                        onClick={handleUpdateAddress}
-                                                        disabled={isUpdatingAddress}
-                                                        className="flex-1 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white py-3.5 rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                                    >
-                                                        {isUpdatingAddress ? (
-                                                            <>
-                                                                <Spinner />
-                                                                <span>جاري الحفظ...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <FaCheckCircle className="w-5 h-5" />
-                                                                <span>حفظ التغييرات</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsEditingAddress(false);
-                                                            if (selectedAddress) {
-                                                                setEditAddressForm({
-                                                                    name: selectedAddress.name || '',
-                                                                    address: selectedAddress.address || '',
-                                                                    city: selectedAddress.city || '',
-                                                                    area: selectedAddress.area || '',
-                                                                    latitude: selectedAddress.latitude || '',
-                                                                    longitude: selectedAddress.longitude || '',
-                                                                    type: selectedAddress.type || 'home',
-                                                                    additional_info: selectedAddress.additional_info || '',
-                                                                    is_favorite: selectedAddress.is_favorite || false
-                                                                });
-                                                            }
-                                                        }}
-                                                        className="px-6 py-3.5 bg-secondary text-foreground rounded-xl hover:bg-secondary/80 transition-colors font-bold border border-border/50"
-                                                    >
-                                                        إلغاء
-                                                    </button>
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <label className="text-sm font-bold text-foreground flex items-center gap-2">
+                                                            <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
+                                                            المنطقة
+                                                        </label>
+                                                        <button
+                                                            onClick={() => setEditAddressForm(prev => ({ ...prev, area: 'حي النرجس' }))}
+                                                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                        >
+                                                            النرجس
+                                                        </button>
+                                                    </div>
+                                                    <Input
+                                                        value={editAddressForm.area}
+                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, area: e.target.value }))}
+                                                        className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl"
+                                                        placeholder="المنطقة"
+                                                    />
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <div className="space-y-4 sm:space-y-5">
-                                                {/* Name Card */}
-                                                <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
-                                                                <FaMapMarkerAlt className="w-6 h-6 text-white" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-lg sm:text-xl font-black text-foreground">
-                                                                    {selectedAddress.name}
-                                                                </h4>
-                                                                {selectedAddress.type && (
-                                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                                        {selectedAddress.type === 'home' ? '🏠 منزل' : 
-                                                                         selectedAddress.type === 'work' ? '💼 عمل' : 
-                                                                         selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        {selectedAddress.is_favorite && (
-                                                            <div className="bg-[#579BE8]/20 rounded-xl px-3 py-2 border border-[#579BE8]/30">
-                                                                <FaStar className="text-[#579BE8] w-5 h-5" />
-                                                            </div>
-                                                        )}
-                                                    </div>
+
+                                            {/* النوع والمفضلة */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                    <label className="text-sm font-bold text-foreground mb-3 block">النوع</label>
+                                                    <select
+                                                        value={editAddressForm.type}
+                                                        onChange={(e) => setEditAddressForm(prev => ({ ...prev, type: e.target.value }))}
+                                                        className="w-full p-3 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8]"
+                                                    >
+                                                        <option value="home">🏠 منزل</option>
+                                                        <option value="work">💼 عمل</option>
+                                                        <option value="other">📍 أخرى</option>
+                                                    </select>
                                                 </div>
 
-                                                {/* Address Card */}
-                                                {selectedAddress.address && (
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
-                                                        <div className="flex items-start gap-4">
-                                                            <div className="w-10 h-10 rounded-xl bg-[#579BE8]/10 flex items-center justify-center flex-shrink-0">
-                                                                <FaMapMarkerAlt className="text-[#579BE8] w-5 h-5" />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">العنوان الكامل</p>
-                                                                <p className="text-base text-foreground leading-relaxed">{selectedAddress.address}</p>
-                                                            </div>
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 flex items-center justify-center">
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="is_favorite"
+                                                            checked={editAddressForm.is_favorite}
+                                                            onChange={(e) => setEditAddressForm(prev => ({ ...prev, is_favorite: e.target.checked }))}
+                                                            className="w-6 h-6 rounded border-2 border-border/50 text-[#579BE8] focus:ring-[#579BE8] cursor-pointer"
+                                                        />
+                                                        <label htmlFor="is_favorite" className="text-sm font-bold text-foreground cursor-pointer flex items-center gap-2">
+                                                            <FaStar className={`w-5 h-5 ${editAddressForm.is_favorite ? 'text-[#579BE8]' : 'text-muted-foreground'}`} />
+                                                            إضافة إلى المفضلة
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* معلومات إضافية */}
+                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                                                    <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
+                                                    معلومات إضافية
+                                                </label>
+                                                <textarea
+                                                    value={editAddressForm.additional_info}
+                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, additional_info: e.target.value }))}
+                                                    className="w-full p-4 bg-white dark:bg-card border-2 border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#579BE8] focus:border-[#579BE8] resize-none"
+                                                    rows="2"
+                                                    placeholder="معلومات إضافية مثل رقم الشقة، الطابق، إلخ..."
+                                                />
+                                            </div>
+
+                                            {/* أزرار الحفظ والإلغاء */}
+                                            <div className="flex gap-3 pt-2">
+                                                <button
+                                                    onClick={isAddingNewAddress ? handleAddNewAddress : handleUpdateAddress}
+                                                    disabled={isAddingAddress || isUpdatingAddress}
+                                                    className="flex-1 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white py-3.5 rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                >
+                                                    {(isAddingAddress || isUpdatingAddress) ? (
+                                                        <>
+                                                            <Spinner />
+                                                            <span>جاري الحفظ...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FaCheckCircle className="w-5 h-5" />
+                                                            <span>{isAddingNewAddress ? "إضافة العنوان" : "حفظ التغييرات"}</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={handleCancel}
+                                                    className="px-6 py-3.5 bg-secondary text-foreground rounded-xl hover:bg-secondary/80 transition-colors font-bold border border-border/50"
+                                                >
+                                                    إلغاء
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // عرض البيانات في وضع القراءة
+                                        <div className="space-y-4 sm:space-y-5">
+                                            <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
+                                                            <FaMapMarkerAlt className="w-6 h-6 text-white" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-lg sm:text-xl font-black text-foreground">
+                                                                {selectedAddress.name}
+                                                            </h4>
+                                                            {selectedAddress.type && (
+                                                                <p className="text-xs text-muted-foreground mt-1">
+                                                                    {selectedAddress.type === 'home' ? '🏠 منزل' : 
+                                                                     selectedAddress.type === 'work' ? '💼 عمل' : 
+                                                                     selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                )}
+                                                    {selectedAddress.is_favorite && (
+                                                        <div className="bg-[#579BE8]/20 rounded-xl px-3 py-2 border border-[#579BE8]/30">
+                                                            <FaStar className="text-[#579BE8] w-5 h-5" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                                {/* Location Details Grid */}
-                                                {(selectedAddress.city || selectedAddress.area) && (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        {selectedAddress.city && (
-                                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
-                                                                <div className="flex items-center gap-3 mb-2">
-                                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                        <FaBuilding className="text-[#579BE8] w-4 h-4" />
-                                                                    </div>
-                                                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المدينة</p>
+                                            {selectedAddress.address && (
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
+                                                            <FaMapMarkerAlt className="text-[#579BE8] w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-xs font-bold text-muted-foreground mb-2">العنوان الكامل</p>
+                                                            <p className="text-base text-foreground">{selectedAddress.address}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {(selectedAddress.city || selectedAddress.area) && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {selectedAddress.city && (
+                                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                                    <FaBuilding className="text-[#579BE8] w-4 h-4" />
                                                                 </div>
-                                                                <p className="text-base font-bold text-foreground">{selectedAddress.city}</p>
+                                                                <p className="text-xs font-bold text-muted-foreground">المدينة</p>
                                                             </div>
-                                                        )}
+                                                            <p className="text-base font-bold text-foreground">{selectedAddress.city}</p>
+                                                        </div>
+                                                    )}
 
-                                                        {selectedAddress.area && (
-                                                            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
-                                                                <div className="flex items-center gap-3 mb-2">
-                                                                    <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                        <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
-                                                                    </div>
-                                                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">المنطقة</p>
+                                                    {selectedAddress.area && (
+                                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                                    <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
                                                                 </div>
-                                                                <p className="text-base font-bold text-foreground">{selectedAddress.area}</p>
+                                                                <p className="text-xs font-bold text-muted-foreground">المنطقة</p>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                            <p className="text-base font-bold text-foreground">{selectedAddress.area}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
-                                                {/* Coordinates Card */}
-                                                {(selectedAddress.latitude && selectedAddress.longitude) && (
-                                                    <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border border-border/50">
-                                                        <div className="flex items-center gap-3 mb-3">
-                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
-                                                            </div>
-                                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">الإحداثيات الجغرافية</p>
+                                            {(selectedAddress.latitude && selectedAddress.longitude) && (
+                                                <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border border-border/50">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                            <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
                                                         </div>
-                                                        <div className="bg-white dark:bg-card rounded-xl p-3 border border-border/40">
-                                                            <p className="text-sm font-mono text-foreground text-center">
-                                                                <span className="text-muted-foreground">Lat:</span> {selectedAddress.latitude} 
-                                                                <span className="mx-2 text-muted-foreground">|</span>
-                                                                <span className="text-muted-foreground">Lng:</span> {selectedAddress.longitude}
-                                                            </p>
-                                                        </div>
+                                                        <p className="text-xs font-bold text-muted-foreground">الإحداثيات الجغرافية</p>
                                                     </div>
-                                                )}
-
-                                                {/* Additional Info Card */}
-                                                {selectedAddress.additional_info && (
-                                                    <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 hover:border-[#579BE8]/30 transition-all">
-                                                        <div className="flex items-center gap-3 mb-3">
-                                                            <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
-                                                            </div>
-                                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">معلومات إضافية</p>
-                                                        </div>
-                                                        <p className="text-sm text-foreground leading-relaxed bg-white dark:bg-card rounded-xl p-4 border border-border/40">
-                                                            {selectedAddress.additional_info}
+                                                    <div className="bg-white dark:bg-card rounded-xl p-3">
+                                                        <p className="text-sm font-mono text-foreground text-center">
+                                                            <span className="text-muted-foreground">Lat:</span> {selectedAddress.latitude} 
+                                                            <span className="mx-2">|</span>
+                                                            <span className="text-muted-foreground">Lng:</span> {selectedAddress.longitude}
                                                         </p>
                                                     </div>
-                                                )}
-                                            </div>
+                                                </div>
+                                            )}
+
+                                            {selectedAddress.additional_info && (
+                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                            <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
+                                                        </div>
+                                                        <p className="text-xs font-bold text-muted-foreground">معلومات إضافية</p>
+                                                    </div>
+                                                    <p className="text-sm text-foreground bg-white dark:bg-card rounded-xl p-4">
+                                                        {selectedAddress.additional_info}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </>
@@ -616,4 +1227,3 @@ export default function AddressesPage() {
         </div>
     );
 }
-
