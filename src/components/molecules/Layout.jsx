@@ -12,6 +12,7 @@ import FloatingChatIcon from '@/components/Chat/FloatingChatIcon';
 import ChatModal from '@/components/Chat/ChatModal';
 
 const Layout = ({ children }) => {
+
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const pathname = usePathname();

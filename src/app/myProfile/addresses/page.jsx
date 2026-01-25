@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt } from "react-icons/fa";
+import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt, FaEye } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import { BiCurrentLocation } from "react-icons/bi";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,27 @@ const Popup = dynamic(
   { ssr: false }
 );
 
+
+// إصلاح مشكلة أيقونات Leaflet
+const fixLeafletIcons = () => {
+  if (typeof window !== 'undefined') {
+    const L = require('leaflet');
+    
+    // مسارات الصور داخل مجلد public
+    delete L.Icon.Default.prototype._getIconUrl;
+    
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: '/images/marker-icon-2x.png',
+      iconUrl: '/images/marker-icon.png',
+      shadowUrl: '/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+  }
+};
+
 const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
 
 // Saudi Arabia coordinates and cities data
@@ -44,6 +65,25 @@ const SAUDI_CITIES = [
   { name: "بريدة", lat: 26.3591, lng: 43.9818, districts: ["حي الروضة", "حي الازدهار", "حي العليا"] },
   { name: "حائل", lat: 27.5114, lng: 41.7208, districts: ["حي المليداء", "حي القاع", "حي السماح"] }
 ];
+
+// Get nearest Saudi city based on coordinates
+const getNearestSaudiCity = (lat, lng) => {
+  let nearestCity = SAUDI_CITIES[0];
+  let minDistance = Infinity;
+
+  for (const city of SAUDI_CITIES) {
+    const distance = Math.sqrt(Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2));
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestCity = city;
+    }
+  }
+
+  return {
+    city: nearestCity,
+    distance: minDistance
+  };
+};
 
 // Enhanced Reverse Geocoding function with better Arabic support
 const reverseGeocode = async (lat, lng) => {
@@ -72,47 +112,14 @@ const reverseGeocode = async (lat, lng) => {
     return data;
   } catch (error) {
     console.error('Reverse geocoding error:', error);
-    
-    // Fallback: Use coordinates to determine nearest Saudi city
-    return getNearestSaudiCity(lat, lng);
+    return null;
   }
-};
-
-// Get nearest Saudi city based on coordinates
-const getNearestSaudiCity = (lat, lng) => {
-  let nearestCity = SAUDI_CITIES[0];
-  let minDistance = Infinity;
-
-  for (const city of SAUDI_CITIES) {
-    const distance = Math.sqrt(Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2));
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearestCity = city;
-    }
-  }
-
-  return {
-    address: {
-      city: nearestCity.name,
-      town: nearestCity.name,
-      suburb: nearestCity.districts[0] || "حي عام",
-      road: "شارع رئيسي",
-      state: "السعودية",
-      country: "السعودية"
-    },
-    display_name: `${nearestCity.name} - ${nearestCity.districts[0] || "حي عام"}`
-  };
 };
 
 // Smart address extraction with Saudi-specific logic
 const extractAddressComponents = (nominatimData, lat, lng) => {
-  if (!nominatimData || !nominatimData.address) {
-    // Fallback to nearest Saudi city
-    const nearestCity = getNearestSaudiCity(lat, lng);
-    return extractAddressComponents(nearestCity, lat, lng);
-  }
-
-  const address = nominatimData.address;
+  const nearestCityData = getNearestSaudiCity(lat, lng);
+  const nearestCity = nearestCityData.city;
   
   const extracted = {
     name: '',
@@ -122,7 +129,7 @@ const extractAddressComponents = (nominatimData, lat, lng) => {
     type: 'home'
   };
 
-  // Smart name generation based on location type and time of day
+  // Smart name generation
   const hour = new Date().getHours();
   let locationType = "موقع";
   
@@ -130,51 +137,63 @@ const extractAddressComponents = (nominatimData, lat, lng) => {
   else if (hour >= 12 && hour < 18) locationType = "موقع الظهيرة";
   else locationType = "موقع المساء";
 
-  // Try to get meaningful name
-  if (address.road) {
-    extracted.name = `${locationType} في ${address.road}`;
-  } else if (address.suburb) {
-    extracted.name = `${locationType} في ${address.suburb}`;
-  } else if (address.city) {
-    extracted.name = `${locationType} في ${address.city}`;
+  // Try to get meaningful name from Nominatim or use default
+  if (nominatimData && nominatimData.address) {
+    const address = nominatimData.address;
+    
+    if (address.road) {
+      extracted.name = `${locationType} في ${address.road}`;
+    } else if (address.suburb) {
+      extracted.name = `${locationType} في ${address.suburb}`;
+    } else if (address.city) {
+      extracted.name = `${locationType} في ${address.city}`;
+    } else {
+      extracted.name = 'البيت';
+    }
+
+    // Build address
+    const addressParts = [];
+    if (address.road) {
+      addressParts.push(`شارع ${address.road.replace(/^شارع\s*/i, '')}`);
+    }
+    if (address.suburb) {
+      addressParts.push(address.suburb);
+    }
+    if (address.city) {
+      addressParts.push(address.city);
+    }
+
+    extracted.address = addressParts.join(' - ') || `${nearestCity.name} - موقع عام`;
+    extracted.city = address.city || address.town || address.county || nearestCity.name;
+    
+    if (address.suburb) {
+      extracted.area = address.suburb.replace(/حي\s*/i, 'حي ');
+    } else if (address.neighbourhood) {
+      extracted.area = address.neighbourhood.replace(/حي\s*/i, 'حي ');
+    } else if (address.city_district) {
+      extracted.area = address.city_district.replace(/حي\s*/i, 'حي ');
+    } else {
+      // Get random district from nearest city
+      if (nearestCity.districts && nearestCity.districts.length > 0) {
+        const randomIndex = Math.floor(Math.random() * nearestCity.districts.length);
+        extracted.area = nearestCity.districts[randomIndex];
+      } else {
+        extracted.area = 'حي عام';
+      }
+    }
   } else {
-    extracted.name = 'البيت'; // Default to 'البيت'
-  }
-
-  // Build address with Saudi format
-  const addressParts = [];
-  
-  if (address.road) {
-    // Clean road name
-    const roadName = address.road.replace(/^شارع\s*/i, '');
-    addressParts.push(`شارع ${roadName}`);
-  }
-  
-  if (address.suburb) {
-    addressParts.push(address.suburb);
-  }
-  
-  if (address.city) {
-    addressParts.push(address.city);
-  }
-
-  extracted.address = addressParts.join(' - ') || `${getNearestSaudiCity(lat, lng).address.city} - موقع عام`;
-
-  // City - prioritize Saudi cities
-  extracted.city = address.city || address.town || address.county || 
-                   getNearestSaudiCity(lat, lng).address.city || '';
-
-  // Area/Neighborhood - clean up the name
-  if (address.suburb) {
-    extracted.area = address.suburb.replace(/حي\s*/i, 'حي ');
-  } else if (address.neighbourhood) {
-    extracted.area = address.neighbourhood.replace(/حي\s*/i, 'حي ');
-  } else if (address.city_district) {
-    extracted.area = address.city_district.replace(/حي\s*/i, 'حي ');
-  } else {
-    // Get random district from nearest city
-    const nearestCity = getNearestSaudiCity(lat, lng);
-    extracted.area = nearestCity.districts[Math.floor(Math.random() * nearestCity.districts.length)] || 'حي عام';
+    // Fallback to nearest Saudi city data
+    extracted.name = 'البيت';
+    extracted.city = nearestCity.name;
+    
+    if (nearestCity.districts && nearestCity.districts.length > 0) {
+      const randomIndex = Math.floor(Math.random() * nearestCity.districts.length);
+      extracted.area = nearestCity.districts[randomIndex];
+    } else {
+      extracted.area = 'حي عام';
+    }
+    
+    extracted.address = `${nearestCity.name} - ${extracted.area}`;
   }
 
   return extracted;
@@ -188,7 +207,12 @@ function SimpleMapPicker({ initialPosition, onLocationSelect }) {
   const markerRef = useRef(null);
 
   useEffect(() => {
-    setMapLoaded(true);
+      if (typeof window !== 'undefined') {
+      // إصلاح الأيقونات عند التحميل
+      fixLeafletIcons();
+      setMapLoaded(true);
+    }
+
   }, []);
 
   const handleMapClick = async (e) => {
@@ -266,6 +290,57 @@ function SimpleMapPicker({ initialPosition, onLocationSelect }) {
         <Marker position={position} ref={markerRef}>
           <Popup>
             الموقع المحدد<br />
+            {position[0].toFixed(6)}, {position[1].toFixed(6)}
+          </Popup>
+        </Marker>
+      </MapContainer>
+    </div>
+  );
+}
+
+// Display Map Component (Read-only)
+function DisplayMap({ lat, lng }) {
+  const [position, setPosition] = useState([lat, lng]);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+     fixLeafletIcons();
+    setMapLoaded(true);
+    setPosition([lat, lng]);
+      }
+
+  }, [lat, lng]);
+
+  if (!mapLoaded) {
+    return (
+      <div className="h-[300px] rounded-xl bg-secondary/30 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner />
+          <p className="text-muted-foreground mt-2">جاري تحميل الخريطة...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border/50">
+      <MapContainer
+        center={position}
+        zoom={15}
+        style={{ height: '100%', width: '100%' }}
+        className="rounded-xl"
+        scrollWheelZoom={false}
+        dragging={false}
+        zoomControl={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={position}>
+          <Popup>
+            موقع العنوان<br />
             {position[0].toFixed(6)}, {position[1].toFixed(6)}
           </Popup>
         </Marker>
@@ -683,6 +758,155 @@ export default function AddressesPage() {
         toast.success(`تم تعيين الاسم: ${name}`);
     };
 
+    // Render display mode (read-only) similar to edit form
+    const renderDisplayMode = () => (
+        <div className="space-y-5">
+            {/* اسم العنوان */}
+            <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
+                <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
+                    <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                    اسم العنوان
+                </label>
+                <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                    {selectedAddress.name}
+                </div>
+            </div>
+
+            {/* العنوان الكامل */}
+            <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                    العنوان الكامل
+                </label>
+                <div className="w-full p-4 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                    {selectedAddress.address}
+                </div>
+            </div>
+
+            {/* موقع العنوان على الخريطة */}
+            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border-2 border-border/50">
+                <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
+                    <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
+                    موقع العنوان على الخريطة
+                </label>
+                
+                <div className="mb-4">
+                    {isMapAvailable && selectedAddress.latitude && selectedAddress.longitude ? (
+                        <DisplayMap 
+                            lat={parseFloat(selectedAddress.latitude) || 24.7136}
+                            lng={parseFloat(selectedAddress.longitude) || 46.6753}
+                        />
+                    ) : (
+                        <div className="h-[300px] rounded-xl bg-secondary/30 flex items-center justify-center">
+                            <div className="text-center">
+                                <FaMapMarkerAlt className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                                <p className="text-muted-foreground">خريطة الموقع غير متوفرة</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label className="text-sm font-bold text-foreground mb-2 block">خط العرض</label>
+                        <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl font-mono text-foreground">
+                            {selectedAddress.latitude}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-bold text-foreground mb-2 block">خط الطول</label>
+                        <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl font-mono text-foreground">
+                            {selectedAddress.longitude}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* المدينة والمنطقة */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                        <FaBuilding className="text-[#579BE8] w-4 h-4" />
+                        المدينة
+                    </label>
+                    <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                        {selectedAddress.city}
+                    </div>
+                </div>
+
+                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                        <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
+                        المنطقة
+                    </label>
+                    <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                        {selectedAddress.area || 'غير محدد'}
+                    </div>
+                </div>
+            </div>
+
+            {/* النوع والمفضلة */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                    <label className="text-sm font-bold text-foreground mb-3 block">النوع</label>
+                    <div className="w-full p-3 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                        {selectedAddress.type === 'home' ? '🏠 منزل' : 
+                         selectedAddress.type === 'work' ? '💼 عمل' : 
+                         selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
+                    </div>
+                </div>
+
+                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded border-2 border-border/50 flex items-center justify-center ${selectedAddress.is_favorite ? 'bg-[#579BE8]/20' : 'bg-transparent'}`}>
+                            {selectedAddress.is_favorite && (
+                                <FaStar className="text-[#579BE8] w-4 h-4" />
+                            )}
+                        </div>
+                        <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                            <FaStar className={`w-5 h-5 ${selectedAddress.is_favorite ? 'text-[#579BE8]' : 'text-muted-foreground'}`} />
+                            {selectedAddress.is_favorite ? 'مضافة إلى المفضلة' : 'غير مضافة إلى المفضلة'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* معلومات إضافية */}
+            {selectedAddress.additional_info && (
+                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
+                    <label className="text-sm font-bold text-foreground mb-3 block flex items-center gap-2">
+                        <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
+                        معلومات إضافية
+                    </label>
+                    <div className="w-full p-4 bg-white/50 dark:bg-card/50 border-2 border-border/30 rounded-xl text-foreground">
+                        {selectedAddress.additional_info}
+                    </div>
+                </div>
+            )}
+
+            {/* أزرار التعديل والإلغاء */}
+            <div className="flex gap-3 pt-2">
+                <button
+                    onClick={() => setIsEditingAddress(true)}
+                    className="flex-1 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white py-3.5 rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                    <CiEdit className="w-5 h-5" />
+                    <span>تعديل العنوان</span>
+                </button>
+                <button
+                    onClick={() => {
+                        setSelectedAddress(null);
+                        setIsEditingAddress(false);
+                    }}
+                    className="px-6 py-3.5 bg-secondary text-foreground rounded-xl hover:bg-secondary/80 transition-colors font-bold border border-border/50"
+                >
+                    رجوع للقائمة
+                </button>
+            </div>
+        </div>
+    );
+
     return (
         <div className="space-y-6 fade-in-up">
             <motion.div
@@ -834,28 +1058,13 @@ export default function AddressesPage() {
                                                     <FaStar className="w-5 h-5" />
                                                 </div>
                                             )}
-                                            {!loadingAddressDetails && !isAddingNewAddress && (
+                                            {!loadingAddressDetails && !isAddingNewAddress && !isEditingAddress && (
                                                 <button
-                                                    onClick={() => {
-                                                        setIsEditingAddress(!isEditingAddress);
-                                                        if (!isEditingAddress) {
-                                                            setEditAddressForm({
-                                                                name: selectedAddress.name || 'البيت',
-                                                                address: selectedAddress.address || 'الرياض - حي النرجس',
-                                                                city: selectedAddress.city || 'الرياض',
-                                                                area: selectedAddress.area || 'حي النرجس',
-                                                                latitude: selectedAddress.latitude || '24.7136',
-                                                                longitude: selectedAddress.longitude || '46.6753',
-                                                                type: selectedAddress.type || 'home',
-                                                                additional_info: selectedAddress.additional_info || 'البيت الرئيسي',
-                                                                is_favorite: selectedAddress.is_favorite || false
-                                                            });
-                                                        }
-                                                    }}
+                                                    onClick={() => setIsEditingAddress(true)}
                                                     className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all font-bold text-sm flex items-center gap-2 border border-white/30"
                                                 >
                                                     <CiEdit className="w-4 h-4" />
-                                                    {isEditingAddress ? 'إلغاء' : 'تعديل'}
+                                                    تعديل
                                                 </button>
                                             )}
                                         </div>
@@ -863,11 +1072,11 @@ export default function AddressesPage() {
                                 </div>
 
                                 <div className="p-6 sm:p-8 overflow-y-auto flex-1">
-                                    {loadingAddressDetails && !isAddingNewAddress ? (
+                                    {loadingAddressDetails ? (
                                         <div className="flex items-center justify-center py-12">
                                             <Spinner />
                                         </div>
-                                    ) : (isEditingAddress || isAddingNewAddress) ? (
+                                    ) : isAddingNewAddress || isEditingAddress ? (
                                         <div className="space-y-5">
                                             {/* اسم العنوان مع اقتراحات سريعة */}
                                             <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
@@ -1114,109 +1323,8 @@ export default function AddressesPage() {
                                             </div>
                                         </div>
                                     ) : (
-                                        // عرض البيانات في وضع القراءة
-                                        <div className="space-y-4 sm:space-y-5">
-                                            <div className="bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 rounded-2xl p-5 border-2 border-[#579BE8]/20">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#124987] flex items-center justify-center shadow-lg">
-                                                            <FaMapMarkerAlt className="w-6 h-6 text-white" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-lg sm:text-xl font-black text-foreground">
-                                                                {selectedAddress.name}
-                                                            </h4>
-                                                            {selectedAddress.type && (
-                                                                <p className="text-xs text-muted-foreground mt-1">
-                                                                    {selectedAddress.type === 'home' ? '🏠 منزل' : 
-                                                                     selectedAddress.type === 'work' ? '💼 عمل' : 
-                                                                     selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {selectedAddress.is_favorite && (
-                                                        <div className="bg-[#579BE8]/20 rounded-xl px-3 py-2 border border-[#579BE8]/30">
-                                                            <FaStar className="text-[#579BE8] w-5 h-5" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {selectedAddress.address && (
-                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                    <div className="flex items-start gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
-                                                            <FaMapMarkerAlt className="text-[#579BE8] w-5 h-5" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <p className="text-xs font-bold text-muted-foreground mb-2">العنوان الكامل</p>
-                                                            <p className="text-base text-foreground">{selectedAddress.address}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(selectedAddress.city || selectedAddress.area) && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    {selectedAddress.city && (
-                                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                            <div className="flex items-center gap-3 mb-2">
-                                                                <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                    <FaBuilding className="text-[#579BE8] w-4 h-4" />
-                                                                </div>
-                                                                <p className="text-xs font-bold text-muted-foreground">المدينة</p>
-                                                            </div>
-                                                            <p className="text-base font-bold text-foreground">{selectedAddress.city}</p>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedAddress.area && (
-                                                        <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                            <div className="flex items-center gap-3 mb-2">
-                                                                <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                                    <BiCurrentLocation className="text-[#579BE8] w-4 h-4" />
-                                                                </div>
-                                                                <p className="text-xs font-bold text-muted-foreground">المنطقة</p>
-                                                            </div>
-                                                            <p className="text-base font-bold text-foreground">{selectedAddress.area}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {(selectedAddress.latitude && selectedAddress.longitude) && (
-                                                <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-2xl p-5 border border-border/50">
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                            <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
-                                                        </div>
-                                                        <p className="text-xs font-bold text-muted-foreground">الإحداثيات الجغرافية</p>
-                                                    </div>
-                                                    <div className="bg-white dark:bg-card rounded-xl p-3">
-                                                        <p className="text-sm font-mono text-foreground text-center">
-                                                            <span className="text-muted-foreground">Lat:</span> {selectedAddress.latitude} 
-                                                            <span className="mx-2">|</span>
-                                                            <span className="text-muted-foreground">Lng:</span> {selectedAddress.longitude}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {selectedAddress.additional_info && (
-                                                <div className="bg-secondary/30 rounded-2xl p-5 border border-border/50">
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
-                                                            <FaInfoCircle className="text-[#579BE8] w-4 h-4" />
-                                                        </div>
-                                                        <p className="text-xs font-bold text-muted-foreground">معلومات إضافية</p>
-                                                    </div>
-                                                    <p className="text-sm text-foreground bg-white dark:bg-card rounded-xl p-4">
-                                                        {selectedAddress.additional_info}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
+                                        // Display mode (read-only) - similar to edit form
+                                        renderDisplayMode()
                                     )}
                                 </div>
                             </>

@@ -1,5 +1,3 @@
-// [file name]: ChatModal.js (التصميم الثابت)
-// [file content begin]
 // components/Chat/ChatModal.js
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -10,7 +8,7 @@ import {
   X, Users, MessageCircle, Plus, Search, Clock, User, CheckCircle, 
   Phone, Video, Info, Send, Paperclip, Smile, ImageIcon, FileText, 
   Mic, ChevronLeft, Star, MoreVertical, Check, CheckCheck, Lock, 
-  HeadphonesIcon, ArrowLeft, Eye, EyeOff, CircleDot
+  HeadphonesIcon, ArrowLeft, Eye, EyeOff, CircleDot, LogIn
 } from "lucide-react";
 
 const ChatModal = ({ 
@@ -30,51 +28,93 @@ const ChatModal = ({
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({});
   const [creatingChat, setCreatingChat] = useState(false);
   const [participantId, setParticipantId] = useState(defaultParticipantId || "");
+  const [participantName, setParticipantName] = useState("");
   const [showNewChatForm, setShowNewChatForm] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [activeTyping, setActiveTyping] = useState({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState({
+    id: currentUserId,
+    name: 'المستخدم',
+    email: '',
+    phone: ''
+  });
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatsContainerRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
-  // جلب بيانات المستخدم الحالي من localStorage
-  const [currentUser, setCurrentUser] = useState(() => {
+  // ألوان ثابتة للرسائل
+  const MESSAGE_COLORS = {
+    outgoing: {
+      bg: '#FFEDC2', // أصفر فاتح للرسائل الصادرة
+      text: '#5D4037',
+      time: '#8D6E63'
+    },
+    incoming: {
+      bg: '#F5F5F5', // رمادي فاتح للرسائل الواردة
+      text: '#212121',
+      time: '#757575'
+    }
+  };
+
+  // جلب بيانات المستخدم والتحقق من تسجيل الدخول
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
+        const token = localStorage.getItem('accessToken');
         const userData = localStorage.getItem('user');
+        
+        setIsLoggedIn(!!token);
+        
         if (userData) {
           const parsedUser = JSON.parse(userData);
-          return {
+          setCurrentUser({
             id: parsedUser.id || currentUserId,
             name: parsedUser.name || parsedUser.username || 'المستخدم',
             email: parsedUser.email || '',
             phone: parsedUser.phone || ''
-          };
+          });
+        } else {
+          setCurrentUser({
+            id: currentUserId,
+            name: 'المستخدم',
+            email: '',
+            phone: ''
+          });
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
+        setIsLoggedIn(false);
+        setCurrentUser({
+          id: currentUserId,
+          name: 'المستخدم',
+          email: '',
+          phone: ''
+        });
       }
     }
-    
-    // بيانات افتراضية
-    return {
-      id: currentUserId,
-      name: 'المستخدم',
-      email: '',
-      phone: ''
-    };
-  });
+  }, [currentUserId]);
+
+  // عرض toast عند فتح المحادثة إذا لم يكن مسجل دخول
+  useEffect(() => {
+    if (isOpen && !isLoggedIn) {
+      showLoginToast();
+    }
+  }, [isOpen, isLoggedIn]);
 
   // جلب المحادثات
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isLoggedIn) {
       loadChats();
+    } else if (isOpen && !isLoggedIn) {
+      setLoading(false);
+      setChats([]);
+      setFilteredChats([]);
     }
-  }, [isOpen]);
+  }, [isOpen, isLoggedIn]);
 
   // تصفية المحادثات عند البحث
   useEffect(() => {
@@ -101,7 +141,7 @@ const ChatModal = ({
 
   // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
   useEffect(() => {
-    if (isOpen && defaultParticipantId && chats.length > 0 && !loading) {
+    if (isOpen && isLoggedIn && defaultParticipantId && chats.length > 0 && !loading) {
       const existingChat = chats.find(chat => 
         chat.participants?.includes(defaultParticipantId) ||
         chat.participants?.includes(Number(defaultParticipantId))
@@ -114,7 +154,123 @@ const ChatModal = ({
         setParticipantId(defaultParticipantId);
       }
     }
-  }, [isOpen, chats, loading, defaultParticipantId]);
+  }, [isOpen, chats, loading, defaultParticipantId, isLoggedIn]);
+
+  // دالة لعرض toast عند عدم تسجيل الدخول
+  const showLoginToast = (customMessage = '') => {
+    if (typeof window === 'undefined') return;
+
+    // إنشاء عنصر toast
+    const toast = document.createElement('div');
+    toast.id = 'chat-login-toast';
+    
+    const message = customMessage || 'سجل الدخول لعرض المحادثات وإرسال الرسائل';
+    
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      z-index: 100000;
+      max-width: 400px;
+      animation: slideInToast 0.3s ease-out;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    `;
+    
+    toast.innerHTML = `
+      <svg style="width: 24px; height: 24px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      </svg>
+      <div style="flex: 1;">
+        <strong style="display: block; margin-bottom: 4px; font-size: 14px;">${customMessage ? 'تنبيه' : 'يجب تسجيل الدخول'}</strong>
+        <span style="font-size: 13px; opacity: 0.9;">${message}</span>
+      </div>
+      <button id="close-chat-toast" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.7; padding: 4px;">
+        ✕
+      </button>
+    `;
+    
+    // إضافة CSS إذا لم يكن موجوداً
+    if (!document.getElementById('chat-toast-styles')) {
+      const style = document.createElement('style');
+      style.id = 'chat-toast-styles';
+      style.textContent = `
+        @keyframes slideInToast {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideOutToast {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+        #chat-login-toast button:hover {
+          opacity: 1;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // إزالة أي toast قديم
+    const existingToast = document.getElementById('chat-login-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    
+    // إضافة الـ toast
+    document.body.appendChild(toast);
+    
+    // زر الإغلاق
+    const closeBtn = toast.querySelector('#close-chat-toast');
+    closeBtn.addEventListener('click', () => {
+      removeToast(toast);
+    });
+    
+    // إزالة تلقائية بعد 6 ثوانٍ
+    setTimeout(() => {
+      removeToast(toast);
+    }, 6000);
+  };
+
+  const removeToast = (toast) => {
+    if (toast && toast.parentNode) {
+      toast.style.animation = 'slideOutToast 0.3s ease-out';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }
+  };
+
+  // دالة لعرض toast عند النقر على أيقونة المحادثات
+  const handleChatIconClick = () => {
+    if (!isLoggedIn) {
+      showLoginToast();
+    } else {
+      messageService.showChatIconToast();
+    }
+  };
 
   const loadChats = async () => {
     try {
@@ -167,7 +323,7 @@ const ChatModal = ({
     
     return chat.messages.filter(msg => {
       if (!msg.sender_id) return false;
-      const currentUserIdStr = String(currentUserId);
+      const currentUserIdStr = String(currentUser.id); // استخدام currentUser.id
       const senderIdStr = String(msg.sender_id);
       
       return !msg.is_read && senderIdStr !== currentUserIdStr;
@@ -176,6 +332,11 @@ const ChatModal = ({
 
   // تحميل الرسائل عند اختيار محادثة
   const loadMessages = async (chatId) => {
+    if (!isLoggedIn) {
+      showLoginToast();
+      return;
+    }
+    
     try {
       setMessagesLoading(true);
       
@@ -191,9 +352,9 @@ const ChatModal = ({
         
         const formattedMsgs = sortedMessages.map(msg => ({
           ...msg,
-          isCurrentUser: String(msg.sender_id) === String(currentUserId),
+          isCurrentUser: String(msg.sender_id) === String(currentUser.id), // استخدام currentUser.id
           formattedTime: formatMessageTime(msg.created_at),
-          is_outgoing: String(msg.sender_id) === String(currentUserId)
+          is_outgoing: String(msg.sender_id) === String(currentUser.id) // استخدام currentUser.id
         }));
         
         setMessages(formattedMsgs);
@@ -214,11 +375,11 @@ const ChatModal = ({
 
   // تحديث عند اختيار محادثة
   useEffect(() => {
-    if (selectedChat) {
+    if (selectedChat && isLoggedIn) {
       loadMessages(selectedChat.id);
       updateChatsActiveState();
     }
-  }, [selectedChat]);
+  }, [selectedChat, isLoggedIn]);
 
   const updateChatsActiveState = () => {
     setChats(prev => prev.map(chat => ({
@@ -229,15 +390,25 @@ const ChatModal = ({
 
   // إنشاء محادثة جديدة
   const createNewChat = async () => {
+    if (!isLoggedIn) {
+      showLoginToast();
+      return;
+    }
+    
     if (!participantId.trim()) {
-      alert("يرجى إدخال معرف المستخدم");
+      showLoginToast("يرجى إدخال معرف المستخدم");
       return;
     }
 
     try {
       setCreatingChat(true);
       
-      const result = await messageService.createChat(participantId);
+      // استخدام الدالة المعدلة التي تأخذ اسم المشارك
+      const result = await messageService.createChat(
+        participantId, 
+        "user_user", 
+        participantName || participantId
+      );
       
       if (result.success) {
         // إعادة تحميل المحادثات
@@ -262,12 +433,13 @@ const ChatModal = ({
         
         setShowNewChatForm(false);
         setParticipantId("");
+        setParticipantName("");
       } else {
-        alert(`فشل إنشاء المحادثة: ${result.error}`);
+        // سيتم عرض رسالة الخطأ تلقائياً من service
+        console.error('فشل إنشاء المحادثة:', result.error);
       }
     } catch (error) {
       console.error('خطأ في إنشاء المحادثة:', error);
-      alert('حدث خطأ أثناء إنشاء المحادثة');
     } finally {
       setCreatingChat(false);
     }
@@ -275,6 +447,11 @@ const ChatModal = ({
 
   // إرسال رسالة
   const sendMessage = async () => {
+    if (!isLoggedIn) {
+      showLoginToast();
+      return;
+    }
+    
     if (!newMessage.trim() || sending || !selectedChat) return;
 
     try {
@@ -284,7 +461,7 @@ const ChatModal = ({
       const tempMessage = {
         id: `temp-${Date.now()}`,
         message: newMessage,
-        sender_id: currentUserId,
+        sender_id: currentUser.id, // استخدام currentUser.id
         sender_type: "App\\Models\\User",
         isCurrentUser: true,
         is_temp: true,
@@ -325,12 +502,11 @@ const ChatModal = ({
       } else {
         // إزالة الرسالة المؤقتة في حالة الفشل
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-        alert('فشل إرسال الرسالة');
+        console.error('فشل إرسال الرسالة:', result.error);
       }
 
     } catch (error) {
       console.error('خطأ في إرسال الرسالة:', error);
-      alert('حدث خطأ أثناء إرسال الرسالة');
     } finally {
       setSending(false);
     }
@@ -358,7 +534,9 @@ const ChatModal = ({
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
     }, 100);
   };
 
@@ -458,7 +636,7 @@ const ChatModal = ({
   // الحصول على اسم الشات
   const getChatName = (chat) => {
     const otherParticipants = chat.participants?.filter(p => {
-      return String(p) !== String(currentUserId);
+      return String(p) !== String(currentUser.id); // استخدام currentUser.id
     }) || [];
     
     if (otherParticipants.length > 0) {
@@ -487,7 +665,7 @@ const ChatModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -502,77 +680,141 @@ const ChatModal = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 h-[90vh] overflow-hidden border border-gray-300"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl mx-auto h-[95vh] md:h-[90vh] overflow-hidden border border-gray-300 flex flex-col md:flex-row"
       >
-        <div className="flex h-full">
-          {/* الجانب الأيسر - قائمة المحادثات */}
-          <div className="w-1/3 border-r border-gray-200 flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center">
-                    {currentUser.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold">المحادثات</h2>
-                    <p className="text-xs opacity-80">{currentUser.name}</p>
-                  </div>
+        {/* Mobile Header */}
+        <div className="md:hidden bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center">
+              {currentUser.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="text-base font-bold">المحادثات</h2>
+              <p className="text-xs opacity-80">{currentUser.name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* الجانب الأيمن - قائمة المحادثات */}
+        <div className={`${selectedChat ? 'hidden md:flex md:w-1/3' : 'flex-1 md:w-1/3'} border-l border-gray-200 flex flex-col`}>
+          {/* Header - Desktop */}
+          <div className="hidden md:block bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center">
+                  {currentUser.name.charAt(0)}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setShowNewChatForm(true)}
-                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
-                    title="محادثة جديدة"
-                  >
-                    <Plus size={16} />
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
-                  >
-                    <X size={16} />
-                  </button>
+                <div>
+                  <h2 className="text-lg font-bold">المحادثات</h2>
+                  <p className="text-xs opacity-80">{currentUser.name}</p>
                 </div>
               </div>
-
-              {/* Search */}
-              <div className="mt-4 relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
-                <input
-                  type="text"
-                  placeholder="بحث في المحادثات..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pr-10 pl-4 py-2.5 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/30"
-                />
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      showLoginToast();
+                      return;
+                    }
+                    setShowNewChatForm(true);
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+                  title="محادثة جديدة"
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
 
-            {/* عرض واجهة إنشاء محادثة جديدة */}
-            <AnimatePresence>
-              {showNewChatForm && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="p-4 bg-gradient-to-b from-blue-50 to-white border-b border-blue-100">
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-blue-200">
-                      <h3 className="font-bold text-gray-800 mb-3">بدء محادثة جديدة</h3>
-                      <div className="flex gap-2">
+            {/* Search */}
+            <div className="mt-4 relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
+              <input
+                type="text"
+                placeholder="بحث في المحادثات..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pr-10 pl-4 py-2.5 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/30"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="md:hidden p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
+              <input
+                type="text"
+                placeholder="بحث في المحادثات..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pr-10 pl-4 py-2.5 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/30"
+              />
+            </div>
+          </div>
+
+          {/* عرض واجهة إنشاء محادثة جديدة */}
+          <AnimatePresence>
+            {showNewChatForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-4 bg-gradient-to-b from-blue-50 to-white border-b border-blue-100">
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-gray-800">بدء محادثة جديدة</h3>
+                      <button
+                        onClick={() => {
+                          setShowNewChatForm(false);
+                          setParticipantId("");
+                          setParticipantName("");
+                        }}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">معرف المستخدم (ID)</label>
                         <input
                           type="text"
                           value={participantId}
                           onChange={(e) => setParticipantId(e.target.value)}
-                          placeholder="أدخل معرف المستخدم (ID)"
-                          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
+                          placeholder="أدخل معرف المستخدم"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">اسم المستخدم (اختياري)</label>
+                        <input
+                          type="text"
+                          value={participantName}
+                          onChange={(e) => setParticipantName(e.target.value)}
+                          placeholder="أدخل اسم المستخدم"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
                         <button
                           onClick={createNewChat}
                           disabled={creatingChat || !participantId.trim()}
-                          className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all ${
+                          className={`flex-1 px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all ${
                             creatingChat || !participantId.trim()
                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                               : 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white hover:shadow-lg'
@@ -586,256 +828,300 @@ const ChatModal = ({
                           ) : (
                             <>
                               <Plus size={16} />
-                              <span>إنشاء</span>
+                              <span>إنشاء محادثة</span>
                             </>
                           )}
                         </button>
                       </div>
                       <p className="text-sm text-gray-500 mt-2">أدخل معرف السائق أو الشخص الذي تريد التواصل معه</p>
-                      <button
-                        onClick={() => {
-                          setShowNewChatForm(false);
-                          setParticipantId("");
-                        }}
-                        className="text-sm text-gray-500 hover:text-gray-700 mt-2"
-                      >
-                        إلغاء
-                      </button>
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Chats List */}
-            <div 
-              ref={chatsContainerRef}
-              className="flex-1 overflow-y-auto bg-white"
-            >
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#579BE8] border-t-transparent"></div>
-                  <p className="text-gray-500 mt-3">جاري تحميل المحادثات...</p>
                 </div>
-              ) : filteredChats.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center mb-4">
-                    <MessageCircle size={32} className="text-gray-400" />
-                  </div>
-                  <h3 className="font-bold text-gray-700 mb-2">لا توجد محادثات</h3>
-                  <p className="text-gray-500 text-center mb-6">ابدأ محادثتك الأولى</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Chats List */}
+          <div 
+            ref={chatsContainerRef}
+            className="flex-1 overflow-y-auto bg-white"
+          >
+            {!isLoggedIn ? (
+              <div className="flex flex-col items-center justify-center h-full p-8">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center mb-4 border-2 border-gray-200">
+                  <LogIn size={32} className="text-gray-400" />
+                </div>
+                <h3 className="font-bold text-gray-700 mb-2">يجب تسجيل الدخول</h3>
+                <p className="text-gray-500 text-center mb-6">سجل الدخول لعرض المحادثات والرسائل</p>
+                <button
+                  onClick={() => window.location.href = '/login'}
+                  className="px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:shadow-lg transition-shadow flex items-center gap-2"
+                >
+                  <LogIn size={18} />
+                  <span>تسجيل الدخول</span>
+                </button>
+              </div>
+            ) : loading ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#579BE8] border-t-transparent"></div>
+                <p className="text-gray-500 mt-3">جاري تحميل المحادثات...</p>
+              </div>
+            ) : filteredChats.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center mb-4 border-2 border-gray-200">
+                  <MessageCircle size={32} className="text-gray-400" />
+                </div>
+                <h3 className="font-bold text-gray-700 mb-2">لا توجد محادثات</h3>
+                <p className="text-gray-500 text-center mb-6">ابدأ محادثتك الأولى</p>
+                <button
+                  onClick={() => setShowNewChatForm(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:shadow-lg transition-shadow flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  <span>بدء محادثة جديدة</span>
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {filteredChats.map((chat) => {
+                  const chatName = getChatName(chat);
+                  const chatAvatar = getChatAvatar(chat);
+                  const isActive = selectedChat?.id === chat.id;
+                  
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => setSelectedChat(chat)}
+                      className={`flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-blue-50 border-r-4 border-blue-400' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* Avatar */}
+                      <div className="relative">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${
+                          chat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500'
+                        } ${isActive ? 'ring-2 ring-blue-300' : ''}`}>
+                          {chatAvatar}
+                        </div>
+                        {(chat.unreadCount || 0) > 0 && !isActive && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                            {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chat Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className={`font-bold truncate ${isActive ? 'text-blue-700' : 'text-gray-800'}`}>
+                            {chatName}
+                          </h3>
+                          <span className="text-xs whitespace-nowrap ml-2">
+                            <span className={isActive ? 'text-blue-600' : 'text-gray-500'}>
+                              {formatChatTime(chat.lastActive)}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className={`text-sm truncate flex-1 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}>
+                            {chat.last_message || 'ابدأ المحادثة الآن'}
+                          </p>
+                          {(chat.unreadCount || 0) > 0 && !isActive && (
+                            <span className="ml-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-xs ${isActive ? 'text-blue-500' : 'text-gray-400'}`}>
+                            {chat.participants?.length || 2} مشارك
+                          </span>
+                          {chat.type && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              isActive 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {chat.type === "user_driver" ? "سائق" : "مستخدم"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* الجانب الأيسر - نافذة الدردشة */}
+        <div className={`${selectedChat ? 'flex-1 flex flex-col' : 'hidden md:flex md:flex-1 md:flex-col'} relative`}>
+          {selectedChat ? (
+            <>
+              {/* Chat Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Back button for mobile */}
                   <button
-                    onClick={() => setShowNewChatForm(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:shadow-lg transition-shadow flex items-center gap-2"
+                    onClick={() => setSelectedChat(null)}
+                    className="md:hidden w-8 h-8 rounded-full hover:bg-blue-200 flex items-center justify-center transition-colors"
                   >
-                    <Plus size={18} />
-                    <span>بدء محادثة جديدة</span>
+                    <ArrowLeft size={18} className="text-blue-700" />
+                  </button>
+                  
+                  <div className="relative">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${
+                      selectedChat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500'
+                    }`}>
+                      {getChatAvatar(selectedChat)}
+                    </div>
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-blue-800">
+                      {getChatName(selectedChat)}
+                      {selectedChat.type === "user_driver" && (
+                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">سائق</span>
+                      )}
+                    </h3>
+                    <div className="text-xs text-blue-600 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <span>متصل الآن</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={onClose}
+                    className="md:hidden w-10 h-10 rounded-full hover:bg-blue-200 flex items-center justify-center transition-colors"
+                  >
+                    <X size={18} className="text-blue-700" />
+                  </button>
+                  <button className="w-10 h-10 rounded-full hover:bg-blue-200 flex items-center justify-center transition-colors">
+                    <Phone size={18} className="text-blue-600" />
+                  </button>
+                  <button className="w-10 h-10 rounded-full hover:bg-blue-200 flex items-center justify-center transition-colors">
+                    <Info size={18} className="text-blue-600" />
                   </button>
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {filteredChats.map((chat) => {
-                    const chatName = getChatName(chat);
-                    const chatAvatar = getChatAvatar(chat);
-                    const isActive = selectedChat?.id === chat.id;
-                    
-                    return (
-                      <div
-                        key={chat.id}
-                        onClick={() => setSelectedChat(chat)}
-                        className={`flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 ${
-                          isActive 
-                            ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-r-4 border-blue-500' 
-                            : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        {/* Avatar */}
-                        <div className="relative">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${
-                            chat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500'
-                          } ${isActive ? 'ring-2 ring-blue-300' : ''}`}>
-                            {chatAvatar}
-                          </div>
-                          {(chat.unreadCount || 0) > 0 && !isActive && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                            </div>
-                          )}
-                        </div>
+              </div>
 
-                        {/* Chat Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className={`font-bold truncate ${isActive ? 'text-blue-700' : 'text-gray-800'}`}>
-                              {chatName}
-                            </h3>
-                            <span className="text-xs whitespace-nowrap ml-2">
-                              <span className={isActive ? 'text-blue-600' : 'text-gray-500'}>
-                                {formatChatTime(chat.lastActive)}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className={`text-sm truncate flex-1 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}>
-                              {chat.last_message || 'ابدأ المحادثة الآن'}
-                            </p>
-                            {(chat.unreadCount || 0) > 0 && !isActive && (
-                              <span className="ml-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                                {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs ${isActive ? 'text-blue-500' : 'text-gray-400'}`}>
-                              {chat.participants?.length || 2} مشارك
-                            </span>
-                            {chat.type && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                isActive 
-                                  ? 'bg-blue-100 text-blue-700' 
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                {chat.type === "user_driver" ? "سائق" : "مستخدم"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* الجانب الأيمن - نافذة الدردشة */}
-          <div className="flex-1 flex flex-col">
-            {selectedChat ? (
-              <>
-                {/* Chat Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${
-                          selectedChat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500'
-                        }`}>
-                          {getChatAvatar(selectedChat)}
-                        </div>
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-800">
-                          {getChatName(selectedChat)}
-                          {selectedChat.type === "user_driver" && (
-                            <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">سائق</span>
-                          )}
-                        </h3>
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                          <span>متصل الآن</span>
-                        </div>
-                      </div>
+              {/* Messages Area */}
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto bg-gradient-to-b from-blue-50 to-white p-4"
+              >
+                {!isLoggedIn ? (
+                  <div className="h-full flex flex-col items-center justify-center p-8">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mb-4 border-2 border-blue-200">
+                      <LogIn size={40} className="text-blue-400" />
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <button className="w-10 h-10 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors">
-                        <Phone size={18} className="text-gray-600" />
-                      </button>
-                      <button className="w-10 h-10 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors">
-                        <Video size={18} className="text-gray-600" />
-                      </button>
-                      <button className="w-10 h-10 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors">
-                        <Info size={18} className="text-gray-600" />
-                      </button>
+                    <h3 className="font-bold text-blue-700 mb-2">يجب تسجيل الدخول</h3>
+                    <p className="text-blue-600 text-center mb-6">سجل الدخول لعرض وإرسال الرسائل</p>
+                    <button
+                      onClick={() => window.location.href = '/login'}
+                      className="px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:shadow-lg transition-shadow flex items-center gap-2"
+                    >
+                      <LogIn size={18} />
+                      <span>تسجيل الدخول</span>
+                    </button>
+                  </div>
+                ) : messagesLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-blue-500 text-sm">جاري تحميل الرسائل...</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white p-4">
-                  {messagesLoading ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        <p className="text-gray-500 text-sm">جاري تحميل الرسائل...</p>
-                      </div>
+                ) : messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mb-4 border-2 border-blue-200">
+                      <MessageCircle size={40} className="text-blue-400" />
                     </div>
-                  ) : messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mb-4 border-2 border-blue-200">
-                        <MessageCircle size={40} className="text-blue-400" />
-                      </div>
-                      <h3 className="font-bold text-gray-700 mb-2">
-                        {`بداية المحادثة مع ${getChatName(selectedChat)}`}
-                      </h3>
-                      <p className="text-gray-500">
-                        ابدأ المحادثة بإرسال رسالة
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
-                        <div key={date}>
-                          {/* Date Separator */}
-                          <div className="flex justify-center my-6">
-                            <div className="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-full font-medium">
-                              {date}
-                            </div>
-                          </div>
-                          
-                          {/* Messages */}
-                          <div className="space-y-3">
-                            {dateMessages.map((message) => {
-                              const isCurrentUser = message.isCurrentUser;
-                              const isOutgoing = message.is_outgoing || isCurrentUser;
-                              
-                              return (
-                                <div
-                                  key={message.id}
-                                  className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
-                                >
-                                  <div
-                                    className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
-                                      isOutgoing
-                                        ? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-br-none ml-auto'
-                                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-                                    } ${message.is_temp ? 'opacity-90' : ''}`}
-                                  >
-                                    {/* Message Text */}
-                                    <div className="whitespace-pre-wrap break-words text-sm">
-                                      {message.message}
-                                    </div>
-                                    
-                                    {/* Message Time and Status */}
-                                    <div className="flex items-center justify-end gap-2 mt-2">
-                                      <span className={`text-xs ${isOutgoing ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        {message.formattedTime || formatMessageTime(message.created_at)}
-                                      </span>
-                                      
-                                      {isOutgoing && (
-                                        message.is_read ? (
-                                          <CheckCheck size={12} className="text-green-300" />
-                                        ) : (
-                                          <Check size={12} className="text-blue-100 opacity-60" />
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                    <h3 className="font-bold text-blue-700 mb-2">
+                      {`بداية المحادثة مع ${getChatName(selectedChat)}`}
+                    </h3>
+                    <p className="text-blue-600">
+                      ابدأ المحادثة بإرسال رسالة
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
+                      <div key={date}>
+                        {/* Date Separator */}
+                        <div className="flex justify-center my-6">
+                          <div className="bg-blue-200 text-blue-700 text-sm px-4 py-2 rounded-full font-medium">
+                            {date}
                           </div>
                         </div>
-                      ))}
+                        
+                        {/* Messages */}
+                        <div className="space-y-3">
+                          {dateMessages.map((message) => {
+                            const isCurrentUser = message.isCurrentUser;
+                            const isOutgoing = message.is_outgoing || isCurrentUser;
+                            
+                            return (
+                              <div
+                                key={message.id}
+                                className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div
+                                  style={{
+                                    backgroundColor: isOutgoing ? MESSAGE_COLORS.outgoing.bg : MESSAGE_COLORS.incoming.bg,
+                                    color: isOutgoing ? MESSAGE_COLORS.outgoing.text : MESSAGE_COLORS.incoming.text
+                                  }}
+                                  className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                                    isOutgoing
+                                      ? 'rounded-br-none ml-auto'
+                                      : 'rounded-bl-none border border-blue-200'
+                                  } ${message.is_temp ? 'opacity-90' : ''}`}
+                                >
+                                  {/* Message Text */}
+                                  <div className="whitespace-pre-wrap break-words text-sm">
+                                    {message.message}
+                                  </div>
+                                  
+                                  {/* Message Time and Status */}
+                                  <div className="flex items-center justify-end gap-2 mt-2">
+                                    <span 
+                                      style={{
+                                        color: isOutgoing ? MESSAGE_COLORS.outgoing.time : MESSAGE_COLORS.incoming.time
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      {message.formattedTime || formatMessageTime(message.created_at)}
+                                    </span>
+                                    
+                                    {isOutgoing && (
+                                      message.is_read ? (
+                                        <CheckCheck size={12} className="text-green-500" />
+                                      ) : (
+                                        <Check size={12} style={{ color: MESSAGE_COLORS.outgoing.time }} />
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
 
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </div>
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
 
-                {/* Input Area */}
-                <div className="border-t border-gray-200 bg-white p-4">
+              {/* Input Area */}
+              {isLoggedIn && (
+                <div className="border-t border-blue-200 bg-blue-50 p-4">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 relative">
                       <textarea
@@ -844,21 +1130,21 @@ const ChatModal = ({
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder="اكتب رسالة..."
-                        className="w-full p-3 pr-12 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20 resize-none min-h-[44px] max-h-[120px]"
+                        className="w-full p-3 pr-12 bg-white border border-blue-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none min-h-[44px] max-h-[120px]"
                         rows="1"
-                        disabled={sending}
+                        disabled={sending || !selectedChat}
                       />
-                      <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                      <div className="absolute bottom-2 right-3 text-xs text-blue-500">
                         {newMessage.length}/1000
                       </div>
                     </div>
 
                     <button
                       onClick={sendMessage}
-                      disabled={sending || !newMessage.trim()}
+                      disabled={sending || !newMessage.trim() || !selectedChat}
                       className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                        sending || !newMessage.trim()
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        sending || !newMessage.trim() || !selectedChat
+                          ? 'bg-blue-200 text-blue-400 cursor-not-allowed'
                           : 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white hover:shadow-lg'
                       }`}
                     >
@@ -870,42 +1156,55 @@ const ChatModal = ({
                     </button>
                   </div>
                 </div>
-              </>
-            ) : (
-              /* Empty State */
-              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white">
-                <div className="text-center max-w-md px-6">
-                  <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center border-8 border-white shadow-lg">
-                    <MessageCircle size={56} className="text-[#579BE8]" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-3">اختر محادثة</h3>
-                  <p className="text-gray-600 mb-8">
-                    اختر محادثة من القائمة على اليسار لبدء المحادثة
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => setShowNewChatForm(true)}
-                      className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition-shadow flex flex-col items-center"
-                    >
-                      <Plus size={24} className="text-blue-600 mb-2" />
-                      <h4 className="font-bold text-gray-800 text-sm">محادثة جديدة</h4>
-                      <p className="text-xs text-gray-600">ابدأ محادثة</p>
-                    </button>
-                    <button
-                      onClick={loadChats}
-                      className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 hover:shadow-md transition-shadow flex flex-col items-center"
-                    >
-                      <svg className="w-6 h-6 text-green-600 mb-2 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <h4 className="font-bold text-gray-800 text-sm">تحديث القائمة</h4>
-                      <p className="text-xs text-gray-600">تحديث المحادثات</p>
-                    </button>
-                  </div>
+              )}
+            </>
+          ) : (
+            /* Empty State */
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white">
+              <div className="text-center max-w-md px-6">
+                <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center border-8 border-white shadow-lg">
+                  <MessageCircle size={56} className="text-blue-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-800 mb-3">اختر محادثة</h3>
+                <p className="text-blue-600 mb-8">
+                  اختر محادثة من القائمة على اليمين لبدء المحادثة
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        showLoginToast();
+                        return;
+                      }
+                      setShowNewChatForm(true);
+                    }}
+                    className="p-4 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl border border-blue-200 hover:shadow-md transition-shadow flex flex-col items-center"
+                  >
+                    <Plus size={24} className="text-blue-600 mb-2" />
+                    <h4 className="font-bold text-blue-800 text-sm">محادثة جديدة</h4>
+                    <p className="text-xs text-blue-600">ابدأ محادثة</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        showLoginToast();
+                        return;
+                      }
+                      loadChats();
+                      handleChatIconClick();
+                    }}
+                    className="p-4 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl border border-blue-200 hover:shadow-md transition-shadow flex flex-col items-center"
+                  >
+                    <svg className="w-6 h-6 text-blue-600 mb-2 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <h4 className="font-bold text-blue-800 text-sm">تحديث القائمة</h4>
+                    <p className="text-xs text-blue-600">تحديث المحادثات</p>
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

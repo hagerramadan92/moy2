@@ -7,8 +7,6 @@ const isProduction = isBrowser &&
                      !window.location.hostname.includes('localhost') && 
                      !window.location.hostname.includes('127.0.0.1');
 
-console.log(`📱 Message Service: ${isProduction ? 'Production' : 'Development'} mode`);
-
 // ==================== دوال مساعدة ====================
 const getToken = () => {
   try {
@@ -19,6 +17,173 @@ const getToken = () => {
     console.error('❌ خطأ في قراءة التوكن:', e);
   }
   return null;
+};
+
+// دالة التحقق من تسجيل الدخول
+const checkAuthentication = (showToast = true, context = '') => {
+  const token = getToken();
+  const isAuthenticated = !!token;
+  
+  if (!isAuthenticated && isBrowser && showToast) {
+    // عرض toast message
+    let message = 'يجب تسجيل الدخول للوصول إلى هذه الميزة';
+    if (context === 'chats') {
+      message = 'سجل الدخول لعرض المحادثات والرسائل';
+    } else if (context === 'notifications') {
+      message = 'سجل الدخول لعرض الإشعارات';
+    } else if (context === 'messages') {
+      message = 'سجل الدخول لإرسال الرسائل';
+    }
+    showLoginToast(message, 'info');
+  }
+  
+  return isAuthenticated;
+};
+
+// دالة عرض toast message
+const showLoginToast = (message, type = 'info', options = {}) => {
+  if (!isBrowser) return;
+  
+  // تحقق إذا كان هناك toast مسبقاً من نفس النوع
+  const existingToast = document.getElementById(`global-toast-${type}`);
+  if (existingToast && !options.force) {
+    return;
+  }
+  
+  // إنشاء عنصر toast
+  const toast = document.createElement('div');
+  toast.id = `global-toast-${type}-${Date.now()}`;
+  
+  // ألوان حسب النوع
+  const colors = {
+    info: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    error: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    success: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    warning: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+    chat: 'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)'
+  };
+  
+  toast.style.cssText = `
+    position: fixed;
+    top: ${options.position === 'top' ? '20px' : '80px'};
+    right: 20px;
+    background: ${colors[type] || colors.info};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 999999;
+    max-width: 400px;
+    animation: slideInToast 0.3s ease-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  `;
+  
+  // أيقونة حسب النوع
+  const icons = {
+    info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+    error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+    success: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+    warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+    chat: 'M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z'
+  };
+  
+  toast.innerHTML = `
+    <svg style="width: 24px; height: 24px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
+      <path d="${icons[type] || icons.info}"/>
+    </svg>
+    <div style="flex: 1;">
+      <span style="font-size: 14px; line-height: 1.4;">${message}</span>
+    </div>
+    <button id="close-global-toast" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.7; padding: 4px;">
+      ✕
+    </button>
+  `;
+  
+  // أضف أنيميشن للـ CSS إذا لم تكن موجودة
+  if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = `
+      @keyframes slideInToast {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutToast {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+      #global-toast-info button:hover,
+      #global-toast-error button:hover,
+      #global-toast-success button:hover,
+      #global-toast-warning button:hover,
+      #global-toast-chat button:hover {
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // إضافة الـ toast إلى الـ body
+  document.body.appendChild(toast);
+  
+  // زر الإغلاق
+  const closeBtn = toast.querySelector('#close-global-toast');
+  closeBtn.addEventListener('click', () => {
+    removeToast(toast);
+  });
+  
+  // إزالة الـ toast تلقائياً بعد المدة المحددة
+  const duration = options.duration || 5000;
+  setTimeout(() => {
+    removeToast(toast);
+  }, duration);
+};
+
+const removeToast = (toast) => {
+  if (toast && toast.parentNode) {
+    toast.style.animation = 'slideOutToast 0.3s ease-out';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }
+};
+
+// عرض toast عند النقر على أيقونة المحادثات
+const showChatsIconToast = () => {
+  if (!isBrowser) return;
+  
+  // التحقق من تسجيل الدخول أولاً
+  if (!checkAuthentication(false)) {
+    showLoginToast('سجل الدخول لبدء محادثة جديدة وعرض رسائلك', 'chat', {
+      position: 'top',
+      duration: 6000
+    });
+  } else {
+    // إذا كان مسجل دخول، عرض رسالة ترحيبية
+    showLoginToast('مرحباً! يمكنك الآن عرض محادثاتك وبدء محادثات جديدة', 'success', {
+      position: 'top',
+      duration: 4000
+    });
+  }
 };
 
 // ==================== إنشاء Axios Instance ====================
@@ -43,7 +208,7 @@ const createAxiosInstance = () => {
     
     // تسجيل الطلب في التطوير
     if (!isProduction) {
-      console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+      console.log('📤 Request:', config.method?.toUpperCase(), config.url, config.params || '');
     }
     
     return config;
@@ -56,26 +221,39 @@ const createAxiosInstance = () => {
   instance.interceptors.response.use(
     (response) => {
       if (!isProduction) {
-        console.log(`✅ Response: ${response.status} ${response.config.url}`);
+        console.log('📥 Response:', response.status, response.config.url);
       }
       return response;
     },
     (error) => {
-      console.error('❌ Response error:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        url: error.config?.url
-      });
+      const status = error.response?.status;
+      const url = error.config?.url;
       
-      // معالجة أخطاء المصادقة
-      if (error.response?.status === 401 && isBrowser) {
-        setTimeout(() => {
-          localStorage.removeItem('accessToken');
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
-          }
-        }, 100);
+      
+      
+      // عرض toast للخطأ
+      if (isBrowser) {
+        let errorMessage = 'حدث خطأ أثناء الاتصال بالخادم';
+        
+        if (status === 401) {
+          errorMessage = 'انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى';
+          setTimeout(() => {
+            localStorage.removeItem('accessToken');
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
+          }, 100);
+        } else if (status === 403) {
+          errorMessage = 'ليس لديك صلاحية للوصول إلى هذا المورد';
+        } else if (status === 404) {
+          errorMessage = 'لم يتم العثور على المورد المطلوب';
+        } else if (status === 500) {
+          errorMessage = 'حدث خطأ في الخادم. يرجى المحاولة لاحقاً';
+        }
+        
+        if (errorMessage && !url?.includes('/login')) {
+          showLoginToast(errorMessage, 'error');
+        }
       }
       
       return Promise.reject(error);
@@ -96,6 +274,9 @@ const cacheManager = {
           ttl
         };
         localStorage.setItem(`cache_${key}`, JSON.stringify(cacheItem));
+        if (!isProduction) {
+          console.log('💾 Cache set:', key);
+        }
       }
     } catch (e) {
       console.warn('⚠️ Cache set error:', e);
@@ -117,6 +298,9 @@ const cacheManager = {
           return null;
         }
         
+        if (!isProduction) {
+          console.log('💾 Cache hit:', key);
+        }
         return cacheItem.data;
       }
     } catch (e) {
@@ -129,9 +313,30 @@ const cacheManager = {
     try {
       if (isBrowser) {
         localStorage.removeItem(`cache_${key}`);
+        if (!isProduction) {
+          console.log('🗑️ Cache cleared:', key);
+        }
       }
     } catch (e) {
       console.warn('⚠️ Cache clear error:', e);
+    }
+  },
+  
+  clearPattern: (pattern) => {
+    try {
+      if (isBrowser) {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith(`cache_${pattern}`)) {
+            localStorage.removeItem(key);
+          }
+        });
+        if (!isProduction) {
+          console.log('🗑️ Cache pattern cleared:', pattern);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Cache pattern clear error:', e);
     }
   }
 };
@@ -151,12 +356,22 @@ class MessageService {
 
   // ==================== الحصول على المحادثات ====================
   async getChats(params = {}) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'chats')) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول للوصول إلى المحادثات',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     const cacheKey = `chats_${JSON.stringify(params)}`;
     
     // محاولة الحصول من التخزين المؤقت
     const cached = cacheManager.get(cacheKey);
     if (cached) {
-      if (!isProduction) console.log('📦 Using cached chats');
       return cached;
     }
     
@@ -177,6 +392,14 @@ class MessageService {
           },
           source: 'axios'
         };
+        
+        // عرض رسالة إذا لم تكن هناك محادثات
+        if (result.data.length === 0) {
+          showLoginToast('لا توجد محادثات حالياً. ابدأ محادثة جديدة!', 'info', {
+            position: 'top',
+            duration: 4000
+          });
+        }
       } else {
         result = {
           success: false,
@@ -196,66 +419,39 @@ class MessageService {
     } catch (error) {
       console.error('❌ Error getting chats:', error.message);
       
-      // المحاولة الثانية: استخدام fetch مباشرة مع proxy في Production
-      if (isProduction || error.code === 'ERR_NETWORK') {
-        try {
-          const token = getToken();
-          const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          };
-          
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          const queryString = new URLSearchParams(params).toString();
-          const apiUrl = `https://moya.talaaljazeera.com/api/v1/chats${queryString ? `?${queryString}` : ''}`;
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-          
-          const response = await fetch(proxyUrl, {
-            method: 'GET',
-            headers: headers
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.status === "success" && data.chats) {
-            const result = {
-              success: true,
-              data: data.chats.data || [],
-              pagination: {
-                current_page: data.chats.current_page,
-                total: data.chats.total,
-                per_page: data.chats.per_page,
-                last_page: data.chats.last_page
-              },
-              source: 'cors-proxy'
-            };
-            
-            cacheManager.set(cacheKey, result);
-            return result;
-          }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy also failed:', proxyError);
-        }
+      // إرجاع بيانات من التخزين المؤقت القديم كبديل
+      const cachedData = cacheManager.get('chats_fallback');
+      if (cachedData) {
+        return {
+          ...cachedData,
+          source: 'cached-fallback',
+          fromCache: true
+        };
       }
       
       return {
         success: false,
         data: [],
         error: 'فشل تحميل المحادثات',
-        source: 'failed'
+        source: 'failed',
+        details: error.message
       };
     }
   }
 
   // ==================== الحصول على الرسائل ====================
   async getMessages(chatId, params = {}) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'messages')) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول لعرض الرسائل',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     const cacheKey = `messages_${chatId}_${JSON.stringify(params)}`;
     const cached = cacheManager.get(cacheKey);
     
@@ -285,7 +481,7 @@ class MessageService {
       }
       
       if (result.success) {
-        cacheManager.set(cacheKey, result, 60000);
+        cacheManager.set(cacheKey, result, 60000); // 1 دقيقة للتخزين المؤقت
       }
       
       return result;
@@ -293,67 +489,32 @@ class MessageService {
     } catch (error) {
       console.error(`❌ Error getting messages for chat ${chatId}:`, error.message);
       
-      // محاولة fetch مع proxy في Production
-      if (isProduction || error.code === 'ERR_NETWORK') {
-        try {
-          const token = getToken();
-          const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          };
-          
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          const queryString = new URLSearchParams(params).toString();
-          const apiUrl = `https://moya.talaaljazeera.com/api/v1/chats/${chatId}/messages${queryString ? `?${queryString}` : ''}`;
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-          
-          const response = await fetch(proxyUrl, {
-            method: 'GET',
-            headers: headers
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.status === "success") {
-            const result = {
-              success: true,
-              data: data.messages?.data || data.messages || [],
-              pagination: data.messages?.meta || {},
-              source: 'cors-proxy'
-            };
-            
-            cacheManager.set(cacheKey, result, 60000);
-            return result;
-          }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
-        }
-      }
-      
       return {
         success: false,
         data: [],
         error: 'فشل تحميل الرسائل',
-        source: 'failed'
+        source: 'failed',
+        details: error.message
       };
     }
   }
 
   // ==================== الحصول على الإشعارات ====================
   async getNotifications(params = {}) {
-    console.log('📞 getNotifications called');
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'notifications')) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول لعرض الإشعارات',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
     
     // ⛔️ ⛔️ ⛔️ تعطيل جلب الإشعارات في Production نهائياً ⛔️ ⛔️ ⛔️
     // لأن الإشعارات لها خدمة منفصلة (NotificationContext)
     if (isProduction) {
-      console.log('🚫 NOTIFICATIONS DISABLED IN PRODUCTION - Using separate NotificationContext');
       return {
         success: true,
         data: [],
@@ -397,7 +558,15 @@ class MessageService {
 
   // ==================== إرسال الرسائل ====================
   async sendMessage(chatId, messageData) {
-    console.log(`📤 sendMessage to chat ${chatId}`);
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'messages')) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول لإرسال الرسائل',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
     
     const payload = {
       message: messageData.message || messageData.text || messageData,
@@ -410,7 +579,12 @@ class MessageService {
       
       if (response.data.status === "success" && response.data.message) {
         // مسح التخزين المؤقت للرسائل
-        cacheManager.clear(`messages_${chatId}`);
+        cacheManager.clearPattern(`messages_${chatId}`);
+        
+        // عرض رسالة نجاح
+        showLoginToast('تم إرسال الرسالة بنجاح', 'success', {
+          duration: 3000
+        });
         
         return {
           success: true,
@@ -429,59 +603,27 @@ class MessageService {
     } catch (error) {
       console.error(`❌ Error sending message to chat ${chatId}:`, error.message);
       
-      // محاولة fetch مع proxy في Production
-      if (isProduction || error.code === 'ERR_NETWORK') {
-        try {
-          const token = getToken();
-          const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          };
-          
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          const apiUrl = `https://moya.talaaljazeera.com/api/v1/chats/${chatId}/send`;
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-          
-          const response = await fetch(proxyUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.status === "success" && data.message) {
-            cacheManager.clear(`messages_${chatId}`);
-            
-            return {
-              success: true,
-              message: data.message,
-              data: data,
-              source: 'cors-proxy'
-            };
-          }
-        } catch (proxyError) {
-          console.error('❌ CORS proxy failed:', proxyError);
-        }
-      }
-      
       return {
         success: false,
         error: 'فشل إرسال الرسالة. تحقق من اتصالك بالإنترنت.',
-        source: 'failed'
+        source: 'failed',
+        details: error.message
       };
     }
   }
 
-  // ==================== باقي الدوال ====================
-  async createChat(participantId, type = "user_user") {
+  // ==================== إنشاء محادثة جديدة ====================
+  async createChat(participantId, type = "user_user", participantName = '') {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'chats')) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول لإنشاء محادثة',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.post('/chats/create', {
         participant_id: participantId,
@@ -490,7 +632,16 @@ class MessageService {
       
       if (response.data.status === "success") {
         // مسح التخزين المؤقت للدردشات
-        cacheManager.clear('chats_');
+        cacheManager.clearPattern('chats_');
+        
+        // عرض رسالة نجاح مع اسم المشارك
+        const successMessage = participantName 
+          ? `تم إنشاء محادثة مع ${participantName} بنجاح`
+          : 'تم إنشاء المحادثة بنجاح';
+        
+        showLoginToast(successMessage, 'success', {
+          duration: 4000
+        });
         
         return {
           success: true,
@@ -498,25 +649,92 @@ class MessageService {
           data: response.data,
           source: 'axios'
         };
+      } else {
+        // عرض رسالة خطأ من الخادم
+        const errorMessage = response.data.message || 'فشل إنشاء المحادثة';
+        
+        // تحليل رسالة الخطأ
+        let userMessage = errorMessage;
+        if (errorMessage.includes('participant') || errorMessage.includes('not found')) {
+          userMessage = participantName 
+            ? `لم يتم العثور على المستخدم ${participantName}`
+            : 'لم يتم العثور على المستخدم المطلوب';
+        } else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+          userMessage = participantName 
+            ? `المحادثة مع ${participantName} موجودة بالفعل`
+            : 'المحادثة موجودة بالفعل';
+        }
+        
+        showLoginToast(userMessage, 'error', {
+          duration: 5000
+        });
+        
+        return {
+          success: false,
+          error: errorMessage,
+          userMessage: userMessage,
+          source: 'axios'
+        };
       }
       
-      return {
-        success: false,
-        error: response.data.message || 'فشل إنشاء المحادثة',
-        source: 'axios'
-      };
-      
     } catch (error) {
-      console.error('❌ Error creating chat:', error.message);
+      console.error('❌ Error creating chat:', error);
+      
+      // تحليل الخطأ لعرض رسالة مناسبة
+      let errorMessage = 'فشل إنشاء المحادثة';
+      let userMessage = errorMessage;
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        
+        // تحليل رسالة الخطأ المحددة
+        if (errorMessage.includes('participant') || errorMessage.includes('not found')) {
+          userMessage = participantName 
+            ? `لم يتم العثور على المستخدم ${participantName} (ID: ${participantId})`
+            : `لم يتم العثور على المستخدم بالمعرف ${participantId}`;
+        } else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+          userMessage = participantName 
+            ? `المحادثة مع ${participantName} موجودة بالفعل`
+            : 'المحادثة موجودة بالفعل';
+        } else if (errorMessage.includes('Invalid participant')) {
+          userMessage = 'معرف المستخدم غير صحيح';
+        }
+      } else if (error.response?.status === 500) {
+        userMessage = 'حدث خطأ في الخادم. يرجى المحاولة لاحقاً';
+      } else if (error.response?.status === 400) {
+        userMessage = 'بيانات غير صحيحة. يرجى التحقق من معرف المستخدم';
+      } else if (error.code === 'ERR_NETWORK') {
+        userMessage = 'فشل الاتصال بالخادم. تحقق من اتصالك بالإنترنت';
+      }
+      
+      // عرض رسالة الخطأ المناسبة للمستخدم
+      showLoginToast(userMessage, 'error', {
+        duration: 5000
+      });
+      
       return {
         success: false,
-        error: 'فشل إنشاء المحادثة',
-        source: 'failed'
+        error: errorMessage,
+        userMessage: userMessage,
+        source: 'failed',
+        details: error.message,
+        status: error.response?.status
       };
     }
   }
 
+  // ==================== تحديد الرسالة كمقروءة ====================
   async markMessageAsRead(messageId) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(false)) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.put(`/messages/${messageId}/read`);
       return {
@@ -534,7 +752,18 @@ class MessageService {
     }
   }
 
+  // ==================== الحصول على تفاصيل محادثة ====================
   async getChatDetails(chatId) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'chats')) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول لعرض تفاصيل المحادثة',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     const cacheKey = `chat_details_${chatId}`;
     const cached = cacheManager.get(cacheKey);
     
@@ -552,7 +781,7 @@ class MessageService {
           source: 'axios'
         };
         
-        cacheManager.set(cacheKey, result, 300000);
+        cacheManager.set(cacheKey, result, 300000); // 5 دقائق
         return result;
       }
       
@@ -571,16 +800,37 @@ class MessageService {
     }
   }
 
+  // ==================== البحث في المحادثات ====================
   async searchChats(query, params = {}) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'chats')) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول للبحث في المحادثات',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.get('/chats/search', {
         params: { query, ...params }
       });
       
       if (response.data.status === "success") {
+        const results = response.data.results || [];
+        
+        // عرض رسالة إذا لم توجد نتائج
+        if (results.length === 0 && query.trim()) {
+          showLoginToast(`لم يتم العثور على نتائج لـ "${query}"`, 'info', {
+            duration: 4000
+          });
+        }
+        
         return {
           success: true,
-          data: response.data.results || [],
+          data: results,
           source: 'axios'
         };
       }
@@ -602,20 +852,81 @@ class MessageService {
     }
   }
 
+  // ==================== الحصول على عدد الرسائل غير المقروءة ====================
+  async getUnreadMessagesCount() {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(false)) {
+      return {
+        success: false,
+        count: 0,
+        error: 'يجب تسجيل الدخول',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
+    try {
+      const response = await this.axiosInstance.get('/messages/unread-count');
+      
+      if (response.data.status === "success") {
+        return {
+          success: true,
+          count: response.data.count || 0,
+          source: 'axios'
+        };
+      }
+      
+      return {
+        success: false,
+        count: 0,
+        error: 'تنسيق البيانات غير صحيح',
+        source: 'axios'
+      };
+    } catch (error) {
+      console.error('❌ Error getting unread messages count:', error.message);
+      return {
+        success: false,
+        count: 0,
+        error: error.message,
+        source: 'failed'
+      };
+    }
+  }
+
+  // ==================== الحصول على آخر المحادثات النشطة ====================
+  async getActiveChats(limit = 10) {
+    return this.getChats({ limit, order_by: 'last_message_at', order: 'desc' });
+  }
+
+  // ==================== مسح التخزين المؤقت ====================
   clearCache() {
     try {
       if (isBrowser) {
         const keys = Object.keys(localStorage);
+        const deletedKeys = [];
         keys.forEach(key => {
           if (key.startsWith('cache_')) {
             localStorage.removeItem(key);
+            deletedKeys.push(key);
           }
         });
-        console.log('🧹 Message service cache cleared');
+        if (!isProduction) {
+          console.log('🗑️ Cleared cache keys:', deletedKeys.length);
+        }
       }
     } catch (e) {
       console.warn('⚠️ Error clearing cache:', e);
     }
+  }
+  
+  // دالة للتحقق من حالة تسجيل الدخول
+  checkAuthStatus() {
+    return checkAuthentication(false);
+  }
+  
+  // دالة لعرض toast عند النقر على أيقونة المحادثات
+  showChatIconToast() {
+    showChatsIconToast();
   }
 }
 

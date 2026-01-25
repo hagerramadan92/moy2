@@ -54,7 +54,6 @@ const enhancedFetch = async (url, options = {}) => {
   }
 
   try {
-    console.log(`📡 Fetching from real backend: ${url}`);
     
     // إضافة timeout للطلب (15 ثانية)
     const controller = new AbortController();
@@ -95,7 +94,6 @@ const enhancedFetch = async (url, options = {}) => {
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
-      console.log(`✅ Backend Response success for ${url}`);
       return data;
     }
     
@@ -170,7 +168,6 @@ export function NotificationProvider({ children }) {
       
       // إذا لم يكن هناك token، نوقف التحميل
       if (!authToken) {
-        console.log('🔔 No auth token - user not logged in');
         setNotifications([]);
         setUnreadCount(0);
         setError('يجب تسجيل الدخول لعرض الإشعارات');
@@ -179,7 +176,6 @@ export function NotificationProvider({ children }) {
 
       try {
         const url = createRequestURL('/notifications');
-        console.log(`🔔 Loading real notifications from backend: ${url}`);
         
         const response = await enhancedFetch(url);
         
@@ -202,7 +198,6 @@ export function NotificationProvider({ children }) {
               }
             });
             
-            console.log(`🔔 Successfully loaded ${processedNotifications.length} real notifications from backend, ${unread} unread`);
           } else {
             throw new Error('تنسيق البيانات غير صحيح من الخادم');
           }
@@ -309,7 +304,6 @@ export function NotificationProvider({ children }) {
           }
           
           setLastUpdate(new Date());
-          console.log(`🔔 Found ${trulyNewData.length} new real notifications from backend`);
         }
       } catch (apiError) {
         console.warn('⚠️ Error checking for new notifications:', apiError.message);
@@ -334,7 +328,6 @@ export function NotificationProvider({ children }) {
       checkForNewNotifications();
     }, interval);
     
-    console.log(`🔔 Auto refresh started with ${interval}ms interval`);
   }, [loadNotifications, checkForNewNotifications]);
 
   // إيقاف التحديث التلقائي
@@ -342,7 +335,6 @@ export function NotificationProvider({ children }) {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
-      console.log('🔔 Auto refresh stopped');
     }
   }, []);
 
@@ -370,7 +362,6 @@ export function NotificationProvider({ children }) {
         setNewNotifications([]);
         toastNotificationIds.current.clear();
         
-        console.log('✅ All notifications marked as read on real backend');
       } else {
         throw new Error(response?.message || 'فشل في تعليم الإشعارات كمقروءة');
       }
@@ -412,7 +403,6 @@ export function NotificationProvider({ children }) {
         );
         toastNotificationIds.current.delete(id);
         
-        console.log(`✅ Notification ${id} marked as read on real backend`);
       } else {
         throw new Error(response?.message || 'فشل في تعليم الإشعار كمقروء');
       }
@@ -450,7 +440,6 @@ export function NotificationProvider({ children }) {
         processedNotificationIds.current.delete(id);
         toastNotificationIds.current.delete(id);
         
-        console.log(`✅ Notification ${id} deleted from real backend`);
       } else {
         throw new Error(response?.message || 'فشل في حذف الإشعار');
       }
@@ -480,7 +469,6 @@ export function NotificationProvider({ children }) {
         processedNotificationIds.current.clear();
         toastNotificationIds.current.clear();
         
-        console.log('✅ All notifications cleared from real backend');
       } else {
         throw new Error(response?.message || 'فشل في مسح جميع الإشعارات');
       }
@@ -517,7 +505,6 @@ export function NotificationProvider({ children }) {
         }
         setFcmToken(token);
         
-        console.log('✅ Device registered successfully with real backend');
         return response;
       }
       throw new Error(response?.message || 'فشل في تسجيل الجهاز');
@@ -571,11 +558,9 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (authToken) {
-        console.log('🔔 Initializing real notification system with backend');
         await loadNotifications();
         startAutoRefresh(30000); // تحديث كل 30 ثانية
       } else {
-        console.log('🔔 User not logged in, notification system paused');
         setNotifications([]);
         setUnreadCount(0);
       }
@@ -589,7 +574,6 @@ export function NotificationProvider({ children }) {
     return () => {
       isMountedRef.current = false;
       stopAutoRefresh();
-      console.log('🔔 Real notification system cleanup');
     };
   }, []);
 
@@ -597,14 +581,12 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'accessToken' || e.key === null) {
-        console.log('🔔 Auth state changed, reloading notifications');
         loadNotifications();
       }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('🔔 Page became visible, checking for new notifications');
         checkForNewNotifications();
       }
     };

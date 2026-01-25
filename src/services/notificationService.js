@@ -9,33 +9,8 @@ const isProduction = isBrowser &&
 
 console.log(`🔔 Notification Service: ${isProduction ? 'Production' : 'Development'} mode`);
 
-// قائمة CORS Proxies
-const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url=',
-  'https://cors-anywhere.herokuapp.com/'
-];
-
-// API الأساسي
+// ==================== إعدادات الخدمة ====================
 const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
-
-// دالة لإنشاء URL مع CORS Proxy
-const createRequestURL = (path) => {
-  // في Development، استخدم API مباشرة
-  if (!isProduction) {
-    return `${API_BASE}${path}`;
-  }
-  
-  // في Production، استخدم CORS Proxy
-  const randomProxy = CORS_PROXIES[Math.floor(Math.random() * CORS_PROXIES.length)];
-  const apiUrl = `${API_BASE}${path}`;
-  
-  if (randomProxy.includes('allorigins.win')) {
-    return `${randomProxy}${encodeURIComponent(apiUrl)}`;
-  }
-  
-  return `${randomProxy}${apiUrl}`;
-};
 
 // الحصول على التوكن
 const getToken = () => {
@@ -49,10 +24,138 @@ const getToken = () => {
   return null;
 };
 
-// إنشاء axios instance
+// دالة التحقق من تسجيل الدخول
+const checkAuthentication = (showToast = true) => {
+  const token = getToken();
+  const isAuthenticated = !!token;
+  
+  if (!isAuthenticated && isBrowser && showToast) {
+    // عرض toast message
+    showLoginToast('يجب تسجيل الدخول لعرض الإشعارات', 'info');
+  }
+  
+  return isAuthenticated;
+};
+
+// دالة عرض toast message
+const showLoginToast = (message, type = 'info') => {
+  if (!isBrowser) return;
+  
+  // نفس دالة showLoginToast من message.service.js
+  // يمكنك دمجها في ملف منفصل لتجنب التكرار
+  const existingToast = document.getElementById('global-login-toast');
+  if (existingToast) {
+    return;
+  }
+  
+  const toast = document.createElement('div');
+  toast.id = 'global-login-toast';
+  
+  const colors = {
+    info: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    error: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    success: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    warning: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)'
+  };
+  
+  toast.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: ${colors[type] || colors.info};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 999999;
+    max-width: 350px;
+    animation: slideInToast 0.3s ease-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  `;
+  
+  const icons = {
+    info: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z',
+    error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+    success: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+    warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'
+  };
+  
+  toast.innerHTML = `
+    <svg style="width: 24px; height: 24px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
+      <path d="${icons[type] || icons.info}"/>
+    </svg>
+    <div style="flex: 1;">
+      <span style="font-size: 14px; line-height: 1.4;">${message}</span>
+    </div>
+    <button id="close-global-toast" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.7; padding: 4px;">
+      ✕
+    </button>
+  `;
+  
+  if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = `
+      @keyframes slideInToast {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutToast {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+      #global-login-toast button:hover {
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(toast);
+  
+  const closeBtn = toast.querySelector('#close-global-toast');
+  closeBtn.addEventListener('click', () => {
+    removeToast(toast);
+  });
+  
+  setTimeout(() => {
+    removeToast(toast);
+  }, 5000);
+};
+
+const removeToast = (toast) => {
+  if (toast && toast.parentNode) {
+    toast.style.animation = 'slideOutToast 0.3s ease-out';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }
+};
+
+// ==================== إنشاء Axios Instance ====================
 const createAxiosInstance = () => {
   const instance = axios.create({
-    timeout: 20000,
+    baseURL: API_BASE,
+    timeout: 15000,
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -68,19 +171,9 @@ const createAxiosInstance = () => {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // في Production، استبدل URL بـ CORS Proxy
-    if (isProduction && config.url) {
-      const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
-      
-      // إذا كان الرابط يشير إلى API الخاص بنا
-      if (fullUrl.includes(API_BASE)) {
-        const endpoint = fullUrl.replace(API_BASE, '');
-        config.url = createRequestURL(endpoint);
-        config.baseURL = undefined;
-      }
+    if (!isProduction) {
+      console.log('🔔 Request:', config.method?.toUpperCase(), config.url);
     }
-    
-    console.log(`🔔 Request: ${config.method?.toUpperCase()} ${config.url || (config.baseURL + config.url)}`);
     
     return config;
   }, (error) => {
@@ -91,19 +184,24 @@ const createAxiosInstance = () => {
   // Response Interceptor
   instance.interceptors.response.use(
     (response) => {
-      console.log(`🔔 Response: ${response.status} ${response.config.url}`);
+      if (!isProduction) {
+        console.log('🔔 Response:', response.status, response.config.url);
+      }
       return response;
     },
     (error) => {
+      const status = error.response?.status;
+      const url = error.config?.url;
+      
       console.error('🔔 Response error:', {
         message: error.message,
         code: error.code,
-        status: error.response?.status,
-        url: error.config?.url
+        status: status,
+        url: url
       });
       
       // معالجة أخطاء المصادقة
-      if (error.response?.status === 401 && isBrowser) {
+      if (status === 401 && isBrowser) {
         setTimeout(() => {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('user');
@@ -114,6 +212,21 @@ const createAxiosInstance = () => {
         }, 100);
       }
       
+      // عرض رسالة الخطأ
+      if (isBrowser && url && !url.includes('/login')) {
+        let errorMessage = 'حدث خطأ في تحميل الإشعارات';
+        
+        if (status === 500) {
+          errorMessage = 'حدث خطأ في خادم الإشعارات';
+        } else if (status === 404) {
+          errorMessage = 'لم يتم العثور على خدمة الإشعارات';
+        } else if (error.code === 'ERR_NETWORK') {
+          errorMessage = 'فشل الاتصال بخادم الإشعارات';
+        }
+        
+        showLoginToast(errorMessage, 'error');
+      }
+      
       return Promise.reject(error);
     }
   );
@@ -121,137 +234,154 @@ const createAxiosInstance = () => {
   return instance;
 };
 
-// دالة Fetch مع Retry للإشعارات
-const fetchNotificationsWithRetry = async (endpoint, options = {}, maxRetries = 2) => {
-  const token = getToken();
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    for (const proxy of CORS_PROXIES) {
-      try {
-        const apiUrl = `${API_BASE}${endpoint}`;
-        let proxyUrl;
-        
-        if (proxy.includes('allorigins.win')) {
-          proxyUrl = `${proxy}${encodeURIComponent(apiUrl)}`;
-        } else {
-          proxyUrl = `${proxy}${apiUrl}`;
-        }
-        
-        console.log(`🔔 Attempt ${attempt} with ${proxy}`);
-        
-        const headers = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...options.headers
-        };
-        
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(proxyUrl, {
-          ...options,
-          headers,
-          mode: 'cors'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log(`🔔 Success with ${proxy}`);
-        
-        return {
+// ==================== إدارة التخزين المؤقت للإشعارات ====================
+const notificationCache = {
+  set: (key, data, ttl = 60000) => { // 1 دقيقة افتراضياً
+    try {
+      if (isBrowser) {
+        const cacheItem = {
           data,
-          status: response.status,
-          proxyUsed: proxy
+          timestamp: Date.now(),
+          ttl
         };
-        
-      } catch (error) {
-        console.warn(`🔔 Failed with ${proxy} (attempt ${attempt}):`, error.message);
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        localStorage.setItem(`notification_${key}`, JSON.stringify(cacheItem));
+        if (!isProduction) {
+          console.log('🔔 Cache set:', key);
         }
       }
+    } catch (e) {
+      console.warn('🔔 Cache set error:', e);
+    }
+  },
+  
+  get: (key) => {
+    try {
+      if (isBrowser) {
+        const cached = localStorage.getItem(`notification_${key}`);
+        if (!cached) return null;
+        
+        const cacheItem = JSON.parse(cached);
+        const now = Date.now();
+        
+        if (now - cacheItem.timestamp > cacheItem.ttl) {
+          localStorage.removeItem(`notification_${key}`);
+          return null;
+        }
+        
+        if (!isProduction) {
+          console.log('🔔 Cache hit:', key);
+        }
+        return cacheItem.data;
+      }
+    } catch (e) {
+      console.warn('🔔 Cache get error:', e);
+    }
+    return null;
+  },
+  
+  clear: (key) => {
+    try {
+      if (isBrowser) {
+        localStorage.removeItem(`notification_${key}`);
+      }
+    } catch (e) {
+      console.warn('🔔 Cache clear error:', e);
     }
   }
-  
-  throw new Error(`All ${maxRetries} attempts failed`);
 };
 
 class NotificationService {
   constructor() {
     this.axiosInstance = createAxiosInstance();
+    this.pollingInterval = null;
+    this.isPolling = false;
   }
 
   // ==================== الحصول على الإشعارات ====================
   async getNotifications(params = {}) {
-    console.log('🔔 getNotifications called');
+    console.log('🔔 getNotifications called with params:', params);
     
-    // في Production، تجاهل الإشعارات غير المقروءة إذا تسببت في مشاكل
-    if (isProduction && params.read === false) {
-      console.log('🔔 Skipping unread notifications in production');
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication()) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول لعرض الإشعارات',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
+    // في Production، نعود بمصفوفة فارغة لتجنب مشاكل CORS
+    if (isProduction) {
+      console.log('🔔 Returning empty notifications in production');
       return {
         success: true,
         data: [],
-        message: 'Notifications disabled in production due to CORS'
+        message: 'Notifications are disabled in production due to CORS limitations',
+        source: 'production-disabled'
       };
+    }
+    
+    const cacheKey = `notifications_${JSON.stringify(params)}`;
+    const cached = notificationCache.get(cacheKey);
+    
+    // إرجاع البيانات المخزنة مؤقتاً إذا لم يكن هناك تحديث
+    if (cached && !params.refresh) {
+      return cached;
     }
     
     try {
       const response = await this.axiosInstance.get('/notifications', { params });
       
+      let result;
+      
       if (response.data) {
-        return {
+        const notificationsData = response.data.data || response.data.notifications || [];
+        
+        result = {
           success: true,
-          data: response.data.data || response.data.notifications || [],
-          total: response.data.total,
-          unread_count: response.data.unread_count,
+          data: Array.isArray(notificationsData) ? notificationsData : [],
+          pagination: response.data.meta || {},
+          total: response.data.total || notificationsData.length,
+          unread_count: response.data.unread_count || 0,
+          source: 'axios'
+        };
+        
+        // تخزين في الذاكرة المؤقتة
+        notificationCache.set(cacheKey, result, 30000); // 30 ثانية للتخزين المؤقت
+      } else {
+        result = {
+          success: false,
+          data: [],
+          error: 'تنسيق البيانات غير صحيح',
           source: 'axios'
         };
       }
       
-      return {
-        success: false,
-        data: [],
-        error: 'تنسيق البيانات غير صحيح',
-        source: 'axios'
-      };
+      return result;
       
     } catch (error) {
-      console.error('🔔 Axios failed for notifications:', error.message);
+      console.error('🔔 Error getting notifications:', error.message);
       
-      // المحاولة الثانية: fetch مع retry
-      if (isProduction || error.code === 'ERR_NETWORK') {
-        try {
-          const queryString = new URLSearchParams(params).toString();
-          const endpoint = queryString ? `/notifications?${queryString}` : '/notifications';
-          
-          const result = await fetchNotificationsWithRetry(endpoint, { method: 'GET' });
-          
-          if (result.data) {
-            return {
-              success: true,
-              data: result.data.data || result.data.notifications || [],
-              total: result.data.total,
-              unread_count: result.data.unread_count,
-              source: `fetch-${result.proxyUsed}`,
-              proxyUsed: result.proxyUsed
-            };
-          }
-        } catch (fetchError) {
-          console.error('🔔 Fetch retry failed:', fetchError);
-        }
+      // إرجاع بيانات مخزنة مؤقتاً كبديل
+      if (cached) {
+        return {
+          ...cached,
+          source: 'cached-fallback',
+          fromCache: true,
+          error: 'Using cached data due to connection error'
+        };
       }
       
-      // في Production، نعود بمصفوفة فارغة بدلاً من خطأ
-      if (isProduction) {
+      // في Development، نعود بمصفوفة فارغة بدلاً من خطأ
+      if (!isProduction) {
         return {
           success: true,
           data: [],
           error: 'لا يمكن تحميل الإشعارات حالياً',
-          source: 'empty-fallback'
+          source: 'empty-fallback',
+          details: error.message
         };
       }
       
@@ -259,7 +389,8 @@ class NotificationService {
         success: false,
         data: [],
         error: 'فشل تحميل الإشعارات',
-        source: 'failed'
+        source: 'failed',
+        details: error.message
       };
     }
   }
@@ -268,71 +399,68 @@ class NotificationService {
   async getUnreadCount() {
     console.log('🔔 getUnreadCount called');
     
-    // في Production، نعود بـ 0 مباشرة لتجنب مشاكل CORS
-    if (isProduction) {
-      console.log('🔔 Returning 0 for unread count in production');
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(false)) {
       return 0;
+    }
+    
+    // في Production، نعود بـ 0 مباشرة
+    if (isProduction) {
+      return 0;
+    }
+    
+    const cacheKey = 'unread_count';
+    const cached = notificationCache.get(cacheKey);
+    
+    if (cached && typeof cached === 'number') {
+      return cached;
     }
     
     try {
       const response = await this.axiosInstance.get('/notifications/unread-count');
       
-      // معالجة الـ response
-      const result = response.data;
+      let count = 0;
       
-      if (result.count !== undefined) {
-        return result.count;
+      // معالجة الـ response بطرق مختلفة
+      if (response.data) {
+        if (typeof response.data === 'number') {
+          count = response.data;
+        } else if (response.data.count !== undefined) {
+          count = response.data.count;
+        } else if (response.data.data?.count !== undefined) {
+          count = response.data.data.count;
+        } else if (response.data.unread_count !== undefined) {
+          count = response.data.unread_count;
+        }
       }
       
-      if (result.data?.count !== undefined) {
-        return result.data.count;
-      }
+      // تخزين في الذاكرة المؤقتة
+      notificationCache.set(cacheKey, count, 15000); // 15 ثانية
       
-      if (typeof result === 'number') {
-        return result;
-      }
-      
-      return 0;
+      return count;
       
     } catch (error) {
       console.error('🔔 Error getting unread count:', error.message);
       
-      // محاولة fetch retry في Development فقط
-      if (!isProduction) {
-        try {
-          const result = await fetchNotificationsWithRetry('/notifications/unread-count', { 
-            method: 'GET' 
-          }, 1); // محاولة واحدة فقط
-          
-          const data = result.data;
-          
-          if (data.count !== undefined) {
-            return data.count;
-          }
-          
-          if (data.data?.count !== undefined) {
-            return data.data.count;
-          }
-          
-          if (typeof data === 'number') {
-            return data;
-          }
-        } catch (fetchError) {
-          console.error('🔔 Fetch retry failed for unread count:', fetchError);
-        }
-      }
-      
-      return 0;
+      // إرجاع القيمة المخزنة مؤقتاً أو 0
+      return cached || 0;
     }
   }
 
-  // ==================== الإشعارات الجديدة ====================
+  // ==================== الحصول على الإشعارات الجديدة ====================
   async getNewNotifications(sinceTimestamp) {
     console.log(`🔔 getNewNotifications since ${sinceTimestamp}`);
     
-    // في Production، نتجاهل هذه الوظيفة
+    if (!checkAuthentication(false)) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول',
+        requiresLogin: true
+      };
+    }
+    
     if (isProduction) {
-      console.log('🔔 Skipping new notifications check in production');
       return {
         success: true,
         data: [],
@@ -362,12 +490,34 @@ class NotificationService {
     }
   }
 
-  // ==================== تحديد كمقروء ====================
+  // ==================== الإشعارات المهمة (Priority) ====================
+  async getPriorityNotifications() {
+    return this.getNotifications({ priority: true, limit: 5 });
+  }
+
+  // ==================== الإشعارات الأخيرة ====================
+  async getRecentNotifications(limit = 10) {
+    return this.getNotifications({ limit, order_by: 'created_at', order: 'desc' });
+  }
+
+  // ==================== تحديد الإشعار كمقروء ====================
   async markAsRead(notificationId) {
     console.log(`🔔 markAsRead ${notificationId}`);
     
+    if (!checkAuthentication(false)) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول',
+        requiresLogin: true
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.post(`/notifications/${notificationId}/read`);
+      
+      // مسح التخزين المؤقت للعدد غير المقروء
+      notificationCache.clear('unread_count');
+      notificationCache.clear('notifications_');
       
       return {
         success: true,
@@ -382,7 +532,7 @@ class NotificationService {
       if (isProduction) {
         return {
           success: true,
-          data: { message: 'Marked as read (simulated in production)' },
+          data: { message: 'Marked as read (simulated)' },
           source: 'simulated'
         };
       }
@@ -399,8 +549,20 @@ class NotificationService {
   async markAllAsRead() {
     console.log('🔔 markAllAsRead called');
     
+    if (!checkAuthentication(false)) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول',
+        requiresLogin: true
+      };
+    }
+    
     try {
       const response = await this.axiosInstance.post('/notifications/mark-all-read');
+      
+      // مسح التخزين المؤقت
+      notificationCache.clear('unread_count');
+      notificationCache.clear('notifications_');
       
       return {
         success: true,
@@ -411,11 +573,10 @@ class NotificationService {
     } catch (error) {
       console.error('🔔 Error marking all as read:', error.message);
       
-      // في Production، نعود بنجاح وهمي
       if (isProduction) {
         return {
           success: true,
-          data: { message: 'All marked as read (simulated in production)' },
+          data: { message: 'All marked as read (simulated)' },
           source: 'simulated'
         };
       }
@@ -428,105 +589,49 @@ class NotificationService {
     }
   }
 
-  // ==================== باقي الدوال (مبسطة للإنتاج) ====================
-  async registerDevice(deviceData) {
-    console.log('🔔 registerDevice called');
-    
-    // في Production، نتجاهل تسجيل الجهاز
-    if (isProduction) {
-      console.log('🔔 Skipping device registration in production');
-      return {
-        success: true,
-        message: 'Device registration disabled in production',
-        device_id: 'production-simulated-' + Date.now()
-      };
+  // ==================== بدء التحديث التلقائي ====================
+  startPolling(callback, interval = 30000) { // 30 ثانية افتراضياً
+    if (this.isPolling) {
+      console.log('🔔 Polling already started');
+      return;
     }
     
-    try {
-      const response = await this.axiosInstance.post('/notifications/register-device', deviceData);
-      return response.data;
-    } catch (error) {
-      console.error('🔔 Error registering device:', error);
+    this.isPolling = true;
+    console.log('🔔 Starting polling with interval:', interval);
+    
+    const poll = async () => {
+      if (!this.isPolling) return;
       
-      // Development fallback
-      if (!isProduction) {
-        return {
-          success: true,
-          message: 'Device registered (mock)',
-          device_id: 'mock-device-' + Date.now()
-        };
+      try {
+        const unreadCount = await this.getUnreadCount();
+        const notifications = await this.getRecentNotifications(5);
+        
+        if (callback && typeof callback === 'function') {
+          callback({
+            unreadCount,
+            notifications: notifications.success ? notifications.data : []
+          });
+        }
+      } catch (error) {
+        console.error('🔔 Polling error:', error);
       }
       
-      throw error;
-    }
-  }
-
-  async updateDevice(deviceId, data) {
-    // في Production، نتجاهل
-    if (isProduction) return { success: true };
+      if (this.isPolling) {
+        this.pollingInterval = setTimeout(poll, interval);
+      }
+    };
     
-    try {
-      const response = await this.axiosInstance.put(`/notifications/devices/${deviceId}`, data);
-      return response.data;
-    } catch (error) {
-      console.error(`🔔 Error updating device:`, error);
-      throw error;
-    }
+    // بدء التحديث الفوري
+    poll();
   }
 
-  async deactivateDevice(deviceId) {
-    // في Production، نتجاهل
-    if (isProduction) return { success: true };
-    
-    try {
-      const response = await this.axiosInstance.delete(`/notifications/devices/${deviceId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`🔔 Error deactivating device:`, error);
-      throw error;
-    }
-  }
-
-  async getRegisteredDevices() {
-    // في Production، نعود بمصفوفة فارغة
-    if (isProduction) {
-      return {
-        success: true,
-        data: []
-      };
-    }
-    
-    try {
-      const response = await this.axiosInstance.get('/notifications/devices');
-      return response.data;
-    } catch (error) {
-      console.error('🔔 Error getting devices:', error);
-      
-      // Development fallback
-      return {
-        success: true,
-        data: []
-      };
-    }
-  }
-
-  async deleteNotification(notificationId) {
-    try {
-      const response = await this.axiosInstance.delete(`/notifications/${notificationId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`🔔 Error deleting notification:`, error);
-      throw error;
-    }
-  }
-
-  async deleteAllNotifications() {
-    try {
-      const response = await this.axiosInstance.delete('/notifications/clear-all');
-      return response.data;
-    } catch (error) {
-      console.error('🔔 Error deleting all notifications:', error);
-      throw error;
+  // ==================== إيقاف التحديث التلقائي ====================
+  stopPolling() {
+    this.isPolling = false;
+    if (this.pollingInterval) {
+      clearTimeout(this.pollingInterval);
+      this.pollingInterval = null;
+      console.log('🔔 Polling stopped');
     }
   }
 
@@ -535,28 +640,14 @@ class NotificationService {
     console.log('🔔 Testing connection...');
     
     try {
-      // في Production، اختبر مع proxy
-      if (isProduction) {
-        const result = await fetchNotificationsWithRetry('/notifications/unread-count', { 
-          method: 'GET' 
-        }, 1);
-        
-        return {
-          success: true,
-          status: 'connected via proxy',
-          proxyUsed: result.proxyUsed,
-          environment: 'production'
-        };
-      }
-      
-      // في Development، اختبر مباشرة
-      const response = await this.axiosInstance.get('/notifications/unread-count');
+      // محاولة جلب عدد الإشعارات غير المقروءة كاختبار
+      const count = await this.getUnreadCount();
       
       return {
         success: true,
         status: 'connected',
-        data: response.data,
-        environment: 'development'
+        unreadCount: count,
+        environment: isProduction ? 'production' : 'development'
       };
       
     } catch (error) {
@@ -571,62 +662,21 @@ class NotificationService {
     }
   }
 
-  // ==================== تهيئة الخدمة ====================
-  async initialize() {
-    if (!isBrowser) return;
-    
-    console.log('🔔 Initializing notification service...');
-    
-    // في Production، لا نحتاج تهيئة حقيقية
-    if (isProduction) {
-      console.log('🔔 Notification service initialized for production (simplified)');
-      return {
-        success: true,
-        message: 'Notification service ready for production'
-      };
-    }
-    
-    // في Development، تهيئة عادية
+  // ==================== مسح التخزين المؤقت ====================
+  clearCache() {
     try {
-      const deviceId = localStorage.getItem('notification_device_id');
-      
-      if (!deviceId) {
-        const deviceData = {
-          device_type: 'web',
-          device_token: 'web-browser-' + Date.now(),
-          device_info: {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language
+      if (isBrowser) {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('notification_')) {
+            localStorage.removeItem(key);
           }
-        };
-        
-        const registration = await this.registerDevice(deviceData);
-        if (registration.success && registration.device_id) {
-          localStorage.setItem('notification_device_id', registration.device_id);
-        }
+        });
+        console.log('🔔 Notification cache cleared');
       }
-      
-      return {
-        success: true,
-        deviceId: deviceId || 'none',
-        message: 'Notification service initialized'
-      };
-      
-    } catch (error) {
-      console.error('🔔 Error initializing:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+    } catch (e) {
+      console.warn('🔔 Error clearing notification cache:', e);
     }
-  }
-
-  // ==================== وظيفة مساعدة: تعطيل التحديث التلقائي ====================
-  disableAutoRefresh() {
-    console.log('🔔 Auto refresh disabled for notifications');
-    // هذه الدالة يمكن استدعاؤها من FloatingChatIcon لتعطيل التحديث التلقائي
-    return true;
   }
 }
 
