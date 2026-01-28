@@ -1,304 +1,190 @@
-// components/ui/DriverCard.jsx
 'use client';
+import { useState } from 'react';
+import { Clock, Star, Truck, Phone, Package, User, CheckCircle } from 'lucide-react';
 
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { Clock, Star, CheckCircle2, Package } from 'lucide-react';
-
-// Constants
-const IMAGE_PATHS = {
-  driver: "/image%204.png",
-  fileIcon: "/Vector (6).png",  
-  starIcon: "/Vector (3).png",
-  timeIcon: "/time.png",
-  ratingStar: "/Vector (4).png",
-  ordersIcon: "/images/RS2.png",
-  acceptIcon: "/Vector (5).png"
-};
-
-// Helper Functions
-const getImagePath = (path) => {
-  if (path && path.includes(' ')) {
-    return encodeURI(path);
-  }
-  return path;
-};
-
-// Main Component
-const DriverCard = ({
-  name,
-  driverName,
-  driverImage = IMAGE_PATHS.driver,
-  deliveryTime = "55 د",
-  rating = "4.5",
-  successfulOrders = "(1,439) طلب ناجح",
-  ordersCount = "238",
+export default function DriverCard({
   id,
   driverId,
+  name,
+  deliveryTime,
+  price,
+  rating,
+  successfulOrders,
+  ordersCount,
+  status,
   onAcceptOrder,
-  onViewOrders
-}) => {
-  // Support both 'name' and 'driverName' props for compatibility
-  const displayName = name || driverName || "سعود بن ناصر المطيري";
-  const currentDriverId = id || driverId;
-  const router = useRouter();
-  
-  const handleViewOrders = () => onViewOrders?.(currentDriverId);
-  const handleAcceptOrder = () => onAcceptOrder?.(currentDriverId);
-  
-  const handleFileIconClick = () => {
-    if (currentDriverId) {
-      router.push(`/driver-rating?id=${currentDriverId}`);
-    } else {
-      router.push('/driver-rating');
+  isPending = true,
+  offerId,
+  createdAt,
+  vehicleType,
+  phone,
+  index
+}) {
+  const [accepting, setAccepting] = useState(false);
+
+  const handleAccept = async () => {
+    if (!isPending || accepting) return;
+    
+    setAccepting(true);
+    try {
+      await onAcceptOrder();
+    } finally {
+      setAccepting(false);
     }
   };
 
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return 'الآن';
+    const now = new Date();
+    const created = new Date(dateString);
+    const diffMs = now - created;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `قبل ${diffMins} دقيقة`;
+    if (diffMins < 1440) return `قبل ${Math.floor(diffMins / 60)} ساعة`;
+    return `قبل ${Math.floor(diffMins / 1440)} يوم`;
+  };
+
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return 'غير متوفر';
+    return phone.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
+  };
+
   return (
-    <div className="
-      group
-      w-full
-      min-w-[180px]
-      md:min-w-[250px]
-      bg-white
-      rounded-2xl
-      border-2
-      border-[#579BE8]/20
-      shadow-lg
-      shadow-[#579BE8]/5
-      hover:shadow-2xl
-      hover:shadow-[#579BE8]/20
-      hover:border-[#579BE8]/40
-      transition-all
-      duration-300
-      overflow-hidden
-      relative
-    ">
-      {/* Top Section with File Icon */}
-      <div className="relative pt-4 px-4 pb-2">
-        <div className="flex items-start justify-between">
-            {/* Status Badge */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-full border border-green-200">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-medium text-green-700">متاح</span>
-          </div>
-          {/* File Icon */}
-          <button
-            onClick={handleFileIconClick}
-            className="flex flex-col items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity duration-200 active:scale-95"
-            aria-label="عرض تفاصيل السائق"
-          >
-            <div className="relative w-6 h-6">
-              <Image
-                src={getImagePath(IMAGE_PATHS.fileIcon)}
-                alt="File icon"
-                fill
-                className="object-contain"
-              />
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 border-b border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+              <User className="w-6 h-6 text-white" />
             </div>
-            <span className="font-cairo font-medium text-[10px] text-gray-500">
-              الملف
-            </span>
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">{name}</h3>
+              <p className="text-sm text-gray-600">رقم السائق: #{driverId}</p>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            isPending 
+              ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
+              : 'bg-green-100 text-green-800 border border-green-200'
+          }`}>
+            {isPending ? 'في انتظار الرد' : 'تم القبول'}
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-4 h-4 ${star <= Math.round(parseFloat(rating)) ? 'text-yellow-500 fill-current' : 'text-gray-300'}`}
+                />
+              ))}
+            </div>
+            <span className="font-bold text-gray-900 mr-1">{rating}</span>
+            <span className="text-xs text-gray-500">({successfulOrders} تقييم)</span>
+          </div>
+          
+          <div className="text-xs text-gray-500">
+            العرض #{offerId} • {getTimeAgo(createdAt)}
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="p-5">
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span className="text-xs text-gray-500">الوقت المتوقع</span>
+            </div>
+            <p className="font-bold text-gray-900">{deliveryTime}</p>
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-2 mb-1">
+              <Truck className="w-4 h-4 text-green-600" />
+              <span className="text-xs text-gray-500">نوع المركبة</span>
+            </div>
+            <p className="font-bold text-gray-900">{vehicleType}</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="w-4 h-4 text-purple-600" />
+              <span className="text-xs text-gray-500">الطلبات المكتملة</span>
+            </div>
+            <p className="font-bold text-gray-900">{ordersCount}</p>
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div className="flex items-center gap-2 mb-1">
+              <Phone className="w-4 h-4 text-amber-600" />
+              <span className="text-xs text-gray-500">رقم الهاتف</span>
+            </div>
+            <p className="font-bold text-gray-900">{formatPhoneNumber(phone)}</p>
+          </div>
+        </div>
+
+        {/* Price Section */}
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200 mb-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">سعر التوصيل</p>
+              <p className="font-bold text-gray-900 text-2xl">{price} ر.س</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 mb-1">ترتيب العرض</p>
+              <div className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold">
+                {index + 1}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div>
+          <button
+            onClick={handleAccept}
+            disabled={!isPending || accepting}
+            className={`w-full py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+              isPending 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {accepting ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>جاري القبول...</span>
+              </>
+            ) : isPending ? (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>قبول هذا العرض</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>تم قبول العرض</span>
+              </>
+            )}
           </button>
           
-        
+          {isPending && (
+            <p className="text-xs text-gray-400 text-center mt-3">
+              سيتم إلغاء العروض الأخرى تلقائياً عند قبول هذا العرض
+            </p>
+          )}
         </div>
       </div>
-
-      {/* Driver Image Section */}
-      <div className="flex justify-center -mt-2 mb-2">
-        <div className="relative">
-          {/* Image Container with Border */}
-          <div className="relative w-24 h-24 rounded-2xl overflow-hidden ring-3 ring-[#579BE8]/10 group-hover:ring-[#579BE8]/20 transition-all duration-300">
-            <Image
-              src={getImagePath(driverImage)}
-              alt={`${displayName} photo`}
-              fill
-              className="object-cover group-hover:scale-110 transition-transform duration-300"
-              sizes="96px"
-            />
-          </div>
-          {/* Verified Badge */}
-          <div className="absolute -bottom-0.5 -right-0.5 bg-gradient-to-br from-[#579BE8] to-[#124987] rounded-full p-1 shadow-lg">
-            <CheckCircle2 size={12} className="text-white" />
-          </div>
-        </div>
-      </div>
-
-      {/* Driver Name Section */}
-      <div className="px-4 mb-3">
-        <div className="flex items-center justify-center gap-1.5">
-          <h3 className="font-cairo font-bold text-base text-gray-900 text-center">
-            {displayName}
-          </h3>
-          <div className="relative w-4 h-4 flex-shrink-0">
-            <Image
-              src={getImagePath(IMAGE_PATHS.starIcon)}
-              alt="Star icon"
-              fill
-              className="object-contain"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Info Stats Section */}
-      <div className="px-4 mb-3">
-        <div className="flex items-center justify-between gap-2 bg-gray-50/50 rounded-xl p-2 border border-gray-100">
-          {/* Delivery Time */}
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <div className="relative w-3.5 h-3.5 flex-shrink-0">
-              <Image
-                src={getImagePath(IMAGE_PATHS.timeIcon)}
-                alt="Delivery time"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-cairo font-bold text-xs text-gray-900 leading-tight">
-                {deliveryTime}
-              </span>
-              <span className="font-cairo font-normal text-[9px] text-gray-500 leading-tight">
-                دقيقة
-              </span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="w-px h-8 bg-gray-200" />
-
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <div className="relative w-3.5 h-3.5 flex-shrink-0">
-              <Image
-                src={getImagePath(IMAGE_PATHS.ratingStar)}
-                alt="Rating"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-cairo font-bold text-xs text-gray-900 leading-tight">
-                {rating}
-              </span>
-              <span className="font-cairo font-normal text-[9px] text-gray-500 leading-tight">
-                تقييم
-              </span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="w-px h-8 bg-gray-200" />
-
-          {/* Successful Orders */}
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <Package size={14} className="text-gray-700 flex-shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="font-cairo font-bold text-xs text-gray-900 leading-tight truncate">
-                {successfulOrders.split(' ')[0]}
-              </span>
-              <span className="font-cairo font-normal text-[9px] text-gray-500 leading-tight">
-                طلب
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons Section */}
-      <div className="px-4 pb-4 space-y-2">
-        {/* Orders Count Button */}
-        <button
-          onClick={handleViewOrders}
-          className="
-            w-full
-            h-10
-            rounded-xl
-            bg-gradient-to-r
-            from-[#579BE8]/10
-            to-[#579BE8]/5
-            border
-            border-[#579BE8]/20
-            flex
-            items-center
-            justify-center
-            gap-1.5
-            hover:from-[#579BE8]/20
-            hover:to-[#579BE8]/10
-            hover:border-[#579BE8]/30
-            hover:shadow-md
-            transition-all
-            duration-200
-            group/btn
-          "
-        >
-          <span className="font-cairo font-bold text-sm text-[#579BE8]">
-            {ordersCount}
-          </span>
-          <div className="relative w-4 h-4">
-            <Image
-              src={getImagePath(IMAGE_PATHS.ordersIcon)}
-              alt="Orders"
-              fill
-              className="object-contain group-hover/btn:scale-110 transition-transform"
-            />
-          </div>
-          <span className="font-cairo font-medium text-xs text-[#4a8dd8]">
-            طلب
-          </span>
-        </button>
-
-        {/* Accept Button */}
-        <button
-          onClick={handleAcceptOrder}
-          className="
-            w-full
-            h-11
-            rounded-xl
-            bg-gradient-to-r
-            from-[#579BE8]
-            via-[#4a8dd8]
-            to-[#124987]
-            hover:from-[#4a8dd8]
-            hover:via-[#3d7bc7]
-            hover:to-[#0f3d6f]
-            shadow-lg
-            shadow-[#579BE8]/30
-            hover:shadow-xl
-            hover:shadow-[#579BE8]/40
-            flex
-            items-center
-            justify-center
-            gap-2
-            transition-all
-            duration-200
-            group/accept
-            relative
-            overflow-hidden
-          "
-        >
-          {/* Shine Effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/accept:translate-x-full transition-transform duration-1000" />
-          
-          <div className="relative w-4 h-4 z-10">
-            <Image
-              src={getImagePath(IMAGE_PATHS.acceptIcon)}
-              alt="Accept"
-              fill
-              className="object-contain brightness-0 invert"
-            />
-          </div>
-          <span className="font-cairo font-bold text-sm text-white z-10">
-            قبول الطلب
-          </span>
-        </button>
-      </div>
-
-      {/* Hover Glow Effect */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#579BE8]/0 via-[#4a8dd8]/0 to-[#124987]/0 group-hover:from-[#579BE8]/5 group-hover:via-[#4a8dd8]/3 group-hover:to-[#124987]/5 pointer-events-none transition-all duration-300 -z-10" />
     </div>
   );
-};
-
-export default DriverCard;
+}

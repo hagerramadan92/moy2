@@ -1,12 +1,11 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-import { FaDownload, FaPrint, FaStar, FaPhoneAlt, FaCommentDots, FaRegStar, FaInfoCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaDownload, FaPrint, FaStar, FaPhoneAlt, FaCommentDots, FaRegStar, FaInfoCircle, FaExclamationTriangle, FaSyncAlt, FaTimes } from "react-icons/fa";
 import { 
     BiArrowBack, 
     BiCalendar, 
@@ -27,96 +26,211 @@ import {
     BiRefresh
 } from "react-icons/bi";
 
+// API base URL
+const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+
 export default function OrderDetailsPage() {
     const params = useParams();
+    const router = useRouter();
     const orderId = params.id;
 
-    // States for Rating Modal
+    // States
+    const [orderData, setOrderData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [authError, setAuthError] = useState(false);
     const [showRatingModal, setShowRatingModal] = useState(false);
     const [userRating, setUserRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-    // Enhanced State Logic
-    const isProcessing = orderId?.includes("002");
-    const isPending = orderId?.includes("003");
-    const isCancelled = orderId?.includes("004");
-    const isCompleted = !isProcessing && !isPending && !isCancelled;
+    // دالة للحصول على التوكن
+    const getToken = () => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('accessToken')
+        }
+        return null;
+    };
 
-    const currentStatus = isProcessing ? "processing" : isPending ? "pending" : isCancelled ? "cancelled" : "completed";
+    // Fetch order details from API
+    useEffect(() => {
+        const fetchOrderDetails = async () => {
+            const token = getToken();
+            if (!token) {
+                setAuthError(true);
+                setError("يجب تسجيل الدخول للوصول إلى هذه الصفحة");
+                setLoading(false);
+                return;
+            }
 
-    const orderData = {
-        id: `#WTR-${orderId || "782"}`,
-        status: currentStatus,
-        date: "28 ديسمبر 2023",
-        time: "11:45 صباحاً",
-        waterType: "مياه تحلية نقية",
-        size: "19 طن (وايت كبير)",
-        quantity: "1 وايت كامل",
-        cancellationReason: isCancelled ? "تم الإلغاء بناءً على طلب العميل - لم يتم العثور على سائق متوفر في الوقت المناسب" : null,
-        customer: {
-            name: "سعود بن ناصر",
-            phone: "+966 50 987 6543",
-            email: "s.nasser@example.com",
-            address: "حي الملقا، طريق أنس بن مالك، الرياض"
-        },
-        driver: (isPending || isCancelled) ? null : {
-            name: "أحمد الرشيدي",
-            image: "/images/driver.png",
-            rating: 4.9,
-            deliveries: 1240,
-            experience: "3 سنوات",
-            isVerified: true,
-            phone: "+966 55 000 1111",
-            vehicle: "وايت مرسيدس - لوحة (أ ب ج 1234)",
-            deliveryTime: isProcessing ? "متوقع خلال 15 دقيقة" : "11:45 صباحاً",
-            currentLocation: "طريق الملك فهد، الرياض"
-        },
-        payment: {
-            method: "بطاقة فيزا (**** 5521)",
-            status: isCancelled ? "مسترجع" : "مدفوع",
-            transactionId: "TXN-1029384"
-        },
-        items: [
-            { id: 1, name: "وايت مياه تحلية", category: "مياه صالحة للاستخدام", quantity: "19 طن", price: 350.00 },
-        ],
-        summary: {
-            subtotal: 350.00,
-            shipping: 0.00,
-            tax: 52.50,
-            total: 402.50
-        },
-        timeline: [
-            { status: "تم استلام الطلب", completed: true, time: "11:00 AM" },
-            { 
-                status: isCancelled ? "تم إلغاء الطلب" : (isPending ? "انتظار تأكيد السائق" : "تجهيز الوايت"), 
-                current: isPending || isCancelled, 
-                completed: !isPending && !isCancelled, 
-                time: isPending ? "الآن" : (isCancelled ? "11:05 AM" : "11:15 AM"),
-                error: isCancelled 
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401 || data.error_code === "UNAUTHENTICATED") {
+                        setAuthError(true);
+                        throw new Error("انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى");
+                    }
+                    throw new Error(data.message || `فشل في جلب البيانات: ${response.status}`);
+                }
+
+                if (data.status === true) {
+                    setOrderData(data.data);
+                } else {
+                    throw new Error(data.message || "حدث خطأ في جلب البيانات");
+                }
+            } catch (err) {
+                console.error("Error fetching order details:", err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (orderId) {
+            fetchOrderDetails();
+        }
+    }, [orderId]);
+
+    // Handle refresh
+    const handleRefresh = () => {
+        setLoading(true);
+        const token = getToken();
+        
+        fetch(`${API_BASE_URL}/orders/${orderId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
-            { status: "جاري التوصيل", current: isProcessing, completed: isCompleted, time: isProcessing ? "الآن" : (isCompleted ? "11:30 AM" : "-"), hidden: isCancelled },
-            { status: "تم التسليم", completed: isCompleted, time: isCompleted ? "11:45 AM" : "-", hidden: isCancelled },
-        ]
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === true) {
+                setOrderData(data.data);
+                setError(null);
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(err => {
+            setError(err.message);
+        })
+        .finally(() => {
+            setLoading(false);
+        });
     };
 
-    const statusStyles = {
-        completed: "bg-gradient-to-r from-sky-500/10 to-blue-600/10 text-[#579BE8] dark:from-sky-500/10 dark:to-blue-600/10 dark:text-[#579BE8]",
-        processing: "bg-[#579BE8]/10 text-[#579BE8] dark:bg-[#579BE8]/10 dark:text-[#579BE8]",
-        pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 font-bold animate-pulse",
-        cancelled: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+    // Handle login redirect
+    const handleLoginRedirect = () => {
+        // router.push('/login');
     };
 
-    const statusText = {
-        completed: "مكتمل التسليم",
-        processing: "جاري التوصيل الآن",
-        pending: "انتظار التأكيد",
-        cancelled: "ملغي",
+    // Format date
+    const formatDate = (dateString) => {
+        if (!dateString) return "غير محدد";
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
+    // Format time
+    const formatTime = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('ar-SA', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Format order date
+    const formatOrderDateTime = (dateString) => {
+        if (!dateString) return "غير محدد";
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Get status style
+    const getStatusStyle = (statusName) => {
+        switch (statusName) {
+            case 'completed':
+                return "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400";
+            case 'in_progress':
+                return "bg-[#579BE8]/10 text-[#579BE8] dark:bg-[#579BE8]/10 dark:text-[#579BE8]";
+            case 'pendding':
+                return "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 font-bold animate-pulse";
+            case 'cancelled':
+                return "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400";
+            case 'confirmed':
+                return "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400";
+            case 'assigned':
+                return "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400";
+            default:
+                return "bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400";
+        }
+    };
+
+    // Get status label
+    const getStatusLabel = (statusName) => {
+        const statusMap = {
+            'pendding': 'معلق',
+            'confirmed': 'مؤكد',
+            'assigned': 'معين للسائق',
+            'in_progress': 'قيد التنفيذ',
+            'completed': 'مكتمل',
+            'cancelled': 'ملغي'
+        };
+        return statusMap[statusName] || statusName;
+    };
+
+    // Get status text
+    const getStatusText = (statusName) => {
+        const statusMap = {
+            'pendding': 'انتظار التأكيد',
+            'confirmed': 'تم التأكيد',
+            'assigned': 'معين للسائق',
+            'in_progress': 'جاري التوصيل الآن',
+            'completed': 'مكتمل التسليم',
+            'cancelled': 'ملغي'
+        };
+        return statusMap[statusName] || statusName;
+    };
+
+    // Determine if order is in progress
+    const isProcessing = orderData?.status?.name === 'in_progress' || orderData?.status?.name === 'assigned';
+    const isPending = orderData?.status?.name === 'pendding';
+    const isCancelled = orderData?.status?.name === 'cancelled';
+    const isCompleted = orderData?.status?.name === 'completed';
+    const isConfirmed = orderData?.status?.name === 'confirmed';
+
+    // Handle rating submit
     const handleRatingSubmit = () => {
         setIsSubmittingRating(true);
+        // هنا يمكنك إضافة API call لتسجيل التقييم
         setTimeout(() => {
             setIsSubmittingRating(false);
             setShowRatingModal(false);
@@ -125,6 +239,137 @@ export default function OrderDetailsPage() {
             setUserRating(0);
         }, 1500);
     };
+
+    // Generate timeline based on order status
+    const generateTimeline = () => {
+        const timeline = [
+            { 
+                status: "تم استلام الطلب", 
+                completed: true, 
+                time: formatTime(orderData?.created_at) || "غير محدد"
+            },
+            { 
+                status: isCancelled ? "تم إلغاء الطلب" : (isPending ? "انتظار تأكيد السائق" : "تم تأكيد الطلب"), 
+                current: isPending, 
+                completed: !isPending && !isCancelled, 
+                time: isPending ? "الآن" : (isCancelled ? formatTime(orderData?.updated_at) || "غير محدد" : formatTime(orderData?.updated_at) || "غير محدد"),
+                error: isCancelled 
+            }
+        ];
+
+        if (!isCancelled && !isPending) {
+            timeline.push({ 
+                status: isProcessing ? "جاري التوصيل" : "تجهيز التوصيل", 
+                current: isProcessing, 
+                completed: isCompleted, 
+                time: isProcessing ? "الآن" : (isCompleted ? formatTime(orderData?.updated_at) || "غير محدد" : "-")
+            });
+        }
+
+        if (isCompleted) {
+            timeline.push({ 
+                status: "تم التسليم", 
+                completed: true, 
+                time: formatTime(orderData?.updated_at) || "غير محدد" 
+            });
+        }
+
+        return timeline;
+    };
+
+    // Calculate order summary
+    const calculateSummary = () => {
+        if (!orderData) return null;
+
+        const subtotal = orderData.price || 0;
+        const tax = subtotal * 0.15; // 15% ضريبة
+        const shipping = 0; // مجاني حالياً
+        const total = subtotal + tax + shipping;
+
+        return {
+            subtotal: subtotal.toFixed(2),
+            shipping: shipping.toFixed(2),
+            tax: tax.toFixed(2),
+            total: total.toFixed(2)
+        };
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#579BE8]"></div>
+                <p className="text-muted-foreground">جاري تحميل تفاصيل الطلب...</p>
+            </div>
+        );
+    }
+
+    if (authError) {
+        return (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+                <div className="text-red-500 mb-4">
+                    <FaTimes className="w-12 h-12 mx-auto" />
+                </div>
+                <p className="text-red-600 font-bold mb-2">يجب تسجيل الدخول</p>
+                <p className="text-muted-foreground mb-4">
+                    {error || "يجب تسجيل الدخول للوصول إلى هذه الصفحة"}
+                </p>
+                <button 
+                    onClick={handleLoginRedirect}
+                    className="px-6 py-3 bg-[#579BE8] text-white rounded-xl hover:bg-[#315782] transition-colors font-bold"
+                >
+                    تسجيل الدخول
+                </button>
+            </div>
+        );
+    }
+
+    if (error && !authError) {
+        return (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+                <div className="text-red-500 mb-4">
+                    <FaTimes className="w-12 h-12 mx-auto" />
+                </div>
+                <p className="text-red-600 font-bold mb-2">حدث خطأ في جلب البيانات</p>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <div className="flex gap-3 justify-center">
+                    <button 
+                        onClick={handleRefresh}
+                        className="px-4 py-2 bg-[#579BE8] text-white rounded-xl hover:bg-[#315782] transition-colors"
+                    >
+                        حاول مرة أخرى
+                    </button>
+                    <Link 
+                        href="/myProfile/orders"
+                        className="px-4 py-2 bg-white dark:bg-card border border-border rounded-xl hover:bg-secondary transition-colors"
+                    >
+                        العودة للطلبات
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (!orderData) {
+        return (
+            <div className="text-center p-10">
+                <div className="text-muted-foreground mb-4">
+                    <BiError className="w-12 h-12 mx-auto" />
+                </div>
+                <p className="text-lg font-bold mb-2">الطلب غير موجود</p>
+                <p className="text-muted-foreground mb-4">تعذر العثور على تفاصيل الطلب</p>
+                <Link 
+                    href="/myProfile/orders"
+                    className="px-4 py-2 bg-[#579BE8] text-white rounded-xl hover:bg-[#315782] transition-colors inline-block"
+                >
+                    العودة للطلبات
+                </Link>
+            </div>
+        );
+    }
+
+    const summary = calculateSummary();
+    const timeline = generateTimeline();
+    const currentStatus = orderData.status?.name || 'pendding';
 
     return (
         <>
@@ -168,7 +413,7 @@ export default function OrderDetailsPage() {
             )}
 
             <div className="space-y-8 pb-10">
-                {/* Header Section - Enhanced */}
+                {/* Header Section */}
                 <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                         <div className="flex items-start gap-4">
@@ -177,52 +422,60 @@ export default function OrderDetailsPage() {
                             </Link>
                             <div className="flex-1">
                                 <div className="flex flex-wrap items-center gap-3 mb-3">
-                                    <h1 className="text-2xl md:text-3xl font-black tracking-tight">{orderData.id}</h1>
-                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${statusStyles[orderData.status]}`}>
-                                        {statusText[orderData.status]}
+                                    <h1 className="text-2xl md:text-3xl font-black tracking-tight">#{orderData.id}</h1>
+                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${getStatusStyle(currentStatus)}`}>
+                                        {getStatusText(currentStatus)}
                                     </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-2">
                                         <BiCalendar className="w-4 h-4" />
-                                        <span>{orderData.date}</span>
+                                        <span>{formatDate(orderData.created_at)}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <BiTimeFive className="w-4 h-4" />
-                                        <span>{orderData.time}</span>
+                                        <span>{formatTime(orderData.created_at)}</span>
                                     </div>
                                 </div>
                             </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    {isCompleted && (
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button 
+                                onClick={handleRefresh}
+                                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm"
+                            >
+                                <FaSyncAlt className="w-4 h-4 text-muted-foreground" />
+                                <span>تحديث</span>
+                            </button>
+                            
+                            {isCompleted && (
                                 <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95 whitespace-nowrap" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
-                            <BiRefresh className="w-5 h-5" />
-                            <span>طلب مرة أخرى</span>
-                        </button>
-                    )}
+                                    <BiRefresh className="w-5 h-5" />
+                                    <span>طلب مرة أخرى</span>
+                                </button>
+                            )}
                             <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                 <FaDownload className="w-4 h-4 text-muted-foreground" />
-                        <span className="hidden sm:inline">تحميل الفاتورة</span>
-                        <span className="sm:hidden">الفاتورة</span>
-                    </button>
-                    {!isCancelled && (
+                                <span className="hidden sm:inline">تحميل الفاتورة</span>
+                                <span className="sm:hidden">الفاتورة</span>
+                            </button>
+                            {!isCancelled && (
                                 <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                     <FaPrint className="w-4 h-4 text-muted-foreground" />
                                     <span>طباعة</span>
-                        </button>
-                    )}
+                                </button>
+                            )}
                         </div>
+                    </div>
                 </div>
-            </div>
 
-                {/* Main Content Grid - Professional Layout */}
+                {/* Main Content Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                     {/* Left Column - Main Content */}
                     <div className="xl:col-span-8 space-y-6">
                         {/* Status Card */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm overflow-hidden">
-                    {isProcessing && (
+                            {isProcessing && (
                                 <div className="relative bg-gradient-to-br from-blue-50 to-white dark:from-blue-500/5 dark:to-card p-8 md:p-12">
                                     <div className="flex flex-col md:flex-row items-center gap-6">
                                         <div className="relative">
@@ -236,7 +489,7 @@ export default function OrderDetailsPage() {
                                             <p className="text-muted-foreground mb-4">متوقع الوصول خلال 15 دقيقة</p>
                                             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-card/70 rounded-xl backdrop-blur-sm border border-border/50">
                                                 <BiMapPin className="w-4 h-4 text-[#579BE8]" />
-                                                <span className="text-sm font-bold">{orderData.driver?.currentLocation}</span>
+                                                <span className="text-sm font-bold">{orderData.location?.address || "جاري تحديث الموقع"}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -272,9 +525,9 @@ export default function OrderDetailsPage() {
                                         </div>
                                         <h3 className="text-2xl font-black text-red-600 mb-4">تم إلغاء الطلب</h3>
                                         <div className="max-w-md bg-white/70 dark:bg-card/70 p-6 rounded-2xl border border-red-500/10 mb-6 backdrop-blur-sm">
-                                            <p className="text-xs font-black text-red-500 uppercase tracking-widest mb-2">سبب الإلغاء</p>
-                                            <p className="text-sm font-bold leading-relaxed">{orderData.cancellationReason}</p>
-                                    </div>
+                                            <p className="text-xs font-black text-red-500 uppercase tracking-widest mb-2">حالة الطلب</p>
+                                            <p className="text-sm font-bold leading-relaxed">تم إلغاء الطلب - {getStatusLabel(currentStatus)}</p>
+                                        </div>
                                         <div className="flex flex-wrap justify-center gap-3">
                                             <button className="px-6 py-3 bg-[#579BE8] text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all">
                                                 <BiRefresh className="w-5 h-5 inline ml-2" />
@@ -283,11 +536,11 @@ export default function OrderDetailsPage() {
                                             <button className="px-6 py-3 bg-white dark:bg-card border border-border rounded-xl font-bold text-sm hover:bg-secondary transition-all">
                                                 <BiSupport className="w-5 h-5 inline ml-2" />
                                                 الدعم الفني
-                                    </button>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
+                            )}
 
                             {isCompleted && (
                                 <div className="relative bg-gradient-to-br from-sky-50/50 to-white dark:from-sky-500/5 dark:to-card p-8 md:p-12">
@@ -304,33 +557,55 @@ export default function OrderDetailsPage() {
                                                 </div>
                                                 <div className="px-4 py-2 bg-secondary/70 rounded-xl text-xs font-bold">
                                                     مدة الانتظار: 25 دقيقة
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            )}
+
+                            {isConfirmed && (
+                                <div className="relative bg-gradient-to-br from-blue-50 to-white dark:from-blue-500/5 dark:to-card p-8 md:p-12">
+                                    <div className="flex flex-col items-center text-center">
+                                        <div className="w-24 h-24 rounded-full bg-blue-500/10 flex items-center justify-center border-4 border-blue-500/20 mb-6">
+                                            <BiCheckCircle className="w-12 h-12 text-blue-500" />
+                                        </div>
+                                        <h3 className="text-2xl font-black mb-3">تم تأكيد طلبك</h3>
+                                        <p className="text-muted-foreground max-w-md mb-6">تم تأكيد الطلب بنجاح، جاري إعداد التوصيل</p>
+                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                            <span className="text-sm font-bold text-blue-700 dark:text-blue-400">جاري تجهيز المركبة</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            </div>
-                        </div>
-                    )}
+                            )}
 
                             {/* Order Details Footer */}
                             <div className="p-6 border-t border-border/50 bg-secondary/20">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-white dark:bg-card p-2 flex-shrink-0">
-                                            <Image src="/images/car.png" alt="Truck" width={40} height={40} className="w-full h-full object-contain" />
-                            </div>
+                                            <Image 
+                                                src="/images/car.png" 
+                                                alt="Truck" 
+                                                width={40} 
+                                                height={40} 
+                                                className="w-full h-full object-contain" 
+                                            />
+                                        </div>
                                         <div>
-                                            <p className="text-xs text-muted-foreground font-bold mb-1">نوع المركبة</p>
-                                            <p className="text-sm font-black">{orderData.size}</p>
-                         </div>
+                                            <p className="text-xs text-muted-foreground font-bold mb-1">الخدمة</p>
+                                            <p className="text-sm font-black">{orderData.service?.name || "غير محدد"}</p>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-white dark:bg-card flex items-center justify-center">
                                             <BiWater className="w-6 h-6 text-[#579BE8]" />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-muted-foreground font-bold mb-1">الكمية</p>
-                                            <p className="text-sm font-black">{orderData.quantity}</p>
-                                </div>
+                                            <p className="text-xs text-muted-foreground font-bold mb-1">نوع المياه</p>
+                                            <p className="text-sm font-black">{orderData.water_type?.name || "غير محدد"}</p>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-white dark:bg-card flex items-center justify-center">
@@ -338,11 +613,48 @@ export default function OrderDetailsPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs text-muted-foreground font-bold mb-1">التاريخ</p>
-                                            <p className="text-sm font-black">{orderData.date.split(' ').slice(0, 2).join(' ')}</p>
+                                            <p className="text-sm font-black">{formatDate(orderData.created_at)}</p>
                                         </div>
                                     </div>
                                 </div>
-                             </div>
+                            </div>
+                        </div>
+
+                        {/* Order Information */}
+                        <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-1 h-8 rounded-full" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}></div>
+                                <h2 className="text-xl font-black">معلومات الطلب</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground font-bold mb-1">اسم المستخدم</p>
+                                        <p className="text-sm font-black">{orderData.user?.name || "غير محدد"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground font-bold mb-1">رقم الهاتف</p>
+                                        <p className="text-sm font-black">{orderData.user?.phone || "غير محدد"}</p>
+                                    </div>
+                                   
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground font-bold mb-1">العنوان</p>
+                                        <p className="text-sm font-black">{orderData.location?.address || "غير محدد"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground font-bold mb-1">تاريخ الطلب</p>
+                                        <p className="text-sm font-black">{formatDate(orderData.created_at)}</p>
+                                    </div>
+                                    {orderData.order_date && (
+                                        <div>
+                                            <p className="text-xs text-muted-foreground font-bold mb-1">تاريخ التسليم المحدد</p>
+                                            <p className="text-sm font-black">{formatOrderDateTime(orderData.order_date)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Timeline Section */}
@@ -354,7 +666,7 @@ export default function OrderDetailsPage() {
                             <div className="relative">
                                 <div className="absolute right-6 top-0 bottom-0 w-0.5 bg-secondary/50"></div>
                                 <div className="space-y-6">
-                                    {orderData.timeline.filter(i => !i.hidden).map((item, idx) => (
+                                    {timeline.map((item, idx) => (
                                         <div key={idx} className="flex items-start gap-6 relative">
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-4 border-white dark:border-card shadow-sm flex-shrink-0 relative z-10 ${item.error ? "bg-red-500 text-white" : item.completed ? "text-white" : item.current ? "bg-amber-500 text-white animate-pulse" : "bg-secondary text-muted-foreground"}`} style={item.completed ? { backgroundColor: 'lab(62 -4.22 -46.14)' } : {}}>
                                                 {item.completed ? <BiCheckCircle className="w-6 h-6" /> : <div className="w-2 h-2 rounded-full bg-current"></div>}
@@ -367,113 +679,99 @@ export default function OrderDetailsPage() {
                                                     <span className="text-xs font-bold text-muted-foreground">{item.time}</span>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground font-medium">تحديث الحالة تلقائياً</p>
-                            </div>
-                        </div>
+                                            </div>
+                                        </div>
                                     ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
                     {/* Right Column - Sidebar */}
                     <div className="xl:col-span-4 space-y-6">
-                    {/* Driver Card */}
-                    {orderData.driver && (
+                        {/* Driver Card */}
+                        {orderData.driver && (
                             <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#579BE8]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                                 
                                 <div className="relative z-10">
                                     <div className="flex items-center justify-between mb-6">
                                         <span className="px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg text-xs font-bold">بيانات الناقل</span>
-                                <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2">
                                             <span className="text-xs font-medium text-muted-foreground">{isProcessing ? "جاري التوصيل" : "تم التوصيل"}</span>
                                             <div className={`w-2 h-2 rounded-full ${isProcessing ? 'bg-amber-500 animate-pulse' : 'bg-[#579BE8]'}`}></div>
-                                </div>
-                            </div>
+                                        </div>
+                                    </div>
 
                                     <div className="text-center mb-6">
                                         <div className="relative inline-block mb-4">
-                                            <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white dark:border-card shadow-lg">
-                                                <Image src={orderData.driver.image} alt={orderData.driver.name} width={96} height={96} className="w-full h-full object-cover" />
-                                </div>
-                                {orderData.driver.isVerified && (
-                                                <div className="absolute -top-1 -right-1 w-8 h-8 rounded-xl text-white flex items-center justify-center shadow-lg border-2 border-white dark:border-card" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
-                                                    <BiCheck className="w-5 h-5" />
-                                    </div>
-                                )}
+                                            <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white dark:border-card shadow-lg bg-secondary/50 flex items-center justify-center">
+                                                <BiUser className="w-12 h-12 text-muted-foreground" />
+                                            </div>
+                                            <div className="absolute -top-1 -right-1 w-8 h-8 rounded-xl text-white flex items-center justify-center shadow-lg border-2 border-white dark:border-card" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
+                                                <BiCheck className="w-5 h-5" />
+                                            </div>
                                             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white dark:bg-card px-3 py-1 rounded-xl border border-border/50 shadow-sm flex items-center gap-1.5">
                                                 <FaStar className="w-3.5 h-3.5" style={{ color: isCompleted ? 'lab(62 -4.22 -46.14)' : '#fbbf24' }} />
-                                    <span className="text-xs font-black">{orderData.driver.rating}</span>
-                                </div>
-                            </div>
-                                        <h3 className="text-xl font-black mb-2">{orderData.driver.name}</h3>
-                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6">
-                                    <BiSolidTruck className="w-4 h-4 text-[#579BE8]" />
-                                            <span className="font-medium">{orderData.driver.vehicle}</span>
-                                </div>
+                                                <span className="text-xs font-black">4.8</span>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-xl font-black mb-2">{orderData.driver.name || "غير محدد"}</h3>
+                                        <div className="text-sm text-muted-foreground mb-6">
+                                            <p>رقم السائق: {orderData.driver.phone || "غير محدد"}</p>
+                                        </div>
 
-                                        <div className="grid grid-cols-2 gap-3 mb-6">
-                                            <div className="bg-secondary/30 rounded-xl p-3 border border-border/20">
-                                                <p className="text-xs text-muted-foreground font-bold mb-1">الطلبات</p>
-                                                <p className="text-base font-black">{orderData.driver.deliveries}+</p>
-                                    </div>
-                                            <div className="bg-secondary/30 rounded-xl p-3 border border-border/20">
-                                                <p className="text-xs text-muted-foreground font-bold mb-1">الخبرة</p>
-                                                <p className="text-base font-black">{orderData.driver.experience}</p>
-                                    </div>
-                                </div>
-                                
-                                {isProcessing ? (
+                                        {isProcessing ? (
                                             <div className="space-y-3">
                                                 <button className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
                                                     <BiPhoneCall className="w-5 h-5 inline ml-2" />
-                                                    اتصال بالفني
+                                                    اتصال بالسائق
                                                 </button>
                                                 <button className="w-full py-3.5 rounded-xl bg-[#579BE8] text-white font-bold text-sm transition-all hover:scale-[1.02] active:scale-95">
                                                     <BiMessageSquareDetail className="w-5 h-5 inline ml-2" />
                                                     دردشة فورية
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button 
-                                        onClick={() => setShowRatingModal(true)} 
+                                                </button>
+                                            </div>
+                                        ) : isCompleted && (
+                                            <button 
+                                                onClick={() => setShowRatingModal(true)} 
                                                 className="w-full py-4 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02] active:scale-95 mb-3"
-                                                style={isCompleted ? { backgroundColor: 'lab(62 -4.22 -46.14)' } : { background: 'linear-gradient(to right, #579BE8, #a855f7)' }}
+                                                style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}
                                             >
                                                 <FaStar className="w-4 h-4 inline ml-2" />
                                                 تقييم تجربة التوصيل
-                                    </button>
-                                )}
+                                            </button>
+                                        )}
 
                                         <button className="w-full py-3 rounded-xl bg-secondary/50 font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-all border border-border/50">
-                                        <BiNavigation className="w-4 h-4 text-[#579BE8]" />
+                                            <BiNavigation className="w-4 h-4 text-[#579BE8]" />
                                             تتبع المسار الفعلي
                                         </button>
                                     </div>
                                 </div>
-                        </div>
-                    )}
+                            </div>
+                        )}
 
-                    {/* Support Card */}
-                    {!orderData.driver && (
+                        {/* Support Card when no driver */}
+                        {!orderData.driver && (
                             <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-8 text-center">
                                 <div className="w-16 h-16 rounded-2xl bg-[#579BE8]/10 flex items-center justify-center mx-auto mb-6">
                                     <BiSupport className="w-8 h-8 text-[#579BE8]" />
-                             </div>
+                                </div>
                                 <h3 className="text-xl font-black mb-3">مركز المساعدة</h3>
                                 <p className="text-sm text-muted-foreground mb-8 leading-relaxed">فريقنا متاح لخدمتك دائماً</p>
                                 <div className="space-y-3">
                                     <button className="w-full py-4 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
                                         <BiMessageSquareDetail className="w-5 h-5 inline ml-2" />
                                         محادثة فورية
-                                </button>
+                                    </button>
                                     <button className="w-full py-4 rounded-xl border-2 border-[#579BE8] text-[#579BE8] font-bold text-sm transition-all hover:scale-[1.02] active:scale-95">
                                         <BiPhoneCall className="w-5 h-5 inline ml-2" />
                                         اتصال هاتفي
-                                </button>
-                             </div>
-                         </div>
-                    )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Invoice Card */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
@@ -485,26 +783,34 @@ export default function OrderDetailsPage() {
                                     <h2 className="text-xl font-black">تفاصيل الفاتورة</h2>
                                 </div>
                                 
-                                <div className="space-y-4 mb-6">
-                                    <div className="flex justify-between items-center py-2">
-                                        <span className="text-sm text-muted-foreground">سعر الوحدة</span>
-                                        <span className="text-sm font-black">{orderData.items[0].price.toFixed(2)} ر.س</span>
-                                    </div>
-                                    <div className="flex justify-between items-center py-2">
-                                        <span className="text-sm text-[#579BE8] font-medium">الضريبة (15%)</span>
-                                        <span className="text-sm font-black text-[#579BE8]">+{orderData.summary.tax.toFixed(2)} ر.س</span>
-                </div>
-            </div>
+                                {summary && (
+                                    <>
+                                        <div className="space-y-4 mb-6">
+                                            <div className="flex justify-between items-center py-2">
+                                                <span className="text-sm text-muted-foreground">سعر الخدمة</span>
+                                                <span className="text-sm font-black">{summary.subtotal} ر.س</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2">
+                                                <span className="text-sm text-[#579BE8] font-medium">الضريبة (15%)</span>
+                                                <span className="text-sm font-black text-[#579BE8]">+{summary.tax} ر.س</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2">
+                                                <span className="text-sm text-muted-foreground">التوصيل</span>
+                                                <span className="text-sm font-black text-green-600">مجاني</span>
+                                            </div>
+                                        </div>
 
-                                <div className="pt-6 border-t border-border/30 mb-6">
-                                    <div className="text-center">
-                                        <p className="text-xs font-black uppercase tracking-widest text-[#579BE8] mb-2">المجموع الكلي</p>
-                                        <div className="flex items-baseline justify-center gap-2">
-                                            <span className="text-4xl font-black">{orderData.summary.total.toFixed(2)}</span>
-                                            <span className="text-sm font-black text-muted-foreground">ريال</span>
-                                 </div>
-                    </div>
-                </div>
+                                        <div className="pt-6 border-t border-border/30 mb-6">
+                                            <div className="text-center">
+                                                <p className="text-xs font-black uppercase tracking-widest text-[#579BE8] mb-2">المجموع الكلي</p>
+                                                <div className="flex items-baseline justify-center gap-2">
+                                                    <span className="text-4xl font-black">{summary.total}</span>
+                                                    <span className="text-sm font-black text-muted-foreground">ريال</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className={`p-4 rounded-xl border ${isCancelled ? 'bg-red-500/5 border-red-500/10' : 'bg-gradient-to-r from-sky-500/5 to-blue-600/5 border-[#579BE8]/10'}`}>
                                     <div className="flex items-center gap-3">
@@ -513,17 +819,19 @@ export default function OrderDetailsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-xs font-extrabold mb-1 ${isCancelled ? 'text-red-600' : 'text-[#579BE8]'}`}>
-                                                {isCancelled ? "عملية مسترجعة" : "تمت العملية"}
+                                                {isCancelled ? "غير مدفوع" : (orderData.price ? "تمت العملية" : "في انتظار التسعير")}
                                             </p>
-                                            <p className="text-xs font-black truncate">{orderData.payment.method}</p>
+                                            <p className="text-xs font-black truncate">
+                                                {orderData.price ? "تم تسعير الطلب" : "لم يتم التسعير بعد"}
+                                            </p>
                                         </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </>
+        </>
     );
 }

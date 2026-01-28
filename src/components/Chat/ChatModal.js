@@ -101,7 +101,7 @@ const ChatModal = ({
   // عرض toast عند فتح المحادثة إذا لم يكن مسجل دخول
   useEffect(() => {
     if (isOpen && !isLoggedIn) {
-      showLoginToast();
+      // showLoginToast();
     }
   }, [isOpen, isLoggedIn]);
 
@@ -1187,7 +1187,7 @@ const ChatModal = ({
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
-                        showLoginToast();
+                        // showLoginToast();
                         return;
                       }
                       loadChats();

@@ -24,18 +24,16 @@ const checkAuthentication = (showToast = true, context = '') => {
   const token = getToken();
   const isAuthenticated = !!token;
   
-  if (!isAuthenticated && isBrowser && showToast) {
-    // عرض toast message
-    let message = 'يجب تسجيل الدخول للوصول إلى هذه الميزة';
-    if (context === 'chats') {
-      message = 'سجل الدخول لعرض المحادثات والرسائل';
-    } else if (context === 'notifications') {
-      message = 'سجل الدخول لعرض الإشعارات';
-    } else if (context === 'messages') {
-      message = 'سجل الدخول لإرسال الرسائل';
-    }
-    showLoginToast(message, 'info');
-  }
+  // if (!isAuthenticated && isBrowser && showToast) {
+  //   // عرض toast message
+  //   let message = 'يجب تسجيل الدخول للوصول إلى هذه الميزة';
+  //   if (context === 'chats') {
+  //     message = 'سجل الدخول لعرض المحادثات والرسائل';
+  //   }  else if (context === 'messages') {
+  //     message = 'سجل الدخول لإرسال الرسائل';
+  //   }
+  //   showLoginToast(message, 'info');
+  // }
   
   return isAuthenticated;
 };
