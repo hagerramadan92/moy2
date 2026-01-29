@@ -440,31 +440,31 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
-                            <button 
+                            {/* <button 
                                 onClick={handleRefresh}
                                 className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm"
                             >
                                 <FaSyncAlt className="w-4 h-4 text-muted-foreground" />
                                 <span>تحديث</span>
-                            </button>
+                            </button> */}
                             
-                            {isCompleted && (
+                            {/* {isCompleted && (
                                 <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95 whitespace-nowrap" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
                                     <BiRefresh className="w-5 h-5" />
                                     <span>طلب مرة أخرى</span>
                                 </button>
-                            )}
-                            <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
+                            )} */}
+                            {/* <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                 <FaDownload className="w-4 h-4 text-muted-foreground" />
                                 <span className="hidden sm:inline">تحميل الفاتورة</span>
                                 <span className="sm:hidden">الفاتورة</span>
-                            </button>
-                            {!isCancelled && (
+                            </button> */}
+                            {/* {!isCancelled && (
                                 <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                     <FaPrint className="w-4 h-4 text-muted-foreground" />
                                     <span>طباعة</span>
                                 </button>
-                            )}
+                            )} */}
                         </div>
                     </div>
                 </div>
@@ -621,7 +621,7 @@ export default function OrderDetailsPage() {
                         </div>
 
                         {/* Order Information */}
-                        <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
+                        {/* <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-1 h-8 rounded-full" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}></div>
                                 <h2 className="text-xl font-black">معلومات الطلب</h2>
@@ -655,7 +655,7 @@ export default function OrderDetailsPage() {
                                     )}
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Timeline Section */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
@@ -752,26 +752,7 @@ export default function OrderDetailsPage() {
                             </div>
                         )}
 
-                        {/* Support Card when no driver */}
-                        {!orderData.driver && (
-                            <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-8 text-center">
-                                <div className="w-16 h-16 rounded-2xl bg-[#579BE8]/10 flex items-center justify-center mx-auto mb-6">
-                                    <BiSupport className="w-8 h-8 text-[#579BE8]" />
-                                </div>
-                                <h3 className="text-xl font-black mb-3">مركز المساعدة</h3>
-                                <p className="text-sm text-muted-foreground mb-8 leading-relaxed">فريقنا متاح لخدمتك دائماً</p>
-                                <div className="space-y-3">
-                                    <button className="w-full py-4 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
-                                        <BiMessageSquareDetail className="w-5 h-5 inline ml-2" />
-                                        محادثة فورية
-                                    </button>
-                                    <button className="w-full py-4 rounded-xl border-2 border-[#579BE8] text-[#579BE8] font-bold text-sm transition-all hover:scale-[1.02] active:scale-95">
-                                        <BiPhoneCall className="w-5 h-5 inline ml-2" />
-                                        اتصال هاتفي
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                     
 
                         {/* Invoice Card */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">

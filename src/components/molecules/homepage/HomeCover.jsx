@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import React from "react";
+import { useState } from "react";
 import AppDownloadButtons from "../homepage/AppDownloadButtons";
 import ServiceSelect from "@/components/common/ServiceSelect";
 import WaterTypeSelect from "@/components/common/WaterTypeSelect";
@@ -12,7 +13,11 @@ export default function HomeCover({ data }) {
 	const [waterType, setWaterType] = React.useState("");
 	const [waterSize, setWaterSize] = React.useState("");
 	const router = useRouter();
-
+ const [validationErrors, setValidationErrors] = useState({
+        waterType: false,
+        waterSize: false
+    });
+	  const [isSubmitting, setIsSubmitting] = useState(false);
 	
 	// Extract data from API response
 	const getContentValue = (key) => {
@@ -25,18 +30,79 @@ export default function HomeCover({ data }) {
 	const subtitle = getContentValue('subtitle');
 	const image = getContentValue('image');
 
-	const handleSubmit = (e) => {
-		e.preventDefault();
+	 const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
 
-		if (!waterType || !waterSize) {
-			toast.error("يرجى اختيار نوع المياه والكمية");
-			return;
-		}
+        // إعادة تعيين أخطاء الفاليديشن
+        const newErrors = {
+            waterType: false,
+            waterSize: false
+        };
 
-		router.push(
-			`/orders?waterType=${encodeURIComponent(waterType)}&waterSize=${encodeURIComponent(waterSize)}`
-		);
-	};
+        let hasError = false;
+
+        // التحقق من نوع المياه
+        if (!waterType) {
+            newErrors.waterType = true;
+            hasError = true;
+        }
+
+        // التحقق من الكمية
+        if (!waterSize) {
+            newErrors.waterSize = true;
+            hasError = true;
+        }
+
+        // تحديث حالة الأخطاء
+        setValidationErrors(newErrors);
+
+        // إذا كان هناك خطأ، عرض رسالة وتوقف
+        if (hasError) {
+            toast.error("يرجى اختيار نوع المياه والكمية", {
+                duration: 3000,
+                position: "top-center",
+                style: {
+                    background: '#ef4444',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
+        // محاكاة تحميل قصير ثم الانتقال
+        setTimeout(() => {
+            router.push(
+                `/orders?waterType=${encodeURIComponent(waterType)}&waterSize=${encodeURIComponent(waterSize)}`
+            );
+        }, 500);
+    };
+
+    // دالة لمعالجة تغيير القيم
+    const handleWaterTypeChange = (value) => {
+        setWaterType(value);
+        // إزالة خطأ الفاليديشن عند الاختيار
+        if (value && validationErrors.waterType) {
+            setValidationErrors(prev => ({
+                ...prev,
+                waterType: false
+            }));
+        }
+    };
+
+    const handleWaterSizeChange = (value) => {
+        setWaterSize(value);
+        // إزالة خطأ الفاليديشن عند الاختيار
+        if (value && validationErrors.waterSize) {
+            setValidationErrors(prev => ({
+                ...prev,
+                waterSize: false
+            }));
+        }
+    };
+
 
 	return (
 		<div className="cover  relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
@@ -45,32 +111,84 @@ export default function HomeCover({ data }) {
 					{/* Form Section - Appears first on small screens */}
 					<div className="form-left content-left order-1 md:order-2 rounded-xl sm:rounded-2xl md:rounded-[26px] border border-[#FFFFFF26] sm:border-2 md:border-[12px] lg:border-[20px] shadow-lg overflow-hidden">
 						<div className="bg-[#FFFFFF26] h-full p-2 py-6 md:py-3">
-							<form onSubmit={handleSubmit} className="bg-[#EFF5FD] px-2 sm:px-5 md:px-6 lg:px-7 py-5 sm:py-6 md:py-7 lg:py-8 rounded-xl sm:rounded-2xl md:rounded-3xl flex flex-col gap-3 sm:gap-4 shadow-md w-full max-w-md mx-auto min-h-[380px] sm:min-h-[420px] md:min-h-[480px] justify-center">
-								<h2 className="text-center text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-[#579BE8] mb-1 sm:mb-2">
-									اختر اللي يناسبك
-								</h2>
+							 <form 
+                onSubmit={handleSubmit} 
+                className="bg-[#EFF5FD] px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-3xl flex flex-col gap-4 sm:gap-6 shadow-xl w-full max-w-md mx-auto"
+            >
+                <div className="text-center mb-4">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#579BE8] mb-2">
+                        اختر اللي يناسبك
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                        اختر نوع المياه والكمية المناسبة لك
+                    </p>
+                </div>
 
-								<WaterTypeSelect
-									label="	نوع المياه"
-									value={waterType}
-									onChange={(value) => {
-										setWaterType(value)
-									}}
-								/>
-								<ServiceSelect
-									label="الكمية (طن)"
-									value={waterSize}
-									onChange={(value) => {
-										setWaterSize(value);
-									}} />
+             
 
-								<button
-									type="submit"
-									className="mt-2 sm:mt-3 md:mt-4 w-full h-11 sm:h-12 md:h-14 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-white text-sm sm:text-base font-semibold bg-gradient-to-r from-[#579BE8] to-[#124987] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-								>
-									ابدأ الطلب
-								</button>
-							</form>
+                {/* Water Type Select */}
+                <div className={`relative ${validationErrors.waterType ? 'animate-shake' : ''}`}>
+                    <WaterTypeSelect
+                        label="نوع المياه"
+                        value={waterType}
+                        onChange={handleWaterTypeChange}
+                        status={validationErrors.waterType ? "error" : "default"}
+                        placeholder="اختر نوع المياه"
+                        onTouched={() => {
+                            if (validationErrors.waterType) {
+                                setValidationErrors(prev => ({
+                                    ...prev,
+                                    waterType: false
+                                }));
+                            }
+                        }}
+                    />
+                  
+                </div>
+
+                {/* Water Size Select */}
+                <div className={`relative ${validationErrors.waterSize ? 'animate-shake' : ''}`}>
+                    <ServiceSelect
+                        label="الكمية (طن)"
+                        value={waterSize}
+                        onChange={handleWaterSizeChange}
+                        status={validationErrors.waterSize ? "error" : "default"}
+                        placeholder="اختر الكمية"
+                        onTouched={() => {
+                            if (validationErrors.waterSize) {
+                                setValidationErrors(prev => ({
+                                    ...prev,
+                                    waterSize: false
+                                }));
+                            }
+                        }}
+                    />
+                  
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`mt-6 w-full h-14 py-3 rounded-xl text-white text-base font-bold bg-gradient-to-r from-[#579BE8] to-[#124987] shadow-lg transition-all duration-300 hover:shadow-xl ${
+                        isSubmitting 
+                            ? 'opacity-70 cursor-not-allowed' 
+                            : 'hover:scale-[1.02] active:scale-[0.98]'
+                    }`}
+                >
+                    {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>جاري المعالجة...</span>
+                        </div>
+                    ) : (
+                        "ابدأ الطلب"
+                    )}
+                </button>
+
+                
+           					</form>
+
+            
 						</div>
 					</div>
 

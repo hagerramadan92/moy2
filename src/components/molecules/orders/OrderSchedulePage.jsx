@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Clock, ArrowLeft, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, isToday, isBefore, addHours } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Clock, ArrowLeft, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Info, MapPin, Droplets, Scale } from 'lucide-react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isBefore, addHours, startOfDay, isAfter, addDays, differenceInHours } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function OrderSchedulePage({ 
 	onBack, 
@@ -17,46 +18,127 @@ export default function OrderSchedulePage({
 	quantity,
 	waterTypes,
 	services,
-	isSubmitting 
+	isSubmitting: initialIsSubmitting 
 }) {
+	const router = useRouter();
 	const [selectedDate, setSelectedDate] = useState(null);
 	const [selectedTime, setSelectedTime] = useState('');
 	const [notes, setNotes] = useState('');
-	const [error, setError] = useState('');
+	const [errors, setErrors] = useState({});
 	const [currentMonth, setCurrentMonth] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [showTimePicker, setShowTimePicker] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(initialIsSubmitting || false);
+	const [showOrderSummary, setShowOrderSummary] = useState(false);
+	
+	const datePickerRef = useRef(null);
+	const timePickerRef = useRef(null);
 
 	// Initialize with tomorrow's date
 	useEffect(() => {
-		const tomorrow = new Date();
-		tomorrow.setDate(tomorrow.getDate() + 1);
-		tomorrow.setHours(0, 0, 0, 0);
+		const tomorrow = startOfDay(addDays(new Date(), 1));
 		setSelectedDate(tomorrow);
+		setCurrentMonth(tomorrow);
 	}, []);
+
+	// Close pickers when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+				setShowDatePicker(false);
+			}
+			if (timePickerRef.current && !timePickerRef.current.contains(event.target)) {
+				setShowTimePicker(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	// Smart validation function
+	const validateForm = () => {
+		const newErrors = {};
+		const now = new Date();
+		
+		// Location validation
+		if (!locationData) {
+			newErrors.location = 'الرجاء تحديد موقع التوصيل أولاً';
+		}
+		
+		// Water type validation
+		if (!waterType) {
+			newErrors.waterType = 'الرجاء اختيار نوع المياه';
+		}
+		
+		// Quantity validation
+		if (!quantity) {
+			newErrors.quantity = 'الرجاء اختيار الكمية';
+		}
+		
+		// Date validation
+		if (!selectedDate) {
+			newErrors.date = 'الرجاء اختيار تاريخ التوصيل';
+		} else {
+			const tomorrow = startOfDay(addDays(now, 1));
+			if (isBefore(selectedDate, tomorrow)) {
+				newErrors.date = 'يجب أن يكون التاريخ غداً أو بعد';
+			}
+			
+			// Max 30 days in future
+			const maxDate = addDays(now, 30);
+			if (isAfter(selectedDate, maxDate)) {
+				newErrors.date = 'الحد الأقصى للجدولة هو 30 يوماً من الآن';
+			}
+		}
+		
+		// Time validation
+		if (!selectedTime) {
+			newErrors.time = 'الرجاء اختيار وقت التوصيل';
+		} else if (selectedDate) {
+			const [hours, minutes] = selectedTime.split(':');
+			const selectedDateTime = new Date(selectedDate);
+			selectedDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+			
+			const minDateTime = addHours(now, 1); // Minimum 1 hour from now
+			
+			if (isBefore(selectedDateTime, minDateTime)) {
+				newErrors.time = 'يجب أن يكون وقت التوصيل بعد ساعة على الأقل من الآن';
+			}
+			
+			// Business hours validation (8 AM to 8 PM)
+			const selectedHour = parseInt(hours);
+			if (selectedHour < 8 || selectedHour > 20) {
+				newErrors.time = 'وقت التوصيل المتاح من 8 صباحاً حتى 8 مساءً';
+			}
+		}
+		
+		// Notes length validation
+		if (notes.length > 500) {
+			newErrors.notes = 'الحد الأقصى للملاحظات هو 500 حرف';
+		}
+		
+		setErrors(newErrors);
+		return Object.keys(newErrors).length === 0;
+	};
+
+	// Real-time validation
+	useEffect(() => {
+		if (Object.keys(errors).length > 0) {
+			validateForm();
+		}
+	}, [selectedDate, selectedTime, notes, locationData, waterType, quantity]);
 
 	const handleSubmit = async (e) => {
 		if (e) e.preventDefault();
-		setError('');
-
-		// Validate required data
-		if (!locationData) {
-			setError('الرجاء تحديد موقع التوصيل أولاً');
-			return;
-		}
-		if (!waterType) {
-			setError('الرجاء اختيار نوع المياه');
-			return;
-		}
-		if (!quantity) {
-			setError('الرجاء اختيار الكمية');
-			return;
-		}
-		if (!selectedDate || !selectedTime) {
-			setError('الرجاء تحديد التاريخ والوقت');
+		
+		if (!validateForm()) {
+			// toast.error('يرجى تصحيح الأخطاء قبل المتابعة');
 			return;
 		}
 
+		setIsSubmitting(true);
+		
 		// Combine date and time
 		const [hours, minutes] = selectedTime.split(':');
 		const dateTimeObj = new Date(selectedDate);
@@ -72,15 +154,6 @@ export default function OrderSchedulePage({
 		
 		const dateTime = `${year}-${month}-${day} ${hoursStr}:${minutesStr}:${secondsStr}`;
 		
-		// Validate future date
-		const now = new Date();
-		const nowPlusOneHour = addHours(now, 1); // Minimum 1 hour from now
-		
-		if (dateTimeObj <= nowPlusOneHour) {
-			setError('يجب اختيار وقت بعد ساعة على الأقل من الوقت الحالي');
-			return;
-		}
-
 		try {
 			await onSchedule({
 				dateTime,
@@ -91,19 +164,70 @@ export default function OrderSchedulePage({
 				waterType,
 				quantity
 			});
+			
+			// Show success toast
+			// toast.success('تم جدولة الطلب بنجاح!', {
+			// 	duration: 3000,
+			// 	icon: '✅',
+			// 	style: {
+			// 		background: '#10b981',
+			// 		color: 'white',
+			// 		fontWeight: 'bold'
+			// 	}
+			// });
+			
+			// Redirect to home after 1.5 seconds
+			setTimeout(() => {
+				router.push('/');
+			}, 1500);
+			
 		} catch (error) {
-			setError('حدث خطأ في جدولة الطلب');
+			setErrors({ submit: 'حدث خطأ في جدولة الطلب. يرجى المحاولة مرة أخرى' });
+			toast.error('حدث خطأ في جدولة الطلب');
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
-	// Generate time slots (8 AM to 8 PM)
-	const timeSlots = [];
-	for (let hour = 8; hour <= 20; hour++) {
-		timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
-		if (hour !== 20) {
-			timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+	// Generate time slots (8 AM to 8 PM) with smart grouping
+	const generateTimeSlots = () => {
+		const slots = [];
+		const timeGroups = {
+			'صباحاً': [],
+			'ظهراً': [],
+			'مساءً': []
+		};
+		
+		// Generate slots for 8 AM to 8 PM
+		for (let hour = 8; hour <= 20; hour++) {
+			const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+			
+			// Categorize by time of day
+			if (hour < 12) {
+				timeGroups['صباحاً'].push(timeSlot);
+			} else if (hour < 17) {
+				timeGroups['ظهراً'].push(timeSlot);
+			} else {
+				timeGroups['مساءً'].push(timeSlot);
+			}
+			
+			// Add half hour slots (except for 8:30 PM)
+			if (hour !== 20) {
+				const halfHourSlot = `${hour.toString().padStart(2, '0')}:30`;
+				if (hour < 12) {
+					timeGroups['صباحاً'].push(halfHourSlot);
+				} else if (hour < 17) {
+					timeGroups['ظهراً'].push(halfHourSlot);
+				} else {
+					timeGroups['مساءً'].push(halfHourSlot);
+				}
+			}
 		}
-	}
+		
+		return timeGroups;
+	};
+
+	const timeGroups = generateTimeSlots();
 
 	// Calendar functions
 	const nextMonth = () => {
@@ -112,10 +236,9 @@ export default function OrderSchedulePage({
 
 	const prevMonth = () => {
 		const newMonth = subMonths(currentMonth, 1);
-		const tomorrow = new Date();
-		tomorrow.setDate(tomorrow.getDate() + 1);
+		const tomorrow = startOfDay(addDays(new Date(), 1));
 		
-		// Don't allow going back before tomorrow
+		// Don't allow going back before current month if it's before tomorrow
 		if (newMonth >= tomorrow || newMonth.getMonth() >= tomorrow.getMonth()) {
 			setCurrentMonth(newMonth);
 		}
@@ -127,11 +250,10 @@ export default function OrderSchedulePage({
 	});
 
 	const isDateDisabled = (date) => {
-		const tomorrow = new Date();
-		tomorrow.setDate(tomorrow.getDate() + 1);
-		tomorrow.setHours(0, 0, 0, 0);
+		const tomorrow = startOfDay(addDays(new Date(), 1));
+		const maxDate = addDays(new Date(), 30);
 		
-		return date < tomorrow;
+		return date < tomorrow || date > maxDate;
 	};
 
 	const handleDateSelect = (date) => {
@@ -142,16 +264,47 @@ export default function OrderSchedulePage({
 		
 		// Reset time when date changes
 		setSelectedTime('');
-		setShowTimePicker(true);
 		
-		toast.success(`تم اختيار ${format(date, 'dd MMMM yyyy', { locale: ar })}`);
+		// Show time picker on mobile, auto-open on desktop
+		if (window.innerWidth < 768) {
+			setShowTimePicker(true);
+		}
+		
+		// toast.success(`تم اختيار ${format(date, 'dd MMMM yyyy', { locale: ar })}`, {
+		// 	duration: 2000,
+		// 	icon: '📅'
+		// });
 	};
 
 	const handleTimeSelect = (time) => {
 		setSelectedTime(time);
 		setShowTimePicker(false);
 		
-		toast.success(`تم اختيار الساعة ${time}`);
+		// Validate time selection
+		const [hours, minutes] = time.split(':');
+		const selectedDateTime = new Date(selectedDate);
+		selectedDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+		
+		const now = new Date();
+		const minDateTime = addHours(now, 1);
+		
+		if (isBefore(selectedDateTime, minDateTime)) {
+			setErrors(prev => ({
+				...prev,
+				time: 'يجب أن يكون وقت التوصيل بعد ساعة على الأقل من الآن'
+			}));
+		} else {
+			setErrors(prev => {
+				const newErrors = { ...prev };
+				delete newErrors.time;
+				return newErrors;
+			});
+		}
+		
+		// toast.success(`تم اختيار الساعة ${time}`, {
+		// 	duration: 2000,
+		// 	icon: '⏰'
+		// });
 	};
 
 	// Format selected date for display
@@ -172,359 +325,440 @@ export default function OrderSchedulePage({
 			? `موقع جديد: ${locationData.address?.substring(0, 30)}...`
 			: 'لم يتم التحديد';
 
-	// Get minimum date (tomorrow)
-	const tomorrow = new Date();
-	tomorrow.setDate(tomorrow.getDate() + 1);
-	tomorrow.setHours(0, 0, 0, 0);
-	const minDate = tomorrow.toISOString().split('T')[0];
+	// Get min and max dates
+	const tomorrow = startOfDay(addDays(new Date(), 1));
+	const maxDate = addDays(new Date(), 30);
 
-	// Get maximum date (30 days from now)
-	const maxDate = new Date();
-	maxDate.setDate(maxDate.getDate() + 30);
-	const maxDateStr = maxDate.toISOString().split('T')[0];
+	// Animation variants
+	const fadeInUp = {
+		hidden: { opacity: 0, y: 20 },
+		visible: { opacity: 1, y: 0 }
+	};
+
+	const scaleIn = {
+		hidden: { opacity: 0, scale: 0.9 },
+		visible: { opacity: 1, scale: 1 }
+	};
 
 	return (
-		<div className="min-h-screen bg-gray-50/50 p-4 md:p-8 flex justify-center items-start pt-12 md:pt-16">
+		<div className="min-h-screen bg-gradient-to-br from-blue-50/50 to-cyan-50/50 p-3 sm:p-4 md:p-6 lg:p-8 flex justify-center items-start pt-12 sm:pt-16 md:pt-20">
 			<motion.div
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: -20 }}
-				className="w-full max-w-4xl space-y-6"
+				initial="hidden"
+				animate="visible"
+				variants={fadeInUp}
+				className="w-full max-w-4xl space-y-4 sm:space-y-6"
 			>
 				{/* Header */}
-				<div className="relative overflow-hidden rounded-3xl p-6 shadow-lg border border-[#579BE8]/20 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]">
-					<div className="absolute inset-0 overflow-hidden">
-						<div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse" />
-						<div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-xl" />
+				<div className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg border border-[#579BE8]/20 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]">
+					<div className="absolute inset-0 ">
+						<div className="absolute -top-6 sm:-top-10 -right-6 sm:-right-10 w-32 h-32 sm:w-40 sm:h-40 bg-white/10 rounded-full blur-2xl animate-pulse" />
+						<div className="absolute -bottom-6 sm:-bottom-10 -left-6 sm:-left-10 w-24 h-24 sm:w-32 sm:h-32 bg-white/5 rounded-full blur-xl" />
 					</div>
-					<div className="relative flex items-center justify-between">
-						<div className="flex-1">
-							<h1 className="text-2xl font-bold text-white font-cairo mb-1">جدولة الطلب</h1>
-							<p className="text-white/80 text-sm">حدد التاريخ والوقت المناسب للتوصيل</p>
-							
-							{/* Order Summary */}
-							<div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-								<div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-									<p className="text-white/80 text-xs mb-1">الموقع</p>
-									<p className="text-white text-sm font-medium truncate">{locationInfo}</p>
-								</div>
-								<div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-									<p className="text-white/80 text-xs mb-1">نوع المياه</p>
-									<p className="text-white text-sm font-medium">{selectedWaterTypeName}</p>
-								</div>
-								<div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-									<p className="text-white/80 text-xs mb-1">الكمية</p>
-									<p className="text-white text-sm font-medium">{selectedServiceName}</p>
-								</div>
+					<div className="relative ">
+						<div className=" flex justify-between items-center gap-3">
+							<div>
+								<h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white font-cairo mb-1 sm:mb-2">جدولة الطلب</h1>
+							<p className="text-white/80 text-xs sm:text-sm md:text-base">
+								حدد التاريخ والوقت المناسب للتوصيل
+							</p>
 							</div>
+							
+				
+							<button
+								onClick={onBack}
+								className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center text-white border border-white/30 hover:bg-white/30 transition-colors flex-shrink-0 self-end sm:self-auto"
+								title="رجوع"
+							>
+								<ArrowLeft size={20} className="sm:w-6 sm:h-6" />
+							</button>
 						</div>
-						<button
-							onClick={onBack}
-							className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white border border-white/30 hover:bg-white/30 transition-colors ml-4 flex-shrink-0"
-						>
-							<ArrowLeft size={24} />
-						</button>
+					
 					</div>
+
+				
 				</div>
 
 				{/* Form Card */}
-				<div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl shadow-[#124987]/10 border border-[#579BE8]/20 relative overflow-hidden">
-					<div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
+				<div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl shadow-[#124987]/10 border border-[#579BE8]/20 relative ">
+					<div className="absolute top-0 left-0 w-full h-1 sm:h-2 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
 
-					<form onSubmit={handleSubmit} className="space-y-8">
-						{/* Date Selection with Calendar */}
-						<div className="space-y-4">
-							<label className="flex items-center gap-2 text-gray-700 font-bold">
-								<Calendar size={20} className="text-[#579BE8]" />
-								تاريخ التوصيل
-							</label>
-							
-							{/* Selected Date Display */}
-							<div className="relative">
-								<button
-									type="button"
-									onClick={() => setShowDatePicker(!showDatePicker)}
-									className="w-full h-14 rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-4 text-right font-medium text-gray-700 focus:border-[#579BE8] focus:outline-none focus:ring-2 focus:ring-[#579BE8]/20 transition-all flex items-center justify-between"
-								>
-									<span className="text-sm md:text-base">
-										{formattedSelectedDate}
-									</span>
-									<div className="flex items-center gap-2">
-										{selectedDate && (
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
-										)}
-										<Calendar size={18} className="text-gray-400" />
-									</div>
-								</button>
+					<form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+						{/* Date and Time Selection - Responsive Grid */}
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							{/* Date Selection */}
+							<div className="space-y-3 sm:space-y-4">
+								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm sm:text-base">
+									<Calendar size={18} className="text-[#579BE8]" />
+									تاريخ التوصيل
+									{selectedDate && !errors.date && (
+										<CheckCircle2 size={16} className="text-green-500 mr-auto" />
+									)}
+								</label>
 								
-								{/* Calendar Picker */}
-								{showDatePicker && (
-									<motion.div
-										initial={{ opacity: 0, y: -10 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -10 }}
-										className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-[#579BE8]/20 z-50 overflow-hidden"
+								<div className="relative" ref={datePickerRef}>
+									<button
+										type="button"
+										onClick={() => {
+											setShowDatePicker(!showDatePicker);
+											setShowTimePicker(false);
+										}}
+										className={`w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl border-2 px-3 sm:px-4 text-right font-medium focus:outline-none focus:ring-2 transition-all flex items-center justify-between
+											${errors.date 
+												? 'border-red-300 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-200'
+												: selectedDate 
+													? 'border-green-300 bg-green-50/30 text-gray-700 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+													: 'border-[#579BE8]/30 bg-gray-50 text-gray-700 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+											}`}
 									>
-										{/* Calendar Header */}
-										<div className="p-4 border-b border-gray-100">
-											<div className="flex items-center justify-between mb-4">
-												<button
-													type="button"
-													onClick={prevMonth}
-													className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-												>
-													<ChevronRight size={20} />
-												</button>
-												<h3 className="text-lg font-bold text-gray-800">
-													{format(currentMonth, 'MMMM yyyy', { locale: ar })}
-												</h3>
-												<button
-													type="button"
-													onClick={nextMonth}
-													className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-												>
-													<ChevronLeft size={20} />
-												</button>
-											</div>
-											
-											{/* Day Headers */}
-											<div className="grid grid-cols-7 gap-1 mb-2">
-												{['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map((day) => (
-													<div key={day} className="text-center text-xs font-medium text-gray-500 p-2">
-														{day}
+										<span className="text-xs sm:text-sm md:text-base truncate pr-2">
+											{formattedSelectedDate}
+										</span>
+										<div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+											<Calendar size={16} className={`${errors.date ? 'text-red-400' : 'text-gray-400'}`} />
+											{showDatePicker ? (
+												<ChevronLeft size={16} className="text-[#579BE8]" />
+											) : (
+												<ChevronRight size={16} className="text-[#579BE8]" />
+											)}
+										</div>
+									</button>
+									
+									{/* Error Message */}
+									{errors.date && (
+										<motion.p
+											initial={{ opacity: 0, y: -5 }}
+											animate={{ opacity: 1, y: 0 }}
+											className="text-red-500 text-xs mt-1 flex items-center gap-1 px-1"
+										>
+											<AlertCircle size={12} />
+											{errors.date}
+										</motion.p>
+									)}
+									
+									{/* Calendar Picker */}
+									<AnimatePresence>
+										{showDatePicker && (
+											<motion.div
+												initial="hidden"
+												animate="visible"
+												exit="hidden"
+												variants={scaleIn}
+												transition={{ duration: 0.2 }}
+												className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-[#579BE8]/20 z-50 overflow-hidden"
+											>
+												{/* Calendar Header */}
+												<div className="p-3 sm:p-4 border-b border-gray-100 bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5">
+													<div className="flex items-center justify-between mb-3">
+														<button
+															type="button"
+															onClick={prevMonth}
+															className="p-1.5 sm:p-2 hover:bg-[#579BE8]/10 rounded-lg sm:rounded-xl transition-colors"
+															title="الشهر السابق"
+														>
+															<ChevronRight size={18} className="text-[#579BE8]" />
+														</button>
+														<h3 className="text-sm sm:text-base font-bold text-gray-800">
+															{format(currentMonth, 'MMMM yyyy', { locale: ar })}
+														</h3>
+														<button
+															type="button"
+															onClick={nextMonth}
+															className="p-1.5 sm:p-2 hover:bg-[#579BE8]/10 rounded-lg sm:rounded-xl transition-colors"
+															title="الشهر التالي"
+														>
+															<ChevronLeft size={18} className="text-[#579BE8]" />
+														</button>
 													</div>
-												))}
-											</div>
-										</div>
-										
-										{/* Calendar Days */}
-										<div className="p-4">
-											<div className="grid grid-cols-7 gap-1">
-												{daysInMonth.map((day, dayIdx) => {
-													const isSelected = selectedDate && isSameDay(day, selectedDate);
-													const isDisabled = isDateDisabled(day);
-													const isCurrentMonth = isSameMonth(day, currentMonth);
 													
-													return (
-														<button
-															type="button"
-															key={day.toString()}
-															onClick={() => handleDateSelect(day)}
-															disabled={isDisabled}
-															className={`
-																h-10 rounded-xl text-sm font-medium transition-all
-																${isSelected
-																	? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white'
-																	: isDisabled
-																		? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-																		: isCurrentMonth
-																			? 'bg-white text-gray-700 hover:bg-[#579BE8]/10 hover:text-[#579BE8]'
-																			: 'bg-gray-50 text-gray-400'
-																}
-															`}
-														>
-															{format(day, 'd')}
-														</button>
-													);
-												})}
-											</div>
-										</div>
-										
-										{/* Calendar Footer */}
-										<div className="p-4 border-t border-gray-100 bg-gray-50">
-											<div className="flex items-center justify-between">
-												<div className="flex items-center gap-2">
-													<div className="w-3 h-3 rounded-full bg-[#579BE8]"></div>
-													<span className="text-xs text-gray-600">يوم محدد</span>
+													{/* Day Headers */}
+													<div className="grid grid-cols-7 gap-1 mb-2">
+														{['أ', 'إ', 'ث', 'أ', 'خ', 'ج', 'س'].map((day, idx) => (
+															<div key={idx} className="text-center text-xs font-medium text-gray-500 p-1">
+																{day}
+															</div>
+														))}
+													</div>
 												</div>
-												<div className="flex items-center gap-2">
-													<div className="w-3 h-3 rounded-full bg-gray-200"></div>
-													<span className="text-xs text-gray-600">غير متاح</span>
+												
+												{/* Calendar Days */}
+												<div className="p-2 sm:p-3">
+													<div className="grid grid-cols-7 gap-1">
+														{daysInMonth.map((day, dayIdx) => {
+															const isSelected = selectedDate && isSameDay(day, selectedDate);
+															const isDisabled = isDateDisabled(day);
+															const isCurrentMonth = isSameMonth(day, currentMonth);
+															const isTodayDate = isToday(day);
+															
+															return (
+																<button
+																	type="button"
+																	key={day.toString()}
+																	onClick={() => handleDateSelect(day)}
+																	disabled={isDisabled}
+																	className={`
+																		h-8 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-all relative
+																		${isSelected
+																			? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white shadow-md'
+																			: isTodayDate
+																				? 'bg-[#579BE8]/10 text-[#579BE8] border border-[#579BE8]/30'
+																				: isDisabled
+																					? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+																					: isCurrentMonth
+																						? 'bg-white text-gray-700 hover:bg-[#579BE8]/10 hover:text-[#579BE8] hover:shadow-sm'
+																						: 'bg-gray-50 text-gray-400'
+																		}
+																	`}
+																	title={format(day, 'dd MMMM yyyy', { locale: ar })}
+																>
+																	{format(day, 'd')}
+																	{isTodayDate && !isSelected && (
+																		<div className="absolute -top-1 -right-1 w-2 h-2 bg-[#579BE8] rounded-full"></div>
+																	)}
+																</button>
+															);
+														})}
+													</div>
 												</div>
-											</div>
-										</div>
-									</motion.div>
-								)}
-							</div>
-							
-							<p className="text-xs text-gray-500 px-2">
-								يمكنك الجدولة من {format(tomorrow, 'dd MMMM', { locale: ar })} إلى {format(maxDate, 'dd MMMM', { locale: ar })}
-							</p>
-						</div>
-
-						{/* Time Selection */}
-						<div className="space-y-4">
-							<label className="flex items-center gap-2 text-gray-700 font-bold">
-								<Clock size={20} className="text-[#579BE8]" />
-								وقت التوصيل
-							</label>
-							
-							{/* Selected Time Display */}
-							<div className="relative">
-								<button
-									type="button"
-									onClick={() => {
-										if (!selectedDate) {
-											toast.error('الرجاء اختيار التاريخ أولاً');
-											return;
-										}
-										setShowTimePicker(!showTimePicker);
-									}}
-									disabled={!selectedDate}
-									className="w-full h-14 rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-4 text-right font-medium text-gray-700 focus:border-[#579BE8] focus:outline-none focus:ring-2 focus:ring-[#579BE8]/20 transition-all flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<span className="text-sm md:text-base">
-										{selectedTime || 'اختر الوقت المناسب'}
-									</span>
-									<div className="flex items-center gap-2">
-										{selectedTime && (
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
+												
+												{/* Calendar Footer */}
+												<div className="p-3 border-t border-gray-100 bg-gray-50/50">
+													<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+														<div className="flex items-center gap-2">
+															<div className="w-3 h-3 rounded-full bg-[#579BE8]"></div>
+															<span className="text-xs text-gray-600">يوم محدد</span>
+														</div>
+														<div className="flex items-center gap-2">
+															<div className="w-3 h-3 rounded-full bg-gray-300"></div>
+															<span className="text-xs text-gray-600">اليوم</span>
+														</div>
+														<div className="flex items-center gap-2">
+															<div className="w-3 h-3 rounded-full bg-gray-200"></div>
+															<span className="text-xs text-gray-600">غير متاح</span>
+														</div>
+													</div>
+													<p className="text-xs text-gray-500 mt-2 text-center">
+														من {format(tomorrow, 'dd/MM')} إلى {format(maxDate, 'dd/MM')}
+													</p>
+												</div>
+											</motion.div>
 										)}
-										<Clock size={18} className="text-gray-400" />
-									</div>
-								</button>
+									</AnimatePresence>
+								</div>
+							</div>
+
+							{/* Time Selection */}
+							<div className="space-y-3 sm:space-y-4">
+								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm sm:text-base">
+									<Clock size={18} className="text-[#579BE8]" />
+									وقت التوصيل
+									{selectedTime && !errors.time && (
+										<CheckCircle2 size={16} className="text-green-500 mr-auto" />
+									)}
+								</label>
 								
-								{/* Time Picker */}
-								{showTimePicker && selectedDate && (
-									<motion.div
-										initial={{ opacity: 0, y: -10 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -10 }}
-										className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-[#579BE8]/20 z-50 overflow-hidden"
+								<div className="relative" ref={timePickerRef}>
+									<button
+										type="button"
+										onClick={() => {
+											if (!selectedDate) {
+												toast.error('الرجاء اختيار التاريخ أولاً');
+												return;
+											}
+											setShowTimePicker(!showTimePicker);
+											setShowDatePicker(false);
+										}}
+										disabled={!selectedDate}
+										className={`w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl border-2 px-3 sm:px-4 text-right font-medium focus:outline-none focus:ring-2 transition-all flex items-center justify-between
+											${!selectedDate 
+												? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+												: errors.time 
+													? 'border-red-300 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-200'
+													: selectedTime 
+														? 'border-green-300 bg-green-50/30 text-gray-700 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+														: 'border-[#579BE8]/30 bg-gray-50 text-gray-700 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+											}`}
 									>
-										<div className="p-4 border-b border-gray-100">
-											<h4 className="text-sm font-bold text-gray-700 mb-3">
-												اختر الوقت المناسب
-											</h4>
+										<span className="text-xs sm:text-sm md:text-base truncate pr-2">
+											{selectedTime || 'اختر الوقت المناسب'}
+										</span>
+										<div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+											<Clock size={16} className={`${errors.time ? 'text-red-400' : 'text-gray-400'}`} />
+											{showTimePicker ? (
+												<ChevronLeft size={16} className="text-[#579BE8]" />
+											) : (
+												<ChevronRight size={16} className="text-[#579BE8]" />
+											)}
 										</div>
-										
-										<div className="p-4 max-h-60 overflow-y-auto">
-											<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-												{timeSlots.map((time) => {
-													const [hours, minutes] = time.split(':');
-													const timeDate = new Date(selectedDate);
-													timeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-													
-													const now = new Date();
-													const nowPlusOneHour = addHours(now, 1);
-													const isTimeDisabled = timeDate <= nowPlusOneHour;
-													
-													return (
-														<button
-															type="button"
-															key={time}
-															onClick={() => !isTimeDisabled && handleTimeSelect(time)}
-															disabled={isTimeDisabled}
-															className={`
-																h-12 rounded-xl border-2 transition-all font-medium
-																${selectedTime === time
-																	? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white border-[#579BE8]'
-																	: isTimeDisabled
-																		? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-																		: 'bg-white border-gray-200 hover:border-[#579BE8] hover:bg-[#579BE8]/5 text-gray-700'
-																}
-															`}
-														>
-															{time}
-														</button>
-													);
-												})}
-											</div>
-										</div>
-										
-										<div className="p-4 border-t border-gray-100 bg-gray-50">
-											<p className="text-xs text-gray-600 text-center">
-												توقيت السعودية (UTC+3)
-											</p>
-										</div>
-									</motion.div>
+									</button>
+									
+									{/* Error Message */}
+									{errors.time && (
+										<motion.p
+											initial={{ opacity: 0, y: -5 }}
+											animate={{ opacity: 1, y: 0 }}
+											className="text-red-500 text-xs mt-1 flex items-center gap-1 px-1"
+										>
+											<AlertCircle size={12} />
+											{errors.time}
+										</motion.p>
+									)}
+									
+									{/* Time Picker */}
+									<AnimatePresence>
+										{showTimePicker && selectedDate && (
+											<motion.div
+												initial="hidden"
+												animate="visible"
+												exit="hidden"
+												variants={scaleIn}
+												transition={{ duration: 0.2 }}
+												className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-[#579BE8]/20 z-50 overflow-hidden max-h-[60vh] sm:max-h-[400px] flex flex-col"
+											>
+												<div className="p-3 sm:p-4 border-b border-gray-100 bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 sticky top-0">
+													<h4 className="text-sm sm:text-base font-bold text-gray-700 mb-2">
+														اختر الوقت المناسب
+													</h4>
+													<p className="text-xs text-gray-600">
+														{format(selectedDate, 'EEEE، d MMMM', { locale: ar })}
+													</p>
+												</div>
+												
+												<div className="flex-1 overflow-y-auto p-3 sm:p-4">
+													{Object.entries(timeGroups).map(([period, times]) => (
+														<div key={period} className="mb-4 last:mb-0">
+															<h5 className="text-xs font-bold text-gray-500 mb-2 sticky top-0 bg-white py-1">
+																{period}
+															</h5>
+															<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+																{times.map((time) => {
+																	const [hours, minutes] = time.split(':');
+																	const timeDate = new Date(selectedDate);
+																	timeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+																	
+																	const now = new Date();
+																	const isTimeDisabled = isBefore(timeDate, addHours(now, 1));
+																	const isSelected = selectedTime === time;
+																	
+																	return (
+																		<button
+																			type="button"
+																			key={time}
+																			onClick={() => !isTimeDisabled && handleTimeSelect(time)}
+																			disabled={isTimeDisabled}
+																			className={`
+																				h-10 rounded-lg text-xs sm:text-sm font-medium transition-all relative
+																				${isSelected
+																					? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white shadow-md'
+																					: isTimeDisabled
+																						? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+																						: 'bg-white border border-gray-200 hover:border-[#579BE8] hover:bg-[#579BE8]/5 text-gray-700 hover:text-[#579BE8] hover:shadow-sm'
+																				}
+																			`}
+																			title={isTimeDisabled ? 'غير متاح (قريب جداً)' : time}
+																		>
+																			{time}
+																			{isTimeDisabled && (
+																				<div className="absolute -top-1 -right-1 w-2 h-2 bg-gray-400 rounded-full"></div>
+																			)}
+																		</button>
+																	);
+																})}
+															</div>
+														</div>
+													))}
+												</div>
+												
+											</motion.div>
+										)}
+									</AnimatePresence>
+								</div>
+								
+								{selectedDate && selectedTime && !errors.time && (
+									<div className="p-2 sm:p-3 bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-xl border border-green-200">
+										<p className="text-xs sm:text-sm text-green-700 font-medium text-center">
+											✓ {format(selectedDate, 'EEEE، d MMMM', { locale: ar })} الساعة {selectedTime}
+										</p>
+									</div>
 								)}
 							</div>
-							
-							{selectedDate && selectedTime && (
-								<div className="p-3 bg-[#579BE8]/5 rounded-xl border border-[#579BE8]/20">
-									<p className="text-sm text-[#579BE8] font-medium text-center">
-										تم اختيار {formattedSelectedDate} الساعة {selectedTime}
-									</p>
-								</div>
-							)}
 						</div>
 
 						{/* Notes */}
-						<div className="space-y-3">
-							<label className="text-gray-700 font-bold">ملاحظات إضافية (اختياري)</label>
+						<div className="space-y-2 sm:space-y-3 sm:mb-2 mb-0">
+							<div className="flex items-center justify-between">
+								<label className="text-gray-700 font-bold text-sm sm:text-base">ملاحظات إضافية (اختياري)</label>
+								<span className="text-xs text-gray-500">
+									{notes.length}/500 حرف
+								</span>
+							</div>
 							<textarea
 								value={notes}
-								onChange={(e) => setNotes(e.target.value)}
-								placeholder="أي ملاحظات إضافية للتوصيل..."
-								className="w-full h-32 rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 p-4 text-right resize-none focus:border-[#579BE8] focus:outline-none focus:ring-2 focus:ring-[#579BE8]/20 transition-all"
+								onChange={(e) => {
+									setNotes(e.target.value);
+									if (e.target.value.length > 500) {
+										setErrors(prev => ({
+											...prev,
+											notes: 'الحد الأقصى للملاحظات هو 500 حرف'
+										}));
+									} else {
+										setErrors(prev => {
+											const newErrors = { ...prev };
+											delete newErrors.notes;
+											return newErrors;
+										});
+									}
+								}}
+								placeholder="أي ملاحظات إضافية للتوصيل (رقم البوابة، الطابق، تعليمات خاصة...)"
+								className="w-full h-28 sm:h-32 rounded-xl sm:rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 p-3 sm:p-4 text-right resize-none focus:border-[#579BE8] focus:outline-none focus:ring-2 focus:ring-[#579BE8]/20 transition-all text-sm sm:text-base"
 								maxLength={500}
 							/>
-							<div className="flex justify-between items-center">
-								<p className="text-xs text-gray-500">
-									{notes.length}/500 حرف
+							{errors.notes && (
+								<p className="text-red-500 text-xs flex items-center gap-1">
+									<AlertCircle size={12} />
+									{errors.notes}
 								</p>
-								<p className="text-xs text-gray-500">
-									يمكنك إضافة ملاحظات مثل رقم البوابة، الطابق، إلخ
-								</p>
-							</div>
+							)}
+						
 						</div>
 
-						{/* Error Message */}
-						{error && (
+						{/* Form Validation Summary */}
+						{Object.keys(errors).length > 0 && (
 							<motion.div
 								initial={{ opacity: 0, height: 0 }}
 								animate={{ opacity: 1, height: 'auto' }}
-								className="flex items-center gap-2 text-red-500 bg-red-50 p-3 rounded-xl"
+								className="bg-red-50 border border-red-200 rounded-xl p-3 sm:p-4"
 							>
-								<AlertCircle size={18} />
-								<span className="text-sm">{error}</span>
+								<h4 className="text-red-700 font-bold text-sm sm:text-base mb-2 flex items-center gap-2">
+									<AlertCircle size={16} />
+									يرجى تصحيح الأخطاء التالية
+								</h4>
+								<ul className="space-y-1">
+									{Object.entries(errors).map(([field, message]) => (
+										<li key={field} className="text-red-600 text-xs sm:text-sm flex items-center gap-2">
+											<div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+											{message}
+										</li>
+									))}
+								</ul>
 							</motion.div>
 						)}
 
-						{/* Validation Summary */}
-						<div className="space-y-2">
-							<h4 className="text-sm font-bold text-gray-700">ملخص الطلب:</h4>
-							<div className="space-y-1">
-								<div className="flex items-center gap-2">
-									<div className={`w-2 h-2 rounded-full ${locationData ? 'bg-green-500' : 'bg-red-500'}`}></div>
-									<span className="text-xs text-gray-600">الموقع: {locationData ? '✓ محدد' : '✗ غير محدد'}</span>
-								</div>
-								<div className="flex items-center gap-2">
-									<div className={`w-2 h-2 rounded-full ${waterType ? 'bg-green-500' : 'bg-red-500'}`}></div>
-									<span className="text-xs text-gray-600">نوع المياه: {waterType ? '✓ محدد' : '✗ غير محدد'}</span>
-								</div>
-								<div className="flex items-center gap-2">
-									<div className={`w-2 h-2 rounded-full ${quantity ? 'bg-green-500' : 'bg-red-500'}`}></div>
-									<span className="text-xs text-gray-600">الكمية: {quantity ? '✓ محدد' : '✗ غير محدد'}</span>
-								</div>
-								<div className="flex items-center gap-2">
-									<div className={`w-2 h-2 rounded-full ${selectedDate ? 'bg-green-500' : 'bg-red-500'}`}></div>
-									<span className="text-xs text-gray-600">التاريخ: {selectedDate ? '✓ محدد' : '✗ غير محدد'}</span>
-								</div>
-								<div className="flex items-center gap-2">
-									<div className={`w-2 h-2 rounded-full ${selectedTime ? 'bg-green-500' : 'bg-red-500'}`}></div>
-									<span className="text-xs text-gray-600">الوقت: {selectedTime ? '✓ محدد' : '✗ غير محدد'}</span>
-								</div>
-							</div>
-						</div>
-
 						{/* Actions */}
-						<div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 							<button
 								type="submit"
-								disabled={isSubmitting || !locationData || !waterType || !quantity || !selectedDate || !selectedTime}
-								className="h-14 rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+								disabled={isSubmitting || Object.keys(errors).length > 0}
+								className="h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-sm sm:text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
 							>
 								{isSubmitting ? (
 									<>
-										<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-										<span>جاري الجدولة...</span>
+										<div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+										<span className="text-xs sm:text-sm">جاري الجدولة...</span>
 									</>
 								) : (
 									<>
-										<span>تأكيد الجدولة</span>
-										<CheckCircle2 size={20} />
+										<span className="text-xs sm:text-sm md:text-base">تأكيد الجدولة</span>
+										<CheckCircle2 size={16} className="sm:w-5 sm:h-5" />
 									</>
 								)}
 							</button>
@@ -533,25 +767,19 @@ export default function OrderSchedulePage({
 								type="button"
 								onClick={onBack}
 								disabled={isSubmitting}
-								className="h-14 rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+								className="h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-sm sm:text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 hidden md:flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								<ArrowLeft size={20} />
-								<span>رجوع</span>
+								<ArrowLeft size={16} className="sm:w-5 sm:h-5" />
+								<span className="text-xs sm:text-sm md:text-base">رجوع</span>
 							</button>
 						</div>
+						
+						
 					</form>
 				</div>
 				
-				{/* Overlay for closing pickers */}
-				{(showDatePicker || showTimePicker) && (
-					<div 
-						className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-						onClick={() => {
-							setShowDatePicker(false);
-							setShowTimePicker(false);
-						}}
-					/>
-				)}
+				{/* Success Toast Placeholder */}
+				<div id="schedule-success-toast" className="fixed bottom-4 right-4 z-50"></div>
 			</motion.div>
 		</div>
 	);

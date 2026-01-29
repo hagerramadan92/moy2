@@ -206,15 +206,11 @@ export default function Navbar() {
           
           <div className="flex items-center gap-2">
             {/* زر اطلب الآن - يذهب إلى صفحة الطلب */}
-            <motion.div whileTap={{ scale: 0.98 }} className="flex items-center gap-1 md:gap-4">
-                <div>
+             <div>
                     <NotificationBell />
-              {/* <Link href="/notifications"> */}
-              {/* <GoBell size={22} className="text-blue-900 font-extrabold"/> */}
-                
-
-              {/* </Link> */}
-            </div>
+                 </div>
+            <motion.div whileTap={{ scale: 0.98 }} className="flex items-center gap-1 md:gap-4">
+               
               <button
                 onClick={handleOrderNow}
                 className={[

@@ -14,6 +14,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+// import { FaChevronDown, FaTimes, FaBox, FaSearch, FaSyncAlt, FaCalendarAlt } from "react-icons/fa";
+// import { FaBox } from "react-icons/fa";
 import flatpickr from "flatpickr";
 import { Arabic } from "flatpickr/dist/l10n/ar.js";
 import "flatpickr/dist/flatpickr.min.css";
@@ -43,20 +45,48 @@ export default function OrdersPage() {
     const flatpickrInstance = useRef(null);
 
     // Available status options based on API response
-    const statusOptions = [
-        { id: 1, name: "pendding", label: "معلق" },
-        { id: 2, name: "confirmed", label: "مؤكد" },
-        { id: 3, name: "assigned", label: "معين للسائق" },
-        { id: 4, name: "in_progress", label: "قيد التنفيذ" },
-        { id: 5, name: "completed", label: "مكتمل" },
-        { id: 6, name: "cancelled", label: "ملغي" }
-    ];
+    const [statusOptions, setStatusOptions] = useState([]);
 
-    // Period options
+    // Fetch order statuses
+    const fetchOrderStatuses = useCallback(async () => {
+        const token = getToken();
+        if (!token) return;
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/orders/statuses`,
+                {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    cache: "no-store",
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok && data.status === true) {
+                setStatusOptions(data.data || []);
+            } else {
+                console.error("Failed to fetch statuses", data);
+            }
+        } catch (error) {
+            console.error("Error fetching order statuses:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchOrderStatuses();
+    }, [fetchOrderStatuses]);
+
+    // Period options - updated to include 7_days
     const periodOptions = [
         { value: "all", label: "جميع الفترات" },
         { value: "today", label: "اليوم" },
         { value: "yesterday", label: "أمس" },
+        { value: "7_days", label: "آخر 7 أيام" },
         { value: "week", label: "هذا الأسبوع" },
         { value: "month", label: "هذا الشهر" },
         { value: "year", label: "هذا العام" }
@@ -103,7 +133,7 @@ export default function OrdersPage() {
                 page: currentPage.toString(),
             });
 
-            // إضافة status_ids إذا تم اختيارها
+            // إضافة status_ids إذا تم اختيارها - باستخدام status_ids[]
             if (selectedStatuses.length > 0) {
                 selectedStatuses.forEach(statusId => {
                     params.append('status_ids[]', statusId);
@@ -119,6 +149,12 @@ export default function OrdersPage() {
             if (selectedDate) {
                 params.append('date', selectedDate);
             }
+
+            // For debugging - log the URL
+            console.log("Fetching orders with URL:", `${API_BASE_URL}/orders?${params.toString()}`);
+            console.log("Selected statuses:", selectedStatuses);
+            console.log("Period:", period);
+            console.log("Date:", selectedDate);
 
             const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
                 method: 'GET',
@@ -341,32 +377,11 @@ export default function OrdersPage() {
     // Statistics
     const stats = [
         { 
-            label: "الطلبات المعلقة", 
-            value: orders.filter(o => o.status?.name === 'pendding').length.toString(), 
+            label: "الطلبات", 
+            value: totalOrders, 
             color: "text-amber-600", 
             bg: "bg-amber-500 border-amber-500/20", 
-            icon: "/images/icontruck.png" 
-        },
-        { 
-            label: "قيد التنفيذ", 
-            value: orders.filter(o => o.status?.name === 'in_progress').length.toString(), 
-            color: "text-[#579BE8]", 
-            bg: "bg-[#579BE8] border-[#579BE8]/20", 
-            icon: "/images/icontruck.png" 
-        },
-        { 
-            label: "مكتمل التسليم", 
-            value: orders.filter(o => o.status?.name === 'completed').length.toString(), 
-            color: "text-green-600", 
-            bg: "bg-green-500 border-green-500/20", 
-            icon: "/images/icontruck.png" 
-        },
-        { 
-            label: "الطلبات الملغية", 
-            value: orders.filter(o => o.status?.name === 'cancelled').length.toString(), 
-            color: "text-red-600", 
-            bg: "bg-red-500 border-red-500/20", 
-            icon: "/images/icontruck.png" 
+            icon: "/images/icontruck.png",
         },
     ];
 
@@ -394,9 +409,9 @@ export default function OrdersPage() {
             {!authError && (
                 <>
                     {/* Statistics Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1">
                         {stats.map((stat, idx) => (
-                            <div key={idx} className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all">
+                            <div key={idx} className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl md:p-6 p-2 shadow-xl relative  group hover:shadow-2xl hover:-translate-y-1 transition-all">
                                 {/* Decorative Elements */}
                                 <div className="absolute -right-6 -top-6 opacity-10">
                                     <FaBox size={100} className="rotate-12" />
@@ -411,10 +426,10 @@ export default function OrdersPage() {
                                         <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
                                             <FaBox className="text-lg" />
                                         </div>
-                                        <p className="text-sm font-bold opacity-90">{stat.label}</p>
+                                        <p className="text-sm md:text-2xl font-bold opacity-90">{stat.label}</p>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-4xl font-black drop-shadow-lg">{stat.value}</h3>
+                                    <div className="flex items-center ">
+                                        <h3 className="md:text-4xl text-2xl font-black drop-shadow-lg">{stat.value}</h3>
                                     </div>
                                 </div>
                             </div>
@@ -422,8 +437,8 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Filters and Actions */}
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                        <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+                    <div className="flex  gap-1 items-start sm:items-center justify-between">
+                        <div className="grid grid-cols-2 gap-2 md:gap-5 flex-1 w-full">
                             {/* Search by Order Number */}
                             <div className="relative flex-1 max-w-md w-full">
                                 <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={18} />
@@ -449,40 +464,7 @@ export default function OrdersPage() {
                                 )}
                             </div>
 
-                            {/* Date Filter */}
-                            <div className="relative flex-1 w-full sm:max-w-md">
-                                <FaCalendarAlt className="absolute right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none" size={20} />
-                                <input 
-                                    ref={dateInputRef}
-                                    type="text"
-                                    placeholder="اختر التاريخ"
-                                    readOnly
-                                    autoComplete="off"
-                                    inputMode="none"
-                                    data-input
-                                    className={`w-full pr-12 py-3.5 h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium shadow-sm hover:shadow-md cursor-pointer ${selectedDate ? 'pl-12' : 'pl-4'}`}
-                                />
-                                {selectedDate && (
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.preventDefault(); 
-                                            e.stopPropagation();
-                                            setSelectedDate("");
-                                            if (flatpickrInstance.current) {
-                                                try {
-                                                    flatpickrInstance.current.clear();
-                                                } catch (error) {
-                                                    console.warn("Error clearing Flatpickr:", error);
-                                                }
-                                            }
-                                        }}
-                                        className="absolute md:left-[10.5rem] left-[5.5rem] top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
-                                        title="مسح التاريخ"
-                                    >
-                                        <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
-                                    </button>
-                                )}
-                            </div>
+                          
 
                             {/* Period Filter */}
                             <div className="relative flex-1 max-w-md w-full">
@@ -509,7 +491,7 @@ export default function OrdersPage() {
                             <button 
                                 onClick={handleRefresh}
                                 disabled={refreshing}
-                                className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl hover:shadow-md hover:border-[#579BE8]/50 transition-all font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="md:flex hidden items-center gap-2 px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl hover:shadow-md hover:border-[#579BE8]/50 transition-all font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <FaSyncAlt className={`${refreshing ? 'animate-spin' : ''}`} />
                                 <span>تحديث</span>
@@ -519,18 +501,12 @@ export default function OrdersPage() {
                             {(selectedStatuses.length > 0 || period !== "all" || selectedDate || searchOrderNumber) && (
                                 <button 
                                     onClick={clearAllFilters}
-                                    className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-card border-2 border-border/60 rounded-2xl hover:shadow-md hover:border-red-500/50 transition-all font-bold shadow-sm text-red-500 hover:text-red-600"
+                                    className="md:flex hidden items-center md:gap-2 md:px-5 md:py-3.5 px-3 py-1.5 bg-white dark:bg-card border-2 border-border/60 rounded-lg md:rounded-2xl hover:shadow-md hover:border-red-500/50 transition-all font-bold shadow-sm text-red-500 hover:text-red-600"
                                 >
-                                    <FaTimes />
-                                    <span>إلغاء الفلتر</span>
+                                    <FaTimes className="" />
+                                    <span className="text-sm">إلغاء الفلتر</span>
                                 </button>
                             )}
-                            
-                            {/* New Order Button */}
-                            <button className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white border-2 border-transparent rounded-2xl hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold shadow-lg active:scale-95">
-                                <FaPlus />
-                                <span>طلب جديد</span>
-                            </button>
                         </div>
                     </div>
 
@@ -555,7 +531,7 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Orders Table Section */}
-                    <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm">
                         <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
                                 <h3 className="font-black text-xl text-foreground">أحدث الطلبات</h3>
@@ -610,7 +586,6 @@ export default function OrdersPage() {
                                                 <th className="px-6 py-4 text-right">رقم الطلب</th>
                                                 <th className="px-6 py-4 text-right">الخدمة</th>
                                                 <th className="px-6 py-4 text-right">نوع المياه</th>
-                                                <th className="px-6 py-4 text-right">المستخدم</th>
                                                 <th className="px-6 py-4 text-right">التاريخ</th>
                                                 <th className="px-6 py-4 text-center">الحالة</th>
                                                 <th className="px-6 py-4 text-center">الإجراء</th>
@@ -635,12 +610,6 @@ export default function OrdersPage() {
                                                         </td>
                                                         <td className="px-6 py-5">
                                                             <span className="font-medium">{order.water_type?.name}</span>
-                                                        </td>
-                                                        <td className="px-6 py-5">
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{order.user?.name}</span>
-                                                                <span className="text-xs text-muted-foreground">{order.user?.phone}</span>
-                                                            </div>
                                                         </td>
                                                         <td className="px-6 py-5">
                                                             <div className="flex flex-col">
@@ -674,7 +643,7 @@ export default function OrdersPage() {
                                                             {openOrderId === order.id && (
                                                                 <div 
                                                                     ref={dropdownRef}
-                                                                    className="absolute left-6 top-[70%] z-[100] w-[180px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200 overflow-hidden"
+                                                                    className="absolute left-6 top-[70%] z-[100] w-[180px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200 "
                                                                 >
                                                                     <Link 
                                                                         href={`/myProfile/orders/${order.id}`}
@@ -683,13 +652,13 @@ export default function OrdersPage() {
                                                                         <BiSolidShow className="w-4 h-4 text-[#579BE8]" />
                                                                         <span>تفاصيل الطلب</span>
                                                                     </Link>
-                                                                    <Link 
+                                                                    {/* <Link 
                                                                         href={`/myProfile/locations/${order.location?.id}`}
                                                                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground border-t border-border/50"
                                                                     >
                                                                         <IoDocumentText className="w-4 h-4 text-green-500" />
                                                                         <span>عرض الموقع</span>
-                                                                    </Link>
+                                                                    </Link> */}
                                                                     <Link 
                                                                         href="/myProfile/help-center"
                                                                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground border-t border-border/50"
@@ -704,7 +673,7 @@ export default function OrdersPage() {
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan="7" className="px-6 py-10 text-center text-muted-foreground">
+                                                    <td colSpan="6" className="px-6 py-10 text-center text-muted-foreground">
                                                         {searchOrderNumber 
                                                             ? "لا توجد طلبات تطابق رقم البحث" 
                                                             : "لا توجد طلبات تطابق الفلتر المختار"}

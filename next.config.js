@@ -3,9 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   
   // إعدادات Turbopack
-  experimental: {
-    turbo: {}
-  },
+  // experimental: {
+  //   turbo: {}
+  // },
   
   images: {
     qualities: [75, 90],
@@ -77,10 +77,10 @@ const nextConfig = {
   },
   
   // إعدادات لتحميل الملفات الكبيرة
-  experimental: {
-    turbo: {},
-    serverComponentsExternalPackages: ['axios', 'react-icons'],
-  },
+  // experimental: {
+  //   turbo: {},
+  //   serverComponentsExternalPackages: ['axios', 'react-icons'],
+  // },
   
   // إعدادات لتحسين أمان الطلبات
   async redirects() {

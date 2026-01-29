@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -76,9 +77,6 @@ const getAccessToken = () => {
 };
 
 // Payment Modal Component
-// "use client";
-
-// import { useState } from "react";
 import {
   FaCreditCard,
   FaWallet,
@@ -86,9 +84,6 @@ import {
 } from "react-icons/fa";
 import { MdCalendarToday, MdAccessTime, MdClose } from "react-icons/md";
 import { BiErrorCircle } from "react-icons/bi";
-// import { getAccessToken } from "@/lib/auth";
-
-// const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
 
 /* =============================
    ربط icon string من API بـ react-icons
@@ -118,33 +113,32 @@ function PaymentModal({
   /* =============================
      GET payment methods
   ============================== */
- const fetchPaymentMethods = async () => {
-  try {
-    setLoadingMethods(true);
+  const fetchPaymentMethods = async () => {
+    try {
+      setLoadingMethods(true);
 
-    const accessToken = getAccessTokenFromStorage();
+      const accessToken = getAccessToken();
 
-    const res = await fetch(`${API_BASE_URL}/payment-methods`, {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+      const res = await fetch(`${API_BASE_URL}/payment-methods`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok && data.status) {
-      setPaymentMethods(data.data);
-    } else {
-      throw new Error(data.message || "فشل تحميل طرق الدفع");
+      if (res.ok && data.status) {
+        setPaymentMethods(data.data);
+      } else {
+        throw new Error(data.message || "فشل تحميل طرق الدفع");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingMethods(false);
     }
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoadingMethods(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     if (isOpen && !useMockData) {
@@ -305,8 +299,6 @@ function PaymentModal({
     </div>
   );
 }
-
-// export default PaymentModal;
 
 // DriverCard Component
 function DriverCard({
@@ -508,8 +500,8 @@ function DriverCard({
   );
 }
 
-// Main Component
-export default function AvailableDriversPage() {
+// المكون الداخلي الذي يستخدم useSearchParams
+function AvailableDriversContent({ onBack }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -750,7 +742,7 @@ export default function AvailableDriversPage() {
             className="flex items-center justify-between mb-6"
           >
             <button 
-              onClick={() => router.back()}
+              onClick={onBack}
               className="flex items-center gap-2 text-gray-600 hover:text-[#579BE8] transition-all font-medium px-4 py-2 rounded-lg hover:bg-[#579BE8]/5"
             >
               <ChevronLeft className="w-4 h-4 rotate-180" />
@@ -1073,5 +1065,26 @@ export default function AvailableDriversPage() {
         <RefreshCw className={`w-5 h-5 text-[#579BE8] ${refreshing ? 'animate-spin' : ''}`} />
       </button>
     </div>
+  );
+}
+
+// المكون الرئيسي مع Suspense
+export default function AvailableDriversPage({ onBack }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto p-4 md:p-8">
+          <div className="flex flex-col items-center justify-center h-[80vh]">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-20 w-20 border-b-2 border-[#579BE8]"></div>
+              <Truck className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-[#579BE8]" />
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">جاري تحميل السائقين...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <AvailableDriversContent onBack={onBack} />
+    </Suspense>
   );
 }

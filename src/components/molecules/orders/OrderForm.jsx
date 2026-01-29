@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Droplets, Scale, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, Search, ArrowLeft, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react';
+import { MapPin, Droplets, Scale, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, Search, ArrowLeft, ChevronDown, ChevronUp, X, Loader2, Menu, X as XIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FaStar, FaMapMarkerAlt, FaHome, FaBriefcase, FaMapMarkedAlt } from 'react-icons/fa';
 
@@ -21,9 +21,19 @@ import api from '@/utils/api';
 import Spinner from "@/components/ui/spinner";
 import WaterTypeSelect from '@/components/common/WaterTypeSelect';
 
+// LocationPickerModal مع تحسينات الريسبونسيف
 const LocationPickerModal = dynamic(
 	() => import('./LocationPickerModal'),
-	{ ssr: false }
+	{ 
+		ssr: false,
+		loading: () => (
+			<div className="flex items-center justify-center p-8">
+				<div className="animate-spin">
+					<div className="w-8 h-8 border-4 border-gray-300 border-t-[#579BE8] rounded-full"></div>
+				</div>
+			</div>
+		)
+	}
 );
 
 const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
@@ -47,6 +57,9 @@ function OrderFormContent() {
 	const [services, setServices] = useState([]);
 	const [loadingWaterTypes, setLoadingWaterTypes] = useState(false);
 	const [loadingServices, setLoadingServices] = useState(false);
+	
+	// Mobile menu state
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	
 	const searchParams = useSearchParams();
 
@@ -193,7 +206,7 @@ function OrderFormContent() {
 
 	// Navigate to saved addresses page
 	const navigateToAddressesPage = () => {
-		router.push('/addresses?fromOrder=true');
+		router.push('/myProfile');
 	};
 
 	// Handle manual location selection from map
@@ -213,6 +226,8 @@ function OrderFormContent() {
 			longitude: parseFloat(location.longitude)
 		});
 		setIsManualLocation(false);
+		// Close mobile menu if open
+		setIsMobileMenuOpen(false);
 	};
 
 	// Clear location selection
@@ -249,7 +264,6 @@ function OrderFormContent() {
 		return 'default';
 	};
 
-	// 🔴 🔴 **التعديل الرئيسي هنا: دالة handleOrderNow** 🔴 🔴
 	const handleOrderNow = async () => {
 		setAttemptedSubmit(true);
 
@@ -273,7 +287,6 @@ function OrderFormContent() {
 			const accessToken = localStorage.getItem("accessToken");
 			if (!accessToken) {
 				toast.error("يرجى تسجيل الدخول أولاً");
-				router.push('/login');
 				return;
 			}
 
@@ -521,106 +534,48 @@ function OrderFormContent() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50/50 p-4 md:p-8 flex justify-center items-start pt-12 md:pt-16">
-			<LocationPickerModal
-				isOpen={isMapOpen}
-				onClose={() => setIsMapOpen(false)}
-				onSelect={handleManualLocationSelect}
-			/>
-
-			<motion.div
-				initial="hidden"
-				animate="visible"
-				variants={containerVariants}
-				className="w-full max-w-3xl space-y-6 relative"
-			>
-
-				{/* Header */}
-				<motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl p-6 shadow-lg border border-[#579BE8]/20 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]">
-					<div className="absolute inset-0 overflow-hidden">
-						<div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse" />
-						<div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-xl" />
-					</div>
-					<div className="relative flex items-center justify-between">
-						<div>
-							<h1 className="text-2xl font-bold text-white font-cairo mb-1">اطلب الان</h1>
-							<p className="text-white/80 text-sm">قم بملء البيانات التالية لإتمام طلبك</p>
-						</div>
-						<div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white border border-white/30">
-							<Truck size={24} />
-						</div>
-					</div>
-				</motion.div>
-
-				{/* Form Card */}
-				<div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl shadow-[#124987]/10 border border-[#579BE8]/20 relative overflow-hidden">
-
-					<div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
-
-					<div className="space-y-8">
-
-						{/* Location Section */}
-						<motion.div variants={itemVariants} className="space-y-4">
-							<div className="flex items-center justify-between mb-2">
-								<label className="flex items-center gap-2 text-gray-700 font-bold">
-									<MapPin size={20} className={getFieldStatus('location') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
-									موقع التوصيل
-									{showSuccess('location') && (
-										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
-										</motion.span>
-									)}
-								</label>
+		<div className="min-h-screen bg-gray-50/50 p-3 md:p-8 flex justify-center items-start pt-12 md:pt-16">
+			{/* Mobile Menu for Saved Locations */}
+			<AnimatePresence>
+				{isMobileMenuOpen && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2 }}
+						className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+						onClick={() => setIsMobileMenuOpen(false)}
+					>
+						<motion.div
+							initial={{ x: '100%' }}
+							animate={{ x: 0 }}
+							exit={{ x: '100%' }}
+							transition={{ type: "spring", damping: 25, stiffness: 300 }}
+							className="absolute right-0 top-0 h-full w-4/5 max-w-sm bg-white shadow-xl"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<div className="p-4 border-b border-gray-200 flex items-center justify-between">
+								<h2 className="text-lg font-bold text-gray-900">الأماكن المحفوظة</h2>
 								<button
-									onClick={navigateToAddressesPage}
-									className="text-xs px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg hover:bg-[#579BE8]/20 transition-colors font-medium flex items-center gap-1"
+									onClick={() => setIsMobileMenuOpen(false)}
+									className="p-2 rounded-lg hover:bg-gray-100"
 								>
-									<FaMapMarkerAlt className="w-3 h-3" />
-									إدارة العناوين
+									<XIcon size={20} />
 								</button>
 							</div>
-
-							{/* Saved Locations Section */}
-							{loadingLocations ? (
-								<div className="flex items-center justify-center py-4">
-									<Spinner />
-									<span className="mr-2 text-sm text-gray-500">جاري تحميل الأماكن المحفوظة...</span>
-								</div>
-							) : savedLocations.length > 0 && (
-								<div className="space-y-3">
-									<div className="flex items-center justify-between">
-										<h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-											<FaStar className="text-[#579BE8] w-4 h-4" />
-											الأماكن المحفوظة
-										</h3>
-										{savedLocations.length > 1 && (
-											<button
-												onClick={() => setShowAllLocations(!showAllLocations)}
-												className="text-xs text-[#579BE8] hover:text-[#124987] flex items-center gap-1"
-											>
-												{showAllLocations ? (
-													<>
-														<ChevronUp size={12} />
-														إخفاء البعض
-													</>
-												) : (
-													<>
-														<ChevronDown size={12} />
-														عرض الكل ({savedLocations.length})
-													</>
-												)}
-											</button>
-										)}
+							
+							<div className="p-4 overflow-y-auto max-h-[calc(100vh-120px)]">
+								{loadingLocations ? (
+									<div className="flex items-center justify-center py-8">
+										<Spinner />
+										<span className="mr-2 text-sm text-gray-500">جاري تحميل الأماكن...</span>
 									</div>
-
-									<div className="space-y-2">
-										{displayedLocations.map((location) => (
+								) : savedLocations.length > 0 ? (
+									<div className="space-y-3">
+										{savedLocations.map((location) => (
 											<div
 												key={location.id}
-												onClick={() => {
-													setTouched(prev => ({ ...prev, location: true }));
-													handleSavedLocationSelect(location);
-												}}
+												onClick={() => handleSavedLocationSelect(location)}
 												className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
 													selectedSavedLocation?.id === location.id
 														? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8]'
@@ -639,20 +594,20 @@ function OrderFormContent() {
 													</div>
 													<div className="flex-1 min-w-0">
 														<div className="flex items-center gap-2 mb-1">
-															<h4 className="font-medium text-sm text-gray-900 truncate">
+															<h4 className="font-medium text-sm text-gray-900">
 																{location.name}
 															</h4>
 															{location.is_favorite && (
 																<FaStar className="text-[#579BE8] w-3 h-3 flex-shrink-0" />
 															)}
 														</div>
-														<p className="text-xs text-gray-500 truncate">
+														<p className="text-xs text-gray-500">
 															{location.address}
 														</p>
 														{selectedSavedLocation?.id === location.id && (
-															<div className="mt-1 flex items-center gap-1">
+															<div className="mt-1">
 																<span className="text-xs px-2 py-0.5 bg-[#579BE8]/10 text-[#579BE8] rounded">
-																	محدد
+																	محدد حالياً
 																</span>
 															</div>
 														)}
@@ -661,7 +616,233 @@ function OrderFormContent() {
 											</div>
 										))}
 									</div>
+								) : (
+									<div className="text-center py-8">
+										<div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+											<MapPin className="text-gray-400" size={24} />
+										</div>
+										<p className="text-gray-500">لا توجد أماكن محفوظة</p>
+										<button
+											onClick={() => {
+												setIsMobileMenuOpen(false);
+												setIsMapOpen(true);
+											}}
+											className="mt-4 px-4 py-2 bg-[#579BE8] text-white rounded-lg text-sm"
+										>
+											إضافة موقع جديد
+										</button>
+									</div>
+								)}
+							</div>
+							
+							<div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+								<button
+									onClick={() => {
+										setIsMobileMenuOpen(false);
+										setIsMapOpen(true);
+									}}
+									className="w-full py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl font-medium flex items-center justify-center gap-2"
+								>
+									<MapPin size={18} />
+									تحديد موقع جديد
+								</button>
+							</div>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+
+			{/* Location Picker Modal - مع تحسينات الريسبونسيف */}
+			<LocationPickerModal
+				isOpen={isMapOpen}
+				onClose={() => setIsMapOpen(false)}
+				onSelect={handleManualLocationSelect}
+			/>
+
+			<motion.div
+				initial="hidden"
+				animate="visible"
+				variants={containerVariants}
+				className="w-full max-w-3xl space-y-4 md:space-y-6 relative"
+			>
+
+				{/* Header */}
+				<motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl md:rounded-3xl p-4 md:p-6 shadow-lg border border-[#579BE8]/20 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]">
+					<div className="absolute inset-0 overflow-hidden">
+						<div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse" />
+						<div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-xl" />
+					</div>
+					<div className="relative flex items-center justify-between">
+						<div>
+							<h1 className="text-lg md:text-2xl font-bold text-white font-cairo mb-1">اطلب الان</h1>
+							<p className="text-white/80 text-xs md:text-sm">قم بملء البيانات التالية لإتمام طلبك</p>
+						</div>
+						<div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white border border-white/30">
+							<Truck size={20} />
+						</div>
+					</div>
+				</motion.div>
+
+				{/* Form Card */}
+				<div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl shadow-[#124987]/10 border border-[#579BE8]/20 relative overflow-hidden">
+
+					<div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
+
+					<div className="space-y-6 md:space-y-8">
+
+						{/* Location Section */}
+						<motion.div variants={itemVariants} className="space-y-4">
+							<div className="flex items-center justify-between mb-4">
+								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base">
+									<MapPin size={18} className={getFieldStatus('location') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+									موقع التوصيل
+								</label>
+								<button
+									onClick={navigateToAddressesPage}
+									className="text-xs px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg hover:bg-[#579BE8]/20 transition-colors font-medium flex items-center gap-1"
+								>
+									<FaMapMarkerAlt className="w-3 h-3" />
+									<span className="hidden sm:inline">إدارة العناوين</span>
+									<span className="sm:hidden">العناوين</span>
+								</button>
+							</div>
+
+							{/* Saved Locations Section - Desktop */}
+							{loadingLocations ? (
+								<div className="flex items-center justify-center py-4">
+									<Spinner size="sm" />
+									<span className="mr-2 text-sm text-gray-500">جاري تحميل الأماكن المحفوظة...</span>
 								</div>
+							) : savedLocations.length > 0 && (
+								<>
+									{/* Desktop View */}
+									<div className="hidden md:block space-y-3">
+										<div className="flex items-center justify-between">
+											<h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+												<FaStar className="text-[#579BE8] w-4 h-4" />
+												الأماكن المحفوظة
+											</h3>
+											{savedLocations.length > 1 && (
+												<button
+													onClick={() => setShowAllLocations(!showAllLocations)}
+													className="text-xs text-[#579BE8] hover:text-[#124987] flex items-center gap-1"
+												>
+													{showAllLocations ? (
+														<>
+															<ChevronUp size={12} />
+															إخفاء البعض
+														</>
+													) : (
+														<>
+															<ChevronDown size={12} />
+															عرض الكل ({savedLocations.length})
+														</>
+													)}
+												</button>
+											)}
+										</div>
+
+										<div className="space-y-2">
+											{displayedLocations.map((location) => (
+												<div
+													key={location.id}
+													onClick={() => {
+														setTouched(prev => ({ ...prev, location: true }));
+														handleSavedLocationSelect(location);
+													}}
+													className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+														selectedSavedLocation?.id === location.id
+															? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8]'
+															: 'bg-gray-50/50 border-gray-200 hover:border-[#579BE8]/50'
+													}`}
+												>
+													<div className="flex items-start gap-3">
+														<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+															selectedSavedLocation?.id === location.id
+																? 'bg-[#579BE8] text-white'
+																: 'bg-gray-100 text-gray-500'
+														}`}>
+															{location.type === 'home' ? <FaHome className="w-4 h-4" /> :
+															 location.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
+															 <FaMapMarkedAlt className="w-4 h-4" />}
+														</div>
+														<div className="flex-1 min-w-0">
+															<div className="flex items-center gap-2 mb-1">
+																<h4 className="font-medium text-sm text-gray-900 truncate">
+																	{location.name}
+																</h4>
+																{location.is_favorite && (
+																	<FaStar className="text-[#579BE8] w-3 h-3 flex-shrink-0" />
+																)}
+															</div>
+															<p className="text-xs text-gray-500 truncate">
+																{location.address}
+															</p>
+															{selectedSavedLocation?.id === location.id && (
+																<div className="mt-1 flex items-center gap-1">
+																	<span className="text-xs px-2 py-0.5 bg-[#579BE8]/10 text-[#579BE8] rounded">
+																		محدد
+																	</span>
+																</div>
+															)}
+														</div>
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+
+									{/* Mobile View - Simplified */}
+									<div className="md:hidden">
+										<div className="flex items-center justify-between mb-3">
+											<h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+												<FaStar className="text-[#579BE8] w-4 h-4" />
+												الأماكن المحفوظة
+											</h3>
+											<button
+												onClick={() => setIsMobileMenuOpen(true)}
+												className="text-xs text-[#579BE8] hover:text-[#124987] flex items-center gap-1"
+											>
+												عرض الكل
+												<ChevronDown size={12} />
+											</button>
+										</div>
+										
+										{selectedSavedLocation && (
+											<div
+												onClick={() => setIsMobileMenuOpen(true)}
+												className="p-3 rounded-xl border-2 border-[#579BE8] bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 cursor-pointer"
+											>
+												<div className="flex items-start gap-3">
+													<div className="w-8 h-8 rounded-lg bg-[#579BE8] text-white flex items-center justify-center">
+														{selectedSavedLocation.type === 'home' ? <FaHome className="w-4 h-4" /> :
+														 selectedSavedLocation.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
+														 <FaMapMarkedAlt className="w-4 h-4" />}
+													</div>
+													<div className="flex-1 min-w-0">
+														<div className="flex items-center gap-2 mb-1">
+															<h4 className="font-medium text-sm text-gray-900 truncate">
+																{selectedSavedLocation.name}
+															</h4>
+															{selectedSavedLocation.is_favorite && (
+																<FaStar className="text-[#579BE8] w-3 h-3 flex-shrink-0" />
+															)}
+														</div>
+														<p className="text-xs text-gray-500 truncate">
+															{selectedSavedLocation.address}
+														</p>
+														<div className="mt-1">
+															<span className="text-xs px-2 py-0.5 bg-[#579BE8]/10 text-[#579BE8] rounded">
+																محدد حالياً
+															</span>
+														</div>
+													</div>
+													<ChevronDown className="text-gray-400" size={16} />
+												</div>
+											</div>
+										)}
+									</div>
+								</>
 							)}
 
 							{/* Manual Location Selection */}
@@ -671,7 +852,7 @@ function OrderFormContent() {
 										setTouched(prev => ({ ...prev, location: true }));
 										setIsMapOpen(true);
 									}}
-									className={`group cursor-pointer relative w-full h-16 rounded-2xl transition-all duration-300 flex items-center px-4 overflow-hidden border-2 border-dashed
+									className={`group cursor-pointer relative w-full h-14 md:h-16 rounded-xl md:rounded-2xl transition-all duration-300 flex items-center px-3 md:px-4 overflow-hidden border-2 border-dashed
 										${getFieldStatus('location') === 'success'
 											? 'bg-[#579BE8]/5 border-[#579BE8]/50 hover:border-[#579BE8]/70'
 											: getFieldStatus('location') === 'error'
@@ -679,25 +860,25 @@ function OrderFormContent() {
 												: 'bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 hover:from-[#579BE8]/10 hover:to-[#124987]/10 border-[#579BE8]/30 hover:border-[#579BE8]/60'
 										}`}
 								>
-									<div className="flex-1 flex items-center gap-3">
-										<div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors 
+									<div className="flex-1 flex items-center gap-2 md:gap-3">
+										<div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center transition-colors 
 											${getFieldStatus('location') === 'success'
 												? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white'
 												: getFieldStatus('location') === 'error'
 													? 'bg-red-100 text-red-500'
 													: 'bg-[#579BE8]/10 text-[#579BE8]'
 											}`}>
-											<MapPin size={20} />
+											<MapPin size={18} />
 										</div>
-										<div className="flex flex-col items-start overflow-hidden">
-											<span className={`text-sm font-bold truncate w-full text-right ${
+										<div className="flex flex-col items-start overflow-hidden flex-1">
+											<span className={`text-xs md:text-sm font-medium truncate w-full text-right ${
 												locationData ? 'text-gray-900' : getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'
 											}`}>
 												{locationData 
 													? isManualLocation 
-														? `موقع على الخريطة: ${locationData.address?.substring(0, 30)}...` 
+														? `موقع على الخريطة: ${locationData.address?.substring(0, 20)}...` 
 														: `محفوظ: ${selectedSavedLocation?.name}`
-													: 'اضغط لتحديد موقع جديد على الخريطة'
+													: 'اضغط لتحديد موقع جديد'
 												}
 											</span>
 											{locationData && (
@@ -713,13 +894,13 @@ function OrderFormContent() {
 												e.stopPropagation();
 												handleClearLocation();
 											}}
-											className="absolute left-3 p-1.5 bg-red-100 text-red-500 rounded-lg hover:bg-red-200 transition-colors"
+											className="absolute left-2 md:left-3 p-1 md:p-1.5 bg-red-100 text-red-500 rounded-lg hover:bg-red-200 transition-colors"
 										>
-											<X size={14} />
+											<X size={12} />
 										</button>
 									)}
-									<div className="bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity absolute left-3">
-										<ArrowRight size={16} />
+									<div className="bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-1.5 md:p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity absolute left-2 md:left-3">
+										<ArrowRight size={14} />
 									</div>
 								</div>
 								<AnimatePresence>
@@ -728,15 +909,15 @@ function OrderFormContent() {
 											initial={{ opacity: 0, y: -10 }}
 											animate={{ opacity: 1, y: 0 }}
 											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1"
+											className="text-red-500 text-xs flex items-center gap-1 mt-1"
 										>
-											<AlertCircle size={14} />
+											<AlertCircle size={12} />
 											الرجاء تحديد موقع التوصيل
 										</motion.p>
 									)}
 								</AnimatePresence>
 								{locationData && isManualLocation && (
-									<div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+									<div className="mt-2 p-2 md:p-3 bg-green-50 border border-green-200 rounded-xl">
 										<p className="text-xs text-green-700 flex items-center gap-2">
 											<CheckCircle2 size={12} />
 											سيتم حفظ هذا الموقع تلقائياً مع الطلب
@@ -747,23 +928,23 @@ function OrderFormContent() {
 						</motion.div>
 
 						{/* Details Grid */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 							{/* Water Type */}
-							<div className="space-y-3">
-								<label className="flex  items-center gap-2 text-gray-700 font-bold mb-2">
-									<Droplets size={20} className={getFieldStatus('waterType') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+							<div className="space-y-2 md:space-y-3">
+								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base mb-1 md:mb-2">
+									<Droplets size={18} className={getFieldStatus('waterType') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
 									نوع المياه
 									{showSuccess('waterType') && (
 										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
+											<CheckCircle2 size={16} className="text-[#579BE8]" />
 										</motion.span>
 									)}
 								</label>
 								
 								{loadingWaterTypes ? (
-									<div className="w-full h-14 rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-4 flex items-center justify-center">
-										<Spinner />
-										<span className="mr-2 text-sm text-gray-500">جاري التحميل...</span>
+									<div className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-3 md:px-4 flex items-center justify-center">
+										<Spinner size="sm" />
+										<span className="mr-2 text-xs md:text-sm text-gray-500">جاري التحميل...</span>
 									</div>
 								) : (
 									<div className="relative">
@@ -774,17 +955,17 @@ function OrderFormContent() {
 												setTouched(prev => ({ ...prev, waterType: true }));
 											}}
 										>
-											<SelectTrigger className={`h-14 w-full rounded-2xl border-2 ${getFieldStatus('waterType') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
+											<SelectTrigger className={`h-12 md:h-14 w-full rounded-xl md:rounded-2xl border-2 text-sm md:text-base ${getFieldStatus('waterType') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-3 md:px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
 												<SelectValue placeholder="اختر نوع المياه">
 													{selectedWaterTypeName || 'اختر نوع المياه'}
 												</SelectValue>
 											</SelectTrigger>
-											<SelectContent className="rounded-xl border-[#579BE8]/20">
+											<SelectContent className="rounded-xl border-[#579BE8]/20 max-h-60">
 												{waterTypes.map((waterTypeItem) => (
 													<SelectItem 
 														key={waterTypeItem.id} 
 														value={waterTypeItem.id.toString()}
-														className="text-right py-3 px-4 focus:bg-[#579BE8]/10 cursor-pointer"
+														className="text-right py-2 md:py-3 px-3 md:px-4 focus:bg-[#579BE8]/10 cursor-pointer text-sm md:text-base"
 													>
 														{waterTypeItem.name}
 													</SelectItem>
@@ -793,8 +974,8 @@ function OrderFormContent() {
 										</Select>
 										
 										{waterType && (
-											<div className="absolute left-3 top-1/2 -translate-y-1/2">
-												<CheckCircle2 size={20} className="text-[#579BE8]" />
+											<div className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2">
+												<CheckCircle2 size={16} className="text-[#579BE8]" />
 											</div>
 										)}
 									</div>
@@ -806,35 +987,34 @@ function OrderFormContent() {
 											initial={{ opacity: 0, y: -10 }}
 											animate={{ opacity: 1, y: 0 }}
 											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1"
+											className="text-red-500 text-xs flex items-center gap-1 mt-1"
 										>
-											<AlertCircle size={14} />
+											<AlertCircle size={12} />
 											الرجاء اختيار نوع المياه
 										</motion.p>
 									)}
 								</AnimatePresence>
 							</div>
-							{/* <WaterTypeSelect/> */}
 
 							{/* Service (Quantity) */}
-							<div className="space-y-3">
-								<label className="flex items-center gap-2 text-gray-700 font-bold mb-2">
-									<Scale size={20} className={getFieldStatus('quantity') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+							<div className="space-y-2 md:space-y-3">
+								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base mb-1 md:mb-2">
+									<Scale size={18} className={getFieldStatus('quantity') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
 									الكمية (طن)
 									{showSuccess('quantity') && (
 										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={18} className="text-[#579BE8]" />
+											<CheckCircle2 size={16} className="text-[#579BE8]" />
 										</motion.span>
 									)}
 								</label>
 								
 								{loadingServices ? (
-									<div className="w-full h-14 rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-4 flex items-center justify-center">
-										<Spinner />
-										<span className="mr-2 text-sm text-gray-500">جاري التحميل...</span>
+									<div className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-3 md:px-4 flex items-center justify-center">
+										<Spinner size="sm" />
+										<span className="mr-2 text-xs md:text-sm text-gray-500">جاري التحميل...</span>
 									</div>
 								) : (
-									<div className="relative ">
+									<div className="relative">
 										<Select
 											value={quantity}
 											onValueChange={(value) => {
@@ -842,17 +1022,17 @@ function OrderFormContent() {
 												setTouched(prev => ({ ...prev, quantity: true }));
 											}}
 										>
-											<SelectTrigger className={`h-14 w-full rounded-2xl border-2 ${getFieldStatus('quantity') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
+											<SelectTrigger className={`h-12 md:h-14 w-full rounded-xl md:rounded-2xl border-2 text-sm md:text-base ${getFieldStatus('quantity') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-3 md:px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
 												<SelectValue placeholder="اختر الكمية">
 													{selectedServiceName || 'اختر الكمية'}
 												</SelectValue>
 											</SelectTrigger>
-											<SelectContent className="rounded-xl border-[#579BE8]/20">
+											<SelectContent className="rounded-xl border-[#579BE8]/20 max-h-60">
 												{services.map((service) => (
 													<SelectItem 
 														key={service.id} 
 														value={service.id.toString()}
-														className="text-right py-3 px-4 focus:bg-[#579BE8]/10 cursor-pointer"
+														className="text-right py-2 md:py-3 px-3 md:px-4 focus:bg-[#579BE8]/10 cursor-pointer text-sm md:text-base"
 													>
 														{service.name}
 													</SelectItem>
@@ -861,8 +1041,8 @@ function OrderFormContent() {
 										</Select>
 										
 										{quantity && (
-											<div className="absolute left-3 top-1/2 -translate-y-1/2">
-												{/* <CheckCircle2 size={20} className="text-[#579BE8]" /> */}
+											<div className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2">
+												<CheckCircle2 size={16} className="text-[#579BE8]" />
 											</div>
 										)}
 									</div>
@@ -874,40 +1054,32 @@ function OrderFormContent() {
 											initial={{ opacity: 0, y: -10 }}
 											animate={{ opacity: 1, y: 0 }}
 											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1"
+											className="text-red-500 text-xs flex items-center gap-1 mt-1"
 										>
-											<AlertCircle size={14} />
+											<AlertCircle size={12} />
 											الرجاء اختيار الكمية
 										</motion.p>
 									)}
 								</AnimatePresence>
-								
-								{selectedServiceName && (
-									<div className="mt-2 p-2 bg-[#579BE8]/5 rounded-lg">
-										<p className="text-xs text-[#579BE8] text-center">
-											الخدمة: {selectedServiceName}
-										</p>
-									</div>
-								)}
 							</div>
 						</div>
 
 						{/* Actions */}
-						<motion.div variants={itemVariants} className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+						<motion.div variants={itemVariants} className="pt-2 md:pt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
 							<button
 								onClick={handleOrderNow}
 								disabled={isLoading || loadingWaterTypes || loadingServices}
-								className="h-14 rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+								className="h-12 md:h-14 rounded-xl md:rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-sm md:text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
 							>
 								{isLoading ? (
 									<>
-										<Spinner />
-										<span>جاري إنشاء الطلب...</span>
+										<Spinner size="sm" />
+										<span className="text-sm">جاري إنشاء الطلب...</span>
 									</>
 								) : (
 									<>
 										<span>اطلب الآن</span>
-										<ArrowLeft size={20} />
+										<ArrowLeft size={16} />
 									</>
 								)}
 							</button>
@@ -915,39 +1087,18 @@ function OrderFormContent() {
 							<button
 								onClick={() => setShowSchedule(true)}
 								disabled={isLoading || !locationData || loadingWaterTypes || loadingServices}
-								className="h-14 rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+								className="h-12 md:h-14 rounded-xl md:rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-sm md:text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								<Calendar size={20} />
+								<Calendar size={16} />
 								<span>جدولة الطلب</span>
 							</button>
 						</motion.div>
 
-						{/* Order Summary */}
-						{(waterType || quantity) && (
-							<div className="pt-4 border-t border-gray-100">
-								<h4 className="text-sm font-bold text-gray-700 mb-3">ملخص اختياراتك:</h4>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-									{waterType && (
-										<div className="bg-[#579BE8]/5 rounded-xl p-3 border border-[#579BE8]/20">
-											<p className="text-xs text-gray-600 mb-1">نوع المياه</p>
-											<p className="text-sm font-medium text-[#579BE8]">{selectedWaterTypeName}</p>
-										</div>
-									)}
-									{quantity && (
-										<div className="bg-[#579BE8]/5 rounded-xl p-3 border border-[#579BE8]/20">
-											<p className="text-xs text-gray-600 mb-1">الكمية</p>
-											<p className="text-sm font-medium text-[#579BE8]">{selectedServiceName}</p>
-										</div>
-									)}
-								</div>
-							</div>
-						)}
-
 						{/* Info Box */}
-						<div className="pt-4 border-t border-gray-100">
-							<div className="flex items-start gap-3 p-3 bg-blue-50/50 rounded-xl">
-								<AlertCircle size={18} className="text-[#579BE8] mt-0.5 flex-shrink-0" />
-								<div>
+						<div className="pt-3 md:pt-4 border-t border-gray-100">
+							<div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-blue-50/50 rounded-xl">
+								<AlertCircle size={16} className="text-[#579BE8] mt-0.5 flex-shrink-0" />
+								<div className="flex-1">
 									<p className="text-xs text-gray-600">
 										• يمكنك اختيار مكان محفوظ أو تحديد موقع جديد على الخريطة
 									</p>
@@ -977,31 +1128,31 @@ function OrderFormContent() {
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.3 }}
-						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center"
+						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
 					>
 						<motion.div
 							initial={{ scale: 0.9, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.9, opacity: 0 }}
 							transition={{ type: "spring", stiffness: 300, damping: 25 }}
-							className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl shadow-[#579BE8]/20 border border-[#579BE8]/20 min-w-[280px] relative overflow-hidden"
+							className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl shadow-[#579BE8]/20 border border-[#579BE8]/20 w-full max-w-xs md:max-w-sm relative overflow-hidden"
 						>
 							<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
-							<div className="flex items-center gap-4">
+							<div className="flex items-center gap-3 md:gap-4">
 								<div className="relative flex-shrink-0">
 									<motion.div
 										animate={{ rotate: 360 }}
 										transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-										className="w-12 h-12 rounded-full border-3 border-[#579BE8]/20 border-t-[#579BE8]"
+										className="w-10 h-10 md:w-12 md:h-12 rounded-full border-3 border-[#579BE8]/20 border-t-[#579BE8]"
 										style={{ borderWidth: '3px' }}
 									/>
 									<div className="absolute inset-0 flex items-center justify-center">
 										<motion.div
 											animate={{ scale: [1, 1.1, 1] }}
 											transition={{ duration: 1, repeat: Infinity }}
-											className="w-7 h-7 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
+											className="w-6 h-6 md:w-7 md:h-7 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
 										>
-											<Search size={14} className="text-white" />
+											<Search size={12} className="text-white" />
 										</motion.div>
 									</div>
 								</div>
@@ -1042,9 +1193,12 @@ function OrderFormContent() {
 export default function OrderForm() {
 	return (
 		<Suspense fallback={
-			<div className="flex items-center justify-center py-8">
-				<div className="animate-spin">
-					<div className="w-8 h-8 border-4 border-gray-300 border-t-[#579BE8] rounded-full"></div>
+			<div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+				<div className="flex flex-col items-center gap-4">
+					<div className="animate-spin">
+						<div className="w-12 h-12 border-4 border-gray-300 border-t-[#579BE8] rounded-full"></div>
+					</div>
+					<p className="text-gray-500">جاري تحميل نموذج الطلب...</p>
 				</div>
 			</div>
 		}>

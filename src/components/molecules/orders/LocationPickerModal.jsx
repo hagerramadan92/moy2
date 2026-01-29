@@ -339,7 +339,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
 
         <div className="flex-1 relative bg-gray-100">
           {/* ✅ Search input ALWAYS at top of map */}
-          <SearchBox onPick={handlePickFromSearch} />
+          {/* <SearchBox onPick={handlePickFromSearch} /> */}
 
           {mapReady && (
             <MapContainer
@@ -385,11 +385,11 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
           )}
 
           {/* Buttons */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-[1000] w-full px-4 justify-center">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex md:gap-3 gap-2 z-[1000] w-full px-4 justify-center">
             <button
               onClick={handleLocateMe}
               disabled={loading}
-              className="flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
+              className="flex  items-center md:gap-2 bg-white text-blue-600 md:px-6 md:py-3 py-1 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
             >
               <Navigation size={20} className={loading ? "animate-spin" : ""} />
               <span>{loading ? "جاري التحديد..." : "موقعي الحالي"}</span>
@@ -398,7 +398,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
             <button
               onClick={handleConfirm}
               disabled={!position}
-              className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl shadow-lg font-semibold hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale min-w-[160px] justify-center"
+              className="flex items-center md:gap-2 bg-blue-600 text-white md:px-8 md:py-3 rounded-xl shadow-lg font-semibold hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale min-w-[160px] justify-center"
             >
               <Check size={20} />
               <span>تأكيد الموقع</span>

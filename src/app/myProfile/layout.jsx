@@ -12,10 +12,10 @@ export default function ProfileLayout({ children }) {
             {/* Fixed Mobile Menu Trigger */}
             <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="  min-[1123px]:hidden fixed top-[10%] max-[1123px]:right-3 right-6 z-[90] flex items-center gap-2 bg-[#579BE8] text-white max-[1123px]:px-4 px-5 py-3 rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all font-bold"
+                className="  min-[1123px]:hidden fixed shadow-2xl top-[15%] max-[1123px]:right-3 right-6 z-[90] flex items-center gap-2 bg-[#579BE8] text-white max-[1123px]:px-4 px-5 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all font-bold"
             >
                 <HiMenuAlt2 className="w-6 h-6" />
-                <span>الحساب الشخصي</span>
+                <span className="text-xs">الحساب الشخصي</span>
             </button>
 
             <div className=" mx-auto  max-[1123px]:pt-[50px] py-10 px-3 max-w-7xl">

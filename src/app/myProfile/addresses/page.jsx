@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt, FaEye, FaArrowLeft } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt, FaEye } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import { BiCurrentLocation } from "react-icons/bi";
 import { Input } from "@/components/ui/input";
@@ -351,8 +351,6 @@ function DisplayMap({ lat, lng }) {
 
 export default function AddressesPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const fromOrder = searchParams.get('fromOrder');
     const [addresses, setAddresses] = useState([]);
     const [loadingAddresses, setLoadingAddresses] = useState(false);
     const [selectedAddress, setSelectedAddress] = useState(null);
@@ -376,15 +374,10 @@ export default function AddressesPage() {
     const [isMapAvailable, setIsMapAvailable] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [locationName, setLocationName] = useState('');
-    const [isSelectMode, setIsSelectMode] = useState(false);
 
     useEffect(() => {
         setIsMapAvailable(typeof window !== 'undefined');
-        // Check if coming from order page
-        if (fromOrder === 'true') {
-            setIsSelectMode(true);
-        }
-    }, [fromOrder]);
+    }, []);
 
     useEffect(() => {
         const fetchAddresses = async () => {
@@ -556,16 +549,6 @@ export default function AddressesPage() {
                 setIsAddingNewAddress(false);
                 setShowMapPicker(false);
                 await refreshAddressesList(accessToken);
-                
-                // إذا كان قادم من صفحة الطلب، ارجع لها
-                if (fromOrder === 'true') {
-                    // إضافة تأخير بسيط لرؤية رسالة النجاح
-                    setTimeout(() => {
-                        router.back();
-                    }, 1500);
-                    return;
-                }
-                
                 await fetchAddressDetails(data.data.id);
                 setEditAddressForm({
                     name: 'البيت',
@@ -750,18 +733,6 @@ export default function AddressesPage() {
         setLocationName('');
     };
 
-    // Handle address selection for order
-    const handleSelectAddressForOrder = (address) => {
-        if (fromOrder === 'true') {
-            // Save selected address ID to localStorage to use in order page
-            localStorage.setItem('selectedAddressId', address.id.toString());
-            toast.success(`تم اختيار العنوان: ${address.name}`);
-            setTimeout(() => {
-                router.back();
-            }, 1000);
-        }
-    };
-
     // Quick location buttons
     const setQuickLocation = (city, district) => {
         const cityData = SAUDI_CITIES.find(c => c.name === city);
@@ -936,53 +907,6 @@ export default function AddressesPage() {
         </div>
     );
 
-    // Render address item with select button
-    const renderAddressItem = (address) => (
-        <div
-            key={address.id}
-            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                selectedAddress?.id === address.id
-                    ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8] shadow-lg'
-                    : 'bg-secondary/30 border-border/50 hover:border-[#579BE8]/50 hover:shadow-md'
-            }`}
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0" onClick={() => fetchAddressDetails(address.id)}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-bold text-sm text-foreground truncate">
-                            {address.name}
-                        </h4>
-                        {address.is_favorite && (
-                            <FaStar className="text-[#579BE8] w-4 h-4 flex-shrink-0" />
-                        )}
-                    </div>
-                    {address.address && (
-                        <p className="text-xs text-muted-foreground truncate">
-                            {address.address}
-                        </p>
-                    )}
-                    {address.type && (
-                        <span className="inline-block mt-2 text-xs px-2 py-1 rounded-lg bg-[#579BE8]/10 text-[#579BE8]">
-                            {address.type === 'home' ? '🏠 منزل' : 
-                             address.type === 'work' ? '💼 عمل' : 
-                             address.type === 'other' ? '📍 أخرى' : address.type}
-                        </span>
-                    )}
-                </div>
-                
-                {isSelectMode && fromOrder === 'true' && (
-                    <button
-                        onClick={() => handleSelectAddressForOrder(address)}
-                        className="px-3 py-1.5 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white text-xs rounded-lg hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold flex items-center gap-1 whitespace-nowrap"
-                    >
-                        <FaCheckCircle className="w-3 h-3" />
-                        اختيار
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-
     return (
         <div className="space-y-6 fade-in-up">
             <motion.div
@@ -992,29 +916,14 @@ export default function AddressesPage() {
             >
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => {
-                            if (fromOrder === 'true') {
-                                router.back();
-                            } else {
-                                router.back();
-                            }
-                        }}
+                        onClick={() => router.back()}
                         className="p-2 hover:bg-secondary/50 rounded-xl transition-colors"
                     >
                         <FaChevronLeft className="w-5 h-5 text-foreground" />
                     </button>
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black text-foreground">الأماكن المحفوظة</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {fromOrder === 'true' ? 'اختر عنواناً للطلب أو أضف عنواناً جديداً' : 'إدارة عناوينك المحفوظة والمفضلة'}
-                        </p>
-                        {fromOrder === 'true' && (
-                            <div className="mt-1">
-                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-lg">
-                                    وضع الاختيار للطلب
-                                </span>
-                            </div>
-                        )}
+                        <p className="text-sm text-muted-foreground mt-1">إدارة عناوينك المحفوظة والمفضلة</p>
                     </div>
                 </div>
                 <button
@@ -1034,18 +943,7 @@ export default function AddressesPage() {
                         animate={{ opacity: 1, x: 0 }}
                         className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 p-4 sm:p-6 h-full min-h-[600px] flex flex-col"
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-foreground">قائمة العناوين</h2>
-                            {fromOrder === 'true' && (
-                                <button
-                                    onClick={() => router.back()}
-                                    className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
-                                >
-                                    <FaArrowLeft className="w-3 h-3" />
-                                    رجوع للطلب
-                                </button>
-                            )}
-                        </div>
+                        <h2 className="text-lg font-bold text-foreground mb-4">قائمة العناوين</h2>
                         
                         {loadingAddresses ? (
                             <div className="flex items-center justify-center py-12 flex-1">
@@ -1065,7 +963,42 @@ export default function AddressesPage() {
                             </div>
                         ) : (
                             <div className="space-y-3 flex-1 overflow-y-auto">
-                                {addresses.map((address) => renderAddressItem(address))}
+                                {addresses.map((address) => (
+                                    <div
+                                        key={address.id}
+                                        onClick={() => fetchAddressDetails(address.id)}
+                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                            selectedAddress?.id === address.id
+                                                ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8] shadow-lg'
+                                                : 'bg-secondary/30 border-border/50 hover:border-[#579BE8]/50 hover:shadow-md'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h4 className="font-bold text-sm text-foreground truncate">
+                                                        {address.name}
+                                                    </h4>
+                                                    {address.is_favorite && (
+                                                        <FaStar className="text-[#579BE8] w-4 h-4 flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                                {address.address && (
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {address.address}
+                                                    </p>
+                                                )}
+                                                {address.type && (
+                                                    <span className="inline-block mt-2 text-xs px-2 py-1 rounded-lg bg-[#579BE8]/10 text-[#579BE8]">
+                                                        {address.type === 'home' ? '🏠 منزل' : 
+                                                         address.type === 'work' ? '💼 عمل' : 
+                                                         address.type === 'other' ? '📍 أخرى' : address.type}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </motion.div>
@@ -1085,11 +1018,6 @@ export default function AddressesPage() {
                                 </div>
                                 <h3 className="text-xl font-bold text-foreground mb-2">اختر عنواناً لعرض التفاصيل</h3>
                                 <p className="text-sm text-muted-foreground">انقر على أي عنوان من القائمة لعرض وتعديل تفاصيله</p>
-                                {fromOrder === 'true' && (
-                                    <p className="text-sm text-blue-600 mt-2">
-                                        أو اختر عنواناً للعودة إلى صفحة الطلب
-                                    </p>
-                                )}
                                 <button
                                     onClick={startAddingNewAddress}
                                     className="mt-6 px-6 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold flex items-center gap-2"
@@ -1121,11 +1049,6 @@ export default function AddressesPage() {
                                                              selectedAddress.type === 'other' ? '📍 أخرى' : selectedAddress.type}
                                                         </p>
                                                     )}
-                                                    {isAddingNewAddress && fromOrder === 'true' && (
-                                                        <p className="text-white/80 text-sm mt-1">
-                                                            سيتم العودة تلقائياً إلى صفحة الطلب بعد الحفظ
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -1142,15 +1065,6 @@ export default function AddressesPage() {
                                                 >
                                                     <CiEdit className="w-4 h-4" />
                                                     تعديل
-                                                </button>
-                                            )}
-                                            {fromOrder === 'true' && !isAddingNewAddress && selectedAddress && (
-                                                <button
-                                                    onClick={() => handleSelectAddressForOrder(selectedAddress)}
-                                                    className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all font-bold text-sm flex items-center gap-2 border border-white/30"
-                                                >
-                                                    <FaCheckCircle className="w-4 h-4" />
-                                                    اختيار للطلب
                                                 </button>
                                             )}
                                         </div>
