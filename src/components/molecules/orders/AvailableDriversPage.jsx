@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo, memo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -531,8 +531,8 @@ function PaymentModal({
   );
 }
 
-// DriverCard Component
-function DriverCard({
+// DriverCard Component - Optimized with memo and useMemo
+const DriverCard = memo(function DriverCard({
   id,
   driverId,
   name,
@@ -566,10 +566,11 @@ function DriverCard({
     }
   };
 
-  const getTimeAgo = (dateString) => {
-    if (!dateString) return 'الآن';
+  // Memoize time ago calculation
+  const timeAgo = useMemo(() => {
+    if (!createdAt) return 'الآن';
     const now = new Date();
-    const created = new Date(dateString);
+    const created = new Date(createdAt);
     const diffMs = now - created;
     const diffMins = Math.floor(diffMs / 60000);
     
@@ -577,9 +578,10 @@ function DriverCard({
     if (diffMins < 60) return `قبل ${diffMins} دقيقة`;
     if (diffMins < 1440) return `قبل ${Math.floor(diffMins / 60)} ساعة`;
     return `قبل ${Math.floor(diffMins / 1440)} يوم`;
-  };
+  }, [createdAt]);
 
-  const getBadgeColor = (index) => {
+  // Memoize badge color
+  const badgeColor = useMemo(() => {
     const colors = [
       'from-blue-500 to-blue-600',
       'from-green-500 to-green-600',
@@ -589,18 +591,54 @@ function DriverCard({
       'from-indigo-500 to-indigo-600'
     ];
     return colors[index % colors.length];
-  };
+  }, [index]);
+
+  // Memoize rating stars
+  const ratingValue = useMemo(() => Math.round(parseFloat(rating)), [rating]);
+
+  // Memoize card classes
+  const cardClasses = useMemo(() => {
+    if (isAccepted) return 'border-green-500 bg-green-50/30';
+    if (isPendingPayment) return 'border-amber-500 bg-amber-50/30';
+    if (isExpired) return 'border-red-300 bg-red-50/30 opacity-75';
+    return 'border-gray-200';
+  }, [isAccepted, isPendingPayment, isExpired]);
+
+  // Memoize header gradient
+  const headerGradient = useMemo(() => {
+    if (isAccepted) return 'from-green-50 to-emerald-50';
+    if (isPendingPayment) return 'from-amber-50 to-orange-50';
+    if (isExpired) return 'from-red-50 to-rose-50';
+    return 'from-gray-50 to-gray-100';
+  }, [isAccepted, isPendingPayment, isExpired]);
+
+  // Memoize icon background
+  const iconBg = useMemo(() => {
+    if (isAccepted) return 'bg-gradient-to-br from-green-500 to-emerald-600';
+    if (isPendingPayment) return 'bg-gradient-to-br from-amber-500 to-orange-600';
+    if (isExpired) return 'bg-gradient-to-br from-red-500 to-rose-600';
+    return 'bg-gradient-to-br from-blue-500 to-indigo-600';
+  }, [isAccepted, isPendingPayment, isExpired]);
+
+  // Memoize badge gradient
+  const badgeGradient = useMemo(() => {
+    if (isAccepted) return 'from-green-500 to-emerald-600';
+    if (isPendingPayment) return 'from-amber-500 to-orange-600';
+    if (isExpired) return 'from-red-500 to-rose-600';
+    return badgeColor;
+  }, [isAccepted, isPendingPayment, isExpired, badgeColor]);
+
+  // Memoize button classes
+  const buttonClasses = useMemo(() => {
+    if (isAccepted) return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg';
+    if (isPendingPayment) return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg';
+    if (isExpired) return 'bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-lg opacity-75 cursor-not-allowed';
+    if (isPending) return 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl';
+    return 'bg-gray-100 text-gray-400 cursor-not-allowed';
+  }, [isAccepted, isPendingPayment, isExpired, isPending]);
 
   return (
-    <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col ${
-      isAccepted 
-        ? 'border-green-500 bg-green-50/30' 
-        : isPendingPayment
-        ? 'border-amber-500 bg-amber-50/30'
-        : isExpired
-        ? 'border-red-300 bg-red-50/30 opacity-75'
-        : 'border-gray-200'
-    }`}>
+    <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col ${cardClasses}`}>
       {/* Header with badge */}
       <div className="relative">
         {/* {isAccepted && (
@@ -621,38 +659,14 @@ function DriverCard({
             انتهت الصلاحية
           </div>
         )} */}
-        <div className={`absolute top-4 right-4 bg-gradient-to-r ${
-          isAccepted 
-            ? 'from-green-500 to-emerald-600' 
-            : isPendingPayment
-            ? 'from-amber-500 to-orange-600'
-            : isExpired
-            ? 'from-red-500 to-rose-600'
-            : getBadgeColor(index)
-        } text-white text-xs font-bold px-3 py-1 rounded-full z-10`}>
+        <div className={`absolute top-4 right-4 bg-gradient-to-r ${badgeGradient} text-white text-xs font-bold px-3 py-1 rounded-full z-10`}>
           العرض #{index + 1}
         </div>
         
-        <div className={`bg-gradient-to-r p-6 ${
-          isAccepted 
-            ? 'from-green-50 to-emerald-50' 
-            : isPendingPayment
-            ? 'from-amber-50 to-orange-50'
-            : isExpired
-            ? 'from-red-50 to-rose-50'
-            : 'from-gray-50 to-gray-100'
-        }`}>
+        <div className={`bg-gradient-to-r p-6 ${headerGradient}`}>
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
-                isAccepted 
-                  ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                  : isPendingPayment
-                  ? 'bg-gradient-to-br from-amber-500 to-orange-600'
-                  : isExpired
-                  ? 'bg-gradient-to-br from-red-500 to-rose-600'
-                  : 'bg-gradient-to-br from-blue-500 to-indigo-600'
-              }`}>
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${iconBg}`}>
                 <Truck className={`w-7 h-7 ${isExpired ? 'opacity-60' : 'text-white'}`} />
               </div>
               {isPending && !isAccepted && !isPendingPayment && !isExpired && (
@@ -682,12 +696,11 @@ function DriverCard({
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
-                      className={`w-4 h-4 ${star <= Math.round(parseFloat(rating)) ? 'text-yellow-500 fill-current' : 'text-gray-300'}`}
+                      className={`w-4 h-4 ${star <= ratingValue ? 'text-yellow-500 fill-current' : 'text-gray-300'}`}
                     />
                   ))}
                 </div>
                 <span className="font-bold text-gray-900">{rating}</span>
-                {/* <span className="text-xs text-gray-500">{successfulOrders}</span> */}
               </div>
             </div>
           </div>
@@ -754,7 +767,7 @@ function DriverCard({
               <Clock className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-600">تم العرض:</span>
             </div>
-            <span className="font-medium text-gray-500 text-sm">{getTimeAgo(createdAt)}</span>
+            <span className="font-medium text-gray-500 text-sm">{timeAgo}</span>
           </div>
         </div>
 
@@ -763,17 +776,7 @@ function DriverCard({
           <button
             onClick={handleAccept}
             disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired}
-            className={`w-full py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-3 ${
-              isAccepted
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
-                : isPendingPayment
-                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg'
-                : isExpired
-                ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-lg opacity-75 cursor-not-allowed'
-                : isPending 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
+            className={`w-full py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-3 ${buttonClasses}`}
           >
             {accepting ? (
               <>
@@ -818,7 +821,7 @@ function DriverCard({
       </div>
     </div>
   );
-}
+});
 
 // المكون الداخلي الذي يستخدم useSearchParams
 function AvailableDriversContent({ onBack }) {
@@ -840,6 +843,7 @@ function AvailableDriversContent({ onBack }) {
   const [orderStatus, setOrderStatus] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isOrderExpired, setIsOrderExpired] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [stats, setStats] = useState({
     totalOffers: 0,
     averagePrice: 0,
@@ -1046,16 +1050,16 @@ function AvailableDriversContent({ onBack }) {
     return () => clearInterval(interval);
   }, [orderStatus, offersData]);
 
-  // Debug: مراقبة تغييرات offersData و loading
-  useEffect(() => {
-    console.log('Loading state:', loading);
-    console.log('Refreshing state:', refreshing);
-    if (offersData) {
-      console.log('offersData updated:', offersData);
-      console.log('offers array:', offersData.offers);
-      console.log('offers count:', offersData.offers?.length);
-    }
-  }, [offersData, loading, refreshing]);
+  // Debug: مراقبة تغييرات offersData و loading (disabled for performance)
+  // useEffect(() => {
+  //   console.log('Loading state:', loading);
+  //   console.log('Refreshing state:', refreshing);
+  //   if (offersData) {
+  //     console.log('offersData updated:', offersData);
+  //     console.log('offers array:', offersData.offers);
+  //     console.log('offers count:', offersData.offers?.length);
+  //   }
+  // }, [offersData, loading, refreshing]);
 
   // 🔴 **تحديث دالة fetchOffers مع token ومعالجة المصادقة**
   const fetchOffers = async () => {
@@ -1074,8 +1078,6 @@ function AvailableDriversContent({ onBack }) {
         return;
       }
 
-      console.log('Fetching offers with token:', accessToken?.substring(0, 20) + '...');
-      
       // محاولة جلب البيانات الحقيقية مع token
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
         headers: {
@@ -1086,15 +1088,23 @@ function AvailableDriversContent({ onBack }) {
         cache: 'no-store'
       });
 
+      // Check for 404 Not Found
+      if (response.status === 404) {
+        setIsNotFound(true);
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        setOffersData(null);
+        return;
+      }
+
       const data = await response.json();
-      console.log('Offers API response:', data);
-      console.log('Offers data:', data.data);
-      console.log('Offers array:', data.data?.offers);
       
       if (response.ok && data.status) {
+        setIsNotFound(false);
+        
         // التحقق من وجود البيانات
         if (!data.data) {
-          console.error('No data in response');
           setError('لا توجد بيانات في الاستجابة');
           setLoading(false);
           setRefreshing(false);
@@ -1102,50 +1112,37 @@ function AvailableDriversContent({ onBack }) {
         }
 
         // عرض البيانات فوراً قبل أي معالجة أخرى
-        console.log('Setting offers data:', data.data);
-        console.log('Offers count:', data.data?.offers?.length);
-        console.log('Total offers:', data.data?.total_offers);
+        const offersDataToSet = {
+          ...data.data,
+          offers: data.data.offers || [],
+          total_offers: data.data.total_offers || (data.data.offers?.length || 0),
+          active_offers: data.data.active_offers || (data.data.offers?.length || 0)
+        };
         
-        // التأكد من أن البيانات موجودة - حتى لو كانت فارغة
-        if (data.data) {
-          // تأكد من وجود offers array حتى لو كان فارغاً
-          const offersDataToSet = {
-            ...data.data,
-            offers: data.data.offers || [],
-            total_offers: data.data.total_offers || (data.data.offers?.length || 0),
-            active_offers: data.data.active_offers || (data.data.offers?.length || 0)
-          };
-          
-          console.log('Setting offersDataToSet:', offersDataToSet);
-          setOffersData(offersDataToSet);
+        // Set data immediately
+        setOffersData(offersDataToSet);
         setUseMockData(false);
         setError(null);
-        } else {
-          console.warn('Invalid data structure:', data.data);
-          setError('بيانات غير صحيحة من الخادم');
-        }
-        
-        setLoading(false); // إيقاف حالة التحميل فوراً
-        setRefreshing(false); // إيقاف حالة التحديث أيضاً
         
         // Set accepted offer ID if exists - prioritize this to show immediately
         if (data.data.accepted_offer) {
           const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
           setAcceptedOfferId(acceptedId);
           setPendingPaymentOfferId(null);
-          // Clear any pending payment data if there's an accepted offer
           localStorage.removeItem('pendingOfferData');
         }
         
-        // Fetch order status to check expiration
-        fetchOrderStatus();
+        // Stop loading immediately after setting data
+        setLoading(false);
+        setRefreshing(false);
         
-        // معالجة البيانات في الخلفية (بعد عرض البيانات)
-        if (data.data.offers && data.data.offers.length > 0) {
-          setTimeout(() => {
-        calculateStats(data.data.offers);
-          }, 0);
-        }
+        // Process stats and fetch status in background (non-blocking)
+        setTimeout(() => {
+          if (data.data.offers && data.data.offers.length > 0) {
+            calculateStats(data.data.offers);
+          }
+          fetchOrderStatus();
+        }, 0);
       } else {
         // إذا كان هناك خطأ في المصادقة
         if (data.error_code === 'UNAUTHENTICATED' || data.message?.includes('تسجيل الدخول')) {
@@ -1161,7 +1158,17 @@ function AvailableDriversContent({ onBack }) {
     } catch (err) {
       console.warn('API Error:', err.message);
       
-      // استخدام البيانات الوهمية كبديل
+      // Check if error is 404
+      if (err.message?.includes('404') || err.message?.includes('Not Found')) {
+        setIsNotFound(true);
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        setOffersData(null);
+        return;
+      }
+      
+      // استخدام البيانات الوهمية كبديل فقط للأخطاء الأخرى
       setUseMockData(true);
       const mockOffers = Array.from({ length: 4 }, (_, i) => generateMockDriver(i, orderId));
       
@@ -1295,6 +1302,23 @@ function AvailableDriversContent({ onBack }) {
     }
   };
 
+  // Format time remaining for display
+  const formatTimeRemaining = () => {
+    if (!timeRemaining) return null;
+    
+    const { days, hours, minutes, seconds } = timeRemaining;
+    
+    if (days > 0) {
+      return `${days} يوم ${hours} ساعة ${minutes} دقيقة`;
+    } else if (hours > 0) {
+      return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
+    } else if (minutes > 0) {
+      return `${minutes} دقيقة ${seconds} ثانية`;
+    } else {
+      return `${seconds} ثانية`;
+    }
+  };
+
   const formatDriverData = (offer) => ({
     id: offer.id,
     driverId: offer.driver_id,
@@ -1371,6 +1395,50 @@ function AvailableDriversContent({ onBack }) {
     );
   }
 
+  // Not Found state
+  if (isNotFound) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto p-4 md:p-8">
+          <div className="flex flex-col items-center justify-center h-[80vh]">
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+              <div className="w-20 h-20 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-10 h-10" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">الطلب غير موجود</h2>
+              
+              <p className="text-gray-600 mb-6">
+                عذراً، لم يتم العثور على الطلب المطلوب. يرجى التحقق من رقم الطلب والمحاولة مرة أخرى.
+              </p>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={onBack}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:from-blue-700 hover:to-indigo-700 transition"
+                >
+                  <ChevronLeft className="w-5 h-5 rotate-180" />
+                  العودة
+                </button>
+                
+                <button
+                  onClick={() => router.push('/')}
+                  className="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
+                >
+                  العودة للرئيسية
+                </button>
+              </div>
+              
+              <p className="text-sm text-gray-500 mt-6">
+                رقم الطلب: #{orderId}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Loading state
   if (loading && !refreshing) {
     return (
@@ -1381,7 +1449,7 @@ function AvailableDriversContent({ onBack }) {
               <div className="animate-spin rounded-full h-20 w-20 border-b-2 border-[#579BE8]"></div>
               <Truck className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-[#579BE8]" />
             </div>
-            <p className="mt-6 text-gray-600 font-medium">جاري البحث عن أفضل العروض...</p>
+            <p className="mt-6 text-gray-600 font-medium text-lg">جاري البحث عن سائقين...</p>
             <p className="text-sm text-gray-400 mt-2">رقم الطلب: #{orderId}</p>
           </div>
         </div>
@@ -1466,12 +1534,28 @@ function AvailableDriversContent({ onBack }) {
                             </div>
                           </div>
                           
-                          <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span className="font-medium">جاري البحث</span>
+                          {isOrderExpired ? (
+                            <div className="bg-red-500/30 backdrop-blur-lg px-4 py-2 rounded-xl border border-red-300/50">
+                              <div className="flex items-center gap-2">
+                                <X className="w-4 h-4" />
+                                <span className="font-medium">انتهت صلاحية الطلب</span>
+                              </div>
                             </div>
-                          </div>
+                          ) : timeRemaining ? (
+                            <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                <span className="font-medium">الوقت المتبقي: <span className="font-bold">{formatTimeRemaining()}</span></span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                <span className="font-medium">جاري البحث</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1509,7 +1593,32 @@ function AvailableDriversContent({ onBack }) {
             </div>
           </motion.div>
 
-       
+          {/* Order Expired Message */}
+          {isOrderExpired && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-xl p-6 shadow-lg"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <X className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-red-800 font-bold text-lg mb-2">
+                    انتهت صلاحية الطلب
+                  </h3>
+                  <p className="text-red-600 text-sm mb-3">
+                    عذراً، انتهت صلاحية هذا الطلب ولم يعد من الممكن قبول العروض. يرجى إنشاء طلب جديد.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-red-500">
+                    <Clock className="w-4 h-4" />
+                    <span>انتهى في: {orderStatus?.expires_in?.expires_at ? new Date(orderStatus.expires_in.expires_at).toLocaleString('ar-SA') : 'غير محدد'}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Pending Payment Message */}
           {pendingPaymentOfferId && !paymentSuccess && (
