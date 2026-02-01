@@ -20,6 +20,7 @@ import {
 import api from '@/utils/api';
 import Spinner from "@/components/ui/spinner";
 import WaterTypeSelect from '@/components/common/WaterTypeSelect';
+import ServiceSelect from '@/components/common/ServiceSelect';
 
 // LocationPickerModal مع تحسينات الريسبونسيف
 const LocationPickerModal = dynamic(
@@ -27,9 +28,20 @@ const LocationPickerModal = dynamic(
 	{ 
 		ssr: false,
 		loading: () => (
-			<div className="flex items-center justify-center p-8">
-				<div className="animate-spin">
-					<div className="w-8 h-8 border-4 border-gray-300 border-t-[#579BE8] rounded-full"></div>
+			<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+				<div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl border border-gray-200 dark:border-slate-700 max-w-sm w-full mx-4">
+					<div className="flex flex-col items-center justify-center space-y-4">
+						<div className="relative">
+							<div className="w-16 h-16 border-4 border-[#579BE8]/20 border-t-[#579BE8] rounded-full animate-spin"></div>
+							<div className="absolute inset-0 flex items-center justify-center">
+								<MapPin className="w-6 h-6 text-[#579BE8] animate-pulse" />
+							</div>
+						</div>
+						<div className="text-center">
+							<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">جاري تحميل البيانات...</h3>
+							<p className="text-sm text-gray-500 dark:text-gray-400">يرجى الانتظار...</p>
+						</div>
+					</div>
 				</div>
 			</div>
 		)
@@ -76,11 +88,8 @@ function OrderFormContent() {
 	// Fetch all required data
 	const fetchAllData = async () => {
 		try {
-			await Promise.all([
-				fetchSavedLocations(),
-				fetchWaterTypes(),
-				fetchServices()
-			]);
+			await fetchSavedLocations();
+			// WaterTypeSelect and ServiceSelect will fetch their own data
 		} catch (error) {
 			console.error("Error fetching all data:", error);
 			toast.error("حدث خطأ في تحميل البيانات");
@@ -395,6 +404,30 @@ function OrderFormContent() {
 		}
 	};
 
+	// Handle going to schedule page - validate first
+	const handleGoToSchedule = () => {
+		setAttemptedSubmit(true);
+		
+		// Validate required fields before going to schedule page
+		if (!locationData) {
+			toast.error('الرجاء تحديد الموقع أولاً');
+			return;
+		}
+		if (!waterType) {
+			toast.error('الرجاء اختيار نوع المياه');
+			setTouched(prev => ({ ...prev, waterType: true }));
+			return;
+		}
+		if (!quantity) {
+			toast.error('الرجاء اختيار الكمية');
+			setTouched(prev => ({ ...prev, quantity: true }));
+			return;
+		}
+		
+		// All validations passed, go to schedule page
+		setShowSchedule(true);
+	};
+
 	// Handle scheduled order
 	const handleScheduleOrder = async (scheduleData) => {
 		setAttemptedSubmit(true);
@@ -484,8 +517,8 @@ function OrderFormContent() {
 			
 			if (response.ok && data.status) {
 				toast.success(data.message || "تم جدولة الطلب بنجاح!");
-				// Navigate back to orders list or home
-				router.push('/orders');
+				// Navigate to home page
+				router.push('/');
 			} else {
 				toast.error(data.message || "فشل جدولة الطلب");
 			}
@@ -515,12 +548,6 @@ function OrderFormContent() {
 	const displayedLocations = showAllLocations 
 		? savedLocations 
 		: savedLocations.slice(0, 1);
-
-	// Get selected water type name
-	const selectedWaterTypeName = waterTypes.find(wt => wt.id.toString() === waterType)?.name || '';
-
-	// Get selected service name
-	const selectedServiceName = services.find(s => s.id.toString() === quantity)?.name || '';
 
 	// Animation variants
 	const containerVariants = {
@@ -870,23 +897,27 @@ function OrderFormContent() {
 											}`}>
 											<MapPin size={18} />
 										</div>
-										<div className="flex flex-col items-start overflow-hidden flex-1">
-											<span className={`text-xs md:text-sm font-medium truncate w-full text-right ${
-												locationData ? 'text-gray-900' : getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'
-											}`}>
-												{locationData 
-													? isManualLocation 
-														? `موقع على الخريطة: ${locationData.address?.substring(0, 20)}...` 
-														: `محفوظ: ${selectedSavedLocation?.name}`
-													: 'اضغط لتحديد موقع جديد'
-												}
-											</span>
-											{locationData && (
-												<span className="text-[#579BE8] text-xs">
+									<div className="flex flex-col items-start overflow-hidden flex-1">
+										{locationData ? (
+											<>
+												<span className="text-xs md:text-sm font-bold text-gray-900 truncate w-full text-right">
+													{selectedSavedLocation ? selectedSavedLocation.name : 'موقع على الخريطة'}
+												</span>
+												<span className="text-xs text-gray-600 truncate w-full text-right mt-0.5">
+													{locationData.address || selectedSavedLocation?.address}
+												</span>
+												<span className="text-[#579BE8] text-xs mt-0.5">
 													✓ {isManualLocation ? 'موقع على الخريطة' : 'مكان محفوظ'}
 												</span>
-											)}
-										</div>
+											</>
+										) : (
+											<span className={`text-xs md:text-sm font-medium truncate w-full text-right ${
+												getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'
+											}`}>
+												اضغط لتحديد موقع جديد
+											</span>
+										)}
+									</div>
 									</div>
 									{locationData && (
 										<button
@@ -929,146 +960,46 @@ function OrderFormContent() {
 
 						{/* Details Grid */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-							{/* Water Type */}
-							<div className="space-y-2 md:space-y-3">
-								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base mb-1 md:mb-2">
-									<Droplets size={18} className={getFieldStatus('waterType') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
-									نوع المياه
-									{showSuccess('waterType') && (
-										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={16} className="text-[#579BE8]" />
-										</motion.span>
-									)}
-								</label>
-								
-								{loadingWaterTypes ? (
-									<div className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-3 md:px-4 flex items-center justify-center">
-										<Spinner size="sm" />
-										<span className="mr-2 text-xs md:text-sm text-gray-500">جاري التحميل...</span>
-									</div>
-								) : (
-									<div className="relative">
-										<Select
-											value={waterType}
-											onValueChange={(value) => {
-												setWaterType(value);
-												setTouched(prev => ({ ...prev, waterType: true }));
-											}}
-										>
-											<SelectTrigger className={`h-12 md:h-14 w-full rounded-xl md:rounded-2xl border-2 text-sm md:text-base ${getFieldStatus('waterType') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-3 md:px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
-												<SelectValue placeholder="اختر نوع المياه">
-													{selectedWaterTypeName || 'اختر نوع المياه'}
-												</SelectValue>
-											</SelectTrigger>
-											<SelectContent className="rounded-xl border-[#579BE8]/20 max-h-60">
-												{waterTypes.map((waterTypeItem) => (
-													<SelectItem 
-														key={waterTypeItem.id} 
-														value={waterTypeItem.id.toString()}
-														className="text-right py-2 md:py-3 px-3 md:px-4 focus:bg-[#579BE8]/10 cursor-pointer text-sm md:text-base"
-													>
-														{waterTypeItem.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										
-										{waterType && (
-											<div className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2">
-												<CheckCircle2 size={16} className="text-[#579BE8]" />
-											</div>
-										)}
-									</div>
-								)}
-								
-								<AnimatePresence>
-									{showError('waterType') && (
-										<motion.p
-											initial={{ opacity: 0, y: -10 }}
-											animate={{ opacity: 1, y: 0 }}
-											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1 mt-1"
-										>
-											<AlertCircle size={12} />
-											الرجاء اختيار نوع المياه
-										</motion.p>
-									)}
-								</AnimatePresence>
-							</div>
+						{/* Water Type */}
+						<div className="space-y-2 md:space-y-3">
+							<WaterTypeSelect
+								value={waterType}
+								onChange={(value) => {
+									setWaterType(value);
+									setTouched(prev => ({ ...prev, waterType: true }));
+								}}
+								onTouched={() => setTouched(prev => ({ ...prev, waterType: true }))}
+								label="نوع المياه"
+								placeholder="اختر نوع المياه"
+								status={getFieldStatus('waterType')}
+								hasError={showError('waterType')}
+								className="h-12 md:h-14"
+							/>
+						</div>
 
-							{/* Service (Quantity) */}
-							<div className="space-y-2 md:space-y-3">
-								<label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base mb-1 md:mb-2">
-									<Scale size={18} className={getFieldStatus('quantity') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
-									الكمية (طن)
-									{showSuccess('quantity') && (
-										<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="mr-auto">
-											<CheckCircle2 size={16} className="text-[#579BE8]" />
-										</motion.span>
-									)}
-								</label>
-								
-								{loadingServices ? (
-									<div className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl border-2 border-[#579BE8]/30 bg-gray-50 px-3 md:px-4 flex items-center justify-center">
-										<Spinner size="sm" />
-										<span className="mr-2 text-xs md:text-sm text-gray-500">جاري التحميل...</span>
-									</div>
-								) : (
-									<div className="relative">
-										<Select
-											value={quantity}
-											onValueChange={(value) => {
-												setQuantity(value);
-												setTouched(prev => ({ ...prev, quantity: true }));
-											}}
-										>
-											<SelectTrigger className={`h-12 md:h-14 w-full rounded-xl md:rounded-2xl border-2 text-sm md:text-base ${getFieldStatus('quantity') === 'error' ? 'border-red-300' : 'border-[#579BE8]/30'} bg-gray-50 px-3 md:px-4 text-right focus:ring-0 focus:ring-offset-0 focus:border-[#579BE8]`}>
-												<SelectValue placeholder="اختر الكمية">
-													{selectedServiceName || 'اختر الكمية'}
-												</SelectValue>
-											</SelectTrigger>
-											<SelectContent className="rounded-xl border-[#579BE8]/20 max-h-60">
-												{services.map((service) => (
-													<SelectItem 
-														key={service.id} 
-														value={service.id.toString()}
-														className="text-right py-2 md:py-3 px-3 md:px-4 focus:bg-[#579BE8]/10 cursor-pointer text-sm md:text-base"
-													>
-														{service.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										
-										{quantity && (
-											<div className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2">
-												<CheckCircle2 size={16} className="text-[#579BE8]" />
-											</div>
-										)}
-									</div>
-								)}
-								
-								<AnimatePresence>
-									{showError('quantity') && (
-										<motion.p
-											initial={{ opacity: 0, y: -10 }}
-											animate={{ opacity: 1, y: 0 }}
-											exit={{ opacity: 0, y: -10 }}
-											className="text-red-500 text-xs flex items-center gap-1 mt-1"
-										>
-											<AlertCircle size={12} />
-											الرجاء اختيار الكمية
-										</motion.p>
-									)}
-								</AnimatePresence>
-							</div>
+						{/* Service (Quantity) */}
+						<div className="space-y-2 md:space-y-3">
+							<ServiceSelect
+								value={quantity}
+								onChange={(value) => {
+									setQuantity(value);
+									setTouched(prev => ({ ...prev, quantity: true }));
+								}}
+								onTouched={() => setTouched(prev => ({ ...prev, quantity: true }))}
+								label="الكمية (طن)"
+								placeholder="اختر حجم المويه"
+								status={getFieldStatus('quantity')}
+								hasError={showError('quantity')}
+								className="h-12 md:h-14"
+							/>
+						</div>
 						</div>
 
 						{/* Actions */}
 						<motion.div variants={itemVariants} className="pt-2 md:pt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
 							<button
 								onClick={handleOrderNow}
-								disabled={isLoading || loadingWaterTypes || loadingServices}
+								disabled={isLoading}
 								className="h-12 md:h-14 rounded-xl md:rounded-2xl bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#3a7dc8] hover:to-[#0d3a6a] text-white font-bold text-sm md:text-lg shadow-lg shadow-[#124987]/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
 							>
 								{isLoading ? (
@@ -1084,14 +1015,14 @@ function OrderFormContent() {
 								)}
 							</button>
 
-							<button
-								onClick={() => setShowSchedule(true)}
-								disabled={isLoading || !locationData || loadingWaterTypes || loadingServices}
-								className="h-12 md:h-14 rounded-xl md:rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-sm md:text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								<Calendar size={16} />
-								<span>جدولة الطلب</span>
-							</button>
+						<button
+							onClick={handleGoToSchedule}
+							disabled={isLoading}
+							className="h-12 md:h-14 rounded-xl md:rounded-2xl bg-white border-2 border-[#579BE8]/30 text-[#579BE8] font-bold text-sm md:text-lg hover:bg-gradient-to-r hover:from-[#579BE8]/5 hover:to-[#124987]/5 hover:border-[#579BE8]/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<Calendar size={16} />
+							<span>جدولة الطلب</span>
+						</button>
 						</motion.div>
 
 						{/* Info Box */}
@@ -1105,12 +1036,6 @@ function OrderFormContent() {
 									<p className="text-xs text-gray-600 mt-1">
 										• المواقع الجديدة سيتم حفظها تلقائياً مع الطلب
 									</p>
-									{(loadingWaterTypes || loadingServices) && (
-										<p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-											<Loader2 className="w-3 h-3 animate-spin" />
-											جاري تحميل الخيارات المتاحة...
-										</p>
-									)}
 								</div>
 							</div>
 						</div>
