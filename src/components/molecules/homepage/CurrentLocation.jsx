@@ -268,7 +268,7 @@ export default function CurrentLocation() {
                     />
                   </div>
                   <div className="flex-1 pt-1">
-                    <h2 className="text-2xl md:text-[28px] font-bold text-gray-900 mb-2">
+                    <h2 className="text-xl md:text-[28px] font-bold text-gray-900 mb-2">
                       تتبع مباشر
                     </h2>
                     <p className="text-lg text-gray-600 leading-relaxed">

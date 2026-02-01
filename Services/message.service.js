@@ -206,7 +206,6 @@ const createAxiosInstance = () => {
     
     // تسجيل الطلب في التطوير
     if (!isProduction) {
-      console.log('📤 Request:', config.method?.toUpperCase(), config.url, config.params || '');
     }
     
     return config;
@@ -219,7 +218,6 @@ const createAxiosInstance = () => {
   instance.interceptors.response.use(
     (response) => {
       if (!isProduction) {
-        console.log('📥 Response:', response.status, response.config.url);
       }
       return response;
     },
@@ -273,7 +271,6 @@ const cacheManager = {
         };
         localStorage.setItem(`cache_${key}`, JSON.stringify(cacheItem));
         if (!isProduction) {
-          console.log('💾 Cache set:', key);
         }
       }
     } catch (e) {
@@ -297,7 +294,6 @@ const cacheManager = {
         }
         
         if (!isProduction) {
-          console.log('💾 Cache hit:', key);
         }
         return cacheItem.data;
       }
@@ -312,7 +308,6 @@ const cacheManager = {
       if (isBrowser) {
         localStorage.removeItem(`cache_${key}`);
         if (!isProduction) {
-          console.log('🗑️ Cache cleared:', key);
         }
       }
     } catch (e) {
@@ -330,7 +325,6 @@ const cacheManager = {
           }
         });
         if (!isProduction) {
-          console.log('🗑️ Cache pattern cleared:', pattern);
         }
       }
     } catch (e) {
@@ -909,7 +903,6 @@ class MessageService {
           }
         });
         if (!isProduction) {
-          console.log('🗑️ Cleared cache keys:', deletedKeys.length);
         }
       }
     } catch (e) {

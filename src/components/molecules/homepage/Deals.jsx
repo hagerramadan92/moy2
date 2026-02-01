@@ -74,7 +74,7 @@ export default function Deals() {
         </motion.div>
 
         {/* Deals Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8 md:mb-10">
+        <div className="grid grid-cols-1 ms:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8 md:mb-10">
           {services.map((service, index) => {
             const Icon = service.icon;
             return (
@@ -86,7 +86,10 @@ export default function Deals() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group relative"
               >
-                <div className="relative h-full rounded-xl md:rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-500 hover:-translate-y-1 border border-gray-100">
+                <div className="relative h-full
+                 rounded-xl md:rounded-2xl overflow-hidden
+                  bg-white shadow-md hover:shadow-xl transition-all
+                   duration-500 hover:-translate-y-1 border border-gray-100">
                   {/* Gradient Background */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
                   
@@ -94,9 +97,9 @@ export default function Deals() {
                   <div className={`absolute inset-0 ${service.bgPattern} opacity-50`}></div>
                   
                   {/* Content */}
-                  <div className="relative p-4 sm:p-5 md:p-6 flex flex-col h-full text-center">
+                  <div className="relative p-0 py-1 mb-5 sm:p-5 md:p-6 flex flex-col h-full text-center">
                     {/* Icon */}
-                    <div className="mb-3 md:mb-4 flex justify-center">
+                    <div className="mb-1 md:mb-4 flex justify-center">
                       <div 
                         className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300"
                         style={{ backgroundColor: `${service.color}15` }}
@@ -117,12 +120,12 @@ export default function Deals() {
                         {service.title}
                       </h3>
                       <p 
-                        className="text-sm sm:text-base md:text-lg font-bold mb-2 md:mb-3 opacity-90"
+                        className="text-sm  sm:text-base md:text-lg font-bold mb-2 md:mb-3 opacity-90"
                         style={{ color: service.color }}
                       >
                         {service.subtitle}
                       </p>
-                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                      <p className="text-xs  sm:text-sm text-gray-600 leading-relaxed">
                         {service.description}
                       </p>
                     </div>

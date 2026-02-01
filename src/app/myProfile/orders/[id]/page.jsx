@@ -42,6 +42,13 @@ export default function OrderDetailsPage() {
     const [showRatingModal, setShowRatingModal] = useState(false);
     const [userRating, setUserRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
+    const [ratingComment, setRatingComment] = useState("");
+    const [aspects, setAspects] = useState({
+        punctuality: 0,
+        service_quality: 0,
+        communication: 0,
+        carefulness: 0
+    });
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
 
@@ -104,6 +111,21 @@ export default function OrderDetailsPage() {
             fetchOrderDetails();
         }
     }, [orderId]);
+
+    // Reset rating form when modal closes
+    useEffect(() => {
+        if (!showRatingModal) {
+            setUserRating(0);
+            setHoverRating(0);
+            setRatingComment("");
+            setAspects({
+                punctuality: 0,
+                service_quality: 0,
+                communication: 0,
+                carefulness: 0
+            });
+        }
+    }, [showRatingModal]);
 
     // Handle refresh
     const handleRefresh = () => {
@@ -228,16 +250,62 @@ export default function OrderDetailsPage() {
     const isConfirmed = orderData?.status?.name === 'confirmed';
 
     // Handle rating submit
-    const handleRatingSubmit = () => {
+    const handleRatingSubmit = async () => {
+        if (userRating === 0) return;
+
         setIsSubmittingRating(true);
-        // هنا يمكنك إضافة API call لتسجيل التقييم
-        setTimeout(() => {
+        const token = getToken();
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/orders/${orderId}/rate`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    rating: userRating,
+                    comment: ratingComment || "",
+                    aspects: {
+                        punctuality: aspects.punctuality || userRating,
+                        service_quality: aspects.service_quality || userRating,
+                        communication: aspects.communication || userRating,
+                        carefulness: aspects.carefulness || userRating
+                    }
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "فشل في إرسال التقييم");
+            }
+
+            if (data.status === true) {
+                // Success - show toast and close modal
+                setShowRatingModal(false);
+                setShowSuccessToast(true);
+                setTimeout(() => setShowSuccessToast(false), 5000);
+                
+                // Reset form
+                setUserRating(0);
+                setRatingComment("");
+                setAspects({
+                    punctuality: 0,
+                    service_quality: 0,
+                    communication: 0,
+                    carefulness: 0
+                });
+            } else {
+                throw new Error(data.message || "حدث خطأ في إرسال التقييم");
+            }
+        } catch (err) {
+            console.error("Error submitting rating:", err);
+            alert(err.message || "حدث خطأ في إرسال التقييم. يرجى المحاولة مرة أخرى.");
+        } finally {
             setIsSubmittingRating(false);
-            setShowRatingModal(false);
-            setShowSuccessToast(true);
-            setTimeout(() => setShowSuccessToast(false), 3000);
-            setUserRating(0);
-        }, 1500);
+        }
     };
 
     // Generate timeline based on order status
@@ -375,11 +443,14 @@ export default function OrderDetailsPage() {
         <>
             {/* Success Toast */}
             {showSuccessToast && (
-                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] bg-gradient-to-r from-sky-500 to-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-5 rounded-2xl shadow-2xl flex items-center gap-4 animate-bounce">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                         <BiCheck className="w-6 h-6" />
                     </div>
-                    <span className="font-black text-sm">شكراً لك! تم استلام تقييمك بنجاح</span>
+                    <div className="flex flex-col">
+                        <span className="font-black text-base">شكراً لك!</span>
+                        <span className="font-medium text-sm opacity-90">تم استلام تقييمك بنجاح ونقدر رأيك</span>
+                    </div>
                 </div>
             )}
 
@@ -394,17 +465,82 @@ export default function OrderDetailsPage() {
                             <h3 className="text-2xl font-black mb-2 tracking-tight line-clamp-1">تقييم تجربة التوصيل</h3>
                             <p className="text-sm text-muted-foreground mb-8">رأيك يهمنا في تحسين جودة خدمات مياه "ستون"</p>
                             <div className="flex flex-col items-center gap-8">
-                                <div className="flex items-center gap-3">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => setUserRating(star)} className="transition-transform active:scale-90">
-                                            {star <= (hoverRating || userRating) ? <FaStar className="w-10 h-10" style={{ color: isCompleted ? 'lab(62 -4.22 -46.14)' : '#fbbf24', filter: isCompleted ? 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))' : 'drop-shadow(0 0 15px rgba(245,158,11,0.4))' }} /> : <FaRegStar className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />}
-                                        </button>
-                                    ))}
+                                {/* Overall Rating */}
+                                <div className="w-full">
+                                    <label className="text-sm font-bold text-right block mb-4 text-[#579BE8]">التقييم العام</label>
+                                    <div className="flex items-center justify-center gap-3">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => setUserRating(star)} className="transition-transform active:scale-90">
+                                                {star <= (hoverRating || userRating) ? <FaStar className="w-10 h-10" style={{ color: isCompleted ? 'lab(62 -4.22 -46.14)' : '#fbbf24', filter: isCompleted ? 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.4))' : 'drop-shadow(0 0 15px rgba(245,158,11,0.4))' }} /> : <FaRegStar className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
+
+                                {/* Aspects Rating */}
+                                <div className="w-full space-y-4">
+                                    <label className="text-sm font-bold text-right block mb-4 text-[#579BE8]">تقييم الجوانب (اختياري)</label>
+                                    
+                                    {/* Punctuality */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-right block text-muted-foreground">الالتزام بالمواعيد</label>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button key={star} onClick={() => setAspects(prev => ({ ...prev, punctuality: star }))} className="transition-transform active:scale-90">
+                                                    {star <= aspects.punctuality ? <FaStar className="w-6 h-6 text-yellow-400" /> : <FaRegStar className="w-6 h-6 text-neutral-300 dark:text-neutral-700" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Service Quality */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-right block text-muted-foreground">جودة الخدمة</label>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button key={star} onClick={() => setAspects(prev => ({ ...prev, service_quality: star }))} className="transition-transform active:scale-90">
+                                                    {star <= aspects.service_quality ? <FaStar className="w-6 h-6 text-yellow-400" /> : <FaRegStar className="w-6 h-6 text-neutral-300 dark:text-neutral-700" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Communication */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-right block text-muted-foreground">التواصل</label>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button key={star} onClick={() => setAspects(prev => ({ ...prev, communication: star }))} className="transition-transform active:scale-90">
+                                                    {star <= aspects.communication ? <FaStar className="w-6 h-6 text-yellow-400" /> : <FaRegStar className="w-6 h-6 text-neutral-300 dark:text-neutral-700" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Carefulness */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-right block text-muted-foreground">الدقة والاهتمام</label>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button key={star} onClick={() => setAspects(prev => ({ ...prev, carefulness: star }))} className="transition-transform active:scale-90">
+                                                    {star <= aspects.carefulness ? <FaStar className="w-6 h-6 text-yellow-400" /> : <FaRegStar className="w-6 h-6 text-neutral-300 dark:text-neutral-700" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Comment */}
                                 <div className="w-full text-right space-y-4">
                                     <label className="text-xs font-black uppercase tracking-widest text-[#579BE8]">ملاحظاتك (اختياري)</label>
-                                    <textarea placeholder="اكتب تعليقك هنا عن جودة الخدمة أو السائق..." className="w-full h-32 bg-secondary/30 rounded-3xl p-6 text-sm border-2 border-transparent focus:border-[#579BE8] outline-none transition-all resize-none"></textarea>
+                                    <textarea 
+                                        value={ratingComment}
+                                        onChange={(e) => setRatingComment(e.target.value)}
+                                        placeholder="اكتب تعليقك هنا عن جودة الخدمة أو السائق..." 
+                                        className="w-full h-32 bg-secondary/30 rounded-3xl p-6 text-sm border-2 border-transparent focus:border-[#579BE8] outline-none transition-all resize-none"
+                                    />
                                 </div>
+                                
                                 <button disabled={userRating === 0 || isSubmittingRating} onClick={handleRatingSubmit} className={`w-full py-5 rounded-[2rem] font-black text-sm transition-all ${userRating === 0 ? "bg-secondary text-muted-foreground cursor-not-allowed" : "text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95"}`} style={userRating === 0 ? {} : isCompleted ? { backgroundColor: 'lab(62 -4.22 -46.14)', boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.3)' } : { backgroundColor: '#579BE8', boxShadow: '0 20px 25px -5px rgba(87, 155, 232, 0.3)' }}>{isSubmittingRating ? "جاري الإرسال..." : "تأكيد التقييم"}</button>
                             </div>
                         </div>

@@ -103,7 +103,7 @@ const page = () => {
 		return (
 			<> 
 				{sortedSections.map(section => renderSection(section))}
-				<CurrentLocation/>
+			
 				<Deals/>
 				<AppPromotionSection />
 				<CallToActionSection />
@@ -120,7 +120,7 @@ const page = () => {
 			<ChooseUs/>	
 			<AvailableSize/>
 			<HowItWorks/>
-			<CurrentLocation/>
+		
 			<Deals/>
 			<CustomerReviews/>
 			<AppPromotionSection />

@@ -10,46 +10,46 @@ export default function Footer() {
     <footer dir="rtl" className="bg-[#072D58] text-white py-12 sm:py-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8 mb-12">
           {/* Logo and Description Section */}
-          <div className="flex flex-col items-center md:items-start text-center md:text-start gap-6">
-            <div className="flex gap-4 items-center">
+          <div className="flex flex-col  gap-1 md:gap-6">
+            <div className="flex md:gap-4 items-center">
               <motion.div
                 whileHover={{ rotate: -6, scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20"
+                className="relative flex-shrink-0 flex md:h-14 md:w-14 h-8 w-8 items-center justify-center rounded-lg md:rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20"
               >
                 <div className="absolute -inset-1 rounded-[18px] bg-blue-500/20 blur-lg" />
-                <DropletIcon className="relative h-8 w-8" />
+                <DropletIcon className="relative h-7 w-7" />
               </motion.div>
-              <h3 className="text-3xl font-bold tracking-tight">وايت مياه</h3>
+              <h3 className="text-xl md:text-3xl font-bold tracking-tight">وايت مياه</h3>
             </div>
-            <p className="text-base text-gray-300 leading-relaxed max-w-xs">
+            <p className="text-sm md:text-base text-gray-300 leading-relaxed max-w-xs">
               منصة توصيل المياة الرائدة في المملكة العربية السعودية. نربط العملاء مع سواقين موثوقين بأعلى معايير الجودة.
             </p>
           </div>
 
           {/* Support Section */}
-          <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-lg font-bold mb-6 text-white">الدعم</h4>
-            <ul className="space-y-4 text-center md:text-start">
+          <div className="flex flex-col ">
+            <h4 className=" text-sm md:text-lg font-bold mb-2 md:mb-6 text-white">الدعم</h4>
+            <ul className="space-y-2 md:space-y-4 md:text-start">
               <li>
-                <Link href="/contact" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/contact" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   تواصل معنا
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/support" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الدعم الفني
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/help-center" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/help-center" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   مركز المساعدة
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/support" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   بلغ عن مشكلة
                 </Link>
               </li>
@@ -57,26 +57,26 @@ export default function Footer() {
           </div>
 
           {/* Legal Section */}
-          <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-lg font-bold mb-6 text-white">قانوني</h4>
-            <ul className="space-y-4 text-center md:text-start">
+          <div className="flex flex-col  md:items-start">
+            <h4 className="text-sm md:text-lg  font-bold mb-2 md:mb-6 text-white">قانوني</h4>
+            <ul className="space-y-2 md:space-y-4 md:text-start">
               <li>
-                <Link href="/privacy" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/privacy" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   سياسة الخصوصية
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/terms" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   المصطلحات والتحكم
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/terms" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   سياسة الاستخدام
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/help-center" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/myProfile/help-center" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الأسئلة الشائعة
                 </Link>
               </li>
@@ -84,26 +84,26 @@ export default function Footer() {
           </div>
 
           {/* Company Section */}
-          <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-lg font-bold mb-6 text-white">الشركة</h4>
-            <ul className="space-y-4 text-center md:text-start">
+          <div className="flex flex-col ">
+            <h4 className="text-sm md:text-lg  font-bold mb-2 md:mb-6 text-white">الشركة</h4>
+            <ul className="space-y-2 md:space-y-4 md:text-start">
               <li>
-                <Link href="/about" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/about" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   من نحن
                 </Link>
               </li>
               <li>
-                <Link href="/drivers" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/drivers" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   كيفية العمل
                 </Link>
               </li>
               <li>
-                <Link href="/partners" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/partners" className="text-gray-300 text-sm  hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الشركاء
                 </Link>
               </li>
               <li>
-                <Link href="/team" className="text-gray-300 hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/team" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الفريق
                 </Link>
               </li>

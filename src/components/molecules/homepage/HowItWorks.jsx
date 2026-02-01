@@ -113,7 +113,7 @@ const HowItWorks = ({ data }) => {
           </svg>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 xl:gap-4 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 xl:gap-4 relative z-10">
           {displaySteps.map((step, index) => {
             // Add margin bottom for bottom row items (2-column grid: last 2 items)
             const isBottomRow = index >= 2 && index < 4; // Items 2 and 3 are in bottom row for 2-column grid
@@ -124,7 +124,7 @@ const HowItWorks = ({ data }) => {
               className="group flex flex-col items-center text-center relative"
             >
               <div 
-                className={`w-20 h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105 ${isBottomRow ? "sm:mb-8 lg:mb-6" : ""}`}
+                className={`w-16 h-16 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105 ${isBottomRow ? "sm:mb-8 lg:mb-6" : ""}`}
                 style={{ backgroundColor: step.color, boxShadow: `0 10px 25px -5px ${step.color}60` }}
               >
                 {step.icon}
@@ -137,10 +137,7 @@ const HowItWorks = ({ data }) => {
                 {step.desc}
               </p>
 
-              {/* Mobile/Tablet connecting line (vertical or simple) */}
-              {index < displaySteps.length - 1 && (
-                 <div className="xl:hidden absolute top-24 left-1/2 -translate-x-1/2 w-0.5 h-8 bg-gray-200 -z-10 sm:hidden"></div>
-              )}
+            
             </div>
             );
           })}

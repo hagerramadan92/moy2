@@ -47,26 +47,6 @@ const DriversMap = dynamic(
 
 const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
 
-// Generate unique IDs for mock drivers
-const generateMockDriver = (index, orderId) => ({
-  id: index + 100,
-  order_id: orderId,
-  driver_id: 200 + index,
-  price: (45.50 + (index * 15)).toFixed(2),
-  status: 'pending',
-  delivery_duration_minutes: 25 + (index * 10),
-  created_at: new Date(Date.now() - index * 60000).toISOString(),
-  updated_at: new Date().toISOString(),
-  driver: {
-    id: 200 + index,
-    name: `السائق ${['أحمد', 'محمد', 'خالد', 'علي', 'فهد', 'سعود'][index]}`,
-    rating: (4.2 + (index * 0.1)).toFixed(1),
-    total_orders: 1200 + (index * 200),
-    completed_orders: 1000 + (index * 150),
-    vehicle_type: ['سيارة صغيرة', 'سيارة كبيرة', 'فان', 'شاحنة صغيرة'][index % 4],
-    phone: `+9665${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`
-  }
-});
 
 // دالة مساعدة للحصول على token
 const getAccessToken = () => {
@@ -102,12 +82,18 @@ function PaymentModal({
   selectedDriverId,
   selectedOfferId,
   orderId,
+  offerAmount,
   useMockData = false,
+  onOfferExpired,
 }) {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [selectedPaymentData, setSelectedPaymentData] = useState(null);
+  const [selectedPaymentUrl, setSelectedPaymentUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingMethods, setLoadingMethods] = useState(false);
+  const [processingMethod, setProcessingMethod] = useState(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState(null);
 
   /* =============================
@@ -143,13 +129,121 @@ function PaymentModal({
   useEffect(() => {
     if (isOpen && !useMockData) {
       fetchPaymentMethods();
+    } else if (!isOpen) {
+      // Reset state when modal closes
+      setSelectedMethod(null);
+      setSelectedPaymentData(null);
+      setSelectedPaymentUrl(null);
+      setProcessingMethod(null);
+      setError(null);
+      setIsConfirming(false);
     }
   }, [isOpen]);
 
   /* =============================
-     Confirm Driver
+     Initiate Payment
   ============================== */
-  const confirmDriver = async (driverId, offerId) => {
+  const initiatePayment = async (orderId, offerId, gateway, paymentMethod, saveCard = false) => {
+    const accessToken = getAccessToken();
+
+    // Get or create device ID for metadata
+    let deviceId;
+    if (typeof window !== 'undefined') {
+      deviceId = localStorage.getItem('deviceId');
+      if (!deviceId) {
+        deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('deviceId', deviceId);
+      }
+    } else {
+      deviceId = `device-${Date.now()}`;
+    }
+    
+    // Get IP address (simplified - in production you might want to get this from a service)
+    const ipAddress = '0.0.0.0'; // You can enhance this later with an IP detection service
+
+    const res = await fetch(
+      `${API_BASE_URL}/orders/payments/${orderId}/initiate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          offer_id: offerId,
+          gateway: gateway,
+          payment_method: paymentMethod,
+          save_card: saveCard,
+          metadata: {
+            device_id: deviceId,
+            ip_address: ipAddress
+          }
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok && data.status) return data.data;
+
+    throw new Error(data.message || "فشل بدء عملية الدفع");
+  };
+
+  /* =============================
+     Initiate Order Payment API
+  ============================== */
+  const initiateOrderPayment = async (orderId, offerId, gateway, paymentMethod, saveCard = false) => {
+    const accessToken = getAccessToken();
+
+    // Get or create device ID for metadata
+    let deviceId;
+    if (typeof window !== 'undefined') {
+      deviceId = localStorage.getItem('deviceId');
+      if (!deviceId) {
+        deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('deviceId', deviceId);
+      }
+    } else {
+      deviceId = `device-${Date.now()}`;
+    }
+    
+    // Get IP address (simplified - in production you might want to get this from a service)
+    const ipAddress = '0.0.0.0'; // You can enhance this later with an IP detection service
+
+    const res = await fetch(
+      `${API_BASE_URL}/orders/payments/${orderId}/initiate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          offer_id: offerId,
+          gateway: gateway,
+          payment_method: paymentMethod,
+          save_card: saveCard,
+          metadata: {
+            device_id: deviceId,
+            ip_address: ipAddress
+          }
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok && data.status) return data.data;
+
+    throw new Error(data.message || "فشل بدء عملية الدفع");
+  };
+
+  /* =============================
+     Confirm Driver API
+  ============================== */
+  const confirmDriver = async (orderId, driverId, offerId) => {
     const accessToken = getAccessToken();
 
     const res = await fetch(
@@ -176,28 +270,138 @@ function PaymentModal({
   };
 
   /* =============================
-     Confirm Payment
+     Handle Payment Method Click - Select method only
   ============================== */
-  const handleConfirm = async () => {
-    if (!selectedMethod) {
-      setError("يرجى اختيار طريقة الدفع");
+  const handlePaymentMethodClick = async (method) => {
+    if (useMockData) {
+      setSelectedMethod(method);
+      setSelectedPaymentUrl('https://example.com/payment');
       return;
     }
 
     try {
-      setLoading(true);
+      setProcessingMethod(method.id);
       setError(null);
+      setSelectedMethod(null);
+      setSelectedPaymentData(null);
+      setSelectedPaymentUrl(null);
 
-      if (!useMockData) {
-        await confirmDriver(selectedDriverId, selectedOfferId);
-        await new Promise((r) => setTimeout(r, 1000));
-        onConfirm(selectedMethod.id, selectedDriverId);
-        onClose();
+      // Get the first payment method from the methods array, or use gateway id
+      const paymentMethod = method.methods && method.methods.length > 0
+        ? method.methods[0]
+        : method.id; // fallback to gateway id if no methods array
+      
+      // Get save_card preference (default to false)
+      const saveCard = false;
+      
+      // Step 1: Initiate order payment to get payment URL
+      const paymentData = await initiateOrderPayment(
+        orderId,
+        selectedOfferId,
+        method.id, // gateway (e.g., "tabby", "paymob", "tamara")
+        paymentMethod, // payment_method
+        saveCard
+      );
+      
+      // Extract payment URL from response - check multiple possible locations
+      const payment = paymentData?.payment;
+      let paymentUrl = null;
+      
+      if (payment) {
+        // Check direct payment URLs first
+        paymentUrl = payment.payment_url || 
+                    payment.checkout_url || 
+                    payment.qr_code_url;
+        
+        // If not found, check raw_response for gateway-specific URLs
+        if (!paymentUrl && payment.raw_response) {
+          const rawResponse = payment.raw_response;
+          
+          // Check for Tabby web_url in installments
+          if (rawResponse.configuration?.available_products?.installments?.[0]?.web_url) {
+            paymentUrl = rawResponse.configuration.available_products.installments[0].web_url;
+          }
+          
+          // Check for QR code URL
+          if (!paymentUrl && rawResponse.configuration?.available_products?.installments?.[0]?.qr_code) {
+            paymentUrl = rawResponse.configuration.available_products.installments[0].qr_code;
+          }
+        }
+      }
+
+      if (paymentUrl) {
+        // Store payment data and URL for confirmation
+        setSelectedMethod(method);
+        setSelectedPaymentData(paymentData);
+        setSelectedPaymentUrl(paymentUrl);
+      } else {
+        throw new Error("لم يتم الحصول على رابط الدفع من بوابة الدفع");
       }
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err.message || '';
+      
+      // Check if offer is expired or not available for payment
+      if (
+        errorMessage.includes('Offer is not available for payment') ||
+        errorMessage.includes('offer expired') ||
+        errorMessage.includes('العرض منتهي') ||
+        errorMessage.includes('العرض غير متاح') ||
+        errorMessage.toLowerCase().includes('expired')
+      ) {
+        // Offer has expired
+        if (onOfferExpired && selectedOfferId) {
+          onOfferExpired(selectedOfferId);
+        }
+        setError('انتهت صلاحية هذا العرض. يرجى اختيار عرض آخر.');
+      } else {
+        setError(err.message);
+      }
     } finally {
-      setLoading(false);
+      setProcessingMethod(null);
+    }
+  };
+
+  /* =============================
+     Handle Confirm Payment - Redirect to payment
+  ============================== */
+  const handleConfirmPayment = async () => {
+    if (!selectedPaymentUrl || !selectedMethod) {
+      setError('يرجى اختيار طريقة الدفع أولاً');
+      return;
+    }
+
+    try {
+      setIsConfirming(true);
+      setError(null);
+
+      const payment = selectedPaymentData?.payment;
+
+      // Store payment and driver confirmation data for after payment callback
+      const paymentCallbackData = {
+        orderId,
+        driverId: selectedDriverId,
+        offerId: selectedOfferId,
+        paymentId: payment?.payment_id,
+        sessionId: payment?.session_id,
+        gateway: selectedMethod.id
+      };
+      
+      // Store in sessionStorage for after payment callback
+      sessionStorage.setItem('paymentCallbackData', JSON.stringify(paymentCallbackData));
+      
+      // Also store temporary data to show "في انتظار الدفع" state
+      localStorage.setItem('pendingOfferData', JSON.stringify({
+        orderId,
+        offerId: selectedOfferId,
+        driverId: selectedDriverId,
+        status: 'pending_payment'
+      }));
+      
+      // Redirect to payment URL
+      window.location.href = selectedPaymentUrl;
+    } catch (err) {
+      setError(err.message || 'حدث خطأ أثناء التوجيه إلى صفحة الدفع');
+      setIsConfirming(false);
     }
   };
 
@@ -224,33 +428,49 @@ function PaymentModal({
             <div className="space-y-3">
               {paymentMethods.map((method) => {
                 const Icon = ICONS_MAP[method.icon] || FaCreditCard;
+                const isProcessing = processingMethod === method.id;
+                const isDisabled = processingMethod !== null && !isProcessing;
                 const isSelected = selectedMethod?.id === method.id;
 
                 return (
                   <button
                     key={method.id}
-                    onClick={() => setSelectedMethod(method)}
+                    onClick={() => handlePaymentMethodClick(method)}
+                    disabled={isDisabled || isProcessing}
                     className={`w-full p-4 rounded-xl border-2 flex gap-4 transition ${
                       isSelected
+                        ? "border-blue-600 bg-blue-50 shadow-md"
+                        : isProcessing
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200"
+                        : isDisabled
+                        ? "border-gray-200 opacity-50 cursor-not-allowed"
+                        : "border-gray-200 hover:border-blue-300 hover:bg-blue-50"
                     }`}
                   >
                     <div
                       className={`p-3 rounded-lg ${
                         isSelected
+                          ? "bg-blue-600 text-white"
+                          : isProcessing
                           ? "bg-blue-100 text-blue-600"
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
+                      {isProcessing ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      ) : (
                       <Icon size={20} />
+                      )}
                     </div>
 
                     <div className="flex-1 text-right">
                       <div className="flex justify-between mb-1">
                         <span className="font-medium">{method.name}</span>
-                        {isSelected && (
-                          <FaCheckCircle className="text-green-500" />
+                        {isProcessing && (
+                          <span className="text-xs text-blue-600">جاري التحضير...</span>
+                        )}
+                        {isSelected && !isProcessing && (
+                          <span className="text-xs text-blue-600 font-bold">✓ تم الاختيار</span>
                         )}
                       </div>
 
@@ -281,18 +501,29 @@ function PaymentModal({
           <div className="flex gap-3 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 border rounded-lg py-3"
-              disabled={loading}
+              className="flex-1 border rounded-lg py-3 font-medium hover:bg-gray-50 transition"
+              disabled={isConfirming}
             >
               إلغاء
             </button>
-            <button
-              onClick={handleConfirm}
-              disabled={!selectedMethod || loading}
-              className="flex-1 bg-blue-600 text-white rounded-lg py-3 disabled:opacity-50"
-            >
-              {loading ? "جاري التأكيد..." : "تأكيد الدفع"}
-            </button>
+            {selectedMethod && selectedPaymentUrl && (
+              <button
+                onClick={handleConfirmPayment}
+                disabled={isConfirming || !selectedPaymentUrl}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-3 font-bold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isConfirming ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>جاري التوجيه...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>تأكيد والدفع</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -313,6 +544,9 @@ function DriverCard({
   status,
   onAcceptOrder,
   isPending = true,
+  isAccepted = false,
+  isPendingPayment = false,
+  isExpired = false,
   offerId,
   createdAt,
   vehicleType,
@@ -322,7 +556,7 @@ function DriverCard({
   const [accepting, setAccepting] = useState(false);
 
   const handleAccept = async () => {
-    if (!isPending || accepting) return;
+    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired) return;
     
     setAccepting(true);
     try {
@@ -358,21 +592,86 @@ function DriverCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col">
+    <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col ${
+      isAccepted 
+        ? 'border-green-500 bg-green-50/30' 
+        : isPendingPayment
+        ? 'border-amber-500 bg-amber-50/30'
+        : isExpired
+        ? 'border-red-300 bg-red-50/30 opacity-75'
+        : 'border-gray-200'
+    }`}>
       {/* Header with badge */}
       <div className="relative">
-        <div className={`absolute top-4 right-4 bg-gradient-to-r ${getBadgeColor(index)} text-white text-xs font-bold px-3 py-1 rounded-full z-10`}>
+        {/* {isAccepted && (
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10 flex items-center gap-1.5">
+            <CheckCircle className="w-3 h-3" />
+            تم القبول
+          </div>
+        )}
+        {isPendingPayment && (
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10 flex items-center gap-1.5">
+            <Clock className="w-3 h-3" />
+            في انتظار الدفع
+          </div>
+        )}
+        {isExpired && (
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10 flex items-center gap-1.5">
+            <X className="w-3 h-3" />
+            انتهت الصلاحية
+          </div>
+        )} */}
+        <div className={`absolute top-4 right-4 bg-gradient-to-r ${
+          isAccepted 
+            ? 'from-green-500 to-emerald-600' 
+            : isPendingPayment
+            ? 'from-amber-500 to-orange-600'
+            : isExpired
+            ? 'from-red-500 to-rose-600'
+            : getBadgeColor(index)
+        } text-white text-xs font-bold px-3 py-1 rounded-full z-10`}>
           العرض #{index + 1}
         </div>
         
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6">
+        <div className={`bg-gradient-to-r p-6 ${
+          isAccepted 
+            ? 'from-green-50 to-emerald-50' 
+            : isPendingPayment
+            ? 'from-amber-50 to-orange-50'
+            : isExpired
+            ? 'from-red-50 to-rose-50'
+            : 'from-gray-50 to-gray-100'
+        }`}>
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <Truck className="w-7 h-7 text-white" />
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
+                isAccepted 
+                  ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                  : isPendingPayment
+                  ? 'bg-gradient-to-br from-amber-500 to-orange-600'
+                  : isExpired
+                  ? 'bg-gradient-to-br from-red-500 to-rose-600'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+              }`}>
+                <Truck className={`w-7 h-7 ${isExpired ? 'opacity-60' : 'text-white'}`} />
               </div>
-              {isPending && (
+              {isPending && !isAccepted && !isPendingPayment && !isExpired && (
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+              {isAccepted && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-white" />
+                </div>
+              )}
+              {isPendingPayment && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-white" />
+                </div>
+              )}
+              {isExpired && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <X className="w-4 h-4 text-white" />
+                </div>
               )}
             </div>
             
@@ -388,7 +687,7 @@ function DriverCard({
                   ))}
                 </div>
                 <span className="font-bold text-gray-900">{rating}</span>
-                <span className="text-xs text-gray-500">{successfulOrders}</span>
+                {/* <span className="text-xs text-gray-500">{successfulOrders}</span> */}
               </div>
             </div>
           </div>
@@ -463,9 +762,15 @@ function DriverCard({
         <div className="mt-auto">
           <button
             onClick={handleAccept}
-            disabled={!isPending || accepting}
+            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired}
             className={`w-full py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-3 ${
-              isPending 
+              isAccepted
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
+                : isPendingPayment
+                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg'
+                : isExpired
+                ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-lg opacity-75 cursor-not-allowed'
+                : isPending 
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
@@ -475,6 +780,21 @@ function DriverCard({
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 <span>جاري القبول...</span>
               </>
+            ) : isAccepted ? (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>تم قبول العرض</span>
+              </>
+            ) : isPendingPayment ? (
+              <>
+                <Clock className="w-5 h-5 animate-pulse" />
+                <span>في انتظار الدفع</span>
+              </>
+            ) : isExpired ? (
+              <>
+                <X className="w-5 h-5" />
+                <span>انتهت صلاحية العرض</span>
+              </>
             ) : isPending ? (
               <>
                 <span>قبول العرض</span>
@@ -482,7 +802,7 @@ function DriverCard({
                 <span>{price}</span>
               </>
             ) : (
-              'تم قبول العرض'
+              'غير متاح'
             )}
           </button>
           
@@ -507,11 +827,19 @@ function AvailableDriversContent({ onBack }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState(null);
   const [selectedOfferId, setSelectedOfferId] = useState(null);
+  const [selectedOffer, setSelectedOffer] = useState(null);
   const [offersData, setOffersData] = useState(null);
+  const [acceptedOfferId, setAcceptedOfferId] = useState(null);
+  const [pendingPaymentOfferId, setPendingPaymentOfferId] = useState(null);
+  const [expiredOfferIds, setExpiredOfferIds] = useState([]);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
+  const [orderStatus, setOrderStatus] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [isOrderExpired, setIsOrderExpired] = useState(false);
   const [stats, setStats] = useState({
     totalOffers: 0,
     averagePrice: 0,
@@ -519,21 +847,221 @@ function AvailableDriversContent({ onBack }) {
     lowestPrice: 0
   });
 
+  // Helper function to get payment callback data
+  const getPaymentCallbackData = () => {
+    if (typeof window === 'undefined') return null;
+    
+    const data = sessionStorage.getItem('paymentCallbackData');
+    if (!data) return null;
+    
+    try {
+      return JSON.parse(data);
+    } catch (err) {
+      console.error('Error parsing payment callback data:', err);
+      return null;
+    }
+  };
+
+  // Helper function to get pending payment data from localStorage
+  const getPendingOfferData = () => {
+    if (typeof window === 'undefined') return null;
+    
+    const data = localStorage.getItem('pendingOfferData');
+    if (!data) return null;
+    
+    try {
+      return JSON.parse(data);
+    } catch (err) {
+      console.error('Error parsing pending offer data:', err);
+      return null;
+    }
+  };
+
   // Get orderId from URL
   const orderId = searchParams.get('orderId');
+  const paymentStatus = searchParams.get('payment');
+  const paymentSuccessParam = searchParams.get('success');
+  const paymentCancelParam = searchParams.get('cancel');
+
+  // Check for payment success and pending offers on component mount
+  useEffect(() => {
+    // Check URL params for payment cancellation
+    if (paymentStatus === 'cancel' || paymentCancelParam === 'true') {
+      // Clear pending payment state
+      setPendingPaymentOfferId(null);
+      setPaymentSuccess(false);
+      // Clear pending payment data
+      localStorage.removeItem('pendingOfferData');
+      sessionStorage.removeItem('paymentCallbackData');
+      
+      // Clean up URL params
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('payment');
+        url.searchParams.delete('cancel');
+        window.history.replaceState({}, '', url);
+      }
+    }
+    
+    // Check URL params for payment success
+    if (paymentStatus === 'success' || paymentSuccessParam === 'true') {
+      setPaymentSuccess(true);
+      
+      // Get payment callback data from sessionStorage
+      const callbackData = getPaymentCallbackData();
+      if (callbackData && callbackData.offerId) {
+        setAcceptedOfferId(callbackData.offerId);
+        setPendingPaymentOfferId(null);
+        // Clear pending payment data
+        localStorage.removeItem('pendingOfferData');
+      }
+      
+      // Clean up URL params
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('payment');
+        url.searchParams.delete('success');
+        window.history.replaceState({}, '', url);
+      }
+    }
+    
+    // Check sessionStorage for payment callback data (for returning from payment)
+    const callbackData = getPaymentCallbackData();
+    if (callbackData && callbackData.offerId && !paymentCancelParam) {
+      setAcceptedOfferId(callbackData.offerId);
+      setPendingPaymentOfferId(null);
+      setPaymentSuccess(true);
+    }
+    
+    // Check localStorage for pending payment offers (only if not cancelled)
+    if (!paymentCancelParam && paymentStatus !== 'cancel') {
+      const pendingOfferData = getPendingOfferData();
+      if (pendingOfferData && pendingOfferData.orderId === orderId) {
+        setPendingPaymentOfferId(pendingOfferData.offerId);
+        setSelectedDriverId(pendingOfferData.driverId);
+        setSelectedOfferId(pendingOfferData.offerId);
+      }
+    }
+    
+    // Listen for page visibility changes (when user returns from payment window)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Check if payment was cancelled by checking if we still have pending data
+        // but no payment callback data (meaning payment was cancelled/closed)
+        const pendingData = getPendingOfferData();
+        const callbackData = getPaymentCallbackData();
+        
+        // If there's pending data but no callback data, and we're back on the page
+        // it likely means the payment window was closed
+        if (pendingData && !callbackData) {
+          // Wait a bit to see if payment callback happens
+          setTimeout(() => {
+            const stillPending = getPendingOfferData();
+            const stillNoCallback = !getPaymentCallbackData();
+            
+            // If still pending and no callback after 2 seconds, clear pending state
+            if (stillPending && stillNoCallback) {
+              setPendingPaymentOfferId(null);
+              localStorage.removeItem('pendingOfferData');
+            }
+          }, 2000);
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [orderId, paymentStatus, paymentSuccessParam, paymentCancelParam]);
 
   useEffect(() => {
     if (orderId) {
       fetchOffers();
+      fetchOrderStatus();
     } else {
       router.back();
     }
   }, [orderId]);
 
+  // Poll order status every 30 seconds
+  useEffect(() => {
+    if (!orderId) return;
+
+    const interval = setInterval(() => {
+      fetchOrderStatus();
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [orderId]);
+
+  // Calculate time remaining countdown
+  useEffect(() => {
+    if (!orderStatus?.expires_in?.expires_at) return;
+
+    const calculateTimeRemaining = () => {
+      const expiresAt = new Date(orderStatus.expires_in.expires_at);
+      const now = new Date();
+      const diff = expiresAt - now;
+
+      if (diff <= 0) {
+        // Order has expired
+        setIsOrderExpired(true);
+        setTimeRemaining(null);
+        
+        // Mark all offers as expired
+        if (offersData?.offers && offersData.offers.length > 0) {
+          const allOfferIds = offersData.offers.map(offer => offer.id);
+          setExpiredOfferIds(prev => {
+            return [...new Set([...prev, ...allOfferIds])];
+          });
+        }
+        return;
+      }
+
+      setIsOrderExpired(false);
+      
+      // Calculate time components
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeRemaining({
+        days,
+        hours,
+        minutes,
+        seconds,
+        total: diff
+      });
+    };
+
+    // Calculate immediately
+    calculateTimeRemaining();
+
+    // Update every second
+    const interval = setInterval(calculateTimeRemaining, 1000);
+
+    return () => clearInterval(interval);
+  }, [orderStatus, offersData]);
+
+  // Debug: مراقبة تغييرات offersData و loading
+  useEffect(() => {
+    console.log('Loading state:', loading);
+    console.log('Refreshing state:', refreshing);
+    if (offersData) {
+      console.log('offersData updated:', offersData);
+      console.log('offers array:', offersData.offers);
+      console.log('offers count:', offersData.offers?.length);
+    }
+  }, [offersData, loading, refreshing]);
+
   // 🔴 **تحديث دالة fetchOffers مع token ومعالجة المصادقة**
   const fetchOffers = async () => {
     try {
       setRefreshing(true);
+      setLoading(true); // تأكد من تفعيل حالة التحميل
       
       // الحصول على token
       const accessToken = getAccessToken();
@@ -560,12 +1088,64 @@ function AvailableDriversContent({ onBack }) {
 
       const data = await response.json();
       console.log('Offers API response:', data);
+      console.log('Offers data:', data.data);
+      console.log('Offers array:', data.data?.offers);
       
       if (response.ok && data.status) {
-        setOffersData(data.data);
+        // التحقق من وجود البيانات
+        if (!data.data) {
+          console.error('No data in response');
+          setError('لا توجد بيانات في الاستجابة');
+          setLoading(false);
+          setRefreshing(false);
+          return;
+        }
+
+        // عرض البيانات فوراً قبل أي معالجة أخرى
+        console.log('Setting offers data:', data.data);
+        console.log('Offers count:', data.data?.offers?.length);
+        console.log('Total offers:', data.data?.total_offers);
+        
+        // التأكد من أن البيانات موجودة - حتى لو كانت فارغة
+        if (data.data) {
+          // تأكد من وجود offers array حتى لو كان فارغاً
+          const offersDataToSet = {
+            ...data.data,
+            offers: data.data.offers || [],
+            total_offers: data.data.total_offers || (data.data.offers?.length || 0),
+            active_offers: data.data.active_offers || (data.data.offers?.length || 0)
+          };
+          
+          console.log('Setting offersDataToSet:', offersDataToSet);
+          setOffersData(offersDataToSet);
         setUseMockData(false);
         setError(null);
+        } else {
+          console.warn('Invalid data structure:', data.data);
+          setError('بيانات غير صحيحة من الخادم');
+        }
+        
+        setLoading(false); // إيقاف حالة التحميل فوراً
+        setRefreshing(false); // إيقاف حالة التحديث أيضاً
+        
+        // Set accepted offer ID if exists - prioritize this to show immediately
+        if (data.data.accepted_offer) {
+          const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
+          setAcceptedOfferId(acceptedId);
+          setPendingPaymentOfferId(null);
+          // Clear any pending payment data if there's an accepted offer
+          localStorage.removeItem('pendingOfferData');
+        }
+        
+        // Fetch order status to check expiration
+        fetchOrderStatus();
+        
+        // معالجة البيانات في الخلفية (بعد عرض البيانات)
+        if (data.data.offers && data.data.offers.length > 0) {
+          setTimeout(() => {
         calculateStats(data.data.offers);
+          }, 0);
+        }
       } else {
         // إذا كان هناك خطأ في المصادقة
         if (data.error_code === 'UNAUTHENTICATED' || data.message?.includes('تسجيل الدخول')) {
@@ -576,6 +1156,7 @@ function AvailableDriversContent({ onBack }) {
         } else {
           throw new Error(data.message || 'فشل في جلب البيانات');
         }
+        setLoading(false);
       }
     } catch (err) {
       console.warn('API Error:', err.message);
@@ -596,8 +1177,8 @@ function AvailableDriversContent({ onBack }) {
       setOffersData(mockData);
       calculateStats(mockOffers);
       setError(`تم تحميل بيانات تجريبية: ${err.message}`);
-    } finally {
       setLoading(false);
+    } finally {
       setRefreshing(false);
     }
   };
@@ -616,20 +1197,98 @@ function AvailableDriversContent({ onBack }) {
     });
   };
 
-  const handleDriverSelect = (driverId, offerId, driverData) => {
+  // Fetch order status
+  const fetchOrderStatus = async () => {
+    if (!orderId) return;
+
+    try {
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
+
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        cache: 'no-store'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status && data.data) {
+        setOrderStatus(data.data);
+
+        // Check if order has expired (remaining_offers is 0 and expires_in.minutes is negative)
+        if (data.data.remaining_offers === 0 && data.data.expires_in?.minutes < 0) {
+          // Mark all offers as expired if order has expired
+          setExpiredOfferIds(prev => {
+            // Get current offers from state
+            const currentOffers = offersData?.offers || [];
+            if (currentOffers.length > 0) {
+              const allOfferIds = currentOffers.map(offer => offer.id);
+              // Merge with existing expired offers
+              return [...new Set([...prev, ...allOfferIds])];
+            }
+            return prev;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching order status:', err.message);
+    }
+  };
+
+  const handleDriverSelect = (driverId, offerId, driverData, offer) => {
     setSelectedDriverId(driverId);
     setSelectedOfferId(offerId);
+    setSelectedOffer(offer);
     setIsModalOpen(true);
+    // Mark this offer as pending payment (not accepted yet)
+    setPendingPaymentOfferId(offerId);
     // Store driver data in session for modal
     sessionStorage.setItem('selectedDriver', JSON.stringify(driverData));
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    // Clear pending payment state when modal is closed without payment
+    setPendingPaymentOfferId(null);
+    localStorage.removeItem('pendingOfferData');
+  };
+
+  const handleOfferExpired = (offerId) => {
+    // Mark offer as expired
+    setExpiredOfferIds(prev => [...prev, offerId]);
+    // Clear pending payment state
+    setPendingPaymentOfferId(null);
+    localStorage.removeItem('pendingOfferData');
+    // Close modal
+    setIsModalOpen(false);
+  };
+
   // 🔴 **تحديث دالة handleConfirmPayment**
-  const handleConfirmPayment = async (methodId, driverId) => {
+  const handleConfirmPayment = async (methodId, driverId, paymentData = null) => {
     try {
-      // ✅ سيتم تنفيذ قبول السائق في PaymentModal
-      // بعد النجاح، توجيه المستخدم لصفحة تأكيد الطلب
-      router.push(`/orders/${orderId}/confirmation?driver=${driverId}&offer=${selectedOfferId}`);
+      // ✅ Payment initiation is handled in PaymentModal
+      // After success, redirect to confirmation page
+      const params = new URLSearchParams({
+        driver: driverId,
+        offer: selectedOfferId,
+        gateway: methodId
+      });
+      
+      if (paymentData) {
+        // Add payment data to URL if needed
+        if (paymentData.payment_url) {
+          params.append('payment_url', paymentData.payment_url);
+        }
+        if (paymentData.payment_id) {
+          params.append('payment_id', paymentData.payment_id);
+        }
+      }
+      
+      router.push(`/orders/${orderId}/confirmation?${params.toString()}`);
     } catch (err) {
       console.error('Error in payment confirmation:', err);
       alert('حدث خطأ في تأكيد الطلب. يرجى المحاولة مرة أخرى.');
@@ -850,6 +1509,39 @@ function AvailableDriversContent({ onBack }) {
             </div>
           </motion.div>
 
+       
+
+          {/* Pending Payment Message */}
+          {pendingPaymentOfferId && !paymentSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4"
+            >
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
+                <div className="flex-1">
+                  <p className="text-amber-800 font-medium text-sm">
+                    جاري انتظار الدفع لاستكمال قبول العرض...
+                  </p>
+                  <p className="text-amber-600 text-xs mt-1">
+                    تم حجز العرض مؤقتاً. يرجى إتمام عملية الدفع خلال 15 دقيقة
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    // Reset pending payment state
+                    setPendingPaymentOfferId(null);
+                    localStorage.removeItem('pendingOfferData');
+                  }}
+                  className="text-xs text-amber-700 hover:text-amber-900 font-medium"
+                >
+                  إلغاء الحجز
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {/* Error Message */}
           {error && !error.includes('تسجيل الدخول') && (
             <motion.div
@@ -883,20 +1575,29 @@ function AvailableDriversContent({ onBack }) {
           >
             <div className="mb-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">العروض المتاحة</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  العروض المتاحة
+                </h2>
                 <div className="text-sm text-gray-500">
-                  يتم ترتيب العروض حسب السعر والأقرب
+                  {offersData?.total_offers || 0} عرض متاح
                 </div>
               </div>
             </div>
 
+         
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {offersData?.offers?.map((offer, index) => (
+              {offersData?.offers && Array.isArray(offersData.offers) && offersData.offers.length > 0 ? (
+                offersData.offers.map((offer, index) => {
+                  const isAccepted = acceptedOfferId === offer.id;
+                  const isPendingPayment = pendingPaymentOfferId === offer.id;
+                  const isExpired = expiredOfferIds.includes(offer.id);
+                  return (
                 <motion.div
                   key={offer.id}
                   variants={itemVariants}
                   custom={index}
-                  whileHover={{ y: -5 }}
+                      whileHover={(!isAccepted && !isPendingPayment && !isExpired) ? { y: -5 } : {}}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <DriverCard
@@ -904,13 +1605,19 @@ function AvailableDriversContent({ onBack }) {
                     onAcceptOrder={() => handleDriverSelect(
                       offer.driver_id, 
                       offer.id, 
-                      formatDriverData(offer)
+                          formatDriverData(offer),
+                          offer
                     )}
-                    isPending={offer.status === 'pending'}
+                        isPending={!isAccepted && !isPendingPayment && !isExpired}
+                        isAccepted={isAccepted}
+                        isPendingPayment={isPendingPayment}
+                        isExpired={isExpired}
                     index={index}
                   />
                 </motion.div>
-              ))}
+                  );
+                })
+              ) : null}
             </div>
 
             {/* Empty State */}
@@ -937,55 +1644,7 @@ function AvailableDriversContent({ onBack }) {
               </motion.div>
             )}
 
-            {/* Tips Section */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6"
-            >
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-blue-600" />
-                نصائح للاختيار الأمثل
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5" />
-                    </div>
-                    <h4 className="font-medium">السعر والتوقيت</h4>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    اختر العرض الذي يوازن بين السعر المناسب ووقت التوصيل الأمثل
-                  </p>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
-                      <Award className="w-5 h-5" />
-                    </div>
-                    <h4 className="font-medium">التقييم والخبرة</h4>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    انظر إلى تقييم السائق وعدد الطلبات المكتملة للتجربة الأفضل
-                  </p>
-                </div>
-                
-                <div className="bg-white p-4 rounded-xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
-                      <Truck className="w-5 h-5" />
-                    </div>
-                    <h4 className="font-medium">نوع المركبة</h4>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    تأكد من أن نوع المركبة مناسب لحجم وشكل شحنتك
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+          
           </motion.div>
 
           {/* Map - Right Column */}
@@ -1018,42 +1677,23 @@ function AvailableDriversContent({ onBack }) {
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="mt-6 bg-white rounded-2xl shadow-md border border-gray-200 p-5">
-                <h4 className="font-bold text-gray-900 mb-4">معلومات سريعة</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">رقم الطلب:</span>
-                    <span className="font-medium">#{orderId}</span>
+              
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">عدد العروض:</span>
-                    <span className="font-medium">{offersData?.total_offers || 0}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">العروض النشطة:</span>
-                    <span className="font-medium text-green-600">{offersData?.active_offers || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">أقل سعر:</span>
-                    <span className="font-medium text-blue-600">{stats.lowestPrice} ريال</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Payment Modal */}
       <PaymentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onConfirm={handleConfirmPayment}
         selectedDriverId={selectedDriverId}
         selectedOfferId={selectedOfferId}
         orderId={orderId}
+        offerAmount={selectedOffer?.price}
         useMockData={useMockData}
+        onOfferExpired={handleOfferExpired}
       />
 
       {/* Floating Action Button */}
@@ -1087,4 +1727,115 @@ export default function AvailableDriversPage({ onBack }) {
       <AvailableDriversContent onBack={onBack} />
     </Suspense>
   );
+}
+
+/* =============================
+   Utility Function for Payment Callback
+   Use this function in your payment callback/success page
+============================= */
+export const confirmDriverAfterPayment = async (orderId, driverId, offerId) => {
+  const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
+  
+  const getAccessToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('accessToken');
+    }
+    return null;
+  };
+
+  const accessToken = getAccessToken();
+
+  if (!accessToken) {
+    throw new Error('يجب تسجيل الدخول أولاً');
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/orders/${orderId}/confirm-driver`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        driver_id: driverId,
+        offer_id: offerId,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (res.ok && data.status) {
+    // Clear the stored callback data after successful confirmation
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('paymentCallbackData');
+      localStorage.removeItem('pendingOfferData');
+    }
+    return data.data;
+  }
+
+  throw new Error(data.message || "فشل تأكيد السائق");
+};
+
+/* =============================
+   Helper function to get payment callback data from sessionStorage
+============================= */
+export const getPaymentCallbackData = () => {
+  if (typeof window === 'undefined') return null;
+  
+  const data = sessionStorage.getItem('paymentCallbackData');
+  if (!data) return null;
+  
+  try {
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error parsing payment callback data:', err);
+    return null;
+  }
+};
+
+/* =============================
+   Helper function to get pending offer data from localStorage
+============================= */
+export const getPendingOfferData = () => {
+  if (typeof window === 'undefined') return null;
+  
+  const data = localStorage.getItem('pendingOfferData');
+  if (!data) return null;
+  
+  try {
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error parsing pending offer data:', err);
+    return null;
+  }
+};
+
+/* =============================
+   Generate Mock Driver Data
+============================= */
+function generateMockDriver(index, orderId) {
+  const names = ["أحمد محمد", "سعيد علي", "عبدالله خالد", "فيصل حسن", "محمد عبدالعزيز"];
+  const vehicles = ["سيارة صغيرة", "سيارة كبيرة", "فان", "بيك أب"];
+  const phones = ["+966500123456", "+966501234567", "+966502345678", "+966503456789", "+966504567890"];
+  
+  return {
+    id: `offer-${Date.now()}-${index}`,
+    driver_id: `driver-${1000 + index}`,
+    driver: {
+      name: names[index % names.length],
+      rating: (4.5 + Math.random() * 0.5).toFixed(1),
+      completed_orders: Math.floor(1000 + Math.random() * 500),
+      total_orders: Math.floor(1200 + Math.random() * 300),
+      vehicle_type: vehicles[index % vehicles.length],
+      phone: phones[index % phones.length]
+    },
+    delivery_duration_minutes: Math.floor(15 + Math.random() * 45),
+    price: (50 + Math.random() * 150).toFixed(2),
+    status: "pending",
+    created_at: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+    order_id: orderId
+  };
 }

@@ -9,10 +9,10 @@ import { MdOutlineLocalPolice } from "react-icons/md";
 
 // Icon mapping for dynamic icons
 const iconMap = {
-  price: <HiArrowTrendingDown className="w-8 h-8 md:w-9 md:h-9" />,
-  fast: <BsLightningCharge className="w-8 h-8 md:w-9 md:h-9" />,
-  safe: <MdOutlineLocalPolice className="w-8 h-8 md:w-9 md:h-9" />,
-  support: <FiHeadphones className="w-8 h-8 md:w-9 md:h-9" />,
+  price: <HiArrowTrendingDown className="w-6 h-6 md:w-9 md:h-9" />,
+  fast: <BsLightningCharge className="w-6 h-6 md:w-9 md:h-9" />,
+  safe: <MdOutlineLocalPolice className="w-6 h-6 md:w-9 md:h-9" />,
+  support: <FiHeadphones className="w-6 h-6 md:w-9 md:h-9" />,
 };
 
 const gradientMap = {
@@ -130,7 +130,7 @@ export default function ChooseUs({ data }) {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-6 lg:gap-6 pt-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-6 lg:gap-6 pt-8">
           {displayFeatures.map((feature, index) => (
             <Card
               key={index}
@@ -152,7 +152,7 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
   return (
     <div
       className="group relative bg-white rounded-2xl
-                 px-5 sm:px-6 md:px-7 pt-12 sm:pt-14 pb-6 sm:pb-8
+                 p-2 sm:pb-3 sm:pt-8
                  text-center w-full
                  border border-gray-100
                  shadow-[0_8px_30px_rgb(0,0,0,0.04)]
@@ -160,15 +160,15 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
                  transition-all duration-300 hover:-translate-y-2"
     >
       <div
-        className={`absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2
-                    w-16 h-16 sm:w-20 sm:h-20 md:w-20 md:h-20
+        className={`absolute -top-5 sm:-top-10 left-1/2 -translate-x-1/2
+                    w-10 h-10  sm:w-20 sm:h-20 md:w-20 md:h-20
                     flex items-center justify-center
-                    rounded-xl sm:rounded-2xl
+                    rounded-sm sm:rounded-2xl
                     bg-gradient-to-b ${gradient}
                     text-white shadow-xl ${shadowColor}
                     group-hover:scale-110 transition-transform duration-300 ease-out`}
       >
-        <div className="brightness-110 drop-shadow-md">
+        <div className="brightness-110 drop-shadow-md ">
            {icon}
         </div>
       </div>

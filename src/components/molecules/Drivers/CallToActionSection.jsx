@@ -87,7 +87,7 @@ export default function CallToActionSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4"
+          className="grid grid-cols-2 gap-2 sm:gap-4 justify-center max-w-md mx-auto"
         >
           {/* Primary Button */}
           <motion.button
@@ -121,7 +121,7 @@ export default function CallToActionSection() {
             />
             <span className="relative z-10 flex items-center justify-center gap-2">
               <FaHeadset className="text-sm" />
-              <span>تحدث مع خدمة العملاء</span>
+              <span >  خدمة العملاء</span>
             </span>
           </motion.button>
         </motion.div>
