@@ -13,11 +13,12 @@ export default function HomeCover({ data }) {
 	const [waterType, setWaterType] = React.useState("");
 	const [waterSize, setWaterSize] = React.useState("");
 	const router = useRouter();
- const [validationErrors, setValidationErrors] = useState({
+	const [validationErrors, setValidationErrors] = useState({
         waterType: false,
         waterSize: false
     });
-	  const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [formLoading, setFormLoading] = useState(true);
 	
 	// Extract data from API response
 	const getContentValue = (key) => {
@@ -103,6 +104,44 @@ export default function HomeCover({ data }) {
         }
     };
 
+	// Check if form data is loaded
+	React.useEffect(() => {
+		// Simulate loading time for form initialization
+		const timer = setTimeout(() => {
+			setFormLoading(false);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, []);
+
+	// Form Skeleton Component
+	const FormSkeleton = () => (
+		<div className="bg-[#EFF5FD] px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-3xl flex flex-col gap-4 sm:gap-6 shadow-xl w-full max-w-md mx-auto h-[420px] sm:h-[440px] md:h-[460px] lg:h-[500px]">
+			{/* Header Skeleton */}
+			<div className="text-center mb-4">
+				<div className="h-7 sm:h-8 md:h-10 w-48 sm:w-56 md:w-64 bg-gray-300 dark:bg-gray-700 rounded-xl animate-pulse mx-auto mb-3"></div>
+				<div className="h-4 w-40 sm:w-48 bg-gray-300 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+			</div>
+
+			{/* Water Type Select Skeleton */}
+			<div className="space-y-2">
+				<div className="h-4 w-24 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+				<div className="h-14 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+			</div>
+
+			{/* Water Size Select Skeleton */}
+			<div className="space-y-2">
+				<div className="h-4 w-28 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+				<div className="h-14 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+			</div>
+
+			{/* Button Skeleton */}
+			<div className="mt-6">
+				<div className="h-14 w-full bg-gray-300 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+			</div>
+		</div>
+	);
+
 
 	return (
 		<div className="cover  relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
@@ -111,10 +150,13 @@ export default function HomeCover({ data }) {
 					{/* Form Section - Appears first on small screens */}
 					<div className="form-left content-left order-1 md:order-2 rounded-xl sm:rounded-2xl md:rounded-[26px] border border-[#FFFFFF26] sm:border-2 md:border-[12px] lg:border-[20px] shadow-lg overflow-hidden">
 						<div className="bg-[#FFFFFF26] h-full p-2 py-6 md:py-3">
-							 <form 
-                onSubmit={handleSubmit} 
-                className="bg-[#EFF5FD] px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-3xl flex flex-col gap-4 sm:gap-6 shadow-xl w-full max-w-md mx-auto"
-            >
+							{formLoading ? (
+								<FormSkeleton />
+							) : (
+								<form 
+									onSubmit={handleSubmit} 
+									className="bg-[#EFF5FD] px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-3xl flex flex-col gap-4 sm:gap-6 shadow-xl w-full max-w-md mx-auto h-[420px] sm:h-[440px] md:h-[460px] lg:h-[500px]"
+								>
                 <div className="text-center mb-4">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#579BE8] mb-2">
                         اختر اللي يناسبك
@@ -184,11 +226,8 @@ export default function HomeCover({ data }) {
                         "ابدأ الطلب"
                     )}
                 </button>
-
-                
-           					</form>
-
-            
+								</form>
+							)}
 						</div>
 					</div>
 

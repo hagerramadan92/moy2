@@ -232,12 +232,19 @@ export function NotificationProvider({ children }) {
 
   // دالة التحقق من إشعارات جديدة
   const checkForNewNotifications = useCallback(async (forceShow = false) => {
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current) {
+      console.log('🔔 NotificationContext: Component not mounted, skipping check');
+      return;
+    }
     
     try {
       const authToken = getAuthToken();
-      if (!authToken) return;
+      if (!authToken) {
+        console.log('🔔 NotificationContext: No auth token, skipping check');
+        return;
+      }
       
+      console.log('🔔 NotificationContext: Checking for new notifications...');
       const url = createRequestURL('/notifications');
       
       try {
@@ -246,70 +253,94 @@ export function NotificationProvider({ children }) {
         if (response && (response.success === true || response.status === 'success' || response.status === true)) {
           const newNotificationsData = response.data || [];
           
+          console.log('🔔 NotificationContext: Received notifications:', newNotificationsData.length);
+          
           if (!Array.isArray(newNotificationsData)) return;
           
-          // فلترة الإشعارات الجديدة فقط
+          // معالجة جميع الإشعارات
+          const processedNotifications = newNotificationsData.map(processNotification);
+          
+          // فلترة الإشعارات الجديدة (غير موجودة في processedNotificationIds)
           const trulyNewData = newNotificationsData.filter(notification => 
             notification.id && !processedNotificationIds.current.has(notification.id)
           );
           
-          if (trulyNewData.length === 0) {
-            setLastUpdate(new Date());
-            return;
-          }
-          
-          const processedNewNotifications = trulyNewData.map(processNotification);
+          console.log('🔔 NotificationContext: Truly new notifications:', trulyNewData.length, 'Total notifications:', newNotificationsData.length, 'Processed IDs count:', processedNotificationIds.current.size);
           
           // حفظ IDs الجديدة
-          trulyNewData.forEach(notification => {
+          newNotificationsData.forEach(notification => {
             if (notification.id) {
               processedNotificationIds.current.add(notification.id);
             }
           });
           
-          // تحديث الإشعارات
+          // تحديث الإشعارات مع إزالة التكرارات
           setNotifications(prev => {
-            const merged = [...processedNewNotifications, ...prev]
+            // إنشاء Map لإزالة التكرارات (نحتفظ بالإصدار الأحدث)
+            const notificationsMap = new Map();
+            
+            // إضافة الإشعارات القديمة
+            prev.forEach(notification => {
+              if (notification.id) {
+                notificationsMap.set(notification.id, notification);
+              }
+            });
+            
+            // إضافة/تحديث الإشعارات الجديدة
+            processedNotifications.forEach(notification => {
+              if (notification.id) {
+                notificationsMap.set(notification.id, notification);
+              }
+            });
+            
+            // تحويل Map إلى Array وترتيب حسب التاريخ
+            const merged = Array.from(notificationsMap.values())
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
               .slice(0, 50);
+            
             return merged;
           });
           
           // تحديث عدد الإشعارات غير المقروءة
-          const newUnread = processedNewNotifications.filter(n => !n.is_read);
-          if (newUnread.length > 0) {
-            setUnreadCount(prev => prev + newUnread.length);
+          const allUnread = processedNotifications.filter(n => !n.is_read);
+          const newUnread = allUnread.filter(n => !toastNotificationIds.current.has(n.id));
+          
+          if (allUnread.length > 0) {
+            setUnreadCount(allUnread.length);
             
-            // عرض إشعارات Toast للإشعارات الجديدة فقط إذا:
-            // 1. showAlerts مفعلة (تم النقر على أيقونة الإشعارات)
-            // 2. forceShow = true
-            // 3. showChatAlerts مفعلة (تم النقر على أيقونة الشات)
-            const shouldShowToast = forceShow || showAlerts || showChatAlerts;
-            
-            if (shouldShowToast) {
+            // عرض إشعارات Toast تلقائياً للإشعارات غير المقروءة التي لم تُعرض من قبل
+            if (newUnread.length > 0) {
+              console.log('🔔 NotificationContext: New unread notifications to show:', newUnread.length);
+              
               newUnread.forEach(notification => {
-                if (!toastNotificationIds.current.has(notification.id)) {
-                  toastNotificationIds.current.add(notification.id);
-                  
-                  setNewNotifications(prev => {
-                    if (prev.some(n => n.id === notification.id)) {
-                      return prev;
-                    }
-                    return [...prev, notification];
-                  });
-                  
-                  // إزالة Toast بعد 5 ثوانٍ
-                  setTimeout(() => {
-                    if (isMountedRef.current) {
-                      setNewNotifications(prev => 
-                        prev.filter(n => n.id !== notification.id)
-                      );
-                      toastNotificationIds.current.delete(notification.id);
-                    }
-                  }, 5000);
-                }
+                console.log('🔔 NotificationContext: Adding notification to toast:', notification.id, notification.title);
+                toastNotificationIds.current.add(notification.id);
+                
+                // إضافة الإشعار فوراً للعرض
+                setNewNotifications(prev => {
+                  if (prev.some(n => n.id === notification.id)) {
+                    console.log('🔔 NotificationContext: Notification already in list, skipping');
+                    return prev;
+                  }
+                  console.log('🔔 NotificationContext: Adding notification to newNotifications state');
+                  return [...prev, notification];
+                });
+                
+                // إزالة Toast بعد 5 ثوانٍ (يتم التعامل معها في NotificationToast)
+                setTimeout(() => {
+                  if (isMountedRef.current) {
+                    setNewNotifications(prev => 
+                      prev.filter(n => n.id !== notification.id)
+                    );
+                    toastNotificationIds.current.delete(notification.id);
+                  }
+                }, 5000);
               });
+            } else {
+              console.log('🔔 NotificationContext: All unread notifications already shown');
             }
+          } else {
+            console.log('🔔 NotificationContext: No unread notifications');
           }
           
           setLastUpdate(new Date());
@@ -324,18 +355,26 @@ export function NotificationProvider({ children }) {
   }, [showAlerts, showChatAlerts]);
 
   // بدء التحديث التلقائي
-  const startAutoRefresh = useCallback((interval = 30000) => {
+  const startAutoRefresh = useCallback((interval = 5000) => { // تقليل من 30 ثانية إلى 5 ثوانٍ
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
     
+    console.log('🔔 NotificationContext: Starting auto refresh with interval:', interval);
+    
     // تحميل الإشعارات أولاً بدون عرض toasts
     loadNotifications(false);
     
-    // بدء التحديث الدوري كل 30 ثانية
+    // التحقق فوراً من الإشعارات الجديدة
+    setTimeout(() => {
+      checkForNewNotifications(true);
+    }, 1000); // بعد ثانية واحدة من التحميل
+    
+    // بدء التحديث الدوري كل 5 ثوانٍ (بدلاً من 30)
     pollIntervalRef.current = setInterval(() => {
-      // تمرير false لمنع عرض الـ toasts تلقائياً
-      checkForNewNotifications(false);
+      console.log('🔔 NotificationContext: Polling for new notifications...');
+      // تمرير true لعرض الإشعارات تلقائياً
+      checkForNewNotifications(true);
     }, interval);
     
   }, [loadNotifications, checkForNewNotifications]);
@@ -520,19 +559,20 @@ export function NotificationProvider({ children }) {
   // دالة تسجيل الجهاز للإشعارات
   const registerDevice = async (token) => {
     try {
-      const authToken = getAuthToken();
-      
+    //  const authToken = getAuthToken();
+      const sessionId = getSessionId();
       // التحقق من وجود التوكن
-      if (!authToken) {
-        throw new Error('يجب تسجيل الدخول لتسجيل الجهاز');
-      }
+      // if (!authToken) {
+      //   throw new Error('يجب تسجيل الدخول لتسجيل الجهاز');
+      // }
 
       const deviceInfo = {
         token: token,
         device_type: getDeviceType(),
         device_name: getDeviceName(),
         app_version: '1.0.0',
-        platform: 'web'
+        platform: 'web',
+        session_id: sessionId,
       };
 
       const url = createRequestURL('/notifications/register-device');
@@ -568,7 +608,24 @@ export function NotificationProvider({ children }) {
       throw new Error(error.message || 'حدث خطأ غير متوقع أثناء تسجيل الجهاز');
     }
   };
+   function getSessionId() {
+    if (typeof window === "undefined") return null;
+  
+    const key = "session_id";
+    let sessionId = localStorage.getItem(key);
+  
+    if (!sessionId) {
+      sessionId =
+        crypto?.randomUUID?.() ||
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  
+      localStorage.setItem(key, sessionId);
+    }
+  
+    return sessionId;
+  }
 
+  
   // الحصول على نوع الجهاز
   const getDeviceType = () => {
     if (!isBrowser) return 'web';
@@ -614,17 +671,15 @@ export function NotificationProvider({ children }) {
       
       if (authToken) {
         await loadNotifications(false); // بدون عرض toasts عند التهيئة
-        startAutoRefresh(30000); // تحديث كل 30 ثانية
+        startAutoRefresh(5000); // تحديث كل 5 ثوانٍ (بدلاً من 30)
       } else {
         setNotifications([]);
         setUnreadCount(0);
       }
     };
 
-    // تأخير التهيئة قليلاً
-    setTimeout(() => {
-      initNotifications();
-    }, 1000);
+    // تهيئة فورية بدون تأخير
+    initNotifications();
 
     return () => {
       isMountedRef.current = false;
@@ -637,12 +692,17 @@ export function NotificationProvider({ children }) {
     const handleStorageChange = (e) => {
       if (e.key === 'accessToken' || e.key === null) {
         loadNotifications(false); // بدون عرض toasts عند تغيير التوكن
+        // التحقق من الإشعارات الجديدة بعد تحديث التوكن
+        setTimeout(() => {
+          checkForNewNotifications(true);
+        }, 500);
       }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkForNewNotifications(false); // بدون عرض toasts عند عودة التركيز
+        // التحقق فوراً من الإشعارات عند عودة التركيز
+        checkForNewNotifications(true);
       }
     };
 

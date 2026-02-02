@@ -26,6 +26,8 @@ const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
 export default function OrdersPage() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [tableLoading, setTableLoading] = useState(false);
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [error, setError] = useState(null);
     const [searchOrderNumber, setSearchOrderNumber] = useState("");
     const [openOrderId, setOpenOrderId] = useState(null);
@@ -114,7 +116,7 @@ export default function OrdersPage() {
     };
 
     // Fetch orders from API
-    const fetchOrders = useCallback(async () => {
+    const fetchOrders = useCallback(async (isInitialLoad = false) => {
         // التحقق من المصادقة أولاً
         if (!checkAuthAndRedirect()) {
             setLoading(false);
@@ -122,7 +124,11 @@ export default function OrdersPage() {
         }
 
         try {
-            setLoading(true);
+            if (isInitialLoad || !initialLoadComplete) {
+                setLoading(true);
+            } else {
+                setTableLoading(true);
+            }
             setError(null);
             setAuthError(false);
             
@@ -179,6 +185,10 @@ export default function OrdersPage() {
                 setOrders(data.data || []);
                 setTotalOrders(data.meta?.total || 0);
                 setTotalPages(data.meta?.last_page || 1);
+                
+                if (isInitialLoad) {
+                    setInitialLoadComplete(true);
+                }
             } else {
                 throw new Error(data.message || "حدث خطأ في جلب البيانات");
             }
@@ -187,15 +197,55 @@ export default function OrdersPage() {
             setError(err.message);
             setOrders([]);
         } finally {
-            setLoading(false);
+            if (isInitialLoad || !initialLoadComplete) {
+                setLoading(false);
+            } else {
+                setTableLoading(false);
+            }
             setRefreshing(false);
         }
-    }, [currentPage, selectedStatuses, period, selectedDate]);
+    }, [currentPage, selectedStatuses, period, selectedDate, initialLoadComplete]);
 
-    // Initial fetch and refetch when filters change
+    // Initial fetch
     useEffect(() => {
-        fetchOrders();
-    }, [fetchOrders]);
+        if (!initialLoadComplete) {
+            fetchOrders(true);
+        }
+    }, [initialLoadComplete, fetchOrders]);
+
+    // Refetch when filters change (without reload)
+    useEffect(() => {
+        if (initialLoadComplete) {
+            const timeoutId = setTimeout(() => {
+                fetchOrders();
+            }, 300);
+            
+            // Update URL without reload
+            const params = new URLSearchParams();
+            if (currentPage > 1) params.set('page', currentPage.toString());
+            if (selectedStatuses.length > 0) {
+                selectedStatuses.forEach(statusId => {
+                    params.append('status_ids[]', statusId);
+                });
+            }
+            if (period && period !== "all") params.set('period', period);
+            if (selectedDate) params.set('date', selectedDate);
+            if (searchOrderNumber) params.set('search', searchOrderNumber);
+            
+            const queryString = params.toString();
+            const newUrl = queryString ? `/myProfile/orders?${queryString}` : '/myProfile/orders';
+            
+            if (typeof window !== 'undefined') {
+                window.history.replaceState(
+                    { ...window.history.state, as: newUrl, url: newUrl },
+                    '',
+                    newUrl
+                );
+            }
+            
+            return () => clearTimeout(timeoutId);
+        }
+    }, [currentPage, selectedStatuses, period, selectedDate, searchOrderNumber, initialLoadComplete, fetchOrders]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -290,7 +340,11 @@ export default function OrdersPage() {
     // Handle refresh
     const handleRefresh = () => {
         setRefreshing(true);
-        fetchOrders();
+        if (initialLoadComplete) {
+            fetchOrders();
+        } else {
+            fetchOrders(true);
+        }
     };
 
     // Handle login redirect
@@ -408,9 +462,103 @@ export default function OrdersPage() {
 
             {!authError && (
                 <>
-                    {/* Statistics Cards */}
-                    <div className="grid grid-cols-1">
-                        {stats.map((stat, idx) => (
+                    {loading ? (
+                        <>
+                            {/* Statistics Skeleton */}
+                            <div className="grid grid-cols-1">
+                                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl md:p-6 p-2 shadow-xl relative">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                                            <div className="w-5 h-5 bg-white/30 rounded animate-pulse"></div>
+                                        </div>
+                                        <div className="h-4 md:h-6 w-20 bg-white/20 rounded animate-pulse"></div>
+                                    </div>
+                                    <div className="h-6 md:h-10 w-12 bg-white/20 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+
+                            {/* Filters Skeleton */}
+                            <div className="flex gap-1 items-start sm:items-center justify-between">
+                                <div className="grid grid-cols-2 gap-2 md:gap-5 flex-1 w-full">
+                                    <div className="relative flex-1 max-w-md w-full">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                        <div className="w-full h-[52px] bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                                    </div>
+                                    <div className="relative flex-1 max-w-md w-full">
+                                        <div className="w-full h-[52px] bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="h-[52px] w-24 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                                </div>
+                            </div>
+
+                            {/* Status Filter Skeleton */}
+                            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl p-4">
+                                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+                                <div className="flex flex-wrap gap-2">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <div key={i} className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Table Skeleton */}
+                            <div className="bg-white dark:bg-card border border-border/60 rounded-2xl shadow-sm">
+                                <div className="p-6 border-b border-border/50">
+                                    <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                                <div className="overflow-x-auto scrollbar-hide p-6">
+                                    <table className="w-full min-w-[800px] text-right border-collapse">
+                                        <thead>
+                                            <tr className="bg-secondary/30">
+                                                {[1, 2, 3, 4, 5, 6].map((i) => (
+                                                    <th key={i} className="px-6 py-4">
+                                                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto"></div>
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/50">
+                                            {[1, 2, 3, 4, 5].map((row) => (
+                                                <tr key={row} className="hover:bg-secondary/10">
+                                                    <td className="px-6 py-5">
+                                                        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="space-y-1">
+                                                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="space-y-1">
+                                                            <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                            <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mx-auto"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Statistics Cards */}
+                            <div className="grid grid-cols-1">
+                                {stats.map((stat, idx) => (
                             <div key={idx} className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-3xl md:p-6 p-2 shadow-xl relative  group hover:shadow-2xl hover:-translate-y-1 transition-all">
                                 {/* Decorative Elements */}
                                 <div className="absolute -right-6 -top-6 opacity-10">
@@ -559,10 +707,50 @@ export default function OrdersPage() {
                         </div>
 
                         <div className="overflow-x-auto scrollbar-hide">
-                            {loading ? (
-                                <div className="p-10 text-center">
-                                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#579BE8] mb-4"></div>
-                                    <p className="text-muted-foreground">جاري تحميل الطلبات...</p>
+                            {tableLoading ? (
+                                <div className="p-6">
+                                    <table className="w-full min-w-[800px] text-right border-collapse">
+                                        <thead>
+                                            <tr className="bg-secondary/30 text-muted-foreground text-sm uppercase tracking-wider font-bold">
+                                                <th className="px-6 py-4 text-right">رقم الطلب</th>
+                                                <th className="px-6 py-4 text-right">الخدمة</th>
+                                                <th className="px-6 py-4 text-right">نوع المياه</th>
+                                                <th className="px-6 py-4 text-right">التاريخ</th>
+                                                <th className="px-6 py-4 text-center">الحالة</th>
+                                                <th className="px-6 py-4 text-center">الإجراء</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/50">
+                                            {[1, 2, 3, 4, 5].map((row) => (
+                                                <tr key={row} className="hover:bg-secondary/10">
+                                                    <td className="px-6 py-5">
+                                                        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="space-y-1">
+                                                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="space-y-1">
+                                                            <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                            <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mx-auto"></div>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             ) : error && !authError ? (
                                 <div className="p-10 text-center">
@@ -741,6 +929,8 @@ export default function OrdersPage() {
                             )}
                         </div>
                     </div>
+                        </>
+                    )}
                 </>
             )}
         </div>

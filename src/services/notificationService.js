@@ -24,6 +24,130 @@ const getToken = () => {
   return null;
 };
 
+// الحصول على Session ID
+const getSessionId = () => {
+  try {
+    if (isBrowser) {
+      return localStorage.getItem('session_id') || sessionStorage.getItem('session_id');
+    }
+  } catch (e) {
+    console.error('❌ Error getting session ID:', e);
+  }
+  return null;
+};
+
+// حفظ Session ID
+const setSessionId = (sessionId) => {
+  try {
+    if (isBrowser && sessionId) {
+      localStorage.setItem('session_id', sessionId);
+      sessionStorage.setItem('session_id', sessionId);
+      if (!isProduction) {
+        console.log('🔔 Session ID saved:', sessionId);
+      }
+    }
+  } catch (e) {
+    console.error('❌ Error saving session ID:', e);
+  }
+};
+
+// متغير لتتبع حالة إنشاء session
+let sessionCreationPromise = null;
+
+// إنشاء Session جديد
+const createSession = async () => {
+  try {
+    // التحقق من وجود session موجود
+    const existingSessionId = getSessionId();
+    if (existingSessionId) {
+      if (!isProduction) {
+        console.log('🔔 Using existing session:', existingSessionId);
+      }
+      return existingSessionId;
+    }
+
+    if (!isBrowser) {
+      return null;
+    }
+
+    // إذا كان هناك طلب إنشاء session قيد التنفيذ، انتظر انتهاءه
+    if (sessionCreationPromise) {
+      return await sessionCreationPromise;
+    }
+
+    // إنشاء promise جديد لإنشاء session
+    sessionCreationPromise = (async () => {
+      try {
+        // إنشاء session جديد
+        const response = await fetch(`${API_BASE}/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            // يمكن إضافة بيانات إضافية إذا كان API يتطلبها
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status && data.data) {
+          const sessionId = data.data.id || data.data.session_id || data.data.session_id;
+          if (sessionId) {
+            setSessionId(sessionId);
+            if (!isProduction) {
+              console.log('🔔 New session created:', sessionId);
+            }
+            sessionCreationPromise = null; // إعادة تعيين بعد النجاح
+            return sessionId;
+          }
+        }
+
+        // إذا فشل إنشاء session، يمكن إنشاء session محلي مؤقت
+        const fallbackSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(fallbackSessionId);
+        if (!isProduction) {
+          console.log('🔔 Fallback session created:', fallbackSessionId);
+        }
+        sessionCreationPromise = null;
+        return fallbackSessionId;
+
+      } catch (error) {
+        console.error('❌ Error creating session:', error);
+        sessionCreationPromise = null;
+        
+        // إنشاء session محلي كبديل
+        const fallbackSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(fallbackSessionId);
+        return fallbackSessionId;
+      }
+    })();
+
+    return await sessionCreationPromise;
+
+  } catch (error) {
+    console.error('❌ Error in createSession:', error);
+    sessionCreationPromise = null;
+    
+    // إنشاء session محلي كبديل
+    const fallbackSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setSessionId(fallbackSessionId);
+    return fallbackSessionId;
+  }
+};
+
+// التأكد من وجود Session عند تحميل الموقع
+if (isBrowser) {
+  // إنشاء session تلقائياً عند تحميل الملف (فقط مرة واحدة)
+  if (typeof window !== 'undefined' && !window.__sessionInitialized) {
+    window.__sessionInitialized = true;
+    createSession().catch(err => {
+      console.warn('🔔 Failed to create session on load:', err);
+    });
+  }
+}
+
 // دالة التحقق من تسجيل الدخول
 const checkAuthentication = (showToast = true) => {
   const token = getToken();
@@ -677,6 +801,131 @@ class NotificationService {
     } catch (e) {
       console.warn('🔔 Error clearing notification cache:', e);
     }
+  }
+
+  // ==================== تسجيل الجهاز للإشعارات ====================
+  async registerDevice(deviceData) {
+    console.log('🔔 registerDevice called with:', deviceData);
+    
+    try {
+      // التأكد من وجود session
+      let sessionId = getSessionId();
+      if (!sessionId) {
+        sessionId = await createSession();
+      }
+
+      if (!sessionId) {
+        return {
+          success: false,
+          error: 'فشل إنشاء session',
+          source: 'session-creation-failed'
+        };
+      }
+
+      // الحصول على معلومات الجهاز
+      const deviceInfo = {
+        token: deviceData.token || deviceData.fcm_token || '',
+        device_type: deviceData.device_type || this.detectDeviceType(),
+        device_name: deviceData.device_name || this.getDeviceName(),
+        app_version: deviceData.app_version || '1.0.0',
+        session_id: sessionId
+      };
+
+      // إرسال طلب تسجيل الجهاز
+      const response = await this.axiosInstance.post('/notifications/register-device', deviceInfo);
+
+      if (response.data && response.data.status) {
+        if (!isProduction) {
+          console.log('🔔 Device registered successfully:', response.data);
+        }
+        return {
+          success: true,
+          data: response.data.data || response.data,
+          source: 'axios'
+        };
+      }
+
+      return {
+        success: false,
+        error: response.data?.message || 'فشل تسجيل الجهاز',
+        source: 'api-error'
+      };
+
+    } catch (error) {
+      console.error('🔔 Error registering device:', error);
+      
+      return {
+        success: false,
+        error: error.message || 'فشل تسجيل الجهاز',
+        source: 'failed',
+        details: error.response?.data || {}
+      };
+    }
+  }
+
+  // ==================== اكتشاف نوع الجهاز ====================
+  detectDeviceType() {
+    if (!isBrowser) return 'web';
+    
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    
+    if (/android/i.test(userAgent)) {
+      return 'android';
+    }
+    
+    if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+      return 'ios';
+    }
+    
+    if (/windows phone/i.test(userAgent)) {
+      return 'windows';
+    }
+    
+    return 'web';
+  }
+
+  // ==================== الحصول على اسم الجهاز ====================
+  getDeviceName() {
+    if (!isBrowser) return 'Unknown Device';
+    
+    const userAgent = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    
+    // محاولة استخراج اسم الجهاز من user agent
+    if (/android/i.test(userAgent)) {
+      const match = userAgent.match(/Android\s+([^;]+)/);
+      return match ? `Android ${match[1]}` : 'Android Device';
+    }
+    
+    if (/iPad|iPhone|iPod/.test(userAgent)) {
+      const match = userAgent.match(/(iPhone|iPad|iPod).*OS\s+([\d_]+)/);
+      return match ? `${match[1]} iOS ${match[2].replace(/_/g, '.')}` : 'iOS Device';
+    }
+    
+    if (/windows/i.test(userAgent)) {
+      return `Windows ${platform}`;
+    }
+    
+    if (/mac/i.test(userAgent)) {
+      return `Mac ${platform}`;
+    }
+    
+    if (/linux/i.test(userAgent)) {
+      return `Linux ${platform}`;
+    }
+    
+    return platform || 'Unknown Device';
+  }
+
+  // ==================== الحصول على Session ID ====================
+  async getOrCreateSession() {
+    let sessionId = getSessionId();
+    
+    if (!sessionId) {
+      sessionId = await createSession();
+    }
+    
+    return sessionId;
   }
 }
 

@@ -81,7 +81,22 @@ export default function OtpPage() {
 			}
 		}
 	};
-
+	function getSessionId() {
+		if (typeof window === "undefined") return null;
+	  
+		const key = "session_id";
+		let sessionId = localStorage.getItem(key);
+	  
+		if (!sessionId) {
+		  sessionId =
+			crypto?.randomUUID?.() ||
+			`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	  
+		  localStorage.setItem(key, sessionId);
+		}
+	  
+		return sessionId;
+	  }
 	const handleVerify = async () => {
 		const enteredOtp = otp.join("");
 
@@ -109,6 +124,7 @@ export default function OtpPage() {
 				body: JSON.stringify({
 					otp: enteredOtp,
 					phone_number: otpData.phone,
+					session_id: getSessionId(),
 				}),
 			});
 

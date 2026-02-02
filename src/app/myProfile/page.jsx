@@ -987,16 +987,128 @@ export default function MyProfilePage() {
         }
     };
 
-    // Show spinner while loading
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-sky-50">
-                <div className="text-center">
-                    <Spinner size="xl" className="mb-4" />
-                    <p className="text-gray-600 text-lg font-medium">جاري تحميل البيانات...</p>
+    // Skeleton Components
+    const ProfileSkeleton = () => (
+        <div className="flex flex-col gap-4 sm:gap-6 md:gap-8 fade-in-up px-2 sm:px-0">
+            {/* Profile Hero Section Skeleton */}
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl shadow-xl overflow-hidden border border-border/60">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white relative overflow-hidden">
+                    <div className="relative z-10 p-4 sm:p-6 md:p-8 lg:p-10">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 justify-between">
+                            <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full bg-white/20 backdrop-blur-md animate-pulse"></div>
+                                <div className="flex flex-col gap-1 sm:gap-2">
+                                    <div className="h-6 sm:h-7 md:h-8 lg:h-9 w-48 bg-white/20 rounded-lg animate-pulse"></div>
+                                    <div className="h-6 w-24 bg-white/20 rounded-full animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                                <div className="h-10 sm:h-12 w-32 bg-white/20 rounded-xl animate-pulse"></div>
+                                <div className="h-10 sm:h-12 w-32 bg-white/20 rounded-xl animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Profile Information Form Skeleton */}
+                <div className="p-4 sm:p-6 md:p-8 lg:p-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="space-y-1 sm:space-y-2">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-12 sm:h-14 md:h-[60px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                        </div>
+                        <div className="space-y-1 sm:space-y-2">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-12 sm:h-14 md:h-[60px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border/50 flex justify-end">
+                        <div className="h-12 w-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                    </div>
                 </div>
             </div>
-        );
+
+            {/* Account Settings Skeleton */}
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl md:rounded-xl overflow-hidden shadow-xl border border-border/60">
+                <div className="p-4 sm:p-6 md:p-8 lg:p-10">
+                    <div className="h-6 sm:h-7 md:h-8 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4 sm:mb-6 md:mb-8"></div>
+                    <div className="flex flex-col gap-3 sm:gap-4">
+                        {/* Notifications Toggle Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                                <div className="space-y-2">
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="w-12 h-6 sm:w-14 sm:h-7 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                        </div>
+
+                        {/* Saved Places Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                                <div className="space-y-2">
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+
+                        {/* Favorite Places Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                                <div className="space-y-2">
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Privacy & Security Skeleton */}
+            <div className="bg-white dark:bg-card rounded-xl sm:rounded-xl md:rounded-xl overflow-hidden shadow-xl border border-border/60">
+                <div className="p-4 sm:p-6 md:p-8 lg:p-10">
+                    <div className="h-6 sm:h-7 md:h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4 sm:mb-6 md:mb-8"></div>
+                    <div className="flex flex-col gap-3 sm:gap-4">
+                        {/* Location Sharing Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                                <div className="space-y-2">
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="w-12 h-6 sm:w-14 sm:h-7 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                        </div>
+
+                        {/* Privacy Policy Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+
+                        {/* Terms of Service Skeleton */}
+                        <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 rounded-xl border border-border/50 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Show spinner while loading
+    if (loading) {
+        return <ProfileSkeleton />;
     }
 
     return (

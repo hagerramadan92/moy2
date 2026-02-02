@@ -33,9 +33,21 @@ const NotificationBell = () => {
     }
   }, [isOpen]);
 
-  // تحديث الإشعارات المحلية
+  // تحديث الإشعارات المحلية مع إزالة التكرارات
   useEffect(() => {
-    setLocalNotifications(notifications);
+    // إزالة الإشعارات المكررة بناءً على id
+    const uniqueNotifications = notifications.reduce((acc, notification) => {
+      const existingIndex = acc.findIndex(n => n.id === notification.id);
+      if (existingIndex === -1) {
+        acc.push(notification);
+      } else {
+        // إذا كان موجود، نستبدله بالإصدار الأحدث
+        acc[existingIndex] = notification;
+      }
+      return acc;
+    }, []);
+    
+    setLocalNotifications(uniqueNotifications);
   }, [notifications]);
 
   const handleNotificationClick = (notification) => {
@@ -229,9 +241,9 @@ const NotificationBell = () => {
                 <p className="text-sm mt-1">عندما تتلقى إشعارات جديدة ستظهر هنا</p>
               </div>
             ) : (
-              localNotifications.map((notification) => (
+              localNotifications.map((notification, index) => (
                 <div
-                  key={notification.id}
+                  key={`notification-${notification.id}-${index}`}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !notification.is_read ? 'bg-blue-50 border-r-4 border-r-blue-500' : ''
                   }`}

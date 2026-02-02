@@ -1768,6 +1768,7 @@ function AvailableDriversContent({ onBack }) {
                 <div className="h-[calc(100%-80px)]">
                   <DriversMap
                     drivers={offersData?.offers?.map(formatDriverData) || []}
+                    shouldUpdate={!loading && !refreshing && offersData && !useMockData}
                   />
                 </div>
                 
@@ -1779,16 +1780,14 @@ function AvailableDriversContent({ onBack }) {
                     <div>
                       <p className="text-sm font-medium">معلومات الخريطة</p>
                       <p className="text-xs text-gray-500">
-                        يتم تحديث المواقع كل 30 ثانية
+                        {loading || refreshing ? 'جاري التحميل...' : 'يتم تحديث المواقع كل 30 ثانية'}
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-
-              
-                  </div>
-                  </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { GoBell } from "react-icons/go";
+import toast from "react-hot-toast";
+
 import NotificationBell from "../Notifications/NotificationBell";
 const NAV_LINKS = [
   { href: "/", label: "الرئيسية" },
@@ -141,7 +142,12 @@ export default function Navbar() {
 
   // دالة للذهاب إلى صفحة الطلب
   const handleOrderNow = () => {
-    router.push('/order');
+    if (!user) {
+      toast.error("يرجى تسجيل الدخول أولاً");
+      router.push('/login');
+    } else {
+      router.push('/order');
+    }
   };
 
   return (
@@ -206,7 +212,7 @@ export default function Navbar() {
           
           <div className="flex items-center gap-2">
             {/* زر اطلب الآن - يذهب إلى صفحة الطلب */}
-             <div>
+                <div>
                     <NotificationBell />
                  </div>
             <motion.div whileTap={{ scale: 0.98 }} className="flex items-center gap-1 md:gap-4">

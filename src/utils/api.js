@@ -572,7 +572,7 @@ export const formatDate = (dateString, format = 'ar-SA') => {
 export const formatCurrency = (amount, currency = 'SAR') => {
   const numAmount = parseFloat(amount || 0);
   return numAmount.toLocaleString('ar-SA', {
-    style: 'currency',
+    // style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2

@@ -9,30 +9,69 @@ import {
   FaTimes,
   FaBell
 } from 'react-icons/fa';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 const NotificationToast = () => {
   const { newNotifications, markAsRead } = useNotification();
   const [visibleNotifications, setVisibleNotifications] = useState([]);
+  const timeoutRefs = useRef({});
 
-  // تحديث الإشعارات المرئية مع منع التكرار
+  // Debug: طباعة الإشعارات الجديدة
   useEffect(() => {
+    if (newNotifications.length > 0) {
+      console.log('🔔 NotificationToast: New notifications received:', newNotifications);
+    }
+  }, [newNotifications]);
+
+  // تحديث الإشعارات المرئية مع منع التكرار وعرض فوري
+  useEffect(() => {
+    console.log('🔔 NotificationToast: useEffect triggered, newNotifications.length:', newNotifications.length);
+    
     if (newNotifications.length === 0) {
       setVisibleNotifications([]);
       return;
     }
 
-    // إضافة الإشعارات الجديدة فقط التي لم تكن معروضة من قبل
+    // إضافة الإشعارات الجديدة فوراً بدون أي تأخير
     setVisibleNotifications(prev => {
       const currentIds = new Set(prev.map(n => n.id));
       const newToAdd = newNotifications.filter(n => !currentIds.has(n.id));
       
-      // الحد الأقصى 3 إشعارات في نفس الوقت
+      console.log('🔔 NotificationToast: New to add:', newToAdd.length, 'Current visible:', prev.length);
+      
+      if (newToAdd.length === 0) return prev;
+      
+      // إضافة الإشعارات الجديدة فوراً (بدون أي تأخير)
       const combined = [...newToAdd, ...prev].slice(0, 3);
+      
+      console.log('🔔 NotificationToast: Setting visible notifications immediately:', combined.length);
+      
+      // إعداد auto-dismiss لكل إشعار جديد (5 ثوانٍ)
+      newToAdd.forEach(notification => {
+        if (!timeoutRefs.current[notification.id]) {
+          timeoutRefs.current[notification.id] = setTimeout(() => {
+            setVisibleNotifications(prevNotifications => 
+              prevNotifications.filter(n => n.id !== notification.id)
+            );
+            delete timeoutRefs.current[notification.id];
+          }, 5000); // 5 ثوانٍ
+        }
+      });
+      
       return combined;
     });
 
   }, [newNotifications]);
+
+  // تنظيف timeouts عند unmount
+  useEffect(() => {
+    return () => {
+      Object.values(timeoutRefs.current).forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
+      timeoutRefs.current = {};
+    };
+  }, []);
 
   const getNotificationIcon = (type) => {
     switch (type?.toLowerCase()) {
@@ -65,6 +104,12 @@ const NotificationToast = () => {
       markAsRead(notification.id);
     }
     
+    // إلغاء timeout إذا كان موجوداً
+    if (timeoutRefs.current[notification.id]) {
+      clearTimeout(timeoutRefs.current[notification.id]);
+      delete timeoutRefs.current[notification.id];
+    }
+    
     // إزالة الإشعار من العرض فوراً
     setVisibleNotifications(prev => 
       prev.filter(n => n.id !== notification.id)
@@ -73,6 +118,13 @@ const NotificationToast = () => {
 
   const handleClose = (e, notificationId) => {
     e.stopPropagation();
+    
+    // إلغاء timeout إذا كان موجوداً
+    if (timeoutRefs.current[notificationId]) {
+      clearTimeout(timeoutRefs.current[notificationId]);
+      delete timeoutRefs.current[notificationId];
+    }
+    
     setVisibleNotifications(prev => 
       prev.filter(n => n.id !== notificationId)
     );

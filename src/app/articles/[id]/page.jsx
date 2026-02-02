@@ -445,15 +445,115 @@ const ArticleDetails = () => {
   // Reading progress bar
   const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل المقال...</p>
+  // Skeleton Components
+  const ArticleDetailsSkeleton = () => (
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Hero Section Skeleton */}
+      <section className="relative overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+          <div className="max-w-7xl mx-auto text-center">
+            {/* Category Badge Skeleton */}
+            <div className="mb-6 flex justify-center">
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+            </div>
+
+            {/* Title Skeleton */}
+            <div className="mb-4 space-y-3">
+              <div className="h-8 md:h-10 lg:h-12 w-3/4 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse mx-auto"></div>
+              <div className="h-8 md:h-10 lg:h-12 w-5/6 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse mx-auto"></div>
+            </div>
+
+            {/* Description Skeleton */}
+            <div className="mb-8 space-y-2">
+              <div className="h-5 w-full max-w-3xl bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse mx-auto"></div>
+              <div className="h-5 w-4/5 max-w-3xl bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse mx-auto"></div>
+            </div>
+
+            {/* Meta Info Skeleton */}
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 mb-10 pb-8 border-b border-gray-200/50">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+              ))}
+            </div>
+
+            {/* Featured Image Skeleton */}
+            <div className="relative w-full h-[350px] md:h-[450px] lg:h-[550px] rounded-xl overflow-hidden mb-0 bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+          </div>
         </div>
-      </main>
-    );
+      </section>
+
+      {/* Content Section Skeleton */}
+      <section className="relative pb-12 md:pb-16 pt-0 -mt-8">
+        <div className="max-w-7xl mx-auto px-3">
+          {/* Main Content Skeleton */}
+          <article className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-8 mb-12 relative overflow-hidden">
+            <div className="relative z-10 space-y-8 mb-12">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-5/6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tags Skeleton */}
+            <div className="border-t border-gray-200/50 pt-6 mb-8">
+              <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-4"></div>
+              <div className="flex flex-wrap gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons Skeleton */}
+            <div className="flex flex-wrap items-center gap-3 pt-6 border-t border-gray-200/50">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </article>
+
+          {/* Author Card Skeleton */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 mb-12 border border-gray-200/50 shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+                <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Related Articles Skeleton */}
+          <div className="mb-12">
+            <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200">
+                  <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                  <div className="p-4">
+                    <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mb-2"></div>
+                    <div className="h-5 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-2"></div>
+                    <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <AppPromotionSection />
+      <CallToActionSection />
+      <Footer />
+    </main>
+  );
+
+  if (loading) {
+    return <ArticleDetailsSkeleton />;
   }
 
   if (error && !article) {

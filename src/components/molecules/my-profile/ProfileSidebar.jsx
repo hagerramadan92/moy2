@@ -13,7 +13,7 @@ import { FaHistory, FaMoneyBillWave, FaPlus } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { HiMenuAlt3, HiX } from "react-icons/hi";
 
-export default function ProfileSidebar({ isOpen, setIsOpen }) {
+export default function ProfileSidebar({ isOpen, setIsOpen, loading = false }) {
     const pathname = usePathname();
 
     const isActive = (path) => pathname === path;
@@ -74,6 +74,148 @@ export default function ProfileSidebar({ isOpen, setIsOpen }) {
             }
         });
     };
+
+    // Skeleton Component
+    const SidebarSkeleton = () => (
+        <>
+            {/* Desktop Sidebar Skeleton */}
+            <aside className="hidden !mt-[25px] min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
+                <div className="flex flex-col gap-8">
+                    {/* First Section Skeleton */}
+                    <div className="flex flex-col gap-4">
+                        {/* Section Header Skeleton */}
+                        <div className="flex items-center gap-2 px-2">
+                            <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                        </div>
+                        <div className="flex flex-col gap-1 pr-4 border-r-2 border-border/50">
+                            {/* Links Skeleton */}
+                            {[1, 2].map((i) => (
+                                <div key={i} className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                            ))}
+                            
+                            {/* Contracting Dropdown Skeleton */}
+                            <div className="flex flex-col gap-1 mt-2">
+                                <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                                <div className="flex flex-col gap-1 mr-6 mt-1">
+                                    {[1, 2].map((i) => (
+                                        <div key={i} className="h-9 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Wallet Dropdown Skeleton */}
+                            <div className="flex flex-col gap-1 mt-2">
+                                <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                                <div className="flex flex-col gap-1 mr-6 mt-1">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="h-9 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Second Section Skeleton */}
+                    <div className="flex flex-col gap-4">
+                        {/* Section Header Skeleton */}
+                        <div className="flex items-center gap-2 px-2">
+                            <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            <div className="h-6 w-36 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                        </div>
+                        <div className="flex flex-col gap-1 pr-4 border-r-2 border-border/50">
+                            {/* Links Skeleton */}
+                            {[1, 2].map((i) => (
+                                <div key={i} className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Logout Button Skeleton */}
+                    <div className="flex flex-col gap-4 pt-4 border-t border-border">
+                        <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                    </div>
+                </div>
+            </aside>
+
+            {/* Mobile Drawer Skeleton */}
+            <div className={`fixed inset-0 z-[10000] min-[1113px]:hidden transition-all duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                    onClick={() => setIsOpen(false)}
+                />
+
+                {/* Drawer */}
+                <div
+                    className={`absolute right-0 top-0 h-full w-[280px] bg-white dark:bg-card p-6 shadow-2xl transition-transform duration-300 transform ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+                >
+                    {/* Header Skeleton */}
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                    </div>
+
+                    <div className="flex flex-col gap-8">
+                        {/* First Section Skeleton */}
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center gap-2 px-2">
+                                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                            </div>
+                            <div className="flex flex-col gap-1 pr-4 border-r-2 border-border/50">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                ))}
+                                
+                                {/* Contracting Dropdown Skeleton */}
+                                <div className="flex flex-col gap-1 mt-2">
+                                    <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                                    <div className="flex flex-col gap-1 mr-6 mt-1">
+                                        {[1, 2].map((i) => (
+                                            <div key={i} className="h-9 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Wallet Dropdown Skeleton */}
+                                <div className="flex flex-col gap-1 mt-2">
+                                    <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                                    <div className="flex flex-col gap-1 mr-6 mt-1">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="h-9 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Second Section Skeleton */}
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center gap-2 px-2">
+                                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                <div className="h-6 w-36 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                            </div>
+                            <div className="flex flex-col gap-1 pr-4 border-r-2 border-border/50">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1"></div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Logout Button Skeleton */}
+                        <div className="flex flex-col gap-4 pt-4 border-t border-border mt-auto">
+                            <div className="h-12 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+
+    if (loading) {
+        return <SidebarSkeleton />;
+    }
 
     return (
         <>

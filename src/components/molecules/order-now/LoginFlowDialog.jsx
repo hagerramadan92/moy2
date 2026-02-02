@@ -184,7 +184,22 @@ export default function LoginFlowDialog({ open, onOpenChange }) {
       setLoading(false);
     }
   };
+  function getSessionId() {
+    if (typeof window === "undefined") return null;
   
+    const key = "session_id";
+    let sessionId = localStorage.getItem(key);
+  
+    if (!sessionId) {
+      sessionId =
+        crypto?.randomUUID?.() ||
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  
+      localStorage.setItem(key, sessionId);
+    }
+  
+    return sessionId;
+  }
   // Handle verify OTP
   const handleVerifyOtp = async () => {
     const enteredOtp = formData.otp.join("");
@@ -212,6 +227,7 @@ export default function LoginFlowDialog({ open, onOpenChange }) {
         body: JSON.stringify({
           otp: enteredOtp,
           phone_number: otpData.phone,
+          session_id: getSessionId(),
         }),
       });
 

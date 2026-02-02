@@ -254,6 +254,8 @@ function OrderFormContent() {
 	});
 	const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [isWaitingForOffers, setIsWaitingForOffers] = useState(false);
+	const [waitingMessage, setWaitingMessage] = useState('');
 
 	const router = useRouter();
 
@@ -295,7 +297,7 @@ function OrderFormContent() {
 		try {
 			const accessToken = localStorage.getItem("accessToken");
 			if (!accessToken) {
-				toast.error("يرجى تسجيل الدخول أولاً");
+				// toast.error("يرجى تسجيل الدخول أولاً");
 				return;
 			}
 
@@ -390,18 +392,129 @@ function OrderFormContent() {
 				
 				console.log('✅ Order ID retrieved:', orderId);
 				
-				// ✅ **التوجيه الصحيح لصفحة السائقين المتاحين مع orderId**
-				router.push(`/orders/available-drivers?orderId=${orderId}`);
+				// ✅ **الانتظار حتى يكون هناك عرض واحد على الأقل قبل الانتقال**
+				await waitForOffers(orderId, accessToken);
 				
 			} else {
 				toast.error(data.message || "فشل إنشاء الطلب");
+				setIsLoading(false);
 			}
 		} catch (error) {
 			console.error("Error creating order:", error);
 			toast.error("حدث خطأ أثناء إنشاء الطلب");
-		} finally {
 			setIsLoading(false);
 		}
+	};
+
+	// دالة للانتظار حتى يكون هناك عرض واحد على الأقل
+	const waitForOffers = async (orderId, accessToken) => {
+		setIsWaitingForOffers(true);
+		setWaitingMessage('جاري البحث عن سائقين متاحين...');
+		
+		const maxWaitTime = 60000; // 60 ثانية كحد أقصى
+		const pollInterval = 2000; // التحقق كل ثانيتين
+		const startTime = Date.now();
+		let pollIntervalId = null;
+
+		const checkForOffers = async () => {
+			try {
+				const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						"Accept": "application/json",
+						"Authorization": `Bearer ${accessToken}`,
+					},
+					cache: 'no-store'
+				});
+
+				if (response.status === 404) {
+					// الطلب غير موجود بعد، استمر في الانتظار
+					return false;
+				}
+
+				const data = await response.json();
+				
+				if (response.ok && data.status && data.data) {
+					const offers = data.data.offers || [];
+					const activeOffers = offers.filter(offer => {
+						// تصفية العروض النشطة فقط (غير منتهية الصلاحية)
+						return offer.status !== 'expired' && offer.status !== 'cancelled';
+					});
+					
+					if (activeOffers.length > 0) {
+						// يوجد عرض واحد على الأقل، يمكن الانتقال
+						if (pollIntervalId) {
+							clearInterval(pollIntervalId);
+						}
+						setIsWaitingForOffers(false);
+						setWaitingMessage('');
+						setIsLoading(false);
+						toast.success(`تم العثور على ${activeOffers.length} عرض متاح`);
+						
+						// الانتقال إلى صفحة السائقين المتاحين
+						router.push(`/orders/available-drivers?orderId=${orderId}`);
+						return true;
+					}
+				}
+				
+				return false;
+			} catch (error) {
+				console.error("Error checking for offers:", error);
+				return false;
+			}
+		};
+
+		// محاولة أولية فورية
+		const hasOffers = await checkForOffers();
+		if (hasOffers) return;
+
+		// بدء polling
+		pollIntervalId = setInterval(async () => {
+			const elapsedTime = Date.now() - startTime;
+			
+			// تحديث الرسالة بناءً على الوقت المنقضي
+			if (elapsedTime < 10000) {
+				setWaitingMessage('جاري البحث عن سائقين متاحين...');
+			} else if (elapsedTime < 30000) {
+				setWaitingMessage('لا يزال البحث جارياً عن سائقين...');
+			} else {
+				setWaitingMessage('قد يستغرق الأمر بعض الوقت، يرجى الانتظار...');
+			}
+
+			// التحقق من وجود عروض
+			const hasOffers = await checkForOffers();
+			if (hasOffers) {
+				if (pollIntervalId) {
+					clearInterval(pollIntervalId);
+				}
+				return;
+			}
+
+			// التحقق من انتهاء الوقت الأقصى
+			if (elapsedTime >= maxWaitTime) {
+				if (pollIntervalId) {
+					clearInterval(pollIntervalId);
+				}
+				setIsWaitingForOffers(false);
+				setWaitingMessage('');
+				setIsLoading(false);
+				
+				// الانتقال إلى صفحة السائقين حتى لو لم يكن هناك عروض بعد
+				toast('سيتم تحديث العروض تلقائياً عند توفرها', {
+					icon: 'ℹ️',
+					duration: 4000,
+				});
+				router.push(`/orders/available-drivers?orderId=${orderId}`);
+			}
+		}, pollInterval);
+
+		// تنظيف عند unmount (سيتم تنظيفه تلقائياً عند تغيير الصفحة)
+		return () => {
+			if (pollIntervalId) {
+				clearInterval(pollIntervalId);
+			}
+		};
 	};
 
 	// Handle going to schedule page - validate first
@@ -451,7 +564,7 @@ function OrderFormContent() {
 		try {
 			const accessToken = localStorage.getItem("accessToken");
 			if (!accessToken) {
-				toast.error("يرجى تسجيل الدخول أولاً");
+				// toast.error("يرجى تسجيل الدخول أولاً");
 				
 				return;
 			}
@@ -1047,7 +1160,7 @@ function OrderFormContent() {
 
 			{/* Loader Overlay */}
 			<AnimatePresence>
-				{isLoading && (
+				{(isLoading || isWaitingForOffers) && (
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -1077,17 +1190,26 @@ function OrderFormContent() {
 											transition={{ duration: 1, repeat: Infinity }}
 											className="w-6 h-6 md:w-7 md:h-7 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
 										>
-											<Search size={12} className="text-white" />
+											{isWaitingForOffers ? (
+												<Truck size={12} className="text-white" />
+											) : (
+												<Search size={12} className="text-white" />
+											)}
 										</motion.div>
 									</div>
 								</div>
 								<div className="flex-1">
 									<h3 className="text-sm font-bold text-[#124987] font-cairo">
-										{isManualLocation ? 'جاري حفظ الموقع وإنشاء الطلب' : 'جاري إنشاء الطلب'}
+										{isWaitingForOffers 
+											? waitingMessage || 'جاري البحث عن سائقين متاحين...'
+											: isManualLocation 
+												? 'جاري حفظ الموقع وإنشاء الطلب' 
+												: 'جاري إنشاء الطلب'
+										}
 									</h3>
 									<div className="flex items-center gap-1 mt-1">
 										<p className="text-gray-400 text-xs">
-											يرجى الانتظار
+											{isWaitingForOffers ? 'يرجى الانتظار حتى يتوفر عرض' : 'يرجى الانتظار'}
 										</p>
 										<div className="flex gap-0.5">
 											{[0, 1, 2].map((i) => (

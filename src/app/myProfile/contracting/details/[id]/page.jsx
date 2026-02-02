@@ -87,7 +87,7 @@ export default function ContractDetailsPage() {
                     type: contractData.contract_type === 'company' ? 'commercial' : 'personal',
                     title: contractData.company_name || 'عقد بدون اسم',
                     applicant: contractData.applicant_name || '',
-                    phone: '', // Phone not in API response
+                    phone: contractData.phone || '',
                     address: address,
                     date: contractData.start_date ? new Date(contractData.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
                     duration: mapDurationToArabic(contractData.duration_type),
@@ -313,15 +313,91 @@ export default function ContractDetailsPage() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center space-y-4">
-                    <div className="w-12 h-12 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="text-muted-foreground font-medium">جاري تحميل تفاصيل العقد...</p>
+    // Skeleton Components
+    const ContractDetailsSkeleton = () => (
+        <div className="space-y-4 md:space-y-6 fade-in-up">
+            {/* Breadcrumb Skeleton */}
+            <div className="flex items-center gap-2 text-xs md:text-sm mb-3 md:mb-4">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            </div>
+
+            {/* Header Card Skeleton */}
+            <div className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white relative overflow-hidden p-4 md:p-6 lg:p-8">
+                    <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/20 backdrop-blur-lg animate-pulse"></div>
+                        <div className="flex-1 space-y-3">
+                            <div className="h-4 w-32 bg-white/20 rounded animate-pulse"></div>
+                            <div className="h-8 md:h-10 w-64 bg-white/20 rounded animate-pulse"></div>
+                            <div className="flex gap-2">
+                                <div className="h-6 w-24 bg-white/20 rounded animate-pulse"></div>
+                                <div className="h-6 w-28 bg-white/20 rounded animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        );
+
+            {/* Main Content Grid Skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
+                {/* Left Column Skeleton */}
+                <div className="lg:col-span-2 space-y-4 md:space-y-5">
+                    {/* Contact Info Skeleton */}
+                    <div className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg">
+                        <div className="flex items-center gap-2.5 mb-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                            <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-4 md:p-5 h-24 animate-pulse"></div>
+                            <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-4 md:p-5 h-24 animate-pulse"></div>
+                        </div>
+                    </div>
+
+                    {/* Location Skeleton */}
+                    <div className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg">
+                        <div className="flex items-center gap-2.5 mb-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-4 md:p-5 h-20 animate-pulse"></div>
+                    </div>
+                </div>
+
+                {/* Right Column Skeleton */}
+                <div>
+                    <div className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg">
+                        <div className="flex items-center gap-2.5 mb-5 md:mb-6">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="space-y-5 md:space-y-6">
+                            <div className="flex gap-3 md:gap-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 md:gap-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-4 md:p-5 h-20 animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loading) {
+        return <ContractDetailsSkeleton />;
     }
 
     if (!contract) {
@@ -406,10 +482,16 @@ export default function ContractDetailsPage() {
                                                 </span>
                                                 <span className={`px-3 py-1.5 rounded-lg font-bold text-xs border-2 backdrop-blur-lg shadow-md ${
                                                     contract.status === 'active' 
-                                                        ? 'bg-green-500/40 border-green-300/60 text-white' 
+                                                        ? 'bg-blue-500/40 border-blue-300/60 text-white' 
+                                                        : contract.status === 'pending'
+                                                        ? 'bg-yellow-500/40 border-yellow-300/60 text-white'
                                                         : 'bg-white/25 border-white/20'
                                                 }`}>
-                                                    {contract.status === 'active' ? '✓ نشط حالياً' : '✓ مكتمل'}
+                                                    {contract.status === 'active' 
+                                                        ? '✓ نشط حالياً' 
+                                                        : contract.status === 'pending'
+                                                        ? '⏳ قيد الانتظار'
+                                                        : '✓ مكتمل'}
                                                 </span>
                                             </div>
                                         </motion.div>
@@ -417,21 +499,7 @@ export default function ContractDetailsPage() {
                                 </div>
                             </div>
                             
-                            {/* Right Section - Cost */}
-                            <motion.div 
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                                whileHover={{ scale: 1.02 }}
-                                className="bg-white/25 backdrop-blur-lg rounded-xl p-4 md:p-5 min-w-[160px] md:min-w-[180px] text-center border-2 border-white/20 shadow-xl"
-                            >
-                                <p className="text-[10px] md:text-xs opacity-95 font-bold uppercase tracking-wider mb-2">القيمة الإجمالية</p>
-                                <p className="text-2xl md:text-3xl font-black mb-1 drop-shadow-lg">{contract.cost}</p>
-                                <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-white/20">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80 shadow-sm"></div>
-                                    <p className="text-[10px] opacity-80 font-medium">قيمة العقد</p>
-                                </div>
-                            </motion.div>
+                        
                         </div>
                     </div>
                 </div>
@@ -562,13 +630,13 @@ export default function ContractDetailsPage() {
                         transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                         className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group"
                     >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/8 to-transparent rounded-full blur-3xl group-hover:opacity-80 transition-opacity"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-500/5 to-transparent rounded-full blur-2xl"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/8 to-transparent rounded-full blur-3xl group-hover:opacity-80 transition-opacity"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/5 to-transparent rounded-full blur-2xl"></div>
                         <div className="relative z-10">
                             <h3 className="text-lg md:text-xl font-black mb-5 md:mb-6 flex items-center gap-2.5">
                                 <motion.div 
                                     whileHover={{ scale: 1.1, rotate: 5 }}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30 border-2 border-green-400/20"
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 border-2 border-blue-400/20"
                                 >
                                     <FaCalendarAlt className="w-5 h-5 md:w-6 md:h-6 text-white" />
                                 </motion.div>
@@ -577,7 +645,7 @@ export default function ContractDetailsPage() {
                             
                             <div className="space-y-5 md:space-y-6">
                                 <div className="relative">
-                                    <div className="absolute right-[19px] md:right-[23px] top-12 bottom-12 w-1 bg-gradient-to-b from-green-500 via-green-400 to-green-200 rounded-full shadow-sm"></div>
+                                    <div className="absolute right-[19px] md:right-[23px] top-12 bottom-12 w-1 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-200 rounded-full shadow-sm"></div>
                                     
                                     <div className="space-y-5 md:space-y-6 relative">
                                         <motion.div 
@@ -587,7 +655,7 @@ export default function ContractDetailsPage() {
                                             whileHover={{ x: 3 }}
                                             className="flex gap-3 md:gap-4"
                                         >
-                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-green-500/40 z-10 border-3 border-white dark:border-card">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/40 z-10 border-3 border-white dark:border-card">
                                                 <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
                                             </div>
                                             <div className="flex-1 pt-1.5">
@@ -605,8 +673,10 @@ export default function ContractDetailsPage() {
                                         >
                                             <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg z-10 border-3 border-white dark:border-card ${
                                                 contract.status === 'active' 
-                                                    ? 'bg-gradient-to-br from-green-200 to-green-300 text-green-700 shadow-green-300/30' 
-                                                    : 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-green-500/40'
+                                                    ? 'bg-gradient-to-br from-blue-200 to-blue-300 text-blue-700 shadow-blue-300/30' 
+                                                    : contract.status === 'pending'
+                                                    ? 'bg-gradient-to-br from-yellow-200 to-yellow-300 text-yellow-700 shadow-yellow-300/30'
+                                                    : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-500/40'
                                             }`}>
                                                 <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
                                             </div>
@@ -623,14 +693,14 @@ export default function ContractDetailsPage() {
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: 0.5 }}
                                     whileHover={{ scale: 1.02, y: -2 }}
-                                    className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-500/10 dark:to-emerald-500/10 border-2 border-green-200/60 dark:border-green-500/30 p-4 md:p-5 rounded-xl text-center shadow-md hover:shadow-lg transition-all"
+                                    className="bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-800/10 dark:to-blue-800/10 border-2 border-blue-200/60 dark:border-blue-500/30 p-4 md:p-5 rounded-xl text-center shadow-md hover:shadow-lg transition-all"
                                 >
-                                    <p className="text-[10px] md:text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1.5">المدة الإجمالية</p>
-                                    <p className="text-xl md:text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{contract.duration}</p>
+                                    <p className="text-[10px] md:text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1.5">المدة الإجمالية</p>
+                                    <p className="text-xl md:text-2xl font-black bg-gradient-to-r from-blue-600 to-blue-600 bg-clip-text text-transparent">{contract.duration}</p>
                                 </motion.div>
 
                                 {/* Consumption Link */}
-                                <motion.div 
+                                {/* <motion.div 
                                     initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: 0.6 }}
@@ -644,12 +714,12 @@ export default function ContractDetailsPage() {
                                         <span>عرض الاستهلاك</span>
                                         <FaArrowRight className="w-3 h-3 md:w-4 md:h-4 rotate-180" />
                                     </button>
-                                </motion.div>
+                                </motion.div> */}
 
                                 {/* Action Buttons */}
-                                {contract.status === 'active' && (
+                                {(contract.status === 'active' || contract.status === 'pending') && (
                                     <>
-                                        <motion.div 
+                                        {/* <motion.div 
                                             initial={{ scale: 0.95, opacity: 0 }}
                                             animate={{ scale: 1, opacity: 1 }}
                                             transition={{ delay: 0.7 }}
@@ -663,8 +733,8 @@ export default function ContractDetailsPage() {
                                                 <FaSync className={`w-4 h-4 md:w-5 md:h-5 ${isRenewing ? 'animate-spin' : ''}`} />
                                                 <span>{isRenewing ? 'جاري التجديد...' : 'تجديد العقد'}</span>
                                             </button>
-                                        </motion.div>
-                                        <motion.div 
+                                        </motion.div> */}
+                                        {/* <motion.div 
                                             initial={{ scale: 0.95, opacity: 0 }}
                                             animate={{ scale: 1, opacity: 1 }}
                                             transition={{ delay: 0.8 }}
@@ -678,7 +748,7 @@ export default function ContractDetailsPage() {
                                                 <FaTimes className={`w-4 h-4 md:w-5 md:h-5 ${isCanceling ? 'animate-pulse' : ''}`} />
                                                 <span>{isCanceling ? 'جاري الإلغاء...' : 'إلغاء العقد'}</span>
                                             </button>
-                                        </motion.div>
+                                        </motion.div> */}
                                     </>
                                 )}
                             </div>

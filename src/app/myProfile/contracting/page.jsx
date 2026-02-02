@@ -177,10 +177,32 @@ export default function ContractingPage() {
         return durationMap[arabicDuration] || 'monthly';
     };
 
+    // تحقق من صحة رقم الهاتف
+    const validatePhone = (phone) => {
+        // تنسيق سعودي: يبدأ بـ 05 أو 5 متبوعًا بـ 8 أرقام
+        const saudiPhoneRegex = /^(05|5)\d{8}$/;
+        // تنسيق عام: 9-15 رقم
+        const generalPhoneRegex = /^\d{9,15}$/;
+        
+        return saudiPhoneRegex.test(phone) || generalPhoneRegex.test(phone);
+    };
+
     const validateForm = () => {
         let newErrors = {};
+        
         if (!formData.applicantName) newErrors.applicantName = "اسم مقدم الطلب مطلوب";
-        if (!formData.phone) newErrors.phone = "رقم الجوال مطلوب";
+        
+        // التحقق من حقل الهاتف
+        if (!formData.phone) {
+            newErrors.phone = "رقم الجوال مطلوب";
+        } else if (!validatePhone(formData.phone)) {
+            newErrors.phone = "رقم الجوال غير صحيح. يرجى إدخال رقم صحيح (مثال: 05XXXXXXXX)";
+        }
+
+        // التحقق من اسم الشركة للتعاقد التجاري
+        if (activeTab === 'commercial' && !formData.name) {
+            newErrors.name = "اسم المؤسسة مطلوب للتعاقد التجاري";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -189,7 +211,7 @@ export default function ContractingPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) {
-            toast.error("يرجى ملء جميع الحقول المطلوبة", {
+            toast.error("يرجى تصحيح الأخطاء في النموذج", {
                 duration: 3000,
                 icon: "❌",
             });
@@ -217,10 +239,11 @@ export default function ContractingPage() {
                 return;
             }
 
-            // Prepare API request body
+            // تحضير بيانات الـ API مع إضافة حقل الهاتف المطلوب
             const apiBody = {
                 contract_type: activeTab === 'personal' ? 'individual' : 'company',
                 applicant_name: formData.applicantName.trim(),
+                phone: formData.phone.trim(), // حقل الهاتف المطلوب
                 company_name: activeTab === 'commercial' ? (formData.name?.trim() || null) : null,
                 duration_type: mapDurationType(formData.duration),
                 total_orders_limit: formData.totalOrdersLimit || 300,
@@ -228,14 +251,18 @@ export default function ContractingPage() {
                 start_date: formData.startDate,
                 delivery_locations: selectedDeliveryLocations.length > 0 
                     ? selectedDeliveryLocations 
-                    : [
-                        {
-                            saved_location_id: addresses[0]?.id || 1,
-                            priority: 1
-                        }
-                    ],
+                    : (addresses.length > 0 
+                        ? [{ saved_location_id: addresses[0]?.id || 1, priority: 1 }]
+                        : []),
                 notes: formData.notes.trim() || ''
             };
+
+            // إزالة الحقول الفارغة (null)
+            Object.keys(apiBody).forEach(key => {
+                if (apiBody[key] === null || apiBody[key] === undefined || apiBody[key] === '') {
+                    delete apiBody[key];
+                }
+            });
 
             // Prepare headers with Authorization token (required)
             const headers = {
@@ -290,6 +317,9 @@ export default function ContractingPage() {
                     });
                     setIndividualErrors({});
                 }
+                
+                // إعادة تعيين مواقع التوصيل المختارة
+                setSelectedDeliveryLocations([]);
             } else {
                 // Handle API error
                 const errorMessage = data.message || data.error || 'فشل إرسال طلب التعاقد. يرجى المحاولة مرة أخرى';
@@ -297,6 +327,14 @@ export default function ContractingPage() {
                     duration: 5000,
                     icon: "❌",
                 });
+                
+                // إذا كان الخطأ يتعلق بالهاتف، عرض رسالة توضيحية
+                if (errorMessage.includes('phone')) {
+                    toast.error("يجب إدخال رقم هاتف صحيح", {
+                        duration: 3000,
+                        icon: "📱",
+                    });
+                }
             }
         } catch (error) {
             toast.dismiss(loadingToast);
@@ -312,6 +350,101 @@ export default function ContractingPage() {
     const inputClasses = (name) => `w-full bg-secondary/30 border ${errors[name] ? 'border-destructive/50 ring-2 ring-destructive/5' : 'border-border/50'} rounded-2xl px-12 py-3.5 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all text-sm`;
     const labelClasses = "block text-sm font-bold mb-2 mr-2 text-foreground/80";
     const iconClasses = (name) => `absolute right-4 ${errors[name] ? 'top-[3.4rem]' : 'top-[3.3rem]'} text-muted-foreground/60 w-5 h-5`;
+
+    // Skeleton Components
+    const HeroCardSkeleton = () => (
+        <div className="flex py-5 md:py-6 lg:py-8 px-4 md:px-6 lg:px-8 flex-col gap-3 md:gap-4 lg:gap-5 items-center justify-center bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-xl md:rounded-2xl lg:rounded-3xl shadow-xl md:shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-[0.08] rotate-12">
+                <FaHardHat size={140} className="text-white" />
+            </div>
+            <div className="absolute bottom-0 left-0 p-4 opacity-[0.08] -rotate-12">
+                <IoWalletOutline size={120} className="text-white" />
+            </div>
+            
+            <div className="flex flex-col gap-4 items-center justify-center relative z-10 w-full">
+                <div className="flex flex-col gap-3 items-center text-center max-w-lg">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xl border-2 border-white/30 mb-2">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-white/30 rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-6 md:h-7 lg:h-8 w-48 bg-white/20 rounded-lg animate-pulse"></div>
+                    <div className="h-4 md:h-5 w-64 bg-white/10 rounded-lg animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const FormSkeleton = () => (
+        <div className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl lg:rounded-3xl shadow-lg md:shadow-xl overflow-hidden flex flex-col">
+            {/* Tabs Skeleton */}
+            <div className="p-3 md:p-4 lg:p-5 border-b-2 border-border/60 flex items-center justify-center bg-gradient-to-b from-secondary/10 to-transparent">
+                <div className="flex bg-secondary/40 dark:bg-secondary/20 p-1.5 md:p-2 rounded-xl md:rounded-2xl w-full max-w-md shadow-inner">
+                    <div className="flex-1 h-10 md:h-12 bg-white/50 dark:bg-card/50 rounded-lg md:rounded-xl animate-pulse"></div>
+                    <div className="flex-1 h-10 md:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl animate-pulse ml-2"></div>
+                </div>
+            </div>
+
+            {/* Split Layout Skeleton */}
+            <div className="flex flex-col lg:flex-row min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
+                {/* Illustration Side Skeleton */}
+                <div className="lg:w-[40%] relative bg-gradient-to-br from-[#579BE8]/5 via-[#579BE8]/10 to-[#124987]/5 dark:from-[#579BE8]/10 dark:via-[#579BE8]/5 dark:to-[#124987]/10 p-4 md:p-6 lg:p-8 xl:p-12 flex flex-col items-center justify-center text-center overflow-hidden border-l-2 border-border/40">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-[#579BE8]/10 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#124987]/10 rounded-full translate-y-28 -translate-x-28 blur-3xl"></div>
+                    
+                    <div className="relative z-10 space-y-4 md:space-y-5 lg:space-y-6 w-full">
+                        <div className="w-full max-w-[180px] md:max-w-[220px] lg:max-w-[240px] xl:max-w-[280px] mx-auto">
+                            <div className="w-full h-64 md:h-80 bg-gray-200 dark:bg-gray-700 rounded-3xl animate-pulse"></div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-5 md:h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+                            <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+                            <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Form Side Skeleton */}
+                <div className="lg:w-[60%] p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white to-secondary/5 dark:from-card dark:to-secondary/10">
+                    <div className="space-y-4 md:space-y-5">
+                        {/* Form Fields Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="space-y-1.5 md:space-y-2">
+                                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div className="h-12 md:h-14 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl lg:rounded-2xl animate-pulse"></div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {/* Full Width Fields */}
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="space-y-1.5 md:space-y-2">
+                                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                {i === 3 ? (
+                                    <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl lg:rounded-2xl animate-pulse"></div>
+                                ) : (
+                                    <div className="h-12 md:h-14 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl lg:rounded-2xl animate-pulse"></div>
+                                )}
+                            </div>
+                        ))}
+                        
+                        {/* Submit Button Skeleton */}
+                        <div className="pt-2 md:pt-3">
+                            <div className="w-full h-12 md:h-14 lg:h-16 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loadingAddresses) {
+        return (
+            <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
+                <HeroCardSkeleton />
+                <FormSkeleton />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
@@ -464,7 +597,7 @@ export default function ContractingPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                                 {activeTab === 'commercial' && (
                                     <div className="space-y-1.5 md:space-y-2 relative">
-                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة</label>
+                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة <span className="text-red-500">*</span></label>
                                         <div className="relative">
                                             <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                             <input
@@ -514,6 +647,9 @@ export default function ContractingPage() {
                                     {errors.phone && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.phone}
                                     </p>}
+                                    <p className="text-[10px] md:text-xs text-muted-foreground mr-3 md:mr-4">
+                                        مثال: 0512345678 أو 5123456789
+                                    </p>
                                 </div>
                                 <div className="space-y-1.5 md:space-y-2 relative">
                                     <label className={`${labelClasses} text-xs md:text-sm`}>مدة التعاقد</label>
@@ -529,13 +665,12 @@ export default function ContractingPage() {
                                             <SelectContent className="text-right">
                                                 <SelectItem value="شهر واحد">شهر واحد</SelectItem>
                                                 <SelectItem value="3 أشهر ">3 أشهر </SelectItem>
-                                                <SelectItem value="6 أشهر ">6 أشهر </SelectItem>
+                                                <SelectItem value="6 أشهر">6 أشهر</SelectItem>
                                                 <SelectItem value="سنة كاملة">سنة كاملة</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
-                               
                             </div>
 
                             <div className="space-y-1.5 md:space-y-2 relative mb-5">
@@ -574,9 +709,7 @@ export default function ContractingPage() {
                                 </p>}
                             </div>
 
-                          
-
-                            <div className="space-y-1.5 md:space-y-2 relative ">
+                            <div className="space-y-1.5 md:space-y-2 relative">
                                 <label className={`${labelClasses} text-xs md:text-sm`}>إضافة ملاحظات إضافية (أو مواقع أخرى)</label>
                                 <div className="relative">
                                     <FaEdit className={`absolute right-3 md:right-4 top-3 md:top-4 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
@@ -604,8 +737,6 @@ export default function ContractingPage() {
                     </motion.div>
                 </div>
             </motion.div>
-
-
         </div>
     );
 }

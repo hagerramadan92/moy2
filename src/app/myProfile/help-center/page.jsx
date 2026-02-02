@@ -1,123 +1,252 @@
+
+
 "use client";
 
-import { useState } from "react";
-import { FaPaperPlane, FaPaperclip, FaSmile, FaInfoCircle } from "react-icons/fa";
-import { IoIosSearch } from "react-icons/io";
-import { BiSupport } from "react-icons/bi";
+import { useState, useEffect } from "react";
+import { IoIosSearch, IoIosArrowDown, IoIosArrowBack, IoIosWater } from "react-icons/io";
+import { FaBox, FaUserCircle, FaTag, FaHeadset, FaQuestionCircle, FaRegUser } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import Link from "next/link";
+import { FaRegHandshake } from "react-icons/fa6";
+import { CgCreditCard } from "react-icons/cg";
+import { BsGift } from "react-icons/bs";
+export default function SupportPage() {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [openFaq, setOpenFaq] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-export default function HelpCenterPage() {
-    const [message, setMessage] = useState("");
+    useEffect(() => {
+        // Simulate loading
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, []);
 
-    const messages = [
-        { id: 1, type: "support", text: "مرحباً بك في مركز المساعدة! كيف يمكننا خدمتك اليوم؟", time: "10:00 ص" },
-        { id: 2, type: "user", text: "أهلاً، لدي استفسار بخصوص تتبع طلبي الأخير.", time: "10:02 ص" },
-        { id: 3, type: "support", text: "بالتأكيد! يمكنك تتبع طلبك عبر الضغط على 'طلباتي' في القائمة الجانبية، أو زودني برقم الطلب وسأقوم بالتحقق لك.", time: "10:05 ص" },
+    const categories = [
+        { id: "orders", title: "الطلبات", icon: <IoIosWater />, description: " ادارة الطلبات - التتبع - الألغاء - تعديل", link: "/myProfile/orders" },
+        { id: "account", title: " الحساب", icon: <FaRegUser />, description: "اعدادات الحسا ب والملف الشخصي", link: "/myProfile" },
+        { id: "wallet", title: " الدفع والمحفظة", icon: <CgCreditCard />, description: "طرق الدفع - الرصيد - الاسترجاع ", link: "/myProfile" },
+        { id: "deals", title: "التعاقدات", icon: <FaRegHandshake />, description: "العقود - الاشتراكات - التجديد", link: "/deals" },
+        { id: "help", title: "الدعم الفني", icon: <FaHeadset />, description: "مساعدة فورية وحلول سريعة", link: "/myProfile/help-center" },
+        { id: "gift", title: "العروض والخصومات", icon: <BsGift />, description: "كوبونات - عروض خاصة  ", link: "/myProfile/help-center" },
     ];
 
-    return (
-        <div className="flex flex-col h-[750px] bg-white dark:bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm fade-in-up">
-            {/* Chat Header */}
-            <div className="p-4 border-b border-border/60 bg-secondary/5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <div className="w-12 h-12 bg-[#579BE8]/10 rounded-2xl flex items-center justify-center text-[#579BE8]">
-                            <BiSupport size={24} />
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-card rounded-full shadow-sm" title="متصل الآن" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-foreground">فريق الدعم الفني</h3>
-                        <p className="text-xs text-green-500 font-medium">متصل الآن - جاهزون لمساعدتك</p>
-                    </div>
+    const faqs = [
+        {
+            q:"كيف اعدل طلبي؟",
+            a: "يمكنك تتبع شحنتك من خلال الانتقال إلى صفحة 'طلباتي' والضغط على زر تتبع الشحنة بجانب الطلب المعني."
+        },
+        {
+            q: "كيف أتواصل مع السائق؟",
+            a: "نقبل الاسترجاع خلال 14 يوماً من تاريخ الاستلام، بشرط أن يكون المنتج في حالته الأصلية وبتغليفه الأصلي."
+        },
+        {
+            q: "ما هي طرق الدفع المتاحة؟",
+            a: "يمكنك تعديل عنوان التوصيل للطلبات التي لم يتم شحنها بعد عبر التواصل مع الدعم الفني فوراً."
+        },
+        {
+            q: "كيف الغي طلبي؟",
+            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
+        },
+        {
+            q: "كم المدة المتوفعة للتوصيل؟",
+            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
+        },
+        {
+            q: "هل يمكنني جدولة الطلب مسبقا؟",
+            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
+        }
+    ];
+
+    // Skeleton Components
+    const SupportSkeleton = () => (
+        <div className="space-y-10 fade-in-up">
+            {/* Search Header Skeleton */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] rounded-2xl p-8 sm:p-12 text-center text-white shadow-2xl">
+                <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                    <FaHeadset size={160} />
                 </div>
-                <div className="flex items-center gap-2">
-                    <button className="p-2.5 hover:bg-white dark:hover:bg-card rounded-xl border border-transparent hover:border-border transition-all text-muted-foreground hover:text-primary">
-                        <IoIosSearch size={20} />
-                    </button>
-                    <button className="p-2.5 hover:bg-white dark:hover:bg-card rounded-xl border border-transparent hover:border-border transition-all text-muted-foreground hover:text-primary">
-                        <FaInfoCircle size={20} />
-                    </button>
+                <div className="absolute bottom-0 left-0 p-4 opacity-10 -rotate-12">
+                    <FaQuestionCircle size={140} />
+                </div>
+                <div className="relative z-10 space-y-4">
+                    <div className="h-8 sm:h-10 w-64 bg-white/20 rounded-lg animate-pulse mx-auto"></div>
+                    <div className="h-4 w-96 bg-white/10 rounded-lg animate-pulse mx-auto"></div>
+                    <div className="max-w-xl mx-auto mt-8">
+                        <div className="h-14 bg-white/20 rounded-2xl animate-pulse"></div>
+                    </div>
                 </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-secondary">
-                <AnimatePresence initial={false}>
-                    {messages.map((msg) => (
-                        <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                            <div className={`max-w-[75%] space-y-1 ${msg.type === "user" ? "items-end" : "items-start"}`}>
-                                <div
-                                    className={`px-5 py-3.5 rounded-3xl text-sm font-medium shadow-sm leading-relaxed ${msg.type === "user"
-                                        ? "bg-[#579BE8] text-white rounded-tl-none"
-                                        : "bg-secondary/40 text-foreground rounded-tr-none"
-                                        }`}
-                                >
-                                    {msg.text}
-                                </div>
-                                <div className="flex items-center gap-2 px-1">
-                                    {msg.type === "support" && (
-                                        <span className="text-[10px] font-bold text-[#579BE8] uppercase tracking-wider">الدعم</span>
-                                    )}
-                                    <span className="text-[10px] text-muted-foreground/60">{msg.time}</span>
+            {/* Categories Skeleton */}
+            <div>
+                <div className="h-7 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-white dark:bg-card flex items-center gap-4 border border-border/50 p-6 rounded-3xl">
+                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                            <div className="flex-1 space-y-2">
+                                <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* FAQs Skeleton */}
+            <div className="bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                    <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+                <div className="space-y-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="border border-border/40 rounded-2xl p-5">
+                            <div className="flex items-center justify-between">
+                                <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-10 p-6 bg-secondary/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-12 w-40 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loading) {
+        return <SupportSkeleton />;
+    }
+
+    return (
+        <div className="space-y-10 fade-in-up">
+            {/* Search Header */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] rounded-2xl p-8 sm:p-12 text-center text-white shadow-2xl">
+                {/* Decorative Background Icons */}
+                <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
+                    <FaHeadset size={160} />
+                </div>
+                <div className="absolute bottom-0 left-0 p-4 opacity-10 -rotate-12">
+                    <FaQuestionCircle size={140} />
+                </div>
+
+                <div className="relative z-10 space-y-4">
+                    <h2 className="text-3xl sm:text-4xl font-black tracking-tight">مركز المساعدة</h2>
+                    <p className="text-white/80 max-w-lg mx-auto text-sm sm:text-base">
+                        اسأل وابحث واحصل على المساعدة بكل سهولة
+                    </p>
+
+                    <div className="max-w-xl mx-auto mt-8 relative group">
+                        <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none group-focus-within:text-[#579BE8] text-gray-400 transition-colors">
+                            <IoIosSearch size={24} />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="ابحث عن سؤالك هنا (مثلاً: تتبع الطلب)..."
+                            className="w-full py-4 pr-14 pl-6 bg-white dark:bg-card text-foreground rounded-2xl border-none shadow-2xl focus:ring-4 focus:ring-white/20 outline-none font-medium transition-all placeholder:text-gray-400 text-sm sm:text-base"
+                        />
+                    </div>
+                </div>
+
+                {/* Decorative Elements */}
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+            </div>
+
+            {/* Support Categories */}
+            <h1 className="text-2xl font-bold text-foreground">التصنيفات الرئيسية</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categories.map((cat) => (
+                    <Link href={cat.link || "/"} key={cat.id}>
+                        <div className="bg-white dark:bg-card flex items-center gap-4 border border-border/50 p-6 rounded-3xl hover:shadow-2xl hover:-translate-y-2 transition-all group h-full cursor-pointer relative overflow-hidden">
+                            <div className="bg-[#579BE8]/10 p-3 text-xl rounded-lg w-fit text-[#579BE8] group-hover:bg-[#579BE8] group-hover:text-white transition-all duration-300 mb-4 shadow-sm">
+                                {cat.icon}
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-lg mb-2 text-foreground group-hover:text-primary transition-colors">{cat.title}</h2>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    {cat.description}
+                                </p>
+                                <div className="absolute bottom-6 left-6 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all">
+                                    <IoIosArrowBack className="text-[#579BE8]" />
                                 </div>
                             </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-
-                {/* Date Divider */}
-                <div className="flex items-center gap-4 py-4">
-                    <div className="h-[1px] flex-1 bg-border/40" />
-                    <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] bg-secondary/20 px-3 py-1 rounded-full">اليوم</span>
-                    <div className="h-[1px] flex-1 bg-border/40" />
-                </div>
+                        </div>
+                    </Link>
+                ))}
             </div>
 
-            {/* Input Bar */}
-            <div className="p-5 border-t border-border/60 bg-secondary/5">
-                <div className="flex items-end gap-3 bg-white dark:bg-card p-2 rounded-[28px] border border-border/60 shadow-inner group focus-within:border-[#579BE8]/50 transition-colors">
-                    <div className="flex items-center gap-1 pb-1 pr-2">
-                        <button className="p-2.5 text-muted-foreground hover:text-[#579BE8] hover:bg-[#579BE8]/5 rounded-full transition-all">
-                            <FaSmile size={20} />
-                        </button>
-                        <button className="p-2.5 text-muted-foreground hover:text-[#579BE8] hover:bg-[#579BE8]/5 rounded-full transition-all">
-                            <FaPaperclip size={20} />
-                        </button>
+            {/* FAQs Section */}
+            <div className="bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2 bg-[#579BE8]/10 rounded-lg text-[#579BE8]">
+                        <FaQuestionCircle size={20} />
                     </div>
-
-                    <textarea
-                        rows={1}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="اكتب رسالتك هنا..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-3 outline-none resize-none max-h-32 text-foreground scrollbar-none"
-                        style={{ height: 'auto' }}
-                        onInput={(e) => {
-                            e.target.style.height = 'auto';
-                            e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                    />
-
-                    <button
-                        className={`p-3.5 rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center ${message.trim()
-                            ? "bg-[#579BE8] text-white hover:bg-[#4a8bd1] shadow-[#579BE8]/20"
-                            : "bg-secondary/40 text-muted-foreground cursor-not-allowed"
-                            }`}
-                        disabled={!message.trim()}
-                    >
-                        <FaPaperPlane size={18} className={message.trim() ? "translate-x-[-1px] " : ""} />
-                    </button>
+                    <h3 className="text-2xl font-bold text-foreground">الاسئلة الشائعة</h3>
                 </div>
-                <p className="text-center text-[10px] text-muted-foreground/60 mt-3 font-medium">
-                    سيقوم فريقنا بالرد عليك في أقرب وقت ممكن. نحن هنا لمساعدتك دائماً.
-                </p>
+
+                <div className="space-y-4">
+                    {faqs.map((faq, i) => (
+                        <div
+                            key={i}
+                            className={`border border-border/40 rounded-2xl transition-all ${openFaq === i ? "bg-secondary/10 border-primary/20 shadow-sm" : "hover:border-primary/30"}`}
+                        >
+                            <button
+                                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                className="w-full flex items-center justify-between p-5 text-right transition-all"
+                            >
+                                <span className="font-bold text-sm sm:text-base text-foreground">{faq.q}</span>
+                                <motion.div
+                                    animate={{ rotate: openFaq === i ? 180 : 0 }}
+                                    transition={{ type: "spring", stiffness: 300 }}
+                                    className="text-muted-foreground"
+                                >
+                                    <IoIosArrowDown size={20} />
+                                </motion.div>
+                            </button>
+
+                            <AnimatePresence>
+                                {openFaq === i && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border/10 mt-1 pt-4">
+                                            {faq.a}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Still Need Help? */}
+                <div className="mt-10 p-6 bg-secondary/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-border/10">
+                    <div className="text-center sm:text-right">
+                        <h5 className="font-bold text-lg mb-1">مازلت بحاجة للمساعدة؟</h5>
+                        <p className="text-sm text-muted-foreground">فريقنا متاح لمساعدتك على مدار الساعة عبر الدردشة المباشرة</p>
+                    </div>
+                    <Link href="/myProfile/help-center">
+                        <button className="bg-[#579BE8] text-white px-8 py-3.5 rounded-2xl font-black shadow-lg shadow-[#579BE8]/20 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-2">
+                            <FaHeadset />
+                            تواصل معنا الآن
+                        </button>
+                    </Link>
+                </div>
             </div>
         </div>
     );

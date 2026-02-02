@@ -62,7 +62,7 @@ export default function ContractHistoryPage() {
                 return;
             }
 
-            const response = await fetch('http://moya.talaaljazeera.com/api/v1/contracts/active', {
+            const response = await fetch('http://moya.talaaljazeera.com/api/v1/contracts', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -74,52 +74,55 @@ export default function ContractHistoryPage() {
             const data = await response.json().catch(() => ({}));
 
             if (response.ok && data.success && data.data) {
-                // Handle single contract object (active contract endpoint returns single object)
-                const contract = data.data;
+                // Handle array of contracts
+                const contracts = Array.isArray(data.data) ? data.data : [data.data];
                 
-                // Format contract ID - use contract_number if available, otherwise use id
-                let contractId = contract.contract_number || contract.id?.toString() || '';
-                if (contractId && !contractId.startsWith('CONT-') && !contractId.startsWith('CONTRACT-')) {
-                    contractId = `CONT-${contractId}`;
-                }
-                
-                // Get address from delivery_locations if available
-                // Try to get address from saved_location, or construct from city/area if available
-                let address = '';
-                if (contract.delivery_locations && contract.delivery_locations.length > 0) {
-                    const savedLocation = contract.delivery_locations[0].saved_location;
-                    if (savedLocation) {
-                        address = savedLocation.address || 
-                                 (savedLocation.city && savedLocation.area 
-                                     ? `${savedLocation.city}, ${savedLocation.area}` 
-                                     : savedLocation.city || savedLocation.area || '');
+                // Map each contract to the required format
+                const mappedContracts = contracts.map(contract => {
+                    // Format contract ID - use contract_number if available, otherwise use id
+                    let contractId = contract.contract_number || contract.id?.toString() || '';
+                    if (contractId && !contractId.startsWith('CONT-') && !contractId.startsWith('CONTRACT-')) {
+                        contractId = `CONT-${contractId}`;
                     }
-                }
+                    
+                    // Get address from delivery_locations if available
+                    // Try to get address from saved_location, or construct from city/area if available
+                    let address = '';
+                    if (contract.delivery_locations && contract.delivery_locations.length > 0) {
+                        const savedLocation = contract.delivery_locations[0].saved_location;
+                        if (savedLocation) {
+                            address = savedLocation.address || 
+                                     (savedLocation.city && savedLocation.area 
+                                         ? `${savedLocation.city}, ${savedLocation.area}` 
+                                         : savedLocation.city || savedLocation.area || '');
+                        }
+                    }
+                    
+                    // Map contract to array format
+                    return {
+                        id: contractId,
+                        type: contract.contract_type === 'company' ? 'commercial' : 'personal',
+                        title: contract.company_name || 'عقد بدون اسم',
+                        applicant: contract.applicant_name || '',
+                        phone: contract.phone || '',
+                        address: address,
+                        startDate: contract.start_date ? new Date(contract.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                        duration: mapDurationToArabic(contract.duration_type),
+                        endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                        cost: contract.total_amount?.toString() || '0',
+                        status: contract.status || 'active',
+                        notes: contract.notes || '',
+                        // Additional fields from API
+                        contractId: contract.id,
+                        contractNumber: contract.contract_number,
+                        remainingOrders: contract.remaining_orders,
+                        totalOrdersLimit: contract.total_orders_limit,
+                        paidAmount: contract.paid_amount,
+                        remainingAmount: contract.remaining_amount
+                    };
+                });
                 
-                // Map single contract to array format
-                const mappedContract = {
-                    id: contractId,
-                    type: contract.contract_type === 'company' ? 'commercial' : 'personal',
-                    title: contract.company_name || 'عقد بدون اسم',
-                    applicant: contract.applicant_name || '',
-                    phone: '', // Phone not in API response
-                    address: address,
-                    startDate: contract.start_date ? new Date(contract.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
-                    duration: mapDurationToArabic(contract.duration_type),
-                    endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
-                    cost: contract.total_amount?.toString() || '0',
-                    status: contract.status || 'active',
-                    notes: contract.notes || '',
-                    // Additional fields from API
-                    contractId: contract.id,
-                    contractNumber: contract.contract_number,
-                    remainingOrders: contract.remaining_orders,
-                    totalOrdersLimit: contract.total_orders_limit,
-                    paidAmount: contract.paid_amount,
-                    remainingAmount: contract.remaining_amount
-                };
-                
-                setContractHistory([mappedContract]);
+                setContractHistory(mappedContracts);
             } else {
                 // Fallback to empty array if API fails
                 setContractHistory([]);
@@ -425,23 +428,119 @@ export default function ContractHistoryPage() {
     const statusOptions = [
         { id: "all", label: "جميع الحالات" },
         { id: "active", label: "نشط" },
+        { id: "pending", label: "قيد الانتظار" },
     ];
 
-    // Calculate statistics - only for active contracts
-    const totalActive = contractHistory.filter(c => c.status === "active").length;
+    // Calculate statistics - include active and pending contracts
+    const totalActive = contractHistory.filter(c => c.status === "active" || c.status === "pending").length;
     const totalValue = contractHistory.reduce((sum, c) => {
         const cost = typeof c.cost === 'string' ? c.cost.replace(/,/g, '') : c.cost;
         return sum + (Number(cost) || 0);
     }, 0);
 
+    // Skeleton Components
+    const StatisticsCardSkeleton = () => (
+        <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 opacity-10">
+                <FaCheckCircle size={100} className="rotate-12" />
+            </div>
+            <div className="absolute -left-4 -bottom-4 opacity-10">
+                <div className="w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+            </div>
+            
+            <div className="relative z-10">
+                <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                    <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
+                        <div className="w-4 h-4 bg-white/30 rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-5 md:h-6 w-24 bg-white/20 rounded-lg animate-pulse"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="h-8 md:h-10 lg:h-12 w-16 bg-white/20 rounded-lg animate-pulse"></div>
+                </div>
+                <div className="h-3 md:h-4 w-32 bg-white/10 rounded-lg animate-pulse mt-1 md:mt-2"></div>
+            </div>
+        </div>
+    );
+
+    const FiltersSkeleton = () => (
+        <div className="flex flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+                <div className="relative flex-1 max-w-md w-full">
+                    <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="w-full pr-10 md:pr-12 pl-3 md:pl-4 h-[44px] md:h-[48px] lg:h-[52px] bg-gray-200 dark:bg-gray-700 rounded-xl md:rounded-2xl animate-pulse"></div>
+                </div>
+            </div>
+            <div className="flex gap-3 flex-wrap items-center">
+                <div className="h-[44px] md:h-[48px] lg:h-[52px] w-[140px] md:w-[160px] lg:w-[180px] bg-gray-200 dark:bg-gray-700 rounded-xl md:rounded-2xl animate-pulse"></div>
+            </div>
+        </div>
+    );
+
+    const TableSkeleton = () => (
+        <div className="bg-white dark:bg-card border border-border/60 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
+            {/* Tabs Header Skeleton */}
+            <div className="p-3 md:p-4 lg:p-6 border-b border-border/50 flex items-center justify-between flex-wrap gap-3">
+                <div className="h-6 md:h-7 lg:h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-secondary/30 p-0.5 md:p-1 rounded-xl md:rounded-2xl">
+                        <div className="h-8 md:h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl animate-pulse"></div>
+                        <div className="h-8 md:h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg md:rounded-xl animate-pulse ml-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Table Skeleton */}
+            <div className="w-full">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-right border-collapse">
+                        <thead>
+                            <tr className="bg-secondary/30">
+                                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                                    <th key={i} className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4">
+                                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto"></div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                            {[1, 2, 3, 4, 5].map((row) => (
+                                <tr key={row} className="hover:bg-secondary/10 transition-colors">
+                                    {[1, 2, 3, 4, 5, 6, 7].map((cell) => (
+                                        <td key={cell} className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
+                                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Pagination Skeleton */}
+            <div className="p-3 md:p-4 lg:p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+                <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                    <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                    <div className="flex items-center gap-0.5 md:gap-1">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                        ))}
+                    </div>
+                    <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+    );
+
     // Show loading state
     if (loading) {
         return (
-            <div className="min-h-[400px] flex items-center justify-center">
-                <div className="text-center space-y-4">
-                    <div className="w-12 h-12 border-4 border-[#579BE8] border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="text-muted-foreground font-medium">جاري تحميل العقود...</p>
-                </div>
+            <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
+                <StatisticsCardSkeleton />
+                <FiltersSkeleton />
+                <TableSkeleton />
             </div>
         );
     }
@@ -449,7 +548,7 @@ export default function ContractHistoryPage() {
     return (
         <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
             {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-5">
+            <div className="grid grid-cols-1  gap-3 md:gap-4 lg:gap-5">
                 {/* Active Contracts */}
                 <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
                     <div className="absolute -right-6 -top-6 opacity-10">
@@ -465,7 +564,7 @@ export default function ContractHistoryPage() {
                             <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
                                 <FaCheckCircle className="text-sm md:text-base lg:text-lg" />
                             </div>
-                            <p className="text-xs md:text-sm font-bold opacity-90">العقود النشطة</p>
+                            <p className="text-xs md:text-lg font-bold opacity-90">العقود </p>
                         </div>
                         <div className="flex items-center gap-2">
                             <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalActive}</h3>
@@ -474,34 +573,11 @@ export default function ContractHistoryPage() {
                     </div>
                 </div>
 
-                {/* Total Value */}
-                <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden group hover:shadow-xl md:hover:shadow-2xl hover:-translate-y-0.5 md:hover:-translate-y-1 transition-all">
-                    <div className="absolute -right-6 -top-6 opacity-10">
-                        <MdBusinessCenter size={100} className="rotate-12" />
-                    </div>
-                    <div className="absolute -left-4 -bottom-4 opacity-10">
-                        <div className="w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
-                    </div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
-                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
-                                <MdBusinessCenter className="text-sm md:text-base lg:text-lg" />
-                            </div>
-                            <p className="text-xs md:text-sm font-bold opacity-90">القيمة الإجمالية</p>
-                        </div>
-                        <div className="flex items-center gap-1.5 md:gap-2">
-                            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black drop-shadow-lg">{totalValue.toLocaleString()}</h3>
-                            <Image src="/images/RS.png" alt="RS" width={28} height={28} quality={100} unoptimized className="opacity-90 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
-                        </div>
-                        <p className="text-[10px] md:text-xs opacity-75 mt-1 md:mt-2 font-medium">إجمالي التعاقدات</p>
-                    </div>
-                </div>
+              
             </div>
 
             {/* Filters and Search */}
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
                 <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
                     {/* Search Input */}
                     <div className="relative flex-1 max-w-md w-full">
@@ -515,40 +591,7 @@ export default function ContractHistoryPage() {
                         />
                     </div>
 
-                    {/* Date Filter */}
-                    <div className="relative flex-1 w-full sm:max-w-md">
-                        <FaCalendarAlt className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] z-10 pointer-events-none w-4 h-4 md:w-5 md:h-5" />
-                        <input 
-                            ref={dateInputRef}
-                            type="text"
-                            placeholder="اختر التاريخ"
-                            readOnly
-                            autoComplete="off"
-                            inputMode="none"
-                            data-input
-                            className={`w-full pr-10 md:pr-12 py-2.5 md:py-3 h-[44px] md:h-[48px] lg:h-[52px] bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#579BE8]/20 focus:border-[#579BE8] transition-all font-medium text-xs md:text-sm shadow-sm hover:shadow-md cursor-pointer placeholder:font-medium ${selectedDate ? 'pl-10 md:pl-12' : 'pl-3 md:pl-4'}`}
-                        />
-                        {selectedDate && (
-                            <button 
-                                onClick={(e) => { 
-                                    e.preventDefault(); 
-                                    e.stopPropagation();
-                                    setSelectedDate("");
-                                    if (flatpickrInstance.current) {
-                                        try {
-                                            flatpickrInstance.current.clear();
-                                        } catch (error) {
-                                            console.warn("Error clearing Flatpickr:", error);
-                                        }
-                                    }
-                                }}
-                                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-destructive/10 hover:bg-destructive/20 p-1.5 rounded-full transition-all group shadow-sm hover:shadow-md border border-destructive/20 hover:border-destructive/30"
-                                title="مسح التاريخ"
-                            >
-                                <FaTimes className="w-3.5 h-3.5 text-destructive group-hover:scale-110 transition-transform" />
-                            </button>
-                        )}
-                    </div>
+                   
                 </div>
 
                 <div className="flex gap-3 flex-wrap items-center">
@@ -565,18 +608,8 @@ export default function ContractHistoryPage() {
                         </SelectContent>
                     </Select>
 
-                    <button 
-                        onClick={fetchContracts}
-                        disabled={loading}
-                        className="flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl md:rounded-2xl hover:shadow-lg md:hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 transition-all duration-200 font-bold text-xs md:text-sm shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <FaSync className={`w-3.5 h-3.5 md:w-4 md:h-4 ${loading ? 'animate-spin' : ''}`} />
-                        <span>تحديث</span>
-                    </button>
-                    <button className="flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 lg:px-5 h-[44px] md:h-[48px] lg:h-[52px] bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl hover:shadow-lg md:hover:shadow-xl hover:shadow-[#579BE8]/25 hover:-translate-y-0.5 transition-all duration-200 font-bold text-xs md:text-sm shadow-md active:scale-[0.98]">
-                        <FaFileDownload className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                        <span>تصدير</span>
-                    </button>
+                  
+                    
                 </div>
             </div>
 
@@ -621,7 +654,7 @@ export default function ContractHistoryPage() {
                                 <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden lg:table-cell whitespace-nowrap">النوع</th>
                                 <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden xl:table-cell whitespace-nowrap">تاريخ البدء</th>
                                 <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 hidden lg:table-cell whitespace-nowrap">المدة</th>
-                                <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">القيمة</th>
+                                {/* <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">القيمة</th> */}
                                 <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">الحالة</th>
                                 <th className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 text-center whitespace-nowrap">الإجراءات</th>
                             </tr>
@@ -672,28 +705,27 @@ export default function ContractHistoryPage() {
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-xs md:text-sm hidden lg:table-cell whitespace-nowrap">
                                             <span className="font-bold">{contract.duration}</span>
                                         </td>
-                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5">
-                                            <div className="flex items-center justify-center gap-1 font-black text-xs md:text-sm lg:text-base text-foreground whitespace-nowrap">
-                                                {contract.cost}
-                                                <Image
-                                                    src="/images/RS.png"
-                                                    alt="RS"
-                                                    width={16}
-                                                    height={16}
-                                                    priority
-                                                    unoptimized
-                                                    className="w-3 h-3 md:w-4 md:h-4 opacity-70"
-                                                />
-                                            </div>
+                                       
+                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
+                                            {contract.status === "active" ? (
+                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
+                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-600"></span>
+                                                    نشط
+                                                </span>
+                                            ) : contract.status === "pending" ? (
+                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400">
+                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-yellow-600"></span>
+                                                    قيد الانتظار
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400">
+                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600"></span>
+                                                    {contract.status || 'غير محدد'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
-                                            <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
-                                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-600"></span>
-                                                نشط
-                                            </span>
-                                        </td>
-                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
-                                            {contract.status === "active" && (
+                                            {(contract.status === "active" || contract.status === "pending") && (
                                                 <button
                                                     onClick={(e) => handleTerminateClick(contract, e)}
                                                     className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
