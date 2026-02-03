@@ -23,11 +23,79 @@ const NotificationToast = () => {
     }
   }, [isFirebaseInitialized]);
 
+  // تحويل إشعار Firebase إلى الصيغة الداخلية
+  const convertFirebaseNotification = (firebaseMessage) => {
+    console.log('🔔 Converting Firebase message:', firebaseMessage);
+    
+    // إذا كان الإشعار يحتوي على بيانات مخصصة
+    if (firebaseMessage.data) {
+      const notificationData = firebaseMessage.data;
+      return {
+        id: firebaseMessage.messageId || `firebase-${Date.now()}-${Math.random()}`,
+        title: firebaseMessage.notification?.title || notificationData.title || 'إشعار جديد',
+        message: firebaseMessage.notification?.body || notificationData.message || 'لديك إشعار جديد',
+        type: notificationData.type || 'info',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        action_url: notificationData.url || notificationData.action_url,
+        data: notificationData
+      };
+    }
+    
+    // إذا كان الإشعار يحتوي على حقل notification مباشرة
+    if (firebaseMessage.notification) {
+      return {
+        id: firebaseMessage.messageId || `firebase-${Date.now()}-${Math.random()}`,
+        title: firebaseMessage.notification.title || 'إشعار جديد',
+        message: firebaseMessage.notification.body || 'لديك إشعار جديد',
+        type: 'info',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        action_url: firebaseMessage.data?.url,
+        data: firebaseMessage.data
+      };
+    }
+    
+    // الإرجاع الافتراضي
+    return {
+      id: `firebase-${Date.now()}-${Math.random()}`,
+      title: 'إشعار جديد',
+      message: 'لديك إشعار جديد من التطبيق',
+      type: 'info',
+      is_read: false,
+      created_at: new Date().toISOString(),
+      data: firebaseMessage
+    };
+  };
+
   // تحديث الإشعارات المرئية
   useEffect(() => {
-    console.log('🔔 NotificationToast: New notifications:', newNotifications.length);
+    console.log('🔔 NotificationToast: New notifications:', newNotifications);
     
-    if (newNotifications.length === 0) {
+    if (!newNotifications || newNotifications.length === 0) {
+      setVisibleNotifications([]);
+      return;
+    }
+
+    // التحقق من وجود إشعارات Firebase
+    const firebaseNotifications = newNotifications.filter(n => 
+      n.from || n.messageId || (n.notification && (n.notification.title || n.notification.body))
+    );
+    
+    const regularNotifications = newNotifications.filter(n => 
+      !(n.from || n.messageId || (n.notification && (n.notification.title || n.notification.body)))
+    );
+
+    console.log('🔔 Firebase notifications:', firebaseNotifications.length);
+    console.log('🔔 Regular notifications:', regularNotifications.length);
+
+    // تحويل إشعارات Firebase إلى الصيغة الداخلية
+    const convertedFirebaseNotifications = firebaseNotifications.map(convertFirebaseNotification);
+    
+    // دمج الإشعارات
+    const allNotifications = [...convertedFirebaseNotifications, ...regularNotifications];
+    
+    if (allNotifications.length === 0) {
       setVisibleNotifications([]);
       return;
     }
@@ -35,7 +103,7 @@ const NotificationToast = () => {
     // إضافة الإشعارات الجديدة فوراً
     setVisibleNotifications(prev => {
       const currentIds = new Set(prev.map(n => n.id));
-      const newToAdd = newNotifications.filter(n => !currentIds.has(n.id));
+      const newToAdd = allNotifications.filter(n => !currentIds.has(n.id));
       
       if (newToAdd.length === 0) return prev;
       
@@ -50,6 +118,7 @@ const NotificationToast = () => {
         }
       });
       
+      console.log('🔔 Combined notifications:', combined.length);
       return combined;
     });
 
@@ -101,7 +170,10 @@ const NotificationToast = () => {
   };
 
   const handleNotificationClick = async (notification) => {
-    if (!notification.is_read) {
+    console.log('🔔 Notification clicked:', notification);
+    
+    // محاولة وضع علامة مقروءة إذا كان لدينا معرف حقيقي
+    if (!notification.is_read && notification.id && !notification.id.startsWith('firebase-')) {
       try {
         await markAsRead(notification.id);
       } catch (error) {
@@ -122,9 +194,14 @@ const NotificationToast = () => {
     
     // التنقل إذا كان هناك رابط
     if (notification.action_url) {
+      console.log('🔔 Navigating to:', notification.action_url);
       window.location.href = notification.action_url;
     } else if (notification.data?.url) {
+      console.log('🔔 Navigating to data URL:', notification.data.url);
       window.location.href = notification.data.url;
+    } else if (notification.data?.action_url) {
+      console.log('🔔 Navigating to action URL:', notification.data.action_url);
+      window.location.href = notification.data.action_url;
     }
   };
 
@@ -147,6 +224,8 @@ const NotificationToast = () => {
   }
 
   if (visibleNotifications.length === 0) return null;
+
+  console.log('🔔 Rendering visible notifications:', visibleNotifications.length);
 
   return (
     <div className="fixed top-4 right-4 z-[1000] space-y-3">
