@@ -859,7 +859,7 @@ const ChatModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-3 md:p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 md:p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -874,7 +874,7 @@ const ChatModal = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl w-full h-[90vh] sm:h-[92vh] md:h-[90vh] max-w-full sm:max-w-2xl md:max-w-7xl mx-auto overflow-hidden border border-gray-300 flex flex-col md:flex-row"
+        className="relative bg-white rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl w-full h-[75vh] sm:h-[80vh] md:h-[90vh] max-w-full sm:max-w-2xl md:max-w-7xl mx-auto overflow-hidden border border-gray-300 flex flex-col md:flex-row"
       >
         {/* Mobile Header */}
         <div className="md:hidden bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-2 sm:p-3 md:p-4 flex items-center justify-between">
