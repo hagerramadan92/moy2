@@ -1159,7 +1159,7 @@ export default function MyProfilePage() {
                                    
                                 </div>
                             </div>
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                            <div className="flex  gap-2 sm:gap-3 w-full sm:w-auto">
                                 <button 
                                     onClick={handleDeleteImage}
                                     className="px-3 sm:px-4 md:px-6 cursor-pointer py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-xl font-bold text-xs sm:text-sm border-2 border-white/30 bg-white/10 backdrop-blur-md text-white hover:bg-white/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"

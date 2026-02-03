@@ -18,6 +18,8 @@ const Layout = ({ children }) => {
   const pathname = usePathname();
   const [userId, setUserId] = useState(null);
   const [selectedChatId, setSelectedChatId] = useState(null);
+  const [defaultParticipantId, setDefaultParticipantId] = useState(null);
+  const [defaultParticipantName, setDefaultParticipantName] = useState(null);
   
   // Routes where navbar should be hidden
   const hideNavbarRoutes = ['/login', '/otp', '/register', '/forgot-password'];
@@ -60,10 +62,14 @@ const Layout = ({ children }) => {
 
   // Handle closing chat modal
   const handleCloseChatModal = () => {
-   
     setIsChatModalOpen(false);
     setShowSupportModal(false);
     setSelectedChatId(null);
+    // إعادة تعيين بعد تأخير بسيط لضمان تنظيف الحالة
+    setTimeout(() => {
+      setDefaultParticipantId(null);
+      setDefaultParticipantName(null);
+    }, 100);
   };
 
   // Handle opening a specific chat (from notifications or elsewhere)
@@ -75,18 +81,15 @@ const Layout = ({ children }) => {
   };
 
   // Handle starting a new chat with specific user/driver
-  const handleStartNewChat = (participantId) => {
-    
+  const handleStartNewChat = (participantId, participantName = null) => {
     setIsChatModalOpen(true);
     setShowSupportModal(false);
     setSelectedChatId(null);
     
-    // يمكنك تمرير participantId إلى ChatModal عبر prop خاص أو حدث
-    // هنا نستخدم custom event
+    // حفظ participantId و participantName للاستخدام في ChatModal
     if (participantId) {
-      window.dispatchEvent(new CustomEvent('start-new-chat', {
-        detail: { participantId }
-      }));
+      setDefaultParticipantId(participantId);
+      setDefaultParticipantName(participantName || null);
     }
   };
 
@@ -128,14 +131,12 @@ const Layout = ({ children }) => {
   // Listen for global chat events
   useEffect(() => {
     const handleStartNewChatEvent = (e) => {
-      const { participantId } = e.detail;
-  
-      handleStartNewChat(participantId);
+      const { participantId, participantName } = e.detail;
+      handleStartNewChat(participantId, participantName);
     };
 
     const handleOpenSpecificChatEvent = (e) => {
       const { chatId } = e.detail;
-     
       handleOpenSpecificChat(chatId);
     };
 
@@ -202,6 +203,8 @@ const Layout = ({ children }) => {
           currentUserId={userId}
           isSupport={showSupportModal}
           initialChatId={selectedChatId}
+          defaultParticipantId={defaultParticipantId}
+          defaultParticipantName={defaultParticipantName}
         />
       </div>
     </AuthProvider>

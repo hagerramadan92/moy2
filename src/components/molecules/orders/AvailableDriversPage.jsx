@@ -26,7 +26,9 @@ import {
   Home,
   Briefcase,
   Phone,
-  Car
+  Car,
+  User,
+  ExternalLink
 } from 'lucide-react';
 
 // Dynamically import map to avoid SSR
@@ -543,6 +545,7 @@ const DriverCard = memo(function DriverCard({
   ordersCount,
   status,
   onAcceptOrder,
+  onViewProfile,
   isPending = true,
   isAccepted = false,
   isPendingPayment = false,
@@ -690,7 +693,21 @@ const DriverCard = memo(function DriverCard({
             </div>
             
             <div className="flex-1">
-              <h3 className="font-bold text-gray-900 text-lg mb-1">{name}</h3>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h3 className="font-bold text-gray-900 text-lg">{name}</h3>
+                {onViewProfile && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewProfile();
+                    }}
+                    className="p-1.5 rounded-lg bg-white/80 hover:bg-white text-gray-600 hover:text-[#579BE8] transition-all shadow-sm hover:shadow-md"
+                    title="عرض الملف الشخصي"
+                  >
+                    <User className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -1717,6 +1734,10 @@ function AvailableDriversContent({ onBack }) {
                           formatDriverData(offer),
                           offer
                     )}
+                    onViewProfile={() => {
+                      const driverData = formatDriverData(offer);
+                      router.push(`/orders/driver_profile?id=${offer.driver_id}&name=${encodeURIComponent(driverData.name)}&phone=${encodeURIComponent(driverData.phone)}&rate=${driverData.rating}&avatar=/images/driver.png`);
+                    }}
                         isPending={!isAccepted && !isPendingPayment && !isExpired}
                         isAccepted={isAccepted}
                         isPendingPayment={isPendingPayment}
@@ -1765,12 +1786,12 @@ function AvailableDriversContent({ onBack }) {
                   <p className="text-sm text-gray-500">مواقع السائقين الحالية</p>
                 </div>
                 
-                <div className="h-[calc(100%-80px)]">
+                {/* <div className="h-[calc(100%-80px)]">
                   <DriversMap
                     drivers={offersData?.offers?.map(formatDriverData) || []}
                     shouldUpdate={!loading && !refreshing && offersData && !useMockData}
                   />
-                </div>
+                </div> */}
                 
                 <div className="p-4 border-t bg-gray-50">
                   <div className="flex items-center gap-3">

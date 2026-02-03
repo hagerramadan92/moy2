@@ -12,7 +12,7 @@ import {
   FaExclamationCircle,
   FaInfoCircle
 } from 'react-icons/fa';
-
+import { GoBell } from "react-icons/go";
 const NotificationBell = () => {
   const { 
     notifications, 
@@ -172,10 +172,10 @@ const NotificationBell = () => {
       {/* زر الجرس */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full transition-colors"
+        className="relative p-1 md:p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full transition-colors"
         aria-label="الإشعارات"
       >
-        <FaBell className="h-6 w-6" />
+        <GoBell className="h-5 w-5 md:h-6 md:w-6" />
         {unreadCount > 0 && (
           <span className="absolute top-0 left-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
             {unreadCount}
@@ -185,11 +185,11 @@ const NotificationBell = () => {
 
       {/* قائمة الإشعارات */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+        <div className="absolute left-[-30] md:left-0 mt-2 w-55 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           {/* الهيدر */}
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-800">
+              <h3 className="text-[16px] md:text-lg font-semibold text-gray-800">
                 الإشعارات
                 {unreadCount > 0 && (
                   <span className="mr-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full">
@@ -204,16 +204,16 @@ const NotificationBell = () => {
                     className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
                     title="تعليم الكل كمقروء"
                   >
-                    <FaCheck className="h-5 w-5" />
+                    <FaCheck className="md:h-5 md:w-5 w-4 h-4" />
                   </button>
                 )}
                 {localNotifications.length > 0 && (
                   <button
                     onClick={handleClearAll}
-                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                    className="p-0 md:p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
                     title="مسح الكل"
                   >
-                    <FaTrash className="h-5 w-5" />
+                    <FaTrash className="h-4 w-4 md:h-5 md:w-5" />
                   </button>
                 )}
                 <button
@@ -221,7 +221,7 @@ const NotificationBell = () => {
                   className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
                   title="إغلاق"
                 >
-                  <FaTimes className="h-5 w-5" />
+                  <FaTimes className="h-4 w-4 md:h-5 md:w-5" />
                 </button>
               </div>
             </div>
@@ -230,12 +230,12 @@ const NotificationBell = () => {
           {/* قائمة الإشعارات */}
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center">
+              <div className="p-2 md:p-4 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">جاري تحميل الإشعارات...</p>
+                <p className="mt-2 text-gray-600 text-sm md:text-base">جاري تحميل الإشعارات...</p>
               </div>
             ) : localNotifications.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className=" p-4 md:p-6 text-center text-gray-500">
                 <FaBell className="h-12 w-12 mx-auto text-gray-400 mb-3" />
                 <p>لا توجد إشعارات</p>
                 <p className="text-sm mt-1">عندما تتلقى إشعارات جديدة ستظهر هنا</p>
@@ -244,7 +244,7 @@ const NotificationBell = () => {
               localNotifications.map((notification, index) => (
                 <div
                   key={`notification-${notification.id}-${index}`}
-                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  className={`p-1 md:p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !notification.is_read ? 'bg-blue-50 border-r-4 border-r-blue-500' : ''
                   }`}
                   onClick={() => handleNotificationClick(notification)}
@@ -254,9 +254,9 @@ const NotificationBell = () => {
                       {getNotificationIcon(notification.type)}
                     </div>
                     
-                    <div className="flex-1 mr-3">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-semibold text-gray-800 text-right">
+                    <div className="flex-1 md:mr-3 mr-1.5">
+                      <div className="flex justify-between items-start md:mb-1">
+                        <h4 className="font-semibold text-gray-800 text-right text-sm">
                           {notification.title}
                         </h4>
                         {!notification.is_read && (
@@ -266,7 +266,7 @@ const NotificationBell = () => {
                         )}
                       </div>
                       
-                      <p className="text-sm text-gray-600 mb-2 text-right">
+                      <p className="text-[12px] md:text-sm text-gray-600 mb-2 text-right">
                         {notification.message}
                       </p>
                       

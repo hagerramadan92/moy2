@@ -210,7 +210,7 @@ export default function Navbar() {
             })}
           </nav>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             {/* زر اطلب الآن - يذهب إلى صفحة الطلب */}
                 <div>
                     <NotificationBell />
@@ -228,7 +228,7 @@ export default function Navbar() {
               >
                 
                 <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-sky-500/25 to-blue-600/25 blur-md" />
-                <span className="relative text-[10px] md:text-xs">اطلب الآن</span>
+                <span className="relative text-[10px] md:text-xs p-1 md:p-0">اطلب الآن</span>
               </button>
             </motion.div>
 
@@ -289,7 +289,7 @@ export default function Navbar() {
                         الملف الشخصي
                       </MenuItemLink>
 
-                      <MenuItemLink href="/orders" onClick={() => setDropdownOpen(false)}>
+                      <MenuItemLink href="/myProfile/orders" onClick={() => setDropdownOpen(false)}>
                         طلباتي
                       </MenuItemLink>
 

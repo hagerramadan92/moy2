@@ -16,6 +16,7 @@ const ChatModal = ({
   onClose, 
   currentUserId = 39, 
   defaultParticipantId = null,
+  defaultParticipantName = null,
   isSupport = false,
   initialChatId = null 
 }) => {
@@ -45,29 +46,39 @@ const ChatModal = ({
   const inputRef = useRef(null);
   const chatsContainerRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const chatCreationAttemptedRef = useRef(false); // لتتبع محاولات إنشاء المحادثة
+  const processedParticipantIdRef = useRef(null); // لتتبع معرف المشارك الذي تم معالجته
+  const chatCreationFailedRef = useRef(null); // لتتبع معرفات المحادثات الفاشلة
+  const errorShownRef = useRef(null); // لتتبع ما إذا تم عرض رسالة الخطأ
 
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
     outgoing: {
-      bg: '#FFEDC2', // أصفر فاتح للرسائل الصادرة
-      text: '#5D4037',
-      time: '#8D6E63'
+      bg: '#579BE8', // أزرق موقعك الأساسي
+      text: '#FFFFFF',
+      time: 'rgba(255, 255, 255, 0.85)',
+      gradient: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)',
+      shadow: '0 2px 8px rgba(87, 155, 232, 0.25)'
     },
     incoming: {
-      bg: '#F5F5F5', // رمادي فاتح للرسائل الواردة
-      text: '#212121',
-      time: '#757575'
+      bg: '#FFFFFF',
+      text: '#1F2937',
+      time: '#6B7280',
+      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
+      border: '1px solid #E5E7EB',
+      shadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
     }
   };
 
-  // جلب بيانات المستخدم والتحقق من تسجيل الدخول
-  useEffect(() => {
+  // دالة للتحقق من حالة تسجيل الدخول وتحديثها
+  const checkAuthStatus = useCallback(() => {
     if (typeof window !== 'undefined') {
       try {
         const token = localStorage.getItem('accessToken');
         const userData = localStorage.getItem('user');
         
-        setIsLoggedIn(!!token);
+        const isAuth = !!token;
+        setIsLoggedIn(isAuth);
         
         if (userData) {
           const parsedUser = JSON.parse(userData);
@@ -97,6 +108,51 @@ const ChatModal = ({
       }
     }
   }, [currentUserId]);
+
+  // جلب بيانات المستخدم والتحقق من تسجيل الدخول
+  useEffect(() => {
+    // التحقق فوراً عند التحميل
+    checkAuthStatus();
+    
+    // الاستماع لتغييرات localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'accessToken' || e.key === 'user' || e.key === null) {
+        checkAuthStatus();
+      }
+    };
+    
+    // الاستماع للأحداث المخصصة لتسجيل الدخول
+    const handleUserLoggedIn = () => {
+      checkAuthStatus();
+    };
+    
+    const handleUserLoggedOut = () => {
+      checkAuthStatus();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userLoggedIn', handleUserLoggedIn);
+    window.addEventListener('userLoggedOut', handleUserLoggedOut);
+    
+    // التحقق دورياً كل ثانية (للحالات التي لا يتم فيها إطلاق events)
+    const interval = setInterval(() => {
+      checkAuthStatus();
+    }, 1000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLoggedIn', handleUserLoggedIn);
+      window.removeEventListener('userLoggedOut', handleUserLoggedOut);
+      clearInterval(interval);
+    };
+  }, [checkAuthStatus]);
+  
+  // التحقق من حالة تسجيل الدخول عند فتح الـ modal
+  useEffect(() => {
+    if (isOpen) {
+      checkAuthStatus();
+    }
+  }, [isOpen, checkAuthStatus]);
 
   // عرض toast عند فتح المحادثة إذا لم يكن مسجل دخول
   useEffect(() => {
@@ -139,22 +195,15 @@ const ChatModal = ({
     setFilteredChats(filtered);
   }, [searchQuery, chats]);
 
-  // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
+  // تحديث participantId و participantName عند تغيير defaultParticipantId
   useEffect(() => {
-    if (isOpen && isLoggedIn && defaultParticipantId && chats.length > 0 && !loading) {
-      const existingChat = chats.find(chat => 
-        chat.participants?.includes(defaultParticipantId) ||
-        chat.participants?.includes(Number(defaultParticipantId))
-      );
-      
-      if (existingChat) {
-        setSelectedChat(existingChat);
-      } else {
-        setShowNewChatForm(true);
-        setParticipantId(defaultParticipantId);
+    if (defaultParticipantId) {
+      setParticipantId(defaultParticipantId);
+      if (defaultParticipantName) {
+        setParticipantName(defaultParticipantName);
       }
     }
-  }, [isOpen, chats, loading, defaultParticipantId, isLoggedIn]);
+  }, [defaultParticipantId, defaultParticipantName]);
 
   // دالة لعرض toast عند عدم تسجيل الدخول
   const showLoginToast = (customMessage = '') => {
@@ -388,6 +437,150 @@ const ChatModal = ({
     })));
   };
 
+  // دالة مساعدة لإنشاء محادثة مع مشارك محدد (تُستخدم تلقائياً من defaultParticipantId)
+  const createNewChatWithParticipant = useCallback(async () => {
+    if (!defaultParticipantId || creatingChat || !isLoggedIn) return;
+    
+    // منع التكرار: إذا تمت محاولة إنشاء المحادثة لنفس المعرف بالفعل
+    if (chatCreationAttemptedRef.current === defaultParticipantId) {
+      return;
+    }
+    
+    // منع المحاولة إذا فشلت المحادثة لهذا المعرف من قبل
+    if (chatCreationFailedRef.current === defaultParticipantId) {
+      return;
+    }
+    
+    try {
+      // وضع علامة أننا حاولنا إنشاء المحادثة لهذا المعرف
+      chatCreationAttemptedRef.current = defaultParticipantId;
+      processedParticipantIdRef.current = defaultParticipantId;
+      
+      setCreatingChat(true);
+      setShowNewChatForm(true);
+      
+      const result = await messageService.createChat(
+        defaultParticipantId, 
+        "user_user", 
+        defaultParticipantName || defaultParticipantId
+      );
+      
+      if (result.success) {
+        // نجح إنشاء المحادثة - إزالة من قائمة الفاشلة
+        chatCreationFailedRef.current = null;
+        errorShownRef.current = null;
+        
+        // إعادة تحميل المحادثات مباشرة
+        try {
+          setLoading(true);
+          const response = await messageService.getChats();
+          
+          if (response.success && Array.isArray(response.data)) {
+            setChats(response.data);
+            setFilteredChats(response.data);
+          }
+        } catch (loadError) {
+          console.error('خطأ في تحميل المحادثات:', loadError);
+        } finally {
+          setLoading(false);
+        }
+        
+        if (result.chat) {
+          setSelectedChat(result.chat);
+          setShowNewChatForm(false);
+        } else {
+          const newChatsResponse = await messageService.getChats();
+          if (newChatsResponse.success && Array.isArray(newChatsResponse.data)) {
+            const foundChat = newChatsResponse.data.find(chat => 
+              chat.participants?.includes(defaultParticipantId) ||
+              chat.participants?.includes(Number(defaultParticipantId)) ||
+              chat.participants?.includes(String(defaultParticipantId))
+            );
+            
+            if (foundChat) {
+              setSelectedChat(foundChat);
+              setShowNewChatForm(false);
+            }
+          }
+        }
+      } else {
+        // فشل إنشاء المحادثة - وضع علامة بالفشل
+        chatCreationFailedRef.current = defaultParticipantId;
+        
+        // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
+        // فقط نضع علامة أننا عرضنا الخطأ
+        errorShownRef.current = defaultParticipantId;
+        
+        setShowNewChatForm(false);
+        // لا نعيد تعيين chatCreationAttemptedRef لمنع إعادة المحاولة
+      }
+    } catch (error) {
+      // فشل إنشاء المحادثة - وضع علامة بالفشل
+      chatCreationFailedRef.current = defaultParticipantId;
+      
+      // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
+      // فقط نضع علامة أننا عرضنا الخطأ
+      errorShownRef.current = defaultParticipantId;
+      
+      setShowNewChatForm(false);
+      // لا نعيد تعيين chatCreationAttemptedRef لمنع إعادة المحاولة
+    } finally {
+      setCreatingChat(false);
+    }
+  }, [defaultParticipantId, defaultParticipantName, creatingChat, isLoggedIn]);
+
+  // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
+  useEffect(() => {
+    // إعادة تعيين المرجع عند إغلاق الـ modal
+    if (!isOpen) {
+      chatCreationAttemptedRef.current = null;
+      processedParticipantIdRef.current = null;
+      chatCreationFailedRef.current = null;
+      errorShownRef.current = null;
+      return;
+    }
+    
+    // إذا تغير defaultParticipantId، إعادة تعيين المراجع
+    if (processedParticipantIdRef.current !== defaultParticipantId) {
+      chatCreationAttemptedRef.current = null;
+      chatCreationFailedRef.current = null;
+      errorShownRef.current = null;
+    }
+    
+    if (isOpen && isLoggedIn && defaultParticipantId && chats.length > 0 && !loading && !creatingChat) {
+      // منع التكرار: إذا تمت معالجة هذا المعرف بالفعل أو فشل من قبل
+      if (
+        (processedParticipantIdRef.current === defaultParticipantId && chatCreationAttemptedRef.current === defaultParticipantId) ||
+        chatCreationFailedRef.current === defaultParticipantId
+      ) {
+        return;
+      }
+      
+      const existingChat = chats.find(chat => 
+        chat.participants?.includes(defaultParticipantId) ||
+        chat.participants?.includes(Number(defaultParticipantId)) ||
+        chat.participants?.includes(String(defaultParticipantId))
+      );
+      
+      if (existingChat) {
+        setSelectedChat(existingChat);
+        setShowNewChatForm(false);
+        processedParticipantIdRef.current = defaultParticipantId;
+        chatCreationAttemptedRef.current = null; // إعادة تعيين لأننا وجدنا المحادثة
+        chatCreationFailedRef.current = null; // إعادة تعيين لأننا وجدنا المحادثة
+        errorShownRef.current = null;
+      } else {
+        // إنشاء المحادثة تلقائياً فقط إذا لم نحاول من قبل ولم تفشل من قبل
+        if (
+          chatCreationAttemptedRef.current !== defaultParticipantId &&
+          chatCreationFailedRef.current !== defaultParticipantId
+        ) {
+          createNewChatWithParticipant();
+        }
+      }
+    }
+  }, [isOpen, chats, loading, defaultParticipantId, defaultParticipantName, isLoggedIn, creatingChat, createNewChatWithParticipant]);
+
   // إنشاء محادثة جديدة
   const createNewChat = async () => {
     if (!isLoggedIn) {
@@ -435,11 +628,12 @@ const ChatModal = ({
         setParticipantId("");
         setParticipantName("");
       } else {
-        // سيتم عرض رسالة الخطأ تلقائياً من service
+        // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
         console.error('فشل إنشاء المحادثة:', result.error);
       }
     } catch (error) {
       console.error('خطأ في إنشاء المحادثة:', error);
+      // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
     } finally {
       setCreatingChat(false);
     }

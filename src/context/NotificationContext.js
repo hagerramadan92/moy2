@@ -128,6 +128,9 @@ export function NotificationProvider({ children }) {
   const [showAlerts, setShowAlerts] = useState(false);
   const [showChatAlerts, setShowChatAlerts] = useState(false);
   
+  // حالة جديدة لإدارة Toast الإجراءات
+  const [actionToasts, setActionToasts] = useState([]);
+  
   const pollIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
   const processedNotificationIds = useRef(new Set());
@@ -139,6 +142,26 @@ export function NotificationProvider({ children }) {
     }
     return null;
   };
+
+  // دالة لإضافة Toast للإجراءات
+  const addActionToast = useCallback((message, type = 'success') => {
+    const id = Date.now() + Math.random();
+    const toast = { id, message, type, timestamp: new Date() };
+    
+    setActionToasts(prev => [...prev, toast]);
+    
+    // إزالة Toast تلقائياً بعد 5 ثوان
+    setTimeout(() => {
+      setActionToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+    
+    return id;
+  }, []);
+
+  // دالة لإزالة Toast محدد
+  const removeActionToast = useCallback((id) => {
+    setActionToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
 
   // دالة معالجة الإشعارات القادمة من الباك إند
   const processNotification = (notification) => {
@@ -182,7 +205,7 @@ export function NotificationProvider({ children }) {
         const response = await enhancedFetch(url);
         
         // توقع استجابة Laravel النموذجية
-        if (response && (response.success === true || response.status === 'success' || response.status === true)) {
+        if (response && (response.status === true || response.success === true)) {
           const notificationsData = response.data || [];
           
           if (Array.isArray(notificationsData)) {
@@ -230,6 +253,32 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
+  // دالة جلب عدد الإشعارات غير المقروءة
+  const loadUnreadCount = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      const authToken = getAuthToken();
+      if (!authToken) {
+        setUnreadCount(0);
+        return;
+      }
+
+      const url = createRequestURL('/notifications/unread-count');
+      const response = await enhancedFetch(url);
+      
+      if (response && response.status === true) {
+        const count = response.data?.count || response.count || 0;
+        setUnreadCount(count);
+      }
+    } catch (error) {
+      console.error('❌ Error loading unread count:', error);
+      // في حالة الخطأ، نحسب من الإشعارات المحلية
+      const localUnread = notifications.filter(n => !n.is_read).length;
+      setUnreadCount(localUnread);
+    }
+  }, [notifications]);
+
   // دالة التحقق من إشعارات جديدة
   const checkForNewNotifications = useCallback(async (forceShow = false) => {
     if (!isMountedRef.current) {
@@ -250,7 +299,7 @@ export function NotificationProvider({ children }) {
       try {
         const response = await enhancedFetch(url);
         
-        if (response && (response.success === true || response.status === 'success' || response.status === true)) {
+        if (response && response.status === true) {
           const newNotificationsData = response.data || [];
           
           console.log('🔔 NotificationContext: Received notifications:', newNotificationsData.length);
@@ -301,46 +350,42 @@ export function NotificationProvider({ children }) {
             return merged;
           });
           
-          // تحديث عدد الإشعارات غير المقروءة
-          const allUnread = processedNotifications.filter(n => !n.is_read);
-          const newUnread = allUnread.filter(n => !toastNotificationIds.current.has(n.id));
+          // تحديث عدد الإشعارات غير المقروءة باستخدام API منفصل
+          loadUnreadCount();
           
-          if (allUnread.length > 0) {
-            setUnreadCount(allUnread.length);
+          // عرض إشعارات Toast تلقائياً للإشعارات غير المقروءة التي لم تُعرض من قبل
+          if (trulyNewData.length > 0 && (forceShow || showAlerts)) {
+            console.log('🔔 NotificationContext: New notifications to show:', trulyNewData.length);
             
-            // عرض إشعارات Toast تلقائياً للإشعارات غير المقروءة التي لم تُعرض من قبل
-            if (newUnread.length > 0) {
-              console.log('🔔 NotificationContext: New unread notifications to show:', newUnread.length);
+            trulyNewData.forEach(notification => {
+              const processed = processNotification(notification);
               
-              newUnread.forEach(notification => {
-                console.log('🔔 NotificationContext: Adding notification to toast:', notification.id, notification.title);
-                toastNotificationIds.current.add(notification.id);
+              // عرض Toast فقط للإشعارات غير المقروءة
+              if (!processed.is_read && !toastNotificationIds.current.has(processed.id)) {
+                console.log('🔔 NotificationContext: Adding notification to toast:', processed.id, processed.title);
+                toastNotificationIds.current.add(processed.id);
                 
                 // إضافة الإشعار فوراً للعرض
                 setNewNotifications(prev => {
-                  if (prev.some(n => n.id === notification.id)) {
+                  if (prev.some(n => n.id === processed.id)) {
                     console.log('🔔 NotificationContext: Notification already in list, skipping');
                     return prev;
                   }
                   console.log('🔔 NotificationContext: Adding notification to newNotifications state');
-                  return [...prev, notification];
+                  return [...prev, processed];
                 });
                 
-                // إزالة Toast بعد 5 ثوانٍ (يتم التعامل معها في NotificationToast)
+                // إزالة Toast بعد 5 ثوانٍ
                 setTimeout(() => {
                   if (isMountedRef.current) {
                     setNewNotifications(prev => 
-                      prev.filter(n => n.id !== notification.id)
+                      prev.filter(n => n.id !== processed.id)
                     );
-                    toastNotificationIds.current.delete(notification.id);
+                    toastNotificationIds.current.delete(processed.id);
                   }
                 }, 5000);
-              });
-            } else {
-              console.log('🔔 NotificationContext: All unread notifications already shown');
-            }
-          } else {
-            console.log('🔔 NotificationContext: No unread notifications');
+              }
+            });
           }
           
           setLastUpdate(new Date());
@@ -352,10 +397,10 @@ export function NotificationProvider({ children }) {
     } catch (error) {
       console.error('❌ Error in checkForNewNotifications:', error);
     }
-  }, [showAlerts, showChatAlerts]);
+  }, [showAlerts, showChatAlerts, loadUnreadCount]);
 
   // بدء التحديث التلقائي
-  const startAutoRefresh = useCallback((interval = 5000) => { // تقليل من 30 ثانية إلى 5 ثوانٍ
+  const startAutoRefresh = useCallback((interval = 30000) => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
@@ -368,16 +413,18 @@ export function NotificationProvider({ children }) {
     // التحقق فوراً من الإشعارات الجديدة
     setTimeout(() => {
       checkForNewNotifications(true);
-    }, 1000); // بعد ثانية واحدة من التحميل
+    }, 1000);
     
-    // بدء التحديث الدوري كل 5 ثوانٍ (بدلاً من 30)
+    // بدء التحديث الدوري
     pollIntervalRef.current = setInterval(() => {
       console.log('🔔 NotificationContext: Polling for new notifications...');
-      // تمرير true لعرض الإشعارات تلقائياً
+      // تحديث عدد الإشعارات غير المقروءة أولاً
+      loadUnreadCount();
+      // ثم التحقق من الإشعارات الجديدة
       checkForNewNotifications(true);
     }, interval);
     
-  }, [loadNotifications, checkForNewNotifications]);
+  }, [loadNotifications, checkForNewNotifications, loadUnreadCount]);
 
   // إيقاف التحديث التلقائي
   const stopAutoRefresh = useCallback(() => {
@@ -424,9 +471,12 @@ export function NotificationProvider({ children }) {
       }
 
       const url = createRequestURL('/notifications/mark-all-read');
-      const response = await enhancedFetch(url, { method: 'POST' });
+      const response = await enhancedFetch(url, { 
+        method: 'POST',
+        body: {} // إرسال body فارغ أو حسب ما يتطلبه الـ API
+      });
       
-      if (response && (response.success === true || response.status === 'success')) {
+      if (response && response.status === true) {
         // بعد النجاح على الباك إند، نحدث الحالة المحلية
         setNotifications(prev => 
           prev.map(notification => ({ 
@@ -439,6 +489,15 @@ export function NotificationProvider({ children }) {
         setNewNotifications([]);
         toastNotificationIds.current.clear();
         
+        // عرض Toast نجاح
+        addActionToast(response.message || 'تم تعليم جميع الإشعارات كمقروءة', 'success');
+        
+        return {
+          success: true,
+          message: response.message || 'تم تعليم جميع الإشعارات كمقروءة',
+          count: response.data?.count || 0
+        };
+        
       } else {
         throw new Error(response?.message || 'فشل في تعليم الإشعارات كمقروءة');
       }
@@ -446,9 +505,11 @@ export function NotificationProvider({ children }) {
     } catch (error) {
       console.error('❌ Error in markAllAsRead:', error);
       setError(error.message);
+      // عرض Toast خطأ
+      addActionToast(error.message || 'حدث خطأ أثناء تعليم الإشعارات كمقروءة', 'error');
       throw error;
     }
-  }, []);
+  }, [addActionToast]);
 
   // تعليم إشعار كمقروء
   const markAsRead = useCallback(async (id) => {
@@ -459,9 +520,12 @@ export function NotificationProvider({ children }) {
       }
 
       const url = createRequestURL(`/notifications/${id}/mark-read`);
-      const response = await enhancedFetch(url, { method: 'POST' });
+      const response = await enhancedFetch(url, { 
+        method: 'POST',
+        body: {} // إرسال body فارغ
+      });
       
-      if (response && (response.success === true || response.status === 'success')) {
+      if (response && response.status === true) {
         // تحديث الحالة المحلية بعد النجاح
         setNotifications(prev => 
           prev.map(notification => 
@@ -474,11 +538,22 @@ export function NotificationProvider({ children }) {
               : notification
           )
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        // تحديث عدد الإشعارات غير المقروءة
+        loadUnreadCount();
+        
         setNewNotifications(prev => 
           prev.filter(notification => notification.id !== id)
         );
         toastNotificationIds.current.delete(id);
+        
+        // عرض Toast نجاح
+        addActionToast('تم تعليم الإشعار كمقروء', 'success');
+        
+        return {
+          success: true,
+          message: response.message || 'تم تعليم الإشعار كمقروء'
+        };
         
       } else {
         throw new Error(response?.message || 'فشل في تعليم الإشعار كمقروء');
@@ -486,12 +561,14 @@ export function NotificationProvider({ children }) {
       
     } catch (error) {
       console.error('❌ Error in markAsRead:', error);
+      // عرض Toast خطأ
+      addActionToast('حدث خطأ أثناء تعليم الإشعار كمقروء', 'error');
       throw error;
     }
-  }, []);
+  }, [loadUnreadCount, addActionToast]);
 
   // حذف إشعار
-  const deleteNotification = useCallback(async (id) => {
+  const deleteNotification = useCallback(async (id, showToast = true) => {
     try {
       const authToken = getAuthToken();
       if (!authToken) {
@@ -501,14 +578,15 @@ export function NotificationProvider({ children }) {
       const url = createRequestURL(`/notifications/${id}`);
       const response = await enhancedFetch(url, { method: 'DELETE' });
       
-      if (response && (response.success === true || response.status === 'success')) {
+      if (response && response.status === true) {
         // تحديث الحالة المحلية بعد النجاح
         const notificationToDelete = notifications.find(n => n.id === id);
         
         setNotifications(prev => prev.filter(notification => notification.id !== id));
         
+        // إذا كان الإشعار غير مقروء، نحدث العدد
         if (notificationToDelete && !notificationToDelete.is_read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
+          loadUnreadCount();
         }
         
         setNewNotifications(prev => 
@@ -517,54 +595,84 @@ export function NotificationProvider({ children }) {
         processedNotificationIds.current.delete(id);
         toastNotificationIds.current.delete(id);
         
+        // عرض Toast نجاح إذا طُلب
+        if (showToast) {
+          addActionToast('تم حذف الإشعار بنجاح', 'success');
+        }
+        
+        return {
+          success: true,
+          message: response.message || 'تم حذف الإشعار بنجاح'
+        };
+        
       } else {
         throw new Error(response?.message || 'فشل في حذف الإشعار');
       }
       
     } catch (error) {
       console.error('❌ Error in deleteNotification:', error);
+      // عرض Toast خطأ
+      addActionToast('حدث خطأ أثناء حذف الإشعار', 'error');
       throw error;
     }
-  }, [notifications]);
+  }, [notifications, loadUnreadCount, addActionToast]);
 
-  // مسح جميع الإشعارات
+  // مسح جميع الإشعارات مع تأكيد
   const clearAll = useCallback(async () => {
-    try {
-      const authToken = getAuthToken();
-      if (!authToken) {
-        throw new Error('يجب تسجيل الدخول');
-      }
+    // هذه الدالة يجب أن تستدعى مع تأكيد من المستخدم
+    return new Promise((resolve, reject) => {
+      try {
+        // نعيد Promise للمستخدم يمكنه إظهار dialog تأكيد
+        resolve({
+          confirm: async () => {
+            try {
+              const authToken = getAuthToken();
+              if (!authToken) {
+                throw new Error('يجب تسجيل الدخول');
+              }
 
-      const url = createRequestURL('/notifications/clear-all');
-      const response = await enhancedFetch(url, { method: 'DELETE' });
-      
-      if (response && (response.success === true || response.status === 'success')) {
-        // تحديث الحالة المحلية بعد النجاح
-        setNotifications([]);
-        setUnreadCount(0);
-        setNewNotifications([]);
-        processedNotificationIds.current.clear();
-        toastNotificationIds.current.clear();
-        
-      } else {
-        throw new Error(response?.message || 'فشل في مسح جميع الإشعارات');
+              // حذف الإشعارات واحداً تلو الآخر
+              const deletePromises = notifications.map(notification => 
+                deleteNotification(notification.id, false) // لا نعرض toast لكل حذف
+              );
+              
+              await Promise.all(deletePromises);
+              
+              // تحديث الحالة المحلية بعد النجاح
+              setNotifications([]);
+              setUnreadCount(0);
+              setNewNotifications([]);
+              processedNotificationIds.current.clear();
+              toastNotificationIds.current.clear();
+              
+              // عرض Toast نجاح
+              addActionToast(`تم حذف جميع الإشعارات (${notifications.length})`, 'success');
+              
+              return {
+                success: true,
+                message: `تم حذف جميع الإشعارات (${notifications.length})`,
+                count: notifications.length
+              };
+              
+            } catch (error) {
+              console.error('❌ Error in clearAll:', error);
+              // عرض Toast خطأ
+              addActionToast('حدث خطأ أثناء حذف جميع الإشعارات', 'error');
+              throw error;
+            }
+          },
+          count: notifications.length
+        });
+      } catch (error) {
+        reject(error);
       }
-      
-    } catch (error) {
-      console.error('❌ Error in clearAll:', error);
-      throw error;
-    }
-  }, []);
+    });
+  }, [notifications, deleteNotification, addActionToast]);
 
   // دالة تسجيل الجهاز للإشعارات
   const registerDevice = async (token) => {
     try {
-    //  const authToken = getAuthToken();
       const sessionId = getSessionId();
-      // التحقق من وجود التوكن
-      // if (!authToken) {
-      //   throw new Error('يجب تسجيل الدخول لتسجيل الجهاز');
-      // }
 
       const deviceInfo = {
         token: token,
@@ -581,34 +689,40 @@ export function NotificationProvider({ children }) {
         body: deviceInfo
       });
 
-      // تحسين التحقق من الـ response
-      if (response && (response.success === true || response.status === 'success' || response.status === true)) {
+      // التحقق من الـ response
+      if (response && response.status === true) {
         if (isBrowser) {
           localStorage.setItem('fcm_token', token);
           localStorage.setItem('device_registered', 'true');
-          localStorage.setItem('current_device_id', response.data?.device_id || response.device_id || 'real-device-' + Date.now());
+          localStorage.setItem('current_device_id', response.data?.device_id || 'real-device-' + Date.now());
         }
         setFcmToken(token);
+        
+        // عرض Toast نجاح
+        addActionToast('تم تسجيل الجهاز بنجاح', 'success');
         
         return {
           success: true,
           message: response.message || 'تم تسجيل الجهاز بنجاح',
-          data: response.data || response
+          data: response.data
         };
       }
       
       // إذا وصلنا هنا، فهناك مشكلة في الـ response
-      const errorMessage = response?.message || response?.error || 'فشل في تسجيل الجهاز';
+      const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
       throw new Error(errorMessage);
       
     } catch (error) {
       console.error('❌ Error registering device:', error);
+      // عرض Toast خطأ
+      addActionToast('حدث خطأ أثناء تسجيل الجهاز', 'error');
       
       // إعادة الخطأ بشكل منظم
       throw new Error(error.message || 'حدث خطأ غير متوقع أثناء تسجيل الجهاز');
     }
   };
-   function getSessionId() {
+
+  function getSessionId() {
     if (typeof window === "undefined") return null;
   
     const key = "session_id";
@@ -625,7 +739,6 @@ export function NotificationProvider({ children }) {
     return sessionId;
   }
 
-  
   // الحصول على نوع الجهاز
   const getDeviceType = () => {
     if (!isBrowser) return 'web';
@@ -671,7 +784,9 @@ export function NotificationProvider({ children }) {
       
       if (authToken) {
         await loadNotifications(false); // بدون عرض toasts عند التهيئة
-        startAutoRefresh(5000); // تحديث كل 5 ثوانٍ (بدلاً من 30)
+        // تحميل عدد الإشعارات غير المقروءة منفصلاً
+        loadUnreadCount();
+        startAutoRefresh(30000);
       } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -692,9 +807,9 @@ export function NotificationProvider({ children }) {
     const handleStorageChange = (e) => {
       if (e.key === 'accessToken' || e.key === null) {
         loadNotifications(false); // بدون عرض toasts عند تغيير التوكن
-        // التحقق من الإشعارات الجديدة بعد تحديث التوكن
+        // تحديث عدد الإشعارات غير المقروءة
         setTimeout(() => {
-          checkForNewNotifications(true);
+          loadUnreadCount();
         }, 500);
       }
     };
@@ -702,6 +817,7 @@ export function NotificationProvider({ children }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         // التحقق فوراً من الإشعارات عند عودة التركيز
+        loadUnreadCount();
         checkForNewNotifications(true);
       }
     };
@@ -717,7 +833,7 @@ export function NotificationProvider({ children }) {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
     };
-  }, [loadNotifications, checkForNewNotifications]);
+  }, [loadNotifications, checkForNewNotifications, loadUnreadCount]);
 
   // دالة اختبار الاتصال بالباك إند
   const testBackendConnection = useCallback(async () => {
@@ -761,13 +877,14 @@ export function NotificationProvider({ children }) {
     error,
     showAlerts,
     showChatAlerts,
+    actionToasts, // إضافة actionToasts للقيمة
     
     // الدوال الأساسية
     loadNotifications: loadNotificationsWithAlerts, // استخدام الدالة المعدلة
     markAllAsRead,
     markAsRead,
     deleteNotification,
-    clearAll,
+    clearAll, // الآن ترجع Promise مع تأكيد
     
     // إدارة الجهاز
     registerDevice,
@@ -782,8 +899,15 @@ export function NotificationProvider({ children }) {
     toggleChatAlerts,
     checkNewNotificationsWithAlerts, // دالة جديدة
     
+    // إدارة Toast الإجراءات
+    addActionToast,
+    removeActionToast,
+    
     // اختبار الاتصال
     testBackendConnection,
+    
+    // دالة جلب عدد الإشعارات غير المقروءة
+    loadUnreadCount,
     
     // معلومات التصحيح
     debugInfo: () => ({
@@ -796,7 +920,8 @@ export function NotificationProvider({ children }) {
       toastIdsCount: toastNotificationIds.current.size,
       isConnected: !!getAuthToken(),
       showAlerts,
-      showChatAlerts
+      showChatAlerts,
+      actionToastsCount: actionToasts.length
     })
   };
 

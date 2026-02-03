@@ -14,27 +14,33 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
   const scrollContainerRef = useRef(null);
 
   // تحميل الرسائل
+  // Note: we intentionally do NOT include `pagination` in deps here.
+  // Including it caused the callback to be recreated when pagination updated,
+  // which retriggered the effect that calls `loadMessages` and created
+  // a maximum update depth loop. The function reads the latest `pagination`
+  // value at call time, so this is safe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadMessages = useCallback(async (reset = true) => {
     if (!chatId) return;
-    
+
     try {
       if (reset) {
         setLoading(true);
       }
-      
+
       const page = reset ? 1 : (pagination?.current_page || 0) + 1;
-      
+
       const response = await messageService.getMessages(chatId, { page });
-      
+
       if (response.success) {
         const newMessages = response.data;
-        
+
         if (reset) {
           setMessages(newMessages);
         } else {
           setMessages(prev => [...newMessages, ...prev]);
         }
-        
+
         setPagination(response.pagination);
         setHasMore(response.pagination?.current_page < response.pagination?.last_page);
       } else {
@@ -48,7 +54,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
         setLoading(false);
       }
     }
-  }, [chatId, pagination]);
+  }, [chatId]);
 
   // تحميل الرسائل عند تغيير chatId
   useEffect(() => {

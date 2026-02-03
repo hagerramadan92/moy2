@@ -164,7 +164,7 @@ export default function WaterTypeSelect({
 			>
 				<SelectTrigger className={triggerClass}>
 					<SelectValue
-						placeholder={loading ? "جاري تحميل الأنواع..." : placeholder}
+						placeholder={ placeholder}
 						className="text-[16px]"
 					/>
 				</SelectTrigger>
@@ -219,12 +219,12 @@ export default function WaterTypeSelect({
 				</div>
 			)}
 			
-			{loading && (
+			{/* {loading && (
 				<div className="flex items-center gap-2 text-gray-500 text-xs mt-1">
 					<div className="w-3 h-3 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
 					<span>جاري تحميل أنواع المياه...</span>
 				</div>
-			)}
+			)} */}
 		</div>
 	);
 }

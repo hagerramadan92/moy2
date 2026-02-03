@@ -54,11 +54,11 @@ const showLoginToast = (message, type = 'info', options = {}) => {
   
   // ألوان حسب النوع
   const colors = {
-    info: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    error: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    success: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    warning: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-    chat: 'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)'
+    info: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)', // أزرق فاتح
+    error: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)', // أزرق فاتح
+    success: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)', // أزرق فاتح
+    warning: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)', // أزرق فاتح
+    chat: 'linear-gradient(135deg, #579BE8 0%, #457FD6 100%)' // أزرق فاتح
   };
   
   toast.style.cssText = `
@@ -229,7 +229,7 @@ const createAxiosInstance = () => {
       
       // عرض toast للخطأ
       if (isBrowser) {
-        let errorMessage = 'حدث خطأ أثناء الاتصال بالخادم';
+        let errorMessage = '';
         
         if (status === 401) {
           errorMessage = 'انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى';
@@ -243,9 +243,7 @@ const createAxiosInstance = () => {
           errorMessage = 'ليس لديك صلاحية للوصول إلى هذا المورد';
         } else if (status === 404) {
           errorMessage = 'لم يتم العثور على المورد المطلوب';
-        } else if (status === 500) {
-          errorMessage = 'حدث خطأ في الخادم. يرجى المحاولة لاحقاً';
-        }
+        } 
         
         if (errorMessage && !url?.includes('/login')) {
           showLoginToast(errorMessage, 'error');
@@ -644,14 +642,24 @@ class MessageService {
       } else {
         // عرض رسالة خطأ من الخادم
         const errorMessage = response.data.message || 'فشل إنشاء المحادثة';
+        const errorCode = response.data.error_code || '';
         
         // تحليل رسالة الخطأ
         let userMessage = errorMessage;
-        if (errorMessage.includes('participant') || errorMessage.includes('not found')) {
+        
+        // التحقق من رسائل الخطأ العربية والإنجليزية
+        if (
+          errorMessage.includes('المرسل اليه غير موجود') ||
+          errorMessage.includes('غير موجود') ||
+          errorMessage.includes('participant') || 
+          errorMessage.includes('not found') ||
+          errorMessage.includes('غير متاح') ||
+          errorCode === 'ValidationException'
+        ) {
           userMessage = participantName 
-            ? `لم يتم العثور على المستخدم ${participantName}`
-            : 'لم يتم العثور على المستخدم المطلوب';
-        } else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+            ? `المستخدم ${participantName} غير موجود`
+            : 'المستخدم المطلوب غير موجود';
+        } else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate') || errorMessage.includes('موجود')) {
           userMessage = participantName 
             ? `المحادثة مع ${participantName} موجودة بالفعل`
             : 'المحادثة موجودة بالفعل';
@@ -675,15 +683,25 @@ class MessageService {
       // تحليل الخطأ لعرض رسالة مناسبة
       let errorMessage = 'فشل إنشاء المحادثة';
       let userMessage = errorMessage;
+      const errorCode = error.response?.data?.error_code || '';
+      const responseMessage = error.response?.data?.message || '';
       
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      // التحقق من رسالة الخطأ أولاً (حتى لو كان status 500)
+      if (responseMessage) {
+        errorMessage = responseMessage;
         
-        // تحليل رسالة الخطأ المحددة
-        if (errorMessage.includes('participant') || errorMessage.includes('not found')) {
+        // تحليل رسالة الخطأ المحددة (العربية والإنجليزية)
+        if (
+          errorMessage.includes('المرسل اليه غير موجود') ||
+          errorMessage.includes('غير موجود') ||
+          errorMessage.includes('participant') || 
+          errorMessage.includes('not found') ||
+          errorMessage.includes('غير متاح') ||
+          errorCode === 'ValidationException'
+        ) {
           userMessage = participantName 
-            ? `لم يتم العثور على المستخدم ${participantName} (ID: ${participantId})`
-            : `لم يتم العثور على المستخدم بالمعرف ${participantId}`;
+            ? `المستخدم ${participantName} غير موجود`
+            : 'المستخدم المطلوب غير موجود';
         } else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
           userMessage = participantName 
             ? `المحادثة مع ${participantName} موجودة بالفعل`
@@ -747,14 +765,14 @@ class MessageService {
   // ==================== الحصول على تفاصيل محادثة ====================
   async getChatDetails(chatId) {
     // التحقق من المصادقة أولاً
-    if (!checkAuthentication(true, 'chats')) {
-      return {
-        success: false,
-        error: 'يجب تسجيل الدخول لعرض تفاصيل المحادثة',
-        requiresLogin: true,
-        source: 'auth-check'
-      };
-    }
+    // if (!checkAuthentication(true, 'chats')) {
+    //   return {
+    //     success: false,
+    //     error: 'يجب تسجيل الدخول لعرض تفاصيل المحادثة',
+    //     requiresLogin: true,
+    //     source: 'auth-check'
+    //   };
+    // }
     
     const cacheKey = `chat_details_${chatId}`;
     const cached = cacheManager.get(cacheKey);
