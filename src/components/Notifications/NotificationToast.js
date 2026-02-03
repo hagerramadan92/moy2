@@ -12,49 +12,41 @@ import {
 import { useEffect, useState, useRef } from 'react';
 
 const NotificationToast = () => {
-  const { newNotifications, markAsRead } = useNotification();
+  const { newNotifications, markAsRead, fcmToken, isFirebaseInitialized } = useNotification();
   const [visibleNotifications, setVisibleNotifications] = useState([]);
   const timeoutRefs = useRef({});
 
-  // Debug: طباعة الإشعارات الجديدة
+  // التحقق من تفعيل Firebase
   useEffect(() => {
-    if (newNotifications.length > 0) {
-      console.log('🔔 NotificationToast: New notifications received:', newNotifications);
+    if (!isFirebaseInitialized) {
+      console.log('🔔 Firebase غير مفعل - الإشعارات قد لا تعمل');
     }
-  }, [newNotifications]);
+  }, [isFirebaseInitialized]);
 
-  // تحديث الإشعارات المرئية مع منع التكرار وعرض فوري
+  // تحديث الإشعارات المرئية
   useEffect(() => {
-    console.log('🔔 NotificationToast: useEffect triggered, newNotifications.length:', newNotifications.length);
+    console.log('🔔 NotificationToast: New notifications:', newNotifications.length);
     
     if (newNotifications.length === 0) {
       setVisibleNotifications([]);
       return;
     }
 
-    // إضافة الإشعارات الجديدة فوراً بدون أي تأخير
+    // إضافة الإشعارات الجديدة فوراً
     setVisibleNotifications(prev => {
       const currentIds = new Set(prev.map(n => n.id));
       const newToAdd = newNotifications.filter(n => !currentIds.has(n.id));
       
-      console.log('🔔 NotificationToast: New to add:', newToAdd.length, 'Current visible:', prev.length);
-      
       if (newToAdd.length === 0) return prev;
       
-      // إضافة الإشعارات الجديدة فوراً (بدون أي تأخير)
       const combined = [...newToAdd, ...prev].slice(0, 3);
       
-      console.log('🔔 NotificationToast: Setting visible notifications immediately:', combined.length);
-      
-      // إعداد auto-dismiss لكل إشعار جديد (5 ثوانٍ)
+      // إعداد auto-dismiss لكل إشعار جديد
       newToAdd.forEach(notification => {
         if (!timeoutRefs.current[notification.id]) {
           timeoutRefs.current[notification.id] = setTimeout(() => {
-            setVisibleNotifications(prevNotifications => 
-              prevNotifications.filter(n => n.id !== notification.id)
-            );
-            delete timeoutRefs.current[notification.id];
-          }, 5000); // 5 ثوانٍ
+            handleAutoDismiss(notification.id);
+          }, 5000);
         }
       });
       
@@ -63,7 +55,16 @@ const NotificationToast = () => {
 
   }, [newNotifications]);
 
-  // تنظيف timeouts عند unmount
+  const handleAutoDismiss = (notificationId) => {
+    setVisibleNotifications(prev => 
+      prev.filter(n => n.id !== notificationId)
+    );
+    if (timeoutRefs.current[notificationId]) {
+      delete timeoutRefs.current[notificationId];
+    }
+  };
+
+  // تنظيف timeouts
   useEffect(() => {
     return () => {
       Object.values(timeoutRefs.current).forEach(timeout => {
@@ -99,27 +100,37 @@ const NotificationToast = () => {
     }
   };
 
-  const handleNotificationClick = (notification) => {
+  const handleNotificationClick = async (notification) => {
     if (!notification.is_read) {
-      markAsRead(notification.id);
+      try {
+        await markAsRead(notification.id);
+      } catch (error) {
+        console.error('❌ Error marking as read:', error);
+      }
     }
     
-    // إلغاء timeout إذا كان موجوداً
+    // إلغاء timeout
     if (timeoutRefs.current[notification.id]) {
       clearTimeout(timeoutRefs.current[notification.id]);
       delete timeoutRefs.current[notification.id];
     }
     
-    // إزالة الإشعار من العرض فوراً
+    // إزالة من العرض
     setVisibleNotifications(prev => 
       prev.filter(n => n.id !== notification.id)
     );
+    
+    // التنقل إذا كان هناك رابط
+    if (notification.action_url) {
+      window.location.href = notification.action_url;
+    } else if (notification.data?.url) {
+      window.location.href = notification.data.url;
+    }
   };
 
   const handleClose = (e, notificationId) => {
     e.stopPropagation();
     
-    // إلغاء timeout إذا كان موجوداً
     if (timeoutRefs.current[notificationId]) {
       clearTimeout(timeoutRefs.current[notificationId]);
       delete timeoutRefs.current[notificationId];
@@ -130,6 +141,11 @@ const NotificationToast = () => {
     );
   };
 
+  // عرض رسالة إذا لم يتم تفعيل Firebase
+  if (!isFirebaseInitialized) {
+    return null; // يمكنك عرض رسالة بديلة إذا أردت
+  }
+
   if (visibleNotifications.length === 0) return null;
 
   return (
@@ -139,9 +155,6 @@ const NotificationToast = () => {
           key={notification.id}
           className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-80 animate-slideInRight cursor-pointer hover:shadow-2xl transition-shadow duration-200"
           onClick={() => handleNotificationClick(notification)}
-          style={{
-            animation: 'slideInRight 0.3s ease-out'
-          }}
         >
           <div className="flex items-start">
             <div className="flex-shrink-0 mt-1">
@@ -187,14 +200,6 @@ const NotificationToast = () => {
           to {
             transform: translateX(0);
             opacity: 1;
-          }
-        }
-        @keyframes fadeOut {
-          from {
-            opacity: 1;
-          }
-          to {
-            opacity: 0;
           }
         }
       `}</style>

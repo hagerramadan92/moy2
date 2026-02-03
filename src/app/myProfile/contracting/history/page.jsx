@@ -79,47 +79,47 @@ export default function ContractHistoryPage() {
                 
                 // Map each contract to the required format
                 const mappedContracts = contracts.map(contract => {
-                    // Format contract ID - use contract_number if available, otherwise use id
-                    let contractId = contract.contract_number || contract.id?.toString() || '';
-                    if (contractId && !contractId.startsWith('CONT-') && !contractId.startsWith('CONTRACT-')) {
-                        contractId = `CONT-${contractId}`;
+                // Format contract ID - use contract_number if available, otherwise use id
+                let contractId = contract.contract_number || contract.id?.toString() || '';
+                if (contractId && !contractId.startsWith('CONT-') && !contractId.startsWith('CONTRACT-')) {
+                    contractId = `CONT-${contractId}`;
+                }
+                
+                // Get address from delivery_locations if available
+                // Try to get address from saved_location, or construct from city/area if available
+                let address = '';
+                if (contract.delivery_locations && contract.delivery_locations.length > 0) {
+                    const savedLocation = contract.delivery_locations[0].saved_location;
+                    if (savedLocation) {
+                        address = savedLocation.address || 
+                                 (savedLocation.city && savedLocation.area 
+                                     ? `${savedLocation.city}, ${savedLocation.area}` 
+                                     : savedLocation.city || savedLocation.area || '');
                     }
-                    
-                    // Get address from delivery_locations if available
-                    // Try to get address from saved_location, or construct from city/area if available
-                    let address = '';
-                    if (contract.delivery_locations && contract.delivery_locations.length > 0) {
-                        const savedLocation = contract.delivery_locations[0].saved_location;
-                        if (savedLocation) {
-                            address = savedLocation.address || 
-                                     (savedLocation.city && savedLocation.area 
-                                         ? `${savedLocation.city}, ${savedLocation.area}` 
-                                         : savedLocation.city || savedLocation.area || '');
-                        }
-                    }
-                    
+                }
+                
                     // Map contract to array format
                     return {
-                        id: contractId,
-                        type: contract.contract_type === 'company' ? 'commercial' : 'personal',
-                        title: contract.company_name || 'عقد بدون اسم',
-                        applicant: contract.applicant_name || '',
+                    id: contractId,
+                    type: contract.contract_type === 'company' ? 'commercial' : 'personal',
+                    title: contract.company_name || 'عقد بدون اسم',
+                    applicant: contract.applicant_name || '',
                         phone: contract.phone || '',
-                        address: address,
-                        startDate: contract.start_date ? new Date(contract.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
-                        duration: mapDurationToArabic(contract.duration_type),
-                        endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
-                        cost: contract.total_amount?.toString() || '0',
-                        status: contract.status || 'active',
-                        notes: contract.notes || '',
-                        // Additional fields from API
-                        contractId: contract.id,
-                        contractNumber: contract.contract_number,
-                        remainingOrders: contract.remaining_orders,
-                        totalOrdersLimit: contract.total_orders_limit,
-                        paidAmount: contract.paid_amount,
-                        remainingAmount: contract.remaining_amount
-                    };
+                    address: address,
+                    startDate: contract.start_date ? new Date(contract.start_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    duration: mapDurationToArabic(contract.duration_type),
+                    endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+                    cost: contract.total_amount?.toString() || '0',
+                    status: contract.status || 'active',
+                    notes: contract.notes || '',
+                    // Additional fields from API
+                    contractId: contract.id,
+                    contractNumber: contract.contract_number,
+                    remainingOrders: contract.remaining_orders,
+                    totalOrdersLimit: contract.total_orders_limit,
+                    paidAmount: contract.paid_amount,
+                    remainingAmount: contract.remaining_amount
+                };
                 });
                 
                 setContractHistory(mappedContracts);
@@ -708,10 +708,10 @@ export default function ContractHistoryPage() {
                                        
                                         <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
                                             {contract.status === "active" ? (
-                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
-                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-600"></span>
-                                                    نشط
-                                                </span>
+                                            <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
+                                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-600"></span>
+                                                نشط
+                                            </span>
                                             ) : contract.status === "pending" ? (
                                                 <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400">
                                                     <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-yellow-600"></span>

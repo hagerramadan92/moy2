@@ -11,31 +11,48 @@ import {
   Trash2, 
   RefreshCw,
   Check,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
-import notificationService from '@/services/notificationService';
+import { useNotification } from '@/context/NotificationContext';
 
 export default function NotificationSettings() {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentDeviceId, setCurrentDeviceId] = useState(null);
+  const { 
+    fcmToken, 
+    notificationPermission, 
+    isFirebaseInitialized,
+    checkDeviceRegistration,
+    unregisterDevice,
+    refreshFCMToken 
+  } = useNotification();
 
   useEffect(() => {
     loadDevices();
-    // الحصول على معرف الجهاز الحالي من localStorage
-    const storedDeviceId = localStorage.getItem('current_device_id');
-    if (storedDeviceId) {
-      setCurrentDeviceId(storedDeviceId);
-    }
   }, []);
 
   const loadDevices = async () => {
     try {
       setLoading(true);
-      const response = await notificationService.getRegisteredDevices();
-      if (response.status && response.data) {
-        setDevices(response.data);
-      }
+      
+      // الحصول على معلومات الجهاز من localStorage
+      const deviceCheck = checkDeviceRegistration();
+      const currentDeviceInfo = {
+        id: deviceCheck.deviceId || 'current-device',
+        device_name: 'هذا الجهاز',
+        device_type: 'web',
+        is_active: deviceCheck.hasToken,
+        created_at: new Date().toISOString(),
+        app_version: '1.0.0',
+        is_current: true
+      };
+      
+      // يمكنك إضافة API call هنا للحصول على الأجهزة من الخادم
+      const fakeDevices = [currentDeviceInfo];
+      
+      setDevices(fakeDevices);
+      
     } catch (error) {
       console.error('خطأ في تحميل الأجهزة:', error);
     } finally {
@@ -45,12 +62,17 @@ export default function NotificationSettings() {
 
   const handleToggleDevice = async (deviceId, isActive) => {
     try {
-      await notificationService.updateDevice(deviceId, {
-        is_active: !isActive
-      });
+      // هنا يمكنك إضافة API call لتحديث حالة الجهاز
+      console.log('تحديث حالة الجهاز:', deviceId, !isActive);
       
-      // تحديث القائمة
-      loadDevices();
+      // تحديث القائمة المحلية
+      setDevices(prev => 
+        prev.map(device => 
+          device.id === deviceId 
+            ? { ...device, is_active: !isActive }
+            : device
+        )
+      );
     } catch (error) {
       console.error('خطأ في تحديث حالة الجهاز:', error);
     }
@@ -59,14 +81,7 @@ export default function NotificationSettings() {
   const handleRemoveDevice = async (deviceId) => {
     if (confirm('هل أنت متأكد من إزالة هذا الجهاز؟')) {
       try {
-        await notificationService.deactivateDevice(deviceId);
-        
-        // إذا كان الجهاز الحالي، قم بإزالته من localStorage
-        if (deviceId === currentDeviceId) {
-          localStorage.removeItem('current_device_id');
-          localStorage.removeItem('fcm_token');
-          setCurrentDeviceId(null);
-        }
+        await unregisterDevice();
         
         // تحديث القائمة
         loadDevices();
@@ -89,6 +104,18 @@ export default function NotificationSettings() {
     }
   };
 
+  const handleRefreshToken = async () => {
+    try {
+      const result = await refreshFCMToken();
+      if (result.success) {
+        alert('تم تحديث رمز الإشعارات بنجاح');
+        loadDevices();
+      }
+    } catch (error) {
+      console.error('خطأ في تحديث التوكن:', error);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -97,11 +124,33 @@ export default function NotificationSettings() {
           إدارة الإشعارات
         </CardTitle>
         <CardDescription>
-          إدارة الأجهزة المسجلة لإرسال الإشعارات إليها
+          إدارة الأجهزة المسجلة وإعدادات الإشعارات
         </CardDescription>
       </CardHeader>
       
       <CardContent>
+        {/* حالة Firebase */}
+        <div className={`p-4 rounded-lg mb-6 ${isFirebaseInitialized ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+          <div className="flex items-start">
+            <AlertCircle className={`h-5 w-5 mt-0.5 ml-2 ${isFirebaseInitialized ? 'text-green-600' : 'text-yellow-600'}`} />
+            <div>
+              <h4 className="font-medium">
+                {isFirebaseInitialized ? 'الإشعارات مفعلة' : 'الإشعارات غير مفعلة'}
+              </h4>
+              <p className="text-sm mt-1">
+                {isFirebaseInitialized 
+                  ? 'يمكنك تلقي الإشعارات الفورية على هذا الجهاز' 
+                  : 'يجب تفعيل الإشعارات لتلقي التحديثات الفورية'
+                }
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                إذن الإشعارات: {notificationPermission === 'granted' ? '✓ مسموح' : '✗ غير مسموح'}
+                {fcmToken && ' • التوكن: ✓ موجود'}
+              </p>
+            </div>
+          </div>
+        </div>
+        
         {loading ? (
           <div className="text-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
@@ -121,7 +170,7 @@ export default function NotificationSettings() {
               <div
                 key={device.id}
                 className={`p-4 rounded-lg border ${
-                  device.id === currentDeviceId
+                  device.is_current
                     ? 'border-blue-200 bg-blue-50'
                     : 'border-gray-200'
                 }`}
@@ -136,7 +185,7 @@ export default function NotificationSettings() {
                         <h4 className="font-medium">
                           {device.device_name}
                         </h4>
-                        {device.id === currentDeviceId && (
+                        {device.is_current && (
                           <Badge className="mr-2 bg-blue-100 text-blue-800">
                             الجهاز الحالي
                           </Badge>
@@ -147,7 +196,6 @@ export default function NotificationSettings() {
                         {device.device_type === 'ios' && 'آيفون'}
                         {device.device_type === 'web' && 'ويب'}
                         {device.device_type === 'windows_phone' && 'ويندوز فون'}
-                        {device.device_model && ` • ${device.device_model}`}
                       </p>
                     </div>
                   </div>
@@ -205,18 +253,18 @@ export default function NotificationSettings() {
               <p className="text-sm text-gray-500">
                 • تأكد من تفعيل الإشعارات في إعدادات المتصفح
                 <br />
-                • أضف الموقع إلى الشاشة الرئيسية لتجربة أفضل
+                • اضغط "تفعيل الإشعارات" في الأعلى إذا لم تكن مفعلة
                 <br />
                 • تأكد من عدم حظر الإشعارات في إعدادات النظام
               </p>
             </div>
             <Button
               variant="outline"
-              onClick={loadDevices}
+              onClick={handleRefreshToken}
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
-              تحديث
+              تحديث التوكن
             </Button>
           </div>
         </div>

@@ -56,7 +56,7 @@ function FitBounds({ markers, shouldUpdate = true }) {
                     const group = L.featureGroup(tempMarkers);
                     
                     // Check if group has valid layers
-                    if (group.getLayers().length > 0) {
+            if (group.getLayers().length > 0) {
                         const bounds = group.getBounds();
                         if (bounds.isValid()) {
                             map.fitBounds(bounds, { padding: [50, 50] });
@@ -72,9 +72,9 @@ function FitBounds({ markers, shouldUpdate = true }) {
                             // Ignore cleanup errors
                         }
                     });
-                } catch (e) {
-                    console.warn("Error fitting bounds:", e);
-                }
+        } catch (e) {
+            console.warn("Error fitting bounds:", e);
+        }
             }, 500); // Wait 500ms for map to be ready
         }
 
@@ -145,7 +145,7 @@ export default function DriversMap({
                 const random2 = (stableSeed * 0.2) % 1;
                 
                 return {
-                    ...driver,
+            ...driver,
                     lat: driver.lat || (center.lat + (random1 - 0.5) * 0.05),
                     lng: driver.lng || (center.lng + (random2 - 0.5) * 0.05),
                 };
@@ -183,9 +183,24 @@ export default function DriversMap({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* User Location Marker */}
-            <Marker position={center}>
-                <Popup>موقع التوصيل</Popup>
+            {/* User Current Location Marker - Blue with custom icon */}
+            <Marker 
+                position={[center.lat, center.lng]}
+                icon={new L.Icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })}
+            >
+                <Popup>
+                    <div className="text-right">
+                        <strong className="block text-sm">📍 موقعك الحالي</strong>
+                        <span className="text-xs text-gray-500">موقع التوصيل</span>
+                    </div>
+                </Popup>
             </Marker>
 
             {/* Driver Markers */}
@@ -196,18 +211,18 @@ export default function DriversMap({
                 }
                 
                 return (
-                    <Marker
+                <Marker
                         key={driver.id || `driver-${driver.driverId || Math.random()}`}
-                        position={[driver.lat, driver.lng]}
-                        icon={carIcon}
-                    >
-                        <Popup>
-                            <div className="text-right">
+                    position={[driver.lat, driver.lng]}
+                    icon={carIcon}
+                >
+                    <Popup>
+                        <div className="text-right">
                                 <strong className="block text-sm">{driver.name || 'سائق'}</strong>
                                 <span className="text-xs text-gray-500">{driver.deliveryTime || 'غير محدد'}</span>
-                            </div>
-                        </Popup>
-                    </Marker>
+                        </div>
+                    </Popup>
+                </Marker>
                 );
             })}
 

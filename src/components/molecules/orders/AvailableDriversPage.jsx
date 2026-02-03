@@ -336,6 +336,24 @@ function PaymentModal({
         setSelectedMethod(method);
         setSelectedPaymentData(paymentData);
         setSelectedPaymentUrl(paymentUrl);
+        
+        // ✅ تحديث حالة العرض بناءً على response
+        // الحصول على حالة العرض من response
+        const offerStatus = paymentData?.offer?.status || paymentData?.status || 'pending_payment';
+        
+        // حفظ حالة العرض في localStorage
+        localStorage.setItem('pendingOfferData', JSON.stringify({
+          orderId,
+          offerId: selectedOfferId,
+          driverId: selectedDriverId,
+          status: offerStatus,
+          paymentData: paymentData // حفظ بيانات الدفع الكاملة
+        }));
+        
+        // تحديث حالة العرض في state
+        if (offerStatus === 'pending_payment' || offerStatus === 'accepted') {
+          setPendingPaymentOfferId(selectedOfferId);
+        }
       } else {
         throw new Error("لم يتم الحصول على رابط الدفع من بوابة الدفع");
       }
@@ -356,7 +374,7 @@ function PaymentModal({
         }
         setError('انتهت صلاحية هذا العرض. يرجى اختيار عرض آخر.');
       } else {
-        setError(err.message);
+      setError(err.message);
       }
     } finally {
       setProcessingMethod(null);
@@ -509,11 +527,11 @@ function PaymentModal({
               إلغاء
             </button>
             {selectedMethod && selectedPaymentUrl && (
-              <button
+            <button
                 onClick={handleConfirmPayment}
                 disabled={isConfirming || !selectedPaymentUrl}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-3 font-bold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
+            >
                 {isConfirming ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -524,7 +542,7 @@ function PaymentModal({
                     <span>تأكيد والدفع</span>
                   </>
                 )}
-              </button>
+            </button>
             )}
           </div>
         </div>
@@ -861,6 +879,8 @@ function AvailableDriversContent({ onBack }) {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isOrderExpired, setIsOrderExpired] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
   const [stats, setStats] = useState({
     totalOffers: 0,
     averagePrice: 0,
@@ -903,6 +923,7 @@ function AvailableDriversContent({ onBack }) {
   const paymentStatus = searchParams.get('payment');
   const paymentSuccessParam = searchParams.get('success');
   const paymentCancelParam = searchParams.get('cancel');
+  const isExpiredParam = searchParams.get('expired');
 
   // Check for payment success and pending offers on component mount
   useEffect(() => {
@@ -999,12 +1020,55 @@ function AvailableDriversContent({ onBack }) {
 
   useEffect(() => {
     if (orderId) {
+      // التحقق من حالة انتهاء الطلب من localStorage
+      const expiredFlag = localStorage.getItem(`order_${orderId}_expired`);
+      if (expiredFlag === 'true' || isExpiredParam === 'true') {
+        setIsOrderExpired(true);
+        // إزالة العلامة من localStorage بعد استخدامها
+        localStorage.removeItem(`order_${orderId}_expired`);
+      }
+      
       fetchOffers();
       fetchOrderStatus();
     } else {
       router.back();
     }
-  }, [orderId]);
+  }, [orderId, isExpiredParam]);
+
+  // Get current user location
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setLocationError(null);
+        },
+        (error) => {
+          console.warn('Error getting location:', error);
+          setLocationError(error.message);
+          // Use default location (Riyadh) if geolocation fails
+          setCurrentLocation({
+            lat: 24.7136,
+            lng: 46.6753
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      // Use default location if geolocation is not supported
+      setCurrentLocation({
+        lat: 24.7136,
+        lng: 46.6753
+      });
+    }
+  }, []);
 
   // Poll order status every 30 seconds
   useEffect(() => {
@@ -1094,7 +1158,7 @@ function AvailableDriversContent({ onBack }) {
         setRefreshing(false);
         return;
       }
-
+      
       // محاولة جلب البيانات الحقيقية مع token
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
         headers: {
@@ -1156,7 +1220,7 @@ function AvailableDriversContent({ onBack }) {
         // Process stats and fetch status in background (non-blocking)
         setTimeout(() => {
           if (data.data.offers && data.data.offers.length > 0) {
-            calculateStats(data.data.offers);
+        calculateStats(data.data.offers);
           }
           fetchOrderStatus();
         }, 0);
@@ -1566,12 +1630,12 @@ function AvailableDriversContent({ onBack }) {
                               </div>
                             </div>
                           ) : (
-                            <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                <span className="font-medium">جاري البحث</span>
-                              </div>
+                          <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              <span className="font-medium">جاري البحث</span>
                             </div>
+                          </div>
                           )}
                         </div>
                       </div>
@@ -1786,12 +1850,22 @@ function AvailableDriversContent({ onBack }) {
                   <p className="text-sm text-gray-500">مواقع السائقين الحالية</p>
                 </div>
                 
-                {/* <div className="h-[calc(100%-80px)]">
+                <div className="h-[calc(100%-80px)]">
+                  {currentLocation ? (
                   <DriversMap
                     drivers={offersData?.offers?.map(formatDriverData) || []}
-                    shouldUpdate={!loading && !refreshing && offersData && !useMockData}
-                  />
-                </div> */}
+                      center={currentLocation}
+                      shouldUpdate={!loading && !refreshing && offersData && !useMockData}
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center bg-gray-100">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#579BE8] mx-auto mb-2"></div>
+                        <span className="text-gray-400 text-sm">جاري تحديد الموقع...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="p-4 border-t bg-gray-50">
                   <div className="flex items-center gap-3">
@@ -1807,8 +1881,8 @@ function AvailableDriversContent({ onBack }) {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+                  </div>
+                  </div>
         </div>
       </div>
 

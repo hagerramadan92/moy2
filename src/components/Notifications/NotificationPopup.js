@@ -7,42 +7,61 @@ import { useNotification } from '@/context/NotificationContext';
 export default function NotificationPopup() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { registerDevice, fcmToken } = useNotification();
+  const { 
+    getFCMToken, 
+    registerDevice, 
+    checkDeviceRegistration,
+    notificationPermission,
+    isFirebaseInitialized 
+  } = useNotification();
 
   useEffect(() => {
-    // الانتظار 2 ثانية ثم التحقق
     const timer = setTimeout(() => {
       if (typeof window === 'undefined') return;
       
-      const permission = Notification.permission;
+      const permission = notificationPermission;
       const skipped = localStorage.getItem('notifications_skipped');
       const shown = sessionStorage.getItem('popup_shown');
-      const deviceRegistered = localStorage.getItem('device_registered');
+      const deviceCheck = checkDeviceRegistration();
       
-      // إذا كان الإذن default ولم يتم التخطي ولم يسجل الجهاز
-      if (permission === 'default' && !skipped && !shown) {
-        setShow(true);
-        sessionStorage.setItem('popup_shown', 'true');
-      }
-      // إذا كان الإذن granted ولكن الجهاز لم يسجل
-      else if (permission === 'granted' && !deviceRegistered && !skipped) {
+      console.log('🔔 Popup check:', {
+        permission,
+        skipped,
+        shown,
+        deviceCheck,
+        isFirebaseInitialized
+      });
+      
+      // عرض البوب أب إذا:
+      // 1. الإذن default أو granted
+      // 2. لم يتم التخطي
+      // 3. لم يتم العرض من قبل
+      // 4. Firebase غير مفعل أو الجهاز غير مسجل
+      if (
+        (permission === 'default' || permission === 'granted') &&
+        !skipped && 
+        !shown && 
+        !deviceCheck.hasToken
+      ) {
         setShow(true);
         sessionStorage.setItem('popup_shown', 'true');
       }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [notificationPermission, isFirebaseInitialized]);
 
   const handleAllow = async () => {
     try {
       setLoading(true);
       
-      let permission = Notification.permission;
+      let permission = notificationPermission;
       
       // إذا كان الإذن default، اطلبه
       if (permission === 'default') {
-        permission = await Notification.requestPermission();
+        // استخدام دالة requestNotificationPermission من Context
+        const result = await window.Notification.requestPermission();
+        permission = result;
       }
       
       if (permission !== 'granted') {
@@ -51,19 +70,25 @@ export default function NotificationPopup() {
         return;
       }
       
-      // تسجيل الجهاز
-      const tokenToUse = fcmToken || "dH1mrzhPREm1_5kM0HCgAO:APA91bFAVRVaXceYnMqYJG7yeHMVYGAU1GSuQgOOkAyn8ZnLk5ZQIYCdbh7ze2rR8kefbRjEMWUqxgKOqpus1rE9NaPHqtqtnNma7wHmQ33g5VpBLxAD9VI";
+      // الحصول على FCM Token
+      const fcmToken = await getFCMToken();
       
-      try {
-        await registerDevice(tokenToUse);
-        
-        // إخفاء البوب أب بعد نجاح التسجيل
-        setTimeout(() => {
+      if (fcmToken) {
+        // تسجيل الجهاز
+        try {
+          await registerDevice(fcmToken);
+          
+          // إخفاء البوب أب بعد نجاح التسجيل
+          setTimeout(() => {
+            setShow(false);
+          }, 1000);
+          
+        } catch (error) {
+          console.error('❌ Error registering device:', error);
           setShow(false);
-        }, 1000);
-        
-      } catch (error) {
-        console.error('❌ Error registering device:', error);
+        }
+      } else {
+        console.error('❌ Failed to get FCM token');
         setShow(false);
       }
       
@@ -96,7 +121,7 @@ export default function NotificationPopup() {
             هل تريد تفعيل الإشعارات؟
           </h2>
           
-          {/* الوصف البسيط */}
+          {/* الوصف */}
           <p className="text-gray-600 text-sm md:text-base leading-relaxed">
             اسمح لنا بإرسال إشعارات إليك لتبقى على اطلاع دائم بآخر التحديثات.
           </p>
@@ -119,9 +144,9 @@ export default function NotificationPopup() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                جاري التحميل...
+                جاري التفعيل...
               </span>
-            ) : 'سماح بالإشعارات'}
+            ) : 'تفعيل الإشعارات'}
           </button>
           
           <button 

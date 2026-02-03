@@ -105,16 +105,16 @@ const SkeletonPagination = () => (
 
 // Empty State Component
 const EmptyState = ({ filter }) => (
-  <div className="p-12 text-center">
-    <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-6">
-      <FaBell className="h-10 w-10 text-blue-600" />
+  <div className="p-6 sm:p-8 md:p-12 text-center">
+    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-blue-100 rounded-full mb-3 sm:mb-4 md:mb-6">
+      <FaBell className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-blue-600" />
     </div>
-    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
       {filter === 'all' ? 'لا توجد إشعارات' : 
        filter === 'unread' ? 'لا توجد إشعارات غير مقروءة' : 
        'لا توجد إشعارات مقروءة'}
     </h3>
-    <p className="text-gray-500 max-w-md mx-auto">
+    <p className="text-xs sm:text-sm md:text-base text-gray-500 max-w-md mx-auto px-2">
       {filter === 'all' ? 'عندما تتلقى إشعارات جديدة، ستظهر هنا' :
        filter === 'unread' ? 'جميع إشعاراتك تمت قراءتها' :
        'لم تقرأ أي إشعارات بعد'}
@@ -247,11 +247,11 @@ export default function NotificationsPage() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-5 md:py-8" dir="rtl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 py-2 sm:py-4 md:py-8" dir="rtl">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <SkeletonHeader />
           
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden">
             <SkeletonControlBar />
             
             <div className="divide-y divide-gray-100">
@@ -268,7 +268,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-5 md:py-8" dir="rtl">
+    <div className="min-h-screen bg-gray-50 py-2 sm:py-4 md:py-8" dir="rtl">
       {/* Action Toasts */}
       <ActionToast />
       
@@ -298,40 +298,41 @@ export default function NotificationsPage() {
         itemCount={selectedNotifications.length}
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-4 sm:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 md:p-3 p-1.5 rounded-lg">
-                <FaBell className="md:h-8 md:w-8 h-5 w-5 text-blue-600" />
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="mb-3 sm:mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 md:gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="bg-blue-100 p-1.5 sm:p-2 md:p-3 rounded-lg">
+                <FaBell className="h-4 w-4 sm:h-5 sm:w-5 md:h-8 md:w-8 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl md:text-3xl font-bold text-gray-900">الإشعارات</h1>
-                <p className="text-gray-600 mt-1 md:text-base text-sm">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">الإشعارات</h1>
+                <p className="text-gray-600 mt-0.5 sm:mt-1 text-xs sm:text-sm md:text-base">
                   إدارة جميع إشعاراتك في مكان واحد
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {unreadCount > 0 && (
-                <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                  <GoBell className="h-4 w-4 ml-1" />
-                  {unreadCount} إشعار غير مقروء
+                <span className="inline-flex items-center px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 rounded-full text-xs sm:text-sm font-medium bg-red-100 text-red-800">
+                  <GoBell className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                  <span className="hidden sm:inline">{unreadCount} إشعار غير مقروء</span>
+                  <span className="sm:hidden">{unreadCount}</span>
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center space-x-4">
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden">
+          <div className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 md:gap-4">
+              <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 w-full sm:w-auto">
                 <button
                   onClick={handleSelectAll}
                   disabled={filteredNotifications.length === 0 || loading}
-                  className={`flex items-center text-sm ${
+                  className={`flex items-center text-xs sm:text-sm ${
                     filteredNotifications.length === 0 || loading
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-700 hover:text-gray-900'
@@ -342,9 +343,10 @@ export default function NotificationsPage() {
                     checked={selectedNotifications.length === filteredNotifications.length && filteredNotifications.length > 0}
                     onChange={handleSelectAll}
                     disabled={filteredNotifications.length === 0 || loading}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded ml-2"
+                    className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 border-gray-300 rounded ml-1.5 sm:ml-2"
                   />
-                  تحديد الكل
+                  <span className="hidden sm:inline">تحديد الكل</span>
+                  <span className="sm:hidden">الكل</span>
                 </button>
                 
                 {selectedNotifications.length > 0 && (
@@ -352,59 +354,62 @@ export default function NotificationsPage() {
                     onClick={handleDeleteSelected}
                     disabled={loading || deleting}
                     className={`inline-flex items-center 
-                      px-4 py-2 text-xs md:text-sm font-medium rounded-lg transition-colors ${
+                      px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                       loading || deleting
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'text-white bg-red-600 hover:bg-red-700'
                     }`}
                   >
-                    <FaTrash className="h-4 w-4 ml-1" />
-                    حذف المحدد ({selectedNotifications.length})
+                    <FaTrash className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                    <span className="hidden sm:inline">حذف المحدد ({selectedNotifications.length})</span>
+                    <span className="sm:hidden">({selectedNotifications.length})</span>
                   </button>
                 )}
               </div>
               
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center space-x-2">
-                  <FaFilter className="h-4 w-4 text-gray-500" />
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3 w-full sm:w-auto justify-start sm:justify-end">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <FaFilter className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 hidden sm:block" />
                   <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     disabled={loading || deleting}
-                    className={`border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 md:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       loading || deleting ? 'bg-gray-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    <option value="all">جميع الإشعارات</option>
-                    <option value="unread">غير المقروءة</option>
-                    <option value="read">المقروءة</option>
+                    <option value="all">الكل</option>
+                    <option value="unread">غير مقروء</option>
+                    <option value="read">مقروء</option>
                   </select>
                 </div>
                 
                 <button
                   onClick={markAllAsRead}
                   disabled={unreadCount === 0 || loading || deleting}
-                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`inline-flex items-center px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                     unreadCount === 0 || loading || deleting
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'text-white bg-green-600 hover:bg-green-700'
                   }`}
                 >
-                  <FaCheck className="h-4 w-4 ml-1" />
-                  تعليم الكل كمقروء
+                  <FaCheck className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                  <span className="hidden sm:inline">تعليم الكل كمقروء</span>
+                  <span className="sm:hidden">مقروء</span>
                 </button>
                 
                 <button
                   onClick={handleClearAll}
                   disabled={notifications.length === 0 || loading || deleting}
-                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`inline-flex items-center px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                     notifications.length === 0 || loading || deleting
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  <FaTrash className="h-4 w-4 ml-1" />
-                  مسح الكل
+                  <FaTrash className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                  <span className="hidden sm:inline">مسح الكل</span>
+                  <span className="sm:hidden">مسح</span>
                 </button>
               </div>
             </div>
@@ -412,7 +417,7 @@ export default function NotificationsPage() {
 
           <div className="divide-y divide-gray-100">
             {loading && notifications.length > 0 ? (
-              <div className="p-4">
+              <div className="p-2 sm:p-4">
                 {[1, 2, 3].map((i) => (
                   <SkeletonNotificationItem key={i} />
                 ))}
@@ -423,33 +428,35 @@ export default function NotificationsPage() {
               filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-6 hover:bg-gray-50 transition-colors ${
+                  className={`p-2 sm:p-4 md:p-6 hover:bg-gray-50 transition-colors ${
                     !notification.is_read ? 'bg-blue-50' : ''
                   }`}
                 >
-                  <div className="flex items-start">
+                  <div className="flex items-start gap-2 sm:gap-3 md:gap-4">
                     <input
                       type="checkbox"
                       checked={selectedNotifications.includes(notification.id)}
                       onChange={() => handleSelectNotification(notification.id)}
                       disabled={loading || deleting}
-                      className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="mt-0.5 sm:mt-1 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                     />
                     
-                    <div className="mr-4 flex-1">
-                      <div className="flex items-start justify-between mb-1 md:mb-3">
-                        <div className="flex items-center space-x-3">
-                          {getNotificationIcon(notification.type)}
-                          <h3 className={`text-lg font-semibold ${
+                    <div className="mr-0 sm:mr-2 md:mr-4 flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-1 sm:mb-2 md:mb-3 gap-2">
+                        <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 min-w-0 flex-1">
+                          <div className="flex-shrink-0">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <h3 className={`text-sm sm:text-base md:text-lg font-semibold truncate ${
                             notification.is_read ? 'text-gray-900' : 'text-blue-900'
                           }`}>
                             {notification.title}
                           </h3>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                           {!notification.is_read && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span className="inline-flex items-center px-1.5 sm:px-2 md:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               جديد
                             </span>
                           )}
@@ -459,18 +466,18 @@ export default function NotificationsPage() {
                             className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50 disabled:hover:text-gray-400 disabled:hover:bg-transparent"
                             title="حذف الإشعار"
                           >
-                            <FaTrash className="h-5 w-5" />
+                            <FaTrash className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
                           </button>
                         </div>
                       </div>
                       
-                      <p className="text-gray-600 mb-1 md:mb-4 leading-relaxed text-right">
+                      <p className="text-gray-600 mb-1 sm:mb-2 md:mb-4 leading-relaxed text-right text-xs sm:text-sm md:text-base">
                         {notification.message}
                       </p>
                       
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center space-x-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 md:gap-3">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-4">
+                          <span className={`inline-flex items-center px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
                             notification.type === 'info' ? 'bg-blue-100 text-blue-800' :
                             notification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
                             notification.type === 'success' ? 'bg-green-100 text-green-800' :
@@ -483,14 +490,15 @@ export default function NotificationsPage() {
                           </span>
                           
                           {notification.data?.sender && (
-                            <span className="inline-flex items-center text-sm text-gray-600">
-                              <FaEnvelope className="h-4 w-4 ml-1" />
-                              من: {notification.data.sender}
+                            <span className="inline-flex items-center text-xs sm:text-sm text-gray-600">
+                              <FaEnvelope className="h-3 w-3 sm:h-4 sm:w-4 ml-1 hidden sm:block" />
+                              <span className="hidden sm:inline">من: </span>
+                              {notification.data.sender}
                             </span>
                           )}
                         </div>
                         
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           {formatDate(notification.created_at)}
                         </span>
                       </div>

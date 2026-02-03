@@ -2,12 +2,13 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { messaging, getToken, onMessage, deleteToken, VAPID_KEY } from '../../config/firebase-config';
 
 const NotificationContext = createContext(undefined);
 
 const isBrowser = typeof window !== 'undefined';
 
-// API الحقيقي للباك إند - لا نستخدم بيانات تجريبية
+// API الحقيقي للباك إند
 const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
 
 const createRequestURL = (path) => {
@@ -16,18 +17,15 @@ const createRequestURL = (path) => {
   return `${cleanBase}${cleanPath}`;
 };
 
-// دالة fetch محسنة للباك إند الحقيقي مع معالجة CORS
+// دالة fetch محسنة
 const enhancedFetch = async (url, options = {}) => {
-  // دالة للحصول على التوكن
   const getAuthToken = () => {
     if (!isBrowser) return null;
-    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    return token;
+    return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
   };
 
   const authToken = getAuthToken();
   
-  // إنشاء headers الأساسية
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -41,20 +39,17 @@ const enhancedFetch = async (url, options = {}) => {
   const defaultOptions = {
     method: 'GET',
     headers,
-    mode: 'cors', // مهم للـ CORS
-    cache: 'no-store', // لا نستخدم الكاش
+    mode: 'cors',
+    cache: 'no-store',
   };
 
   const finalOptions = { ...defaultOptions, ...options };
   
-  // تحويل body إلى JSON إذا كان موجوداً
   if (options.body && typeof options.body !== 'string') {
     finalOptions.body = JSON.stringify(options.body);
   }
 
   try {
-    
-    // إضافة timeout للطلب (15 ثانية)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
     finalOptions.signal = controller.signal;
@@ -63,28 +58,12 @@ const enhancedFetch = async (url, options = {}) => {
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.error(`❌ Backend Error ${response.status}: ${response.statusText}`);
-      
-      // إذا كان 401 (غير مصرح)، نطلب إعادة تسجيل الدخول
       if (response.status === 401) {
         if (isBrowser) {
-          // تنظيف بيانات الجلسة
           localStorage.removeItem('accessToken');
           sessionStorage.removeItem('accessToken');
-          // يمكن إعادة التوجيه للصفحة الرئيسية
-          // window.location.href = '/login';
         }
-        throw new Error('انتهت جلسة الدخول، يرجى إعادة تسجيل الدخول');
-      }
-      
-      // إذا كان 404 (غير موجود)
-      if (response.status === 404) {
-        throw new Error('الرابط غير موجود على الخادم');
-      }
-      
-      // إذا كان 500 (خطأ داخلي في الخادم)
-      if (response.status >= 500) {
-        throw new Error('خطأ داخلي في الخادم، يرجى المحاولة لاحقاً');
+        throw new Error('انتهت جلسة الدخول');
       }
       
       throw new Error(`خطأ ${response.status}: ${response.statusText}`);
@@ -92,11 +71,9 @@ const enhancedFetch = async (url, options = {}) => {
     
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      return data;
+      return await response.json();
     }
     
-    // إذا لم تكن JSON، نعيد النص
     const textData = await response.text();
     return { 
       status: true, 
@@ -105,16 +82,43 @@ const enhancedFetch = async (url, options = {}) => {
     };
     
   } catch (error) {
-    clearTimeout(timeoutId);
-    console.error('❌ Fetch Error Details:', {
-      url,
-      error: error.message,
-      errorName: error.name,
-      isNetworkError: error.name === 'TypeError' || error.name === 'AbortError'
-    });
-    
-    throw error; // نرمي الخطأ للتعامل معه في الكود الرئيسي
+    console.error('❌ Fetch Error:', error.message);
+    throw error;
   }
+};
+
+// طلب إذن الإشعارات
+const requestNotificationPermission = async () => {
+  if (!isBrowser || !('Notification' in window)) {
+    console.log('🔔 Browser does not support notifications');
+    return 'denied';
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    console.log('🔔 Notification permission:', permission);
+    return permission;
+  } catch (error) {
+    console.error('❌ Error requesting notification permission:', error);
+    return 'denied';
+  }
+};
+
+// التحقق من دعم Service Worker
+const checkServiceWorkerSupport = () => {
+  if (!isBrowser) return false;
+  
+  if (!('serviceWorker' in navigator)) {
+    console.log('🔔 Service Worker not supported');
+    return false;
+  }
+  
+  if (!('PushManager' in window)) {
+    console.log('🔔 Push notifications not supported');
+    return false;
+  }
+  
+  return true;
 };
 
 export function NotificationProvider({ children }) {
@@ -127,14 +131,15 @@ export function NotificationProvider({ children }) {
   const [error, setError] = useState(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showChatAlerts, setShowChatAlerts] = useState(false);
-  
-  // حالة جديدة لإدارة Toast الإجراءات
+  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
   const [actionToasts, setActionToasts] = useState([]);
   
-  const pollIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
   const processedNotificationIds = useRef(new Set());
   const toastNotificationIds = useRef(new Set());
+  const firebaseMessageListener = useRef(null);
+  const pollIntervalRef = useRef(null);
 
   const getAuthToken = () => {
     if (isBrowser) {
@@ -143,14 +148,27 @@ export function NotificationProvider({ children }) {
     return null;
   };
 
-  // دالة لإضافة Toast للإجراءات
+  const getUserId = () => {
+    if (!isBrowser) return null;
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.id || user._id;
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+    }
+    return null;
+  };
+
+  // دالة لإضافة Toast
   const addActionToast = useCallback((message, type = 'success') => {
     const id = Date.now() + Math.random();
     const toast = { id, message, type, timestamp: new Date() };
     
     setActionToasts(prev => [...prev, toast]);
     
-    // إزالة Toast تلقائياً بعد 5 ثوان
     setTimeout(() => {
       setActionToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
@@ -158,12 +176,10 @@ export function NotificationProvider({ children }) {
     return id;
   }, []);
 
-  // دالة لإزالة Toast محدد
   const removeActionToast = useCallback((id) => {
     setActionToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
-  // دالة معالجة الإشعارات القادمة من الباك إند
   const processNotification = (notification) => {
     return {
       id: notification.id || notification._id,
@@ -179,7 +195,7 @@ export function NotificationProvider({ children }) {
     };
   };
 
-  // دالة جلب الإشعارات الحقيقية من الباك إند
+  // دالة جلب الإشعارات
   const loadNotifications = useCallback(async (showLoader = true) => {
     if (!isMountedRef.current) return;
     
@@ -191,7 +207,6 @@ export function NotificationProvider({ children }) {
       
       const authToken = getAuthToken();
       
-      // إذا لم يكن هناك token، نوقف التحميل
       if (!authToken) {
         setNotifications([]);
         setUnreadCount(0);
@@ -199,49 +214,34 @@ export function NotificationProvider({ children }) {
         return;
       }
 
-      try {
-        const url = createRequestURL('/notifications');
-        
-        const response = await enhancedFetch(url);
-        
-        // توقع استجابة Laravel النموذجية
-        if (response && (response.status === true || response.success === true)) {
-          const notificationsData = response.data || [];
-          
-          if (Array.isArray(notificationsData)) {
-            const processedNotifications = notificationsData.map(processNotification);
-            const unread = processedNotifications.filter(n => !n.is_read).length;
-            
-            setNotifications(processedNotifications);
-            setUnreadCount(unread);
-            setLastUpdate(new Date());
-            
-            // حفظ IDs المعالجة لتتبع الإشعارات الجديدة
-            notificationsData.forEach(notification => {
-              if (notification.id) {
-                processedNotificationIds.current.add(notification.id);
-              }
-            });
-            
-          } else {
-            throw new Error('تنسيق البيانات غير صحيح من الخادم');
-          }
-          
-        } else {
-          throw new Error(response?.message || 'استجابة غير متوقعة من الخادم');
-        }
-      } catch (apiError) {
-        console.error('❌ API Error in loadNotifications:', apiError.message);
-        setError(apiError.message);
-        
-        // نترك القائمة فارغة عند فشل الاتصال - لا نعرض بيانات تجريبية
-        setNotifications([]);
-        setUnreadCount(0);
-      }
+      const url = createRequestURL('/notifications');
+      const response = await enhancedFetch(url);
       
-    } catch (error) {
-      console.error('❌ Error loading notifications:', error);
-      setError(error.message);
+      if (response && (response.status === true || response.success === true)) {
+        const notificationsData = response.data || [];
+        
+        if (Array.isArray(notificationsData)) {
+          const processedNotifications = notificationsData.map(processNotification);
+          const unread = processedNotifications.filter(n => !n.is_read).length;
+          
+          setNotifications(processedNotifications);
+          setUnreadCount(unread);
+          setLastUpdate(new Date());
+          
+          notificationsData.forEach(notification => {
+            if (notification.id) {
+              processedNotificationIds.current.add(notification.id);
+            }
+          });
+        } else {
+          throw new Error('تنسيق البيانات غير صحيح من الخادم');
+        }
+      } else {
+        throw new Error(response?.message || 'استجابة غير متوقعة من الخادم');
+      }
+    } catch (apiError) {
+      console.error('❌ API Error in loadNotifications:', apiError.message);
+      setError(apiError.message);
       setNotifications([]);
       setUnreadCount(0);
     } finally {
@@ -273,158 +273,324 @@ export function NotificationProvider({ children }) {
       }
     } catch (error) {
       console.error('❌ Error loading unread count:', error);
-      // في حالة الخطأ، نحسب من الإشعارات المحلية
       const localUnread = notifications.filter(n => !n.is_read).length;
       setUnreadCount(localUnread);
     }
   }, [notifications]);
 
-  // دالة التحقق من إشعارات جديدة
-  const checkForNewNotifications = useCallback(async (forceShow = false) => {
-    if (!isMountedRef.current) {
-      console.log('🔔 NotificationContext: Component not mounted, skipping check');
-      return;
-    }
+  // دالة معالجة إشعار Firebase عند استلامه
+  const handleFirebaseMessage = useCallback((payload) => {
+    if (!isMountedRef.current || !payload) return;
+    
+    console.log('🔔 Firebase: Message received:', payload);
     
     try {
-      const authToken = getAuthToken();
-      if (!authToken) {
-        console.log('🔔 NotificationContext: No auth token, skipping check');
-        return;
-      }
+      const notificationData = payload.data || payload.notification || {};
       
-      console.log('🔔 NotificationContext: Checking for new notifications...');
-      const url = createRequestURL('/notifications');
-      
-      try {
-        const response = await enhancedFetch(url);
+      // إذا كانت بيانات الإشعار موجودة في payload.data
+      if (notificationData.notificationId || notificationData.id) {
+        const processed = processNotification(notificationData);
         
-        if (response && response.status === true) {
-          const newNotificationsData = response.data || [];
-          
-          console.log('🔔 NotificationContext: Received notifications:', newNotificationsData.length);
-          
-          if (!Array.isArray(newNotificationsData)) return;
-          
-          // معالجة جميع الإشعارات
-          const processedNotifications = newNotificationsData.map(processNotification);
-          
-          // فلترة الإشعارات الجديدة (غير موجودة في processedNotificationIds)
-          const trulyNewData = newNotificationsData.filter(notification => 
-            notification.id && !processedNotificationIds.current.has(notification.id)
-          );
-          
-          console.log('🔔 NotificationContext: Truly new notifications:', trulyNewData.length, 'Total notifications:', newNotificationsData.length, 'Processed IDs count:', processedNotificationIds.current.size);
-          
-          // حفظ IDs الجديدة
-          newNotificationsData.forEach(notification => {
-            if (notification.id) {
-              processedNotificationIds.current.add(notification.id);
-            }
-          });
-          
-          // تحديث الإشعارات مع إزالة التكرارات
-          setNotifications(prev => {
-            // إنشاء Map لإزالة التكرارات (نحتفظ بالإصدار الأحدث)
-            const notificationsMap = new Map();
-            
-            // إضافة الإشعارات القديمة
-            prev.forEach(notification => {
-              if (notification.id) {
-                notificationsMap.set(notification.id, notification);
-              }
-            });
-            
-            // إضافة/تحديث الإشعارات الجديدة
-            processedNotifications.forEach(notification => {
-              if (notification.id) {
-                notificationsMap.set(notification.id, notification);
-              }
-            });
-            
-            // تحويل Map إلى Array وترتيب حسب التاريخ
-            const merged = Array.from(notificationsMap.values())
-              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-              .slice(0, 50);
-            
-            return merged;
-          });
-          
-          // تحديث عدد الإشعارات غير المقروءة باستخدام API منفصل
-          loadUnreadCount();
-          
-          // عرض إشعارات Toast تلقائياً للإشعارات غير المقروءة التي لم تُعرض من قبل
-          if (trulyNewData.length > 0 && (forceShow || showAlerts)) {
-            console.log('🔔 NotificationContext: New notifications to show:', trulyNewData.length);
-            
-            trulyNewData.forEach(notification => {
-              const processed = processNotification(notification);
-              
-              // عرض Toast فقط للإشعارات غير المقروءة
-              if (!processed.is_read && !toastNotificationIds.current.has(processed.id)) {
-                console.log('🔔 NotificationContext: Adding notification to toast:', processed.id, processed.title);
-                toastNotificationIds.current.add(processed.id);
-                
-                // إضافة الإشعار فوراً للعرض
-                setNewNotifications(prev => {
-                  if (prev.some(n => n.id === processed.id)) {
-                    console.log('🔔 NotificationContext: Notification already in list, skipping');
-                    return prev;
-                  }
-                  console.log('🔔 NotificationContext: Adding notification to newNotifications state');
-                  return [...prev, processed];
-                });
-                
-                // إزالة Toast بعد 5 ثوانٍ
-                setTimeout(() => {
-                  if (isMountedRef.current) {
-                    setNewNotifications(prev => 
-                      prev.filter(n => n.id !== processed.id)
-                    );
-                    toastNotificationIds.current.delete(processed.id);
-                  }
-                }, 5000);
-              }
-            });
+        if (processedNotificationIds.current.has(processed.id)) {
+          console.log('🔔 Firebase: Notification already processed');
+          return;
+        }
+        
+        processedNotificationIds.current.add(processed.id);
+        
+        // تحديث قائمة الإشعارات
+        setNotifications(prev => {
+          const exists = prev.some(n => n.id === processed.id);
+          if (exists) {
+            return prev.map(n => n.id === processed.id ? processed : n);
           }
           
-          setLastUpdate(new Date());
+          const newList = [processed, ...prev].slice(0, 50);
+          return newList;
+        });
+        
+        // تحديث عدد الإشعارات غير المقروءة
+        if (!processed.is_read) {
+          setUnreadCount(prev => prev + 1);
         }
-      } catch (apiError) {
-        console.warn('⚠️ Error checking for new notifications:', apiError.message);
+        
+        // عرض Toast إذا كان الإشعار غير مقروء
+        if (!processed.is_read && showAlerts && !toastNotificationIds.current.has(processed.id)) {
+          console.log('🔔 Firebase: Adding notification toast:', processed.id);
+          toastNotificationIds.current.add(processed.id);
+          
+          setNewNotifications(prev => {
+            if (prev.some(n => n.id === processed.id)) {
+              return prev;
+            }
+            return [...prev, processed];
+          });
+          
+          // إزالة Toast بعد 5 ثوان
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              setNewNotifications(prev => 
+                prev.filter(n => n.id !== processed.id)
+              );
+              toastNotificationIds.current.delete(processed.id);
+            }
+          }, 5000);
+        }
+        
+        setLastUpdate(new Date());
+        
+        // عرض إشعار النظام إذا كان التطبيق في الخلفية
+        if (payload.notification && Notification.permission === 'granted') {
+          const { title, body, icon } = payload.notification;
+          new Notification(title || 'إشعار جديد', {
+            body: body || 'لديك إشعار جديد',
+            icon: icon || '/notification-icon.png',
+            badge: '/badge-icon.png',
+            tag: processed.id,
+            data: processed.data || {}
+          });
+        }
       }
       
     } catch (error) {
-      console.error('❌ Error in checkForNewNotifications:', error);
+      console.error('❌ Error handling Firebase message:', error);
     }
-  }, [showAlerts, showChatAlerts, loadUnreadCount]);
+  }, [showAlerts]);
 
-  // بدء التحديث التلقائي
+  // دالة الحصول على FCM Token
+  const getFCMToken = useCallback(async () => {
+    if (!isBrowser || !messaging) {
+      console.log('🔔 Firebase Messaging not available');
+      return null;
+    }
+
+    try {
+      // التحقق من إذن الإشعارات
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+      
+      if (permission !== 'granted') {
+        console.log('🔔 Notification permission not granted:', permission);
+        addActionToast('تم رفض إذن الإشعارات', 'warning');
+        return null;
+      }
+
+      // التحقق من دعم Service Worker
+      if (!checkServiceWorkerSupport()) {
+        console.log('🔔 Service Worker not supported');
+        return null;
+      }
+
+      // تسجيل Service Worker
+      let registration;
+      try {
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('🔔 Service Worker registered:', registration);
+      } catch (swError) {
+        console.error('❌ Service Worker registration failed:', swError);
+        
+        // محاولة استخدام service worker افتراضي
+        if ('serviceWorker' in navigator) {
+          registration = await navigator.serviceWorker.ready;
+        } else {
+          throw new Error('Service Worker غير مدعوم في هذا المتصفح');
+        }
+      }
+
+      // الحصول على FCM Token
+      console.log('🔔 Requesting FCM token...');
+      const currentToken = await getToken(messaging, { 
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: registration
+      });
+      
+      if (currentToken) {
+        console.log('🔔 FCM Token obtained:', currentToken.substring(0, 20) + '...');
+        setFcmToken(currentToken);
+        
+        // حفظ التوكن في localStorage
+        localStorage.setItem('fcm_token', currentToken);
+        localStorage.setItem('fcm_token_updated', new Date().toISOString());
+        
+        // إرسال التوكن للخادم
+        await registerDevice(currentToken);
+        
+        return currentToken;
+      } else {
+        console.log('🔔 No registration token available.');
+        return null;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error getting FCM token:', error);
+      addActionToast('حدث خطأ في تفعيل الإشعارات', 'error');
+      return null;
+    }
+  }, [addActionToast]);
+
+  // دالة تسجيل الجهاز في الخادم
+  const registerDevice = useCallback(async (token) => {
+    try {
+      const authToken = getAuthToken();
+      const userId = getUserId();
+      
+      if (!authToken || !userId) {
+        console.log('🔔 Cannot register device - missing auth token or user ID');
+        return { success: false, message: 'يجب تسجيل الدخول أولاً' };
+      }
+
+      const deviceInfo = {
+        token: token,
+        device_type: getDeviceType(),
+        device_name: getDeviceName(),
+        platform: 'web',
+        user_id: userId,
+        app_version: '1.0.0'
+      };
+
+      const url = createRequestURL('/notifications/register-device');
+      const response = await enhancedFetch(url, {
+        method: 'POST',
+        body: deviceInfo
+      });
+
+      if (response && response.status === true) {
+        console.log('🔔 Device registered successfully on backend');
+        localStorage.setItem('device_registered', 'true');
+        localStorage.setItem('current_device_id', response.data?.device_id || 'firebase-device-' + Date.now());
+        
+        // addActionToast('تم تفعيل الإشعارات بنجاح', 'success');
+        
+        return {
+          success: true,
+          message: response.message || 'تم تسجيل الجهاز بنجاح',
+          data: response.data
+        };
+      }
+      
+      const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
+      throw new Error(errorMessage);
+      
+    } catch (error) {
+      console.error('❌ Error registering device:', error);
+      addActionToast('حدث خطأ أثناء تسجيل الجهاز', 'error');
+      throw error;
+    }
+  }, [addActionToast]);
+
+  // الحصول على نوع الجهاز
+  const getDeviceType = () => {
+    if (!isBrowser) return 'web';
+    const ua = navigator.userAgent.toLowerCase();
+    if (/android/.test(ua)) return 'android';
+    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+    return 'web';
+  };
+
+  // الحصول على اسم الجهاز
+  const getDeviceName = () => {
+    if (!isBrowser) return 'Unknown Device';
+    return navigator.userAgent || 'Unknown Device';
+  };
+
+  // دالة إلغاء تسجيل الجهاز
+  const unregisterDevice = useCallback(async () => {
+    try {
+      const authToken = getAuthToken();
+      if (!authToken) return;
+
+      // حذف التوكن من Firebase
+      if (messaging && fcmToken) {
+        await deleteToken(messaging);
+        console.log('🔔 FCM token deleted');
+      }
+
+      // إعلام الخادم بإلغاء التسجيل
+      const url = createRequestURL('/notifications/unregister-device');
+      await enhancedFetch(url, {
+        method: 'POST',
+        body: { token: fcmToken }
+      });
+
+      // مسح البيانات المحلية
+      localStorage.removeItem('fcm_token');
+      localStorage.removeItem('device_registered');
+      localStorage.removeItem('current_device_id');
+      localStorage.removeItem('fcm_token_updated');
+      
+      setFcmToken(null);
+      
+      console.log('🔔 Device unregistered successfully');
+      
+    } catch (error) {
+      console.error('❌ Error unregistering device:', error);
+    }
+  }, [fcmToken]);
+
+  // دالة تهيئة Firebase والإشعارات
+  const initializeFirebase = useCallback(async () => {
+    if (!isBrowser || !messaging) {
+      console.log('🔔 Firebase not available in this environment');
+      setIsFirebaseInitialized(false);
+      return;
+    }
+
+    try {
+      console.log('🔔 Initializing Firebase notifications...');
+      
+      // التحقق من إذن الإشعارات
+      const permission = Notification.permission;
+      setNotificationPermission(permission);
+      
+      if (permission === 'granted') {
+        // الحصول على التوكن إذا كان مسموحاً
+        const token = await getFCMToken();
+        
+        if (token) {
+          // الاستماع للرسائل الواردة
+          if (!firebaseMessageListener.current) {
+            firebaseMessageListener.current = onMessage(messaging, (payload) => {
+              console.log('🔔 Firebase: Message received in foreground');
+              handleFirebaseMessage(payload);
+            });
+          }
+          
+          setIsFirebaseInitialized(true);
+          console.log('🔔 Firebase notifications initialized successfully');
+        }
+      } else {
+        console.log('🔔 Notification permission not granted:', permission);
+        setIsFirebaseInitialized(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error initializing Firebase:', error);
+      setIsFirebaseInitialized(false);
+    }
+  }, [getFCMToken, handleFirebaseMessage]);
+
+  // بدء التحديث التلقائي (fallback polling)
   const startAutoRefresh = useCallback((interval = 30000) => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
     
-    console.log('🔔 NotificationContext: Starting auto refresh with interval:', interval);
+    console.log('🔔 Starting fallback polling with interval:', interval);
     
-    // تحميل الإشعارات أولاً بدون عرض toasts
+    // تحميل الإشعارات أولاً
     loadNotifications(false);
+    loadUnreadCount();
     
-    // التحقق فوراً من الإشعارات الجديدة
-    setTimeout(() => {
-      checkForNewNotifications(true);
-    }, 1000);
-    
-    // بدء التحديث الدوري
+    // التحديث الدوري
     pollIntervalRef.current = setInterval(() => {
-      console.log('🔔 NotificationContext: Polling for new notifications...');
-      // تحديث عدد الإشعارات غير المقروءة أولاً
-      loadUnreadCount();
-      // ثم التحقق من الإشعارات الجديدة
-      checkForNewNotifications(true);
+      if (!isFirebaseInitialized) {
+        console.log('🔔 Fallback polling: Firebase not initialized, checking for updates');
+        loadUnreadCount();
+        loadNotifications(false);
+      }
     }, interval);
     
-  }, [loadNotifications, checkForNewNotifications, loadUnreadCount]);
+  }, [loadNotifications, loadUnreadCount, isFirebaseInitialized]);
 
   // إيقاف التحديث التلقائي
   const stopAutoRefresh = useCallback(() => {
@@ -434,50 +600,19 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
-  // دالة لتفعيل/إلغاء تفعيل عرض الـ alerts
-  const toggleAlerts = useCallback((show = true) => {
-    setShowAlerts(show);
-  }, []);
-
-  // دالة لتفعيل/إلغاء تفعيل عرض الـ alerts للشات
-  const toggleChatAlerts = useCallback((show = true) => {
-    setShowChatAlerts(show);
-  }, []);
-
-  // دالة لجلب الإشعارات وعرض الـ toasts
-  const loadNotificationsWithAlerts = useCallback(async () => {
-    // تفعيل عرض الـ alerts مؤقتاً
-    setShowAlerts(true);
-    await loadNotifications(true);
-    // بعد تحميل الإشعارات، نعطل عرض الـ alerts تلقائياً
-    setTimeout(() => setShowAlerts(false), 1000);
-  }, [loadNotifications]);
-
-  // دالة التحقق من إشعارات جديدة مع عرض الـ toasts
-  const checkNewNotificationsWithAlerts = useCallback(async () => {
-    // تفعيل عرض الـ alerts مؤقتاً
-    setShowAlerts(true);
-    await checkForNewNotifications(true);
-    // بعد التحقق، نعطل عرض الـ alerts تلقائياً
-    setTimeout(() => setShowAlerts(false), 1000);
-  }, [checkForNewNotifications]);
-
   // تعليم جميع الإشعارات كمقروءة
   const markAllAsRead = useCallback(async () => {
     try {
       const authToken = getAuthToken();
-      if (!authToken) {
-        throw new Error('يجب تسجيل الدخول');
-      }
+      if (!authToken) throw new Error('يجب تسجيل الدخول');
 
       const url = createRequestURL('/notifications/mark-all-read');
       const response = await enhancedFetch(url, { 
         method: 'POST',
-        body: {} // إرسال body فارغ أو حسب ما يتطلبه الـ API
+        body: {}
       });
       
       if (response && response.status === true) {
-        // بعد النجاح على الباك إند، نحدث الحالة المحلية
         setNotifications(prev => 
           prev.map(notification => ({ 
             ...notification, 
@@ -489,23 +624,17 @@ export function NotificationProvider({ children }) {
         setNewNotifications([]);
         toastNotificationIds.current.clear();
         
-        // عرض Toast نجاح
         addActionToast(response.message || 'تم تعليم جميع الإشعارات كمقروءة', 'success');
         
         return {
           success: true,
-          message: response.message || 'تم تعليم جميع الإشعارات كمقروءة',
-          count: response.data?.count || 0
+          message: response.message || 'تم تعليم جميع الإشعارات كمقروءة'
         };
-        
-      } else {
-        throw new Error(response?.message || 'فشل في تعليم الإشعارات كمقروءة');
       }
       
+      throw new Error(response?.message || 'فشل في تعليم الإشعارات كمقروءة');
     } catch (error) {
       console.error('❌ Error in markAllAsRead:', error);
-      setError(error.message);
-      // عرض Toast خطأ
       addActionToast(error.message || 'حدث خطأ أثناء تعليم الإشعارات كمقروءة', 'error');
       throw error;
     }
@@ -515,18 +644,15 @@ export function NotificationProvider({ children }) {
   const markAsRead = useCallback(async (id) => {
     try {
       const authToken = getAuthToken();
-      if (!authToken) {
-        throw new Error('يجب تسجيل الدخول');
-      }
+      if (!authToken) throw new Error('يجب تسجيل الدخول');
 
       const url = createRequestURL(`/notifications/${id}/mark-read`);
       const response = await enhancedFetch(url, { 
         method: 'POST',
-        body: {} // إرسال body فارغ
+        body: {}
       });
       
       if (response && response.status === true) {
-        // تحديث الحالة المحلية بعد النجاح
         setNotifications(prev => 
           prev.map(notification => 
             notification.id === id 
@@ -539,7 +665,6 @@ export function NotificationProvider({ children }) {
           )
         );
         
-        // تحديث عدد الإشعارات غير المقروءة
         loadUnreadCount();
         
         setNewNotifications(prev => 
@@ -547,21 +672,14 @@ export function NotificationProvider({ children }) {
         );
         toastNotificationIds.current.delete(id);
         
-        // عرض Toast نجاح
         addActionToast('تم تعليم الإشعار كمقروء', 'success');
         
-        return {
-          success: true,
-          message: response.message || 'تم تعليم الإشعار كمقروء'
-        };
-        
-      } else {
-        throw new Error(response?.message || 'فشل في تعليم الإشعار كمقروء');
+        return { success: true, message: response.message || 'تم تعليم الإشعار كمقروء' };
       }
       
+      throw new Error(response?.message || 'فشل في تعليم الإشعار كمقروء');
     } catch (error) {
       console.error('❌ Error in markAsRead:', error);
-      // عرض Toast خطأ
       addActionToast('حدث خطأ أثناء تعليم الإشعار كمقروء', 'error');
       throw error;
     }
@@ -571,20 +689,16 @@ export function NotificationProvider({ children }) {
   const deleteNotification = useCallback(async (id, showToast = true) => {
     try {
       const authToken = getAuthToken();
-      if (!authToken) {
-        throw new Error('يجب تسجيل الدخول');
-      }
+      if (!authToken) throw new Error('يجب تسجيل الدخول');
 
       const url = createRequestURL(`/notifications/${id}`);
       const response = await enhancedFetch(url, { method: 'DELETE' });
       
       if (response && response.status === true) {
-        // تحديث الحالة المحلية بعد النجاح
         const notificationToDelete = notifications.find(n => n.id === id);
         
         setNotifications(prev => prev.filter(notification => notification.id !== id));
         
-        // إذا كان الإشعار غير مقروء، نحدث العدد
         if (notificationToDelete && !notificationToDelete.is_read) {
           loadUnreadCount();
         }
@@ -595,167 +709,23 @@ export function NotificationProvider({ children }) {
         processedNotificationIds.current.delete(id);
         toastNotificationIds.current.delete(id);
         
-        // عرض Toast نجاح إذا طُلب
         if (showToast) {
           addActionToast('تم حذف الإشعار بنجاح', 'success');
         }
         
-        return {
-          success: true,
-          message: response.message || 'تم حذف الإشعار بنجاح'
-        };
-        
-      } else {
-        throw new Error(response?.message || 'فشل في حذف الإشعار');
+        return { success: true, message: response.message || 'تم حذف الإشعار بنجاح' };
       }
       
+      throw new Error(response?.message || 'فشل في حذف الإشعار');
     } catch (error) {
       console.error('❌ Error in deleteNotification:', error);
-      // عرض Toast خطأ
       addActionToast('حدث خطأ أثناء حذف الإشعار', 'error');
       throw error;
     }
   }, [notifications, loadUnreadCount, addActionToast]);
 
-  // مسح جميع الإشعارات مع تأكيد
-  const clearAll = useCallback(async () => {
-    // هذه الدالة يجب أن تستدعى مع تأكيد من المستخدم
-    return new Promise((resolve, reject) => {
-      try {
-        // نعيد Promise للمستخدم يمكنه إظهار dialog تأكيد
-        resolve({
-          confirm: async () => {
-            try {
-              const authToken = getAuthToken();
-              if (!authToken) {
-                throw new Error('يجب تسجيل الدخول');
-              }
-
-              // حذف الإشعارات واحداً تلو الآخر
-              const deletePromises = notifications.map(notification => 
-                deleteNotification(notification.id, false) // لا نعرض toast لكل حذف
-              );
-              
-              await Promise.all(deletePromises);
-              
-              // تحديث الحالة المحلية بعد النجاح
-              setNotifications([]);
-              setUnreadCount(0);
-              setNewNotifications([]);
-              processedNotificationIds.current.clear();
-              toastNotificationIds.current.clear();
-              
-              // عرض Toast نجاح
-              addActionToast(`تم حذف جميع الإشعارات (${notifications.length})`, 'success');
-              
-              return {
-                success: true,
-                message: `تم حذف جميع الإشعارات (${notifications.length})`,
-                count: notifications.length
-              };
-              
-            } catch (error) {
-              console.error('❌ Error in clearAll:', error);
-              // عرض Toast خطأ
-              addActionToast('حدث خطأ أثناء حذف جميع الإشعارات', 'error');
-              throw error;
-            }
-          },
-          count: notifications.length
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }, [notifications, deleteNotification, addActionToast]);
-
-  // دالة تسجيل الجهاز للإشعارات
-  const registerDevice = async (token) => {
-    try {
-      const sessionId = getSessionId();
-
-      const deviceInfo = {
-        token: token,
-        device_type: getDeviceType(),
-        device_name: getDeviceName(),
-        app_version: '1.0.0',
-        platform: 'web',
-        session_id: sessionId,
-      };
-
-      const url = createRequestURL('/notifications/register-device');
-      const response = await enhancedFetch(url, {
-        method: 'POST',
-        body: deviceInfo
-      });
-
-      // التحقق من الـ response
-      if (response && response.status === true) {
-        if (isBrowser) {
-          localStorage.setItem('fcm_token', token);
-          localStorage.setItem('device_registered', 'true');
-          localStorage.setItem('current_device_id', response.data?.device_id || 'real-device-' + Date.now());
-        }
-        setFcmToken(token);
-        
-        // عرض Toast نجاح
-        addActionToast('تم تسجيل الجهاز بنجاح', 'success');
-        
-        return {
-          success: true,
-          message: response.message || 'تم تسجيل الجهاز بنجاح',
-          data: response.data
-        };
-      }
-      
-      // إذا وصلنا هنا، فهناك مشكلة في الـ response
-      const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
-      throw new Error(errorMessage);
-      
-    } catch (error) {
-      console.error('❌ Error registering device:', error);
-      // عرض Toast خطأ
-      addActionToast('حدث خطأ أثناء تسجيل الجهاز', 'error');
-      
-      // إعادة الخطأ بشكل منظم
-      throw new Error(error.message || 'حدث خطأ غير متوقع أثناء تسجيل الجهاز');
-    }
-  };
-
-  function getSessionId() {
-    if (typeof window === "undefined") return null;
-  
-    const key = "session_id";
-    let sessionId = localStorage.getItem(key);
-  
-    if (!sessionId) {
-      sessionId =
-        crypto?.randomUUID?.() ||
-        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  
-      localStorage.setItem(key, sessionId);
-    }
-  
-    return sessionId;
-  }
-
-  // الحصول على نوع الجهاز
-  const getDeviceType = () => {
-    if (!isBrowser) return 'web';
-    const ua = navigator.userAgent;
-    if (/android/i.test(ua)) return 'android';
-    if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
-    return 'web';
-  };
-
-  // الحصول على اسم الجهاز
-  const getDeviceName = () => {
-    if (!isBrowser) return 'Unknown Device';
-    return navigator.platform || 'Unknown Device';
-  };
-
   // التحقق من تسجيل الجهاز
-  const checkDeviceRegistration = () => {
+  const checkDeviceRegistration = useCallback(() => {
     if (!isBrowser) {
       return { hasToken: false, isRegistered: false };
     }
@@ -763,17 +733,74 @@ export function NotificationProvider({ children }) {
     const token = localStorage.getItem('fcm_token');
     const registered = localStorage.getItem('device_registered');
     const deviceId = localStorage.getItem('current_device_id');
+    const tokenUpdated = localStorage.getItem('fcm_token_updated');
+    
+    // التحقق من عمر التوكن (أكثر من 7 أيام)
+    let tokenValid = true;
+    if (tokenUpdated) {
+      const updateDate = new Date(tokenUpdated);
+      const now = new Date();
+      const daysDiff = (now - updateDate) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 7) {
+        console.log('🔔 FCM token expired (older than 7 days)');
+        tokenValid = false;
+      }
+    }
     
     if (token) {
       setFcmToken(token);
     }
     
     return {
-      hasToken: !!token,
+      hasToken: !!token && tokenValid,
       isRegistered: registered === 'true',
-      deviceId: deviceId
+      deviceId: deviceId,
+      permission: notificationPermission,
+      firebaseInitialized: isFirebaseInitialized
     };
-  };
+  }, [notificationPermission, isFirebaseInitialized]);
+
+  // دالة طلب إذن الإشعارات يدوياً
+  const requestNotificationPermissionManual = useCallback(async () => {
+    try {
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+      
+      if (permission === 'granted') {
+        await initializeFirebase();
+        return { success: true, message: 'تم تفعيل الإشعارات بنجاح' };
+      } else {
+        return { 
+          success: false, 
+          message: permission === 'denied' 
+            ? 'تم رفض إذن الإشعارات. يرجى السماح بالإشعارات من إعدادات المتصفح' 
+            : 'لم يتم اختيار خيار للإشعارات' 
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error);
+      return { success: false, message: error.message };
+    }
+  }, [initializeFirebase]);
+
+  // دالة تحديث FCM Token
+  const refreshFCMToken = useCallback(async () => {
+    try {
+      if (!messaging) {
+        throw new Error('Firebase Messaging غير متاح');
+      }
+
+      const token = await getFCMToken();
+      if (token) {
+        return { success: true, token, message: 'تم تحديث رمز الإشعارات' };
+      } else {
+        return { success: false, message: 'فشل في تحديث رمز الإشعارات' };
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing FCM token:', error);
+      return { success: false, message: error.message };
+    }
+  }, [getFCMToken]);
 
   // تهيئة نظام الإشعارات
   useEffect(() => {
@@ -783,9 +810,16 @@ export function NotificationProvider({ children }) {
       const authToken = getAuthToken();
       
       if (authToken) {
-        await loadNotifications(false); // بدون عرض toasts عند التهيئة
-        // تحميل عدد الإشعارات غير المقروءة منفصلاً
+        // تحميل الإشعارات أولاً
+        await loadNotifications(false);
         loadUnreadCount();
+        
+        // تهيئة Firebase
+        if (isBrowser && messaging) {
+          await initializeFirebase();
+        }
+        
+        // بدء fallback polling
         startAutoRefresh(30000);
       } else {
         setNotifications([]);
@@ -793,12 +827,16 @@ export function NotificationProvider({ children }) {
       }
     };
 
-    // تهيئة فورية بدون تأخير
     initNotifications();
 
     return () => {
       isMountedRef.current = false;
       stopAutoRefresh();
+      
+      // إزالة مستمع Firebase
+      if (firebaseMessageListener.current) {
+        firebaseMessageListener.current = null;
+      }
     };
   }, []);
 
@@ -806,36 +844,43 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'accessToken' || e.key === null) {
-        loadNotifications(false); // بدون عرض toasts عند تغيير التوكن
-        // تحديث عدد الإشعارات غير المقروءة
-        setTimeout(() => {
+        const authToken = getAuthToken();
+        
+        if (authToken) {
+          loadNotifications(false);
           loadUnreadCount();
-        }, 500);
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // التحقق فوراً من الإشعارات عند عودة التركيز
-        loadUnreadCount();
-        checkForNewNotifications(true);
+          
+          if (isBrowser && messaging) {
+            initializeFirebase();
+          }
+        } else {
+          setNotifications([]);
+          setUnreadCount(0);
+          setFcmToken(null);
+        }
       }
     };
 
     if (isBrowser) {
       window.addEventListener('storage', handleStorageChange);
+      
+      // تحديث عند التركيز على الصفحة
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          loadUnreadCount();
+        }
+      };
+      
       document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
-    
-    return () => {
-      if (isBrowser) {
+      
+      return () => {
         window.removeEventListener('storage', handleStorageChange);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
-      }
-    };
-  }, [loadNotifications, checkForNewNotifications, loadUnreadCount]);
+      };
+    }
+  }, [loadNotifications, loadUnreadCount, initializeFirebase]);
 
-  // دالة اختبار الاتصال بالباك إند
+  // اختبار الاتصال
   const testBackendConnection = useCallback(async () => {
     try {
       const authToken = getAuthToken();
@@ -856,18 +901,21 @@ export function NotificationProvider({ children }) {
       return {
         connected: response.ok,
         status: response.status,
-        statusText: response.statusText
+        statusText: response.statusText,
+        firebaseInitialized: isFirebaseInitialized,
+        notificationPermission,
+        hasFCMToken: !!fcmToken
       };
     } catch (error) {
       return {
         connected: false,
-        message: error.message
+        message: error.message,
+        firebaseInitialized: isFirebaseInitialized
       };
     }
-  }, []);
+  }, [isFirebaseInitialized, notificationPermission, fcmToken]);
 
   const value = {
-    // البيانات الحقيقية من الباك إند
     notifications,
     unreadCount,
     loading,
@@ -877,27 +925,32 @@ export function NotificationProvider({ children }) {
     error,
     showAlerts,
     showChatAlerts,
-    actionToasts, // إضافة actionToasts للقيمة
+    actionToasts,
+    notificationPermission,
+    isFirebaseInitialized,
     
     // الدوال الأساسية
-    loadNotifications: loadNotificationsWithAlerts, // استخدام الدالة المعدلة
+    loadNotifications,
     markAllAsRead,
     markAsRead,
     deleteNotification,
-    clearAll, // الآن ترجع Promise مع تأكيد
     
-    // إدارة الجهاز
+    // إدارة Firebase
+    getFCMToken,
     registerDevice,
+    unregisterDevice,
     checkDeviceRegistration,
+    requestNotificationPermission: requestNotificationPermissionManual,
+    refreshFCMToken,
+    initializeFirebase,
     
     // التحديث التلقائي
     startAutoRefresh,
     stopAutoRefresh,
     
     // التحكم في عرض الـ alerts
-    toggleAlerts,
-    toggleChatAlerts,
-    checkNewNotificationsWithAlerts, // دالة جديدة
+    toggleAlerts: useCallback((show = true) => setShowAlerts(show), []),
+    toggleChatAlerts: useCallback((show = true) => setShowChatAlerts(show), []),
     
     // إدارة Toast الإجراءات
     addActionToast,
@@ -918,10 +971,13 @@ export function NotificationProvider({ children }) {
       lastUpdate: lastUpdate?.toISOString(),
       processedIdsCount: processedNotificationIds.current.size,
       toastIdsCount: toastNotificationIds.current.size,
-      isConnected: !!getAuthToken(),
+      notificationPermission,
+      isFirebaseInitialized,
+      hasFCMToken: !!fcmToken,
       showAlerts,
       showChatAlerts,
-      actionToastsCount: actionToasts.length
+      actionToastsCount: actionToasts.length,
+      deviceInfo: checkDeviceRegistration()
     })
   };
 

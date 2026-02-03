@@ -365,23 +365,29 @@ function OrderFormContent() {
 				
 				// ✅ ✅ **الحل: الحصول على orderId من الـ response** ✅ ✅
 				let orderId;
+				let orderDate = null;
 				
 				// حاول الحصول على orderId بطرق مختلفة حسب هيكل الـ response
 				if (data.data?.id) {
 					// الحالة 1: data.data.id
 					orderId = data.data.id;
+					orderDate = data.data?.order_date || null;
 				} else if (data.data?.order_id) {
 					// الحالة 2: data.data.order_id
 					orderId = data.data.order_id;
+					orderDate = data.data?.order_date || null;
 				} else if (data.id) {
 					// الحالة 3: data.id
 					orderId = data.id;
+					orderDate = data?.order_date || null;
 				} else if (data.order_id) {
 					// الحالة 4: data.order_id
 					orderId = data.order_id;
+					orderDate = data?.order_date || null;
 				} else if (data.order?.id) {
 					// الحالة 5: data.order.id
 					orderId = data.order.id;
+					orderDate = data.order?.order_date || null;
 				} else {
 					// إذا لم يتم العثور على orderId، استخدم fallback
 					console.warn('⚠️ Could not find orderId in response');
@@ -391,9 +397,40 @@ function OrderFormContent() {
 				}
 				
 				console.log('✅ Order ID retrieved:', orderId);
+				console.log('📅 Order date:', orderDate);
 				
-				// ✅ **الانتظار حتى يكون هناك عرض واحد على الأقل قبل الانتقال**
-				await waitForOffers(orderId, accessToken);
+				// ✅ **جلب order status للحصول على expires_at إذا كان order_date null**
+				let expiresAt = null;
+				if (!orderDate) {
+					try {
+						const statusResponse = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+							method: "GET",
+							headers: {
+								"Content-Type": "application/json",
+								"Accept": "application/json",
+								"Authorization": `Bearer ${accessToken}`,
+							},
+							cache: 'no-store'
+						});
+						
+						if (statusResponse.ok) {
+							const statusData = await statusResponse.json();
+							if (statusData.status && statusData.data) {
+								expiresAt = statusData.data?.expires_in?.expires_at || null;
+								console.log('⏰ Expires at from status:', expiresAt);
+							}
+						}
+					} catch (statusError) {
+						console.warn('⚠️ Could not fetch order status:', statusError);
+					}
+				} else {
+					// استخدام order_date كـ expires_at
+					expiresAt = orderDate;
+					console.log('⏰ Using order_date as expires_at:', expiresAt);
+				}
+				
+				// ✅ **الانتظار حتى ينتهي وقت الطلب أو يوجد عرض**
+				await waitForOffers(orderId, accessToken, expiresAt);
 				
 			} else {
 				toast.error(data.message || "فشل إنشاء الطلب");
@@ -406,15 +443,25 @@ function OrderFormContent() {
 		}
 	};
 
-	// دالة للانتظار حتى يكون هناك عرض واحد على الأقل
-	const waitForOffers = async (orderId, accessToken) => {
+	// دالة للانتظار حتى يكون هناك عرض واحد على الأقل أو ينتهي وقت الطلب
+	const waitForOffers = async (orderId, accessToken, expiresAt = null) => {
 		setIsWaitingForOffers(true);
 		setWaitingMessage('جاري البحث عن سائقين متاحين...');
 		
-		const maxWaitTime = 60000; // 60 ثانية كحد أقصى
 		const pollInterval = 2000; // التحقق كل ثانيتين
 		const startTime = Date.now();
 		let pollIntervalId = null;
+		
+		// حساب الوقت الأقصى بناءً على expiresAt إذا كان متوفراً
+		let maxWaitTime = 60000; // 60 ثانية كحد أقصى افتراضي
+		if (expiresAt) {
+			const expiresTime = new Date(expiresAt).getTime();
+			const now = Date.now();
+			const timeUntilExpiry = expiresTime - now;
+			if (timeUntilExpiry > 0) {
+				maxWaitTime = timeUntilExpiry;
+			}
+		}
 
 		const checkForOffers = async () => {
 			try {
@@ -500,12 +547,26 @@ function OrderFormContent() {
 				setWaitingMessage('');
 				setIsLoading(false);
 				
-				// الانتقال إلى صفحة السائقين حتى لو لم يكن هناك عروض بعد
-				toast('سيتم تحديث العروض تلقائياً عند توفرها', {
-					icon: 'ℹ️',
-					duration: 4000,
-				});
-				router.push(`/orders/available-drivers?orderId=${orderId}`);
+				// التحقق من انتهاء وقت الطلب
+				const isExpired = expiresAt && new Date(expiresAt).getTime() <= Date.now();
+				
+				if (isExpired) {
+					// تم انتهاء وقت الطلب
+					toast.error('تم انتهاء وقت الطلب', {
+						icon: '⏰',
+						duration: 5000,
+					});
+					// حفظ حالة انتهاء الطلب في localStorage
+					localStorage.setItem(`order_${orderId}_expired`, 'true');
+				} else {
+					// الانتقال إلى صفحة السائقين حتى لو لم يكن هناك عروض بعد
+					toast('سيتم تحديث العروض تلقائياً عند توفرها', {
+						icon: 'ℹ️',
+						duration: 4000,
+					});
+				}
+				
+				router.push(`/orders/available-drivers?orderId=${orderId}${isExpired ? '&expired=true' : ''}`);
 			}
 		}, pollInterval);
 
