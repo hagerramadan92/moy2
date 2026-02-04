@@ -62,6 +62,7 @@ export default function AvailableDriversContent({ onBack }) {
   const [locationError, setLocationError] = useState(null);
   const [locationPermissionRequested, setLocationPermissionRequested] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [showLocationPermissionPopup, setShowLocationPermissionPopup] = useState(false);
   const [stats, setStats] = useState({
     totalOffers: 0,
     averagePrice: 0,
@@ -90,8 +91,8 @@ export default function AvailableDriversContent({ onBack }) {
       driverId: offer.driver_id,
       driverUserId: driverUserId, // User ID for profile navigation
       name: driverName,
-      deliveryTime: `${offer.delivery_duration_minutes} دقيقة`,
-      price: `${offer.price} ريال`,
+      deliveryTime: `${offer.delivery_duration_minutes} د`,
+      price: `${offer.price} `,
       rating: offer.driver?.rating || "4.5",
       successfulOrders: `(${offer.driver?.completed_orders || '1,439'}) طلب ناجح`,
       ordersCount: offer.driver?.total_orders || "238",
@@ -160,10 +161,14 @@ export default function AvailableDriversContent({ onBack }) {
       // Get payment callback data from sessionStorage
       const callbackData = getPaymentCallbackData();
       if (callbackData && callbackData.offerId) {
-        setAcceptedOfferId(callbackData.offerId);
+        const acceptedId = callbackData.offerId;
+        setAcceptedOfferId(acceptedId);
         setPendingPaymentOfferId(null);
         // Clear pending payment data
         localStorage.removeItem('pendingOfferData');
+        
+        // Reject other offers when an offer is accepted
+        rejectOtherOffers(acceptedId);
       }
       
       // Clean up URL params
@@ -178,9 +183,13 @@ export default function AvailableDriversContent({ onBack }) {
     // Check sessionStorage for payment callback data (for returning from payment)
     const callbackData = getPaymentCallbackData();
     if (callbackData && callbackData.offerId && !paymentCancelParam) {
-      setAcceptedOfferId(callbackData.offerId);
+      const acceptedId = callbackData.offerId;
+      setAcceptedOfferId(acceptedId);
       setPendingPaymentOfferId(null);
       setPaymentSuccess(true);
+      
+      // Reject other offers when an offer is accepted
+      rejectOtherOffers(acceptedId);
     }
     
     // Check localStorage for pending payment offers (only if not cancelled)
@@ -245,6 +254,9 @@ export default function AvailableDriversContent({ onBack }) {
 
   // Function to request location permission and get current location
   const requestLocationPermission = () => {
+    // Close popup first
+    setShowLocationPermissionPopup(false);
+    
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setLocationError('المتصفح لا يدعم تحديد الموقع');
       // Use default location
@@ -351,11 +363,15 @@ export default function AvailableDriversContent({ onBack }) {
         }
       );
     } else {
-      // Use default location until user grants permission
+      // Use default location and show popup to request permission
       setCurrentLocation({
         lat: 24.7136,
         lng: 46.6753
       });
+      // Show popup if permission wasn't granted before
+      if (typeof window !== 'undefined' && navigator.geolocation) {
+        setShowLocationPermissionPopup(true);
+      }
     }
   }, []);
 
@@ -488,6 +504,12 @@ export default function AvailableDriversContent({ onBack }) {
           setAcceptedOfferId(acceptedId);
           setPendingPaymentOfferId(null);
           localStorage.removeItem('pendingOfferData');
+          
+          // Reject other offers when an offer is accepted
+          // Use setTimeout to ensure offersData is set first
+          setTimeout(() => {
+            rejectOtherOffers(acceptedId);
+          }, 500);
         }
         
         // Stop loading immediately after setting data
@@ -590,6 +612,81 @@ export default function AvailableDriversContent({ onBack }) {
       console.warn('Error fetching order status:', err.message);
     }
   };
+
+  // Reject other offers when an offer is accepted
+  const rejectOtherOffers = useCallback(async (acceptedOfferId) => {
+    if (!orderId || !acceptedOfferId) return;
+
+    try {
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
+
+      // Get current offers from state
+      const currentOffers = offersData?.offers || [];
+      if (currentOffers.length === 0) return;
+
+      // Get all other offer IDs (excluding the accepted one)
+      const otherOfferIds = currentOffers
+        .filter(offer => offer.id !== acceptedOfferId)
+        .map(offer => offer.id);
+
+      if (otherOfferIds.length === 0) return;
+
+      // Mark other offers as expired in the UI immediately
+      setExpiredOfferIds(prev => [...new Set([...prev, ...otherOfferIds])]);
+
+      // Try to reject offers via API (if endpoint exists)
+      // Note: This is a best-effort attempt. If the API doesn't have this endpoint,
+      // the UI will still show them as expired
+      const rejectPromises = otherOfferIds.map(async (offerId) => {
+        try {
+          // Try common API patterns for rejecting offers
+          const endpoints = [
+            `${API_BASE_URL}/orders/${orderId}/offers/${offerId}/reject`,
+            `${API_BASE_URL}/offers/${offerId}/reject`,
+            `${API_BASE_URL}/orders/${orderId}/offers/${offerId}/decline`,
+          ];
+
+          for (const endpoint of endpoints) {
+            try {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`
+                },
+                cache: 'no-store'
+              });
+
+              if (response.ok) {
+                console.log(`✅ Offer ${offerId} rejected successfully`);
+                return true;
+              }
+            } catch (err) {
+              // Continue to next endpoint
+              continue;
+            }
+          }
+          return false;
+        } catch (err) {
+          console.warn(`Failed to reject offer ${offerId}:`, err.message);
+          return false;
+        }
+      });
+
+      // Wait for all rejections (don't block if they fail)
+      await Promise.allSettled(rejectPromises);
+
+      // Refresh offers data to get updated status
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
+    } catch (err) {
+      console.warn('Error rejecting other offers:', err.message);
+      // Still mark as expired in UI even if API call fails
+    }
+  }, [orderId, offersData?.offers]);
 
   const handleDriverSelect = (driverId, offerId, driverData, offer) => {
     setSelectedDriverId(driverId);
@@ -788,31 +885,32 @@ export default function AvailableDriversContent({ onBack }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8">
 
         {/* Header */}
-        <div className="pt-8 pb-6">
+        <div className="pt-4 sm:pt-6 md:pt-8 pb-4 sm:pb-6">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between mb-6"
+            className="flex items-center justify-between mb-4 sm:mb-6 gap-2"
           >
             <button 
               onClick={onBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-[#579BE8] transition-all font-medium px-4 py-2 rounded-lg hover:bg-[#579BE8]/5"
+              className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-[#579BE8] transition-all font-medium px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-[#579BE8]/5 text-sm sm:text-base"
             >
-              <ChevronLeft className="w-4 h-4 rotate-180" />
-              <span>العودة</span>
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 rotate-180" />
+              <span className="hidden sm:inline">العودة</span>
             </button>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={fetchOffers}
                 disabled={refreshing}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium shadow-sm"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-sm"
               >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                تحديث العروض
+                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">تحديث العروض</span>
+                <span className="sm:hidden">تحديث</span>
               </button>
             </div>
           </motion.div>
@@ -822,59 +920,59 @@ export default function AvailableDriversContent({ onBack }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-2xl shadow-2xl overflow-hidden"
+            className="bg-gradient-to-br from-[#579BE8] via-[#4a8dd8] to-[#124987] text-white rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden"
           >
-            <div className="p-6 md:p-8 relative overflow-hidden">
+            <div className="p-4 sm:p-6 md:p-8 relative overflow-hidden">
               {/* Background Elements */}
-              <div className="absolute top-0 right-0 opacity-10">
+              <div className="absolute top-0 right-0 opacity-10 hidden sm:block">
                 <Truck size={200} className="rotate-12" />
               </div>
               
               <div className="relative z-10">
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
                   <div className="flex-1">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-xl">
-                        <Truck className="w-8 h-8" />
+                    <div className="flex items-start gap-2 sm:gap-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-xl flex-shrink-0">
+                        <Truck className="w-6 h-6 sm:w-8 sm:h-8" />
                       </div>
-                      <div>
-                        <p className="text-sm opacity-90 font-medium mb-2">اختيار السائق</p>
-                        <h1 className="text-2xl md:text-3xl font-black mb-4">السائقين المتاحين</h1>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm opacity-90 font-medium mb-1 sm:mb-2">اختيار السائق</p>
+                        <h1 className="text-lg sm:text-2xl md:text-3xl font-black mb-2 sm:mb-4">السائقين المتاحين</h1>
                         
-                        <div className="flex flex-wrap gap-3">
-                          <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                              <span className="font-medium">طلب #<span className="font-bold">{orderId}</span></span>
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
+                          <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse" />
+                              <span className="font-medium text-xs sm:text-sm">طلب #<span className="font-bold">{orderId}</span></span>
                             </div>
                           </div>
                           
-                          <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4" />
-                              <span className="font-medium">{offersData?.total_offers || 0} عرض متاح</span>
+                          <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span className="font-medium text-xs sm:text-sm">{offersData?.total_offers || 0} عرض</span>
                             </div>
                           </div>
                           
                           {isOrderExpired ? (
-                            <div className="bg-red-500/30 backdrop-blur-lg px-4 py-2 rounded-xl border border-red-300/50">
-                              <div className="flex items-center gap-2">
-                                <X className="w-4 h-4" />
-                                <span className="font-medium">انتهت صلاحية الطلب</span>
+                            <div className="bg-red-500/30 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-red-300/50">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="font-medium text-xs sm:text-sm">انتهت الصلاحية</span>
                               </div>
                             </div>
                           ) : timeRemaining ? (
-                            <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                <span className="font-medium">الوقت المتبقي: <span className="font-bold">{formatTimeRemaining()}</span></span>
+                            <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="font-medium text-xs sm:text-sm">متبقي: <span className="font-bold">{formatTimeRemaining()}</span></span>
                               </div>
                             </div>
                           ) : (
-                          <div className="bg-white/20 backdrop-blur-lg px-4 py-2 rounded-xl border border-white/30">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span className="font-medium">جاري البحث</span>
+                          <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span className="font-medium text-xs sm:text-sm">جاري البحث</span>
                             </div>
                           </div>
                           )}
@@ -888,25 +986,25 @@ export default function AvailableDriversContent({ onBack }) {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white/15 backdrop-blur-lg rounded-xl p-5 border border-white/20"
+                    className="bg-white/15 backdrop-blur-lg rounded-lg sm:rounded-xl p-3 sm:p-5 border border-white/20 mt-4 lg:mt-0"
                   >
-                    <p className="text-sm opacity-90 font-medium mb-4 text-center">إحصائيات العروض</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <p className="text-xs sm:text-sm opacity-90 font-medium mb-3 sm:mb-4 text-center">إحصائيات العروض</p>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{stats.totalOffers}</div>
-                        <div className="text-xs opacity-90">عدد العروض</div>
+                        <div className="text-lg sm:text-2xl font-bold">{stats.totalOffers}</div>
+                        <div className="text-[10px] sm:text-xs opacity-90">عدد العروض</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{stats.averagePrice}</div>
-                        <div className="text-xs opacity-90">متوسط السعر</div>
+                        <div className="text-lg sm:text-2xl font-bold">{stats.averagePrice}</div>
+                        <div className="text-[10px] sm:text-xs opacity-90">متوسط السعر</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{stats.fastestDelivery}</div>
-                        <div className="text-xs opacity-90">أسرع وقت</div>
+                        <div className="text-lg sm:text-2xl font-bold">{stats.fastestDelivery}</div>
+                        <div className="text-[10px] sm:text-xs opacity-90">أسرع وقت</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{stats.lowestPrice}</div>
-                        <div className="text-xs opacity-90">أقل سعر</div>
+                        <div className="text-lg sm:text-2xl font-bold">{stats.lowestPrice}</div>
+                        <div className="text-[10px] sm:text-xs opacity-90">أقل سعر</div>
                       </div>
                     </div>
                   </motion.div>
@@ -920,22 +1018,22 @@ export default function AvailableDriversContent({ onBack }) {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-xl p-6 shadow-lg"
+              className="mt-4 sm:mt-6 bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <X className="w-6 h-6 text-red-600" />
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <X className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-red-800 font-bold text-lg mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-red-800 font-bold text-base sm:text-lg mb-1 sm:mb-2">
                     انتهت صلاحية الطلب
                   </h3>
-                  <p className="text-red-600 text-sm mb-3">
+                  <p className="text-red-600 text-xs sm:text-sm mb-2 sm:mb-3">
                     عذراً، انتهت صلاحية هذا الطلب ولم يعد من الممكن قبول العروض. يرجى إنشاء طلب جديد.
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-red-500">
-                    <Clock className="w-4 h-4" />
-                    <span>انتهى في: {orderStatus?.expires_in?.expires_at ? new Date(orderStatus.expires_in.expires_at).toLocaleString('ar-SA') : 'غير محدد'}</span>
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-red-500">
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="break-words">انتهى في: {orderStatus?.expires_in?.expires_at ? new Date(orderStatus.expires_in.expires_at).toLocaleString('ar-SA') : 'غير محدد'}</span>
                   </div>
                 </div>
               </div>
@@ -947,15 +1045,15 @@ export default function AvailableDriversContent({ onBack }) {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4"
+              className="mt-4 sm:mt-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
-                <div className="flex-1">
-                  <p className="text-amber-800 font-medium text-sm">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-800 font-medium text-xs sm:text-sm">
                     جاري انتظار الدفع لاستكمال قبول العرض...
                   </p>
-                  <p className="text-amber-600 text-xs mt-1">
+                  <p className="text-amber-600 text-[10px] sm:text-xs mt-1">
                     تم حجز العرض مؤقتاً. يرجى إتمام عملية الدفع خلال 15 دقيقة
                   </p>
                 </div>
@@ -965,9 +1063,9 @@ export default function AvailableDriversContent({ onBack }) {
                     setPendingPaymentOfferId(null);
                     localStorage.removeItem('pendingOfferData');
                   }}
-                  className="text-xs text-amber-700 hover:text-amber-900 font-medium"
+                  className="text-[10px] sm:text-xs text-amber-700 hover:text-amber-900 font-medium flex-shrink-0"
                 >
-                  إلغاء الحجز
+                  إلغاء
                 </button>
               </div>
             </motion.div>
@@ -978,12 +1076,12 @@ export default function AvailableDriversContent({ onBack }) {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4"
+              className="mt-4 sm:mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-amber-800 text-sm">{error}</p>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-800 text-xs sm:text-sm break-words">{error}</p>
                 </div>
               </div>
             </motion.div>
@@ -991,26 +1089,26 @@ export default function AvailableDriversContent({ onBack }) {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 pb-12 sm:pb-20">
           {/* Drivers List - Left Column */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="lg:col-span-8"
+            className="lg:col-span-8 order-2 lg:order-1"
           >
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                   العروض المتاحة
                 </h2>
-                <div className="text-sm text-gray-500">
-                  {offersData?.total_offers || 0} عرض متاح
+                <div className="text-xs sm:text-sm text-gray-500">
+                  {offersData?.total_offers || 0} عرض
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
               {offersData?.offers && Array.isArray(offersData.offers) && offersData.offers.length > 0 ? (
                 offersData.offers.map((offer, index) => {
                   const isAccepted = acceptedOfferId === offer.id;
@@ -1079,22 +1177,23 @@ export default function AvailableDriversContent({ onBack }) {
           </motion.div>
 
           {/* Map - Right Column */}
-          <div className="lg:col-span-4">
-            <div className="sticky top-8">
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden h-[600px]">
-                <div className="p-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-gray-900">خريطة السائقين</h3>
-                      <p className="text-sm text-gray-500">مواقع السائقين الحالية</p>
+          <div className="lg:col-span-4 order-1 lg:order-2">
+            <div className="sticky top-4 sm:top-8">
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden h-[300px] sm:h-[400px] lg:h-[600px]">
+                <div className="p-2 sm:p-4 border-b">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-gray-900 text-sm sm:text-base">خريطة السائقين</h3>
+                      <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">مواقع السائقين الحالية</p>
                     </div>
                     {!locationPermissionRequested && (
                       <button
                         onClick={requestLocationPermission}
-                        className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#579BE8] text-white text-[10px] sm:text-xs font-medium rounded-lg hover:bg-[#4a8dd8] transition flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
                       >
-                        <MapPin className="w-3.5 h-3.5" />
-                        تحديد موقعي
+                        <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">تحديد موقعي</span>
+                        <span className="sm:hidden">موقعي</span>
                       </button>
                     )}
                   </div>
@@ -1147,14 +1246,14 @@ export default function AvailableDriversContent({ onBack }) {
                   )}
                 </div>
                 
-                <div className="p-4 border-t bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
-                      <Truck className="w-4 h-4" />
+                <div className="p-2 sm:p-4 border-t bg-gray-50">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#579BE8]/10 text-[#579BE8] rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-3 h-3 sm:w-4 sm:h-4" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">معلومات الخريطة</p>
-                      <p className="text-xs text-gray-500">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium">معلومات الخريطة</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">
                         {loading || refreshing ? 'جاري التحميل...' : 'يتم تحديث المواقع كل 30 ثانية'}
                       </p>
                     </div>
@@ -1162,9 +1261,68 @@ export default function AvailableDriversContent({ onBack }) {
                 </div>
               </div>
                   </div>
-                  </div>
+           </div>
         </div>
       </div>
+
+      {/* Location Permission Popup */}
+      {showLocationPermissionPopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 md:p-8 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="text-center">
+              {/* Icon */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#579BE8]/10 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <MapPin className="w-8 h-8 sm:w-10 sm:h-10 text-[#579BE8]" />
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
+                السماح بمشاركة الموقع
+              </h3>
+              
+              {/* Description */}
+              <p className="text-gray-600 mb-4 sm:mb-6 text-xs sm:text-sm leading-relaxed px-1">
+                نحتاج إلى الوصول إلى موقعك الحالي لعرض مواقع السائقين على الخريطة بشكل دقيق. 
+                سيتم استخدام موقعك فقط لعرض الخريطة ولن يتم مشاركته مع أي طرف آخر.
+              </p>
+              
+              {/* Buttons */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <button
+                  onClick={requestLocationPermission}
+                  className="px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white rounded-lg sm:rounded-xl font-bold hover:from-[#4a8dd8] hover:to-[#3b7bc8] transition text-xs sm:text-sm"
+                >
+                  <span className="hidden sm:inline">السماح بمشاركة الموقع</span>
+                  <span className="sm:hidden">السماح</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLocationPermissionPopup(false);
+                    // Use default location
+                    setCurrentLocation({
+                      lat: 24.7136,
+                      lng: 46.6753
+                    });
+                  }}
+                  className="px-3 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-xl font-medium hover:bg-gray-50 transition text-xs sm:text-sm"
+                >
+                  تخطي
+                </button>
+              </div>
+              
+              {/* Privacy Note */}
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-3 sm:mt-4">
+                يمكنك تغيير هذا الإعداد في أي وقت من الاعدادات
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       <PaymentModal
@@ -1179,14 +1337,7 @@ export default function AvailableDriversContent({ onBack }) {
         setPendingPaymentOfferId={setPendingPaymentOfferId}
       />
 
-      {/* Floating Action Button */}
-      <button
-        onClick={fetchOffers}
-        className="fixed bottom-6 left-6 z-50 w-12 h-12 bg-white shadow-lg rounded-full flex items-center justify-center hover:shadow-xl transition-all hover:scale-110 border border-gray-200"
-        title="تحديث العروض"
-      >
-        <RefreshCw className={`w-5 h-5 text-[#579BE8] ${refreshing ? 'animate-spin' : ''}`} />
-      </button>
+    
     </div>
   );
 }

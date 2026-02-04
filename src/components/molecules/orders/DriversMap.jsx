@@ -426,6 +426,50 @@ export default function DriversMap({
         }
     }, []);
 
+    // Function to create custom icon with driver name
+    const createDriverIcon = (driverName) => {
+        if (typeof window === 'undefined') return null;
+        try {
+            // Create a container div for the icon and name
+            const iconHtml = `
+                <div style="display: flex; flex-direction: column; align-items: center; transform: translateY(-5px);">
+                    <div style="
+                        background: white;
+                        border: 2px solid rgb(16, 151, 185);
+                        border-radius: 8px;
+                        padding: 4px 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                        font-size: 11px;
+                        font-weight: bold;
+                        color:rgb(16, 131, 185);
+                        white-space: nowrap;
+                        margin-bottom: 2px;
+                        direction: rtl;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    ">
+                        ${driverName || 'سائق'}
+                    </div>
+                    <img 
+                        src="/car22.png" 
+                        alt="car" 
+                        style="width: 40px; height: 25px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"
+                    />
+                </div>
+            `;
+            
+            return L.divIcon({
+                html: iconHtml,
+                className: 'custom-driver-icon',
+                iconSize: [60, 50],
+                iconAnchor: [30, 45],
+                popupAnchor: [0, -45],
+            });
+        } catch (e) {
+            console.warn('Error creating driver icon with name:', e);
+            return carIcon;
+        }
+    };
+
     // Map ready state - MUST be declared before any conditional returns (Rules of Hooks)
     const [mapReady, setMapReady] = useState(false);
 
@@ -583,8 +627,9 @@ export default function DriversMap({
                     }
                 };
                 
-                // Use default icon if carIcon failed to load
-                const markerIcon = carIcon || new L.Icon({
+                // Create custom icon with driver name
+                const driverName = driver.name || 'سائق';
+                const markerIcon = createDriverIcon(driverName) || carIcon || new L.Icon({
                     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
                     iconSize: [25, 41],
