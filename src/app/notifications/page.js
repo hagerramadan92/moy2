@@ -301,7 +301,7 @@ export default function NotificationsPage() {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="mb-3 sm:mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 md:gap-4">
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 mt-2">
               <div className="bg-blue-100 p-1.5 sm:p-2 md:p-3 rounded-lg">
                 <FaBell className="h-4 w-4 sm:h-5 sm:w-5 md:h-8 md:w-8 text-blue-600" />
               </div>
