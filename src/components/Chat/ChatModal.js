@@ -18,7 +18,8 @@ const ChatModal = ({
   defaultParticipantId = null,
   defaultParticipantName = null,
   isSupport = false,
-  initialChatId = null 
+  initialChatId = null,
+  showDriversOnly = false // عرض السائقين فقط عند فتح المحادثة من صفحة السائق
 }) => {
   // States
   const [chats, setChats] = useState([]);
@@ -770,28 +771,33 @@ const ChatModal = ({
     }
   }, [isOpen, isLoggedIn]);
 
-  // تصفية المحادثات عند البحث
+  // تصفية المحادثات عند البحث وعند عرض السائقين فقط
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredChats(chats);
-      return;
+    let filtered = chats;
+    
+    // تصفية حسب نوع المحادثة (السائقين فقط) إذا كان showDriversOnly مفعلاً
+    if (showDriversOnly) {
+      filtered = chats.filter(chat => chat.type === "user_driver");
     }
     
-    const query = searchQuery.toLowerCase();
-    const filtered = chats.filter(chat => {
-      const chatName = getChatName(chat).toLowerCase();
-      const lastMessage = (chat.last_message || '').toLowerCase();
-      const chatIdStr = `الدردشة ${chat.id}`.toLowerCase();
-      
-      return (
-        chatName.includes(query) ||
-        lastMessage.includes(query) ||
-        chatIdStr.includes(query)
-      );
-    });
+    // تصفية حسب البحث
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(chat => {
+        const chatName = getChatName(chat).toLowerCase();
+        const lastMessage = (chat.last_message || '').toLowerCase();
+        const chatIdStr = `الدردشة ${chat.id}`.toLowerCase();
+        
+        return (
+          chatName.includes(query) ||
+          lastMessage.includes(query) ||
+          chatIdStr.includes(query)
+        );
+      });
+    }
     
     setFilteredChats(filtered);
-  }, [searchQuery, chats]);
+  }, [searchQuery, chats, showDriversOnly]);
 
   // تحديث participantId و participantName عند تغيير defaultParticipantId
   useEffect(() => {
@@ -906,7 +912,8 @@ const ChatModal = ({
         exit={{ opacity: 0, scale: 0.95 }}
         className="relative bg-white w-full h-full md:w-[95%] md:h-[90vh] md:max-w-7xl md:mx-auto md:mt-5 md:rounded-2xl overflow-hidden flex flex-col md:flex-row"
       >
-        {/* Sidebar - قائمة المحادثات */}
+        {/* Sidebar - قائمة المحادثات - مخفية عند فتح المحادثة من صفحة السائق */}
+        {!defaultParticipantId && (
         <div className={`${selectedChat ? 'hidden md:flex' : 'flex'} md:w-[400px] flex-col h-full border-r border-gray-200`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -1147,21 +1154,84 @@ const ChatModal = ({
             )}
           </div>
         </div>
+        )}
 
         {/* Main Chat Area */}
-        <div className={`${selectedChat ? 'flex-1 flex flex-col' : 'hidden md:flex md:flex-1 md:flex-col'} h-full`}>
-          {selectedChat ? (
+        <div className={`${
+          defaultParticipantId 
+            ? 'flex-1 flex flex-col' // عند فتح من صفحة السائق، عرض المحادثة مباشرة
+            : selectedChat 
+              ? 'flex-1 flex flex-col' 
+              : 'hidden md:flex md:flex-1 md:flex-col'
+        } h-full`}>
+          {defaultParticipantId && !selectedChat && creatingChat ? (
+            /* Loading state when creating chat from driver profile */
+            <div className="h-full flex flex-col items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">جاري إنشاء المحادثة مع السائق...</p>
+              </div>
+            </div>
+          ) : defaultParticipantId && !selectedChat && !creatingChat ? (
+            /* Show new chat form when opened from driver profile */
+            <div className="h-full flex flex-col bg-gray-50">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onClose}
+                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  >
+                    <X size={18} className="text-gray-700" />
+                  </button>
+                  <div>
+                    <h3 className="font-bold text-gray-800">محادثة مع {defaultParticipantName || 'السائق'}</h3>
+                    <p className="text-sm text-gray-500">ابدأ المحادثة الآن</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center max-w-md">
+                  <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+                    <MessageCircle size={32} className="text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">ابدأ محادثة مع السائق</h3>
+                  <p className="text-gray-600 mb-6">
+                    سيتم إنشاء المحادثة تلقائياً عند إرسال أول رسالة
+                  </p>
+                  <button
+                    onClick={createNewChatWithParticipant}
+                    disabled={creatingChat}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {creatingChat ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>جاري الإنشاء...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        <span>إنشاء المحادثة</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : selectedChat ? (
             <>
               {/* Chat Header - ثابت */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
                 <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
-                  {/* Back button for mobile */}
+                  {/* Back button for mobile - مخفي عند فتح المحادثة من صفحة السائق */}
+                  {!defaultParticipantId && (
                   <button
                     onClick={() => setSelectedChat(null)}
                     className="md:hidden w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors flex-shrink-0"
                   >
                     <ArrowLeft size={18} className="text-gray-700" />
                   </button>
+                  )}
                   
                   <div className="relative flex-shrink-0">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${
@@ -1187,11 +1257,13 @@ const ChatModal = ({
                 </div>
                 
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* زر الإغلاق - مرئي دائماً */}
                   <button 
                     onClick={onClose}
-                    className="md:hidden w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center transition-colors group"
+                    title="إغلاق المحادثة"
                   >
-                    <X size={18} className="text-gray-700" />
+                    <X size={20} className="text-gray-600 group-hover:text-red-600 transition-colors" />
                   </button>
                   <button className="hidden sm:flex w-10 h-10 rounded-full hover:bg-gray-100 items-center justify-center transition-colors">
                     <Phone size={18} className="text-gray-600" />

@@ -205,6 +205,7 @@ const Layout = ({ children }) => {
           initialChatId={selectedChatId}
           defaultParticipantId={defaultParticipantId}
           defaultParticipantName={defaultParticipantName}
+          showDriversOnly={!!defaultParticipantId} // عرض السائقين فقط عند فتح المحادثة من صفحة السائق
         />
       </div>
     </AuthProvider>
