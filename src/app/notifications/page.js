@@ -268,7 +268,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-2 sm:py-4 md:py-8" dir="rtl">
+    <div className="min-h-screen bg-gray-50 py-2 sm:py-4 md:py-8 mt-3" dir="rtl">
       {/* Action Toasts */}
       <ActionToast />
       
