@@ -11,14 +11,13 @@ import { FaRegTrashCan } from "react-icons/fa6";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Spinner from "@/components/ui/spinner";
-
-
+import { useRouter } from "next/navigation";
 export default function MyProfilePage() {
     const [showSavedPlaces, setShowSavedPlaces] = useState(false);
     const [showAllPlaces, setShowAllPlaces] = useState(false);
     const [notificationsActive, setNotificationsActive] = useState(true);
     const [locationSharingActive, setLocationSharingActive] = useState(false);
-
+    const router = useRouter();
     // Form States
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
@@ -67,6 +66,7 @@ export default function MyProfilePage() {
                 
                 if (!accessToken) {
                     toast.error("يرجى تسجيل الدخول أولاً");
+                    router.push("/login");
                     setLoading(false);
                     return;
                 }

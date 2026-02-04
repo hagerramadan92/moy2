@@ -51,6 +51,7 @@ const ChatModal = ({
   const processedParticipantIdRef = useRef(null);
   const chatCreationFailedRef = useRef(null);
   const errorShownRef = useRef(null);
+  const lastLoadedChatIdRef = useRef(null);
 
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
@@ -329,14 +330,20 @@ const ChatModal = ({
   };
 
   // تحميل الرسائل عند اختيار محادثة
-  const loadMessages = async (chatId) => {
+  const loadMessages = useCallback(async (chatId) => {
     if (!isLoggedIn) {
       showLoginToast();
       return;
     }
     
+    // Prevent loading the same chat multiple times
+    if (lastLoadedChatIdRef.current === chatId) {
+      return;
+    }
+    
     try {
       setMessagesLoading(true);
+      lastLoadedChatIdRef.current = chatId;
       
       const response = await messageService.getMessages(chatId);
       
@@ -356,20 +363,24 @@ const ChatModal = ({
         }));
         
         setMessages(formattedMsgs);
-        scrollToBottom();
         
-        // تحديث حالة القراءة
-        markChatAsRead(chatId);
+        // تحديث حالة القراءة (after a small delay to avoid state update conflicts)
+        setTimeout(() => {
+          markChatAsRead(chatId);
+        }, 100);
+        
+        scrollToBottom();
       } else {
         setMessages([]);
       }
     } catch (error) {
       console.error('خطأ في تحميل الرسائل:', error);
       setMessages([]);
+      lastLoadedChatIdRef.current = null; // Reset on error
     } finally {
       setMessagesLoading(false);
     }
-  };
+  }, [isLoggedIn, currentUser.id]);
 
   // دالة مساعدة لإنشاء محادثة مع مشارك محدد
   const createNewChatWithParticipant = useCallback(async () => {
@@ -584,25 +595,39 @@ const ChatModal = ({
     }
   };
 
-  const markChatAsRead = async (chatId) => {
+  const markChatAsRead = useCallback(async (chatId) => {
     try {
-      // تحديث الحالة المحلية
-      setChats(prev => prev.map(chat => {
-        if (chat.id === chatId) {
-          return { ...chat, unreadCount: 0 };
-        }
-        return chat;
-      }));
+      // تحديث الحالة المحلية - only update if unreadCount > 0
+      setChats(prev => {
+        const needsUpdate = prev.some(chat => 
+          chat.id === chatId && chat.unreadCount > 0
+        );
+        if (!needsUpdate) return prev;
+        
+        return prev.map(chat => {
+          if (chat.id === chatId) {
+            return { ...chat, unreadCount: 0 };
+          }
+          return chat;
+        });
+      });
       
-      // تحديث الرسائل المحلية
-      setMessages(prev => prev.map(msg => ({
-        ...msg,
-        is_read: msg.isCurrentUser ? msg.is_read : true
-      })));
+      // تحديث الرسائل المحلية - only update unread messages
+      setMessages(prev => {
+        const needsUpdate = prev.some(msg => 
+          !msg.isCurrentUser && !msg.is_read
+        );
+        if (!needsUpdate) return prev;
+        
+        return prev.map(msg => ({
+          ...msg,
+          is_read: msg.isCurrentUser ? msg.is_read : true
+        }));
+      });
     } catch (error) {
       console.error('خطأ في تحديث حالة القراءة:', error);
     }
-  };
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -780,14 +805,34 @@ const ChatModal = ({
 
   // تحديث عند اختيار محادثة
   useEffect(() => {
-    if (selectedChat && isLoggedIn) {
-      loadMessages(selectedChat.id);
-      setChats(prev => prev.map(chat => ({
-        ...chat,
-        isActive: selectedChat?.id === chat.id
-      })));
+    if (selectedChat?.id && isLoggedIn) {
+      const chatId = selectedChat.id;
+      
+      // Only load messages if this is a different chat
+      if (lastLoadedChatIdRef.current !== chatId) {
+        loadMessages(chatId);
+      }
+      
+      // Update chat active state (only if it actually changed)
+      setChats(prev => {
+        const needsUpdate = prev.some(chat => 
+          (chat.isActive && chat.id !== chatId) || 
+          (!chat.isActive && chat.id === chatId)
+        );
+        
+        if (!needsUpdate) return prev;
+        
+        return prev.map(chat => ({
+          ...chat,
+          isActive: chat.id === chatId
+        }));
+      });
+    } else if (!selectedChat) {
+      // Reset when no chat is selected
+      lastLoadedChatIdRef.current = null;
+      setMessages([]);
     }
-  }, [selectedChat, isLoggedIn]);
+  }, [selectedChat?.id, isLoggedIn, loadMessages]);
 
   // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
   useEffect(() => {

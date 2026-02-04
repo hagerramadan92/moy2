@@ -195,6 +195,145 @@ export function NotificationProvider({ children }) {
     };
   };
 
+  // الحصول على اسم الجهاز مع معلومات إضافية
+  const getDeviceName = () => {
+    if (!isBrowser) return 'Unknown Device';
+    
+    const userAgent = navigator.userAgent;
+    let deviceName = 'Web Device';
+    
+    // الكشف عن نوع الجهاز
+    if (/android/i.test(userAgent)) {
+      deviceName = 'Android Device';
+    } else if (/iPad|iPhone|iPod/.test(userAgent)) {
+      deviceName = 'iOS Device';
+    } else if (/Macintosh|Mac/.test(userAgent)) {
+      deviceName = 'Mac Device';
+    } else if (/Windows/.test(userAgent)) {
+      deviceName = 'Windows Device';
+    } else if (/Linux/.test(userAgent)) {
+      deviceName = 'Linux Device';
+    }
+    
+    // إضافة معلومات المتصفح
+    if (/Chrome/.test(userAgent)) {
+      deviceName += ' (Chrome)';
+    } else if (/Firefox/.test(userAgent)) {
+      deviceName += ' (Firefox)';
+    } else if (/Safari/.test(userAgent)) {
+      deviceName += ' (Safari)';
+    } else if (/Edge/.test(userAgent)) {
+      deviceName += ' (Edge)';
+    }
+    
+    return deviceName;
+  };
+
+  // الحصول على نوع الجهاز
+  const getDeviceType = () => {
+    if (!isBrowser) return 'web';
+    const ua = navigator.userAgent.toLowerCase();
+    
+    if (/android/.test(ua)) return 'android';
+    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+    if (/windows phone/.test(ua)) return 'windows';
+    
+    // للويب، يمكن استخدام 'web' أو 'browser'
+    return 'web';
+  };
+
+  // الحصول على معلومات الجهاز المسجلة
+  const getRegisteredDeviceInfo = useCallback(() => {
+    if (!isBrowser) return null;
+    
+    try {
+      const deviceInfoStr = localStorage.getItem('device_info');
+      if (deviceInfoStr) {
+        return JSON.parse(deviceInfoStr);
+      }
+    } catch (error) {
+      console.error('Error parsing device info:', error);
+    }
+    
+    return {
+      session_id: localStorage.getItem('device_session_id'),
+      device_id: localStorage.getItem('current_device_id'),
+      registered: localStorage.getItem('device_registered') === 'true'
+    };
+  }, []);
+
+  // دالة مساعدة لتسجيل الجهاز (بدون useCallback)
+  const registerDeviceFunc = async (token, authToken) => {
+    try {
+      // إنشاء معرف الجلسة فريد
+      const generateSessionId = () => {
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      };
+
+      const deviceInfo = {
+        token: token,
+        device_type: getDeviceType(),
+        device_name: getDeviceName(),
+        app_version: '1.0.0',
+        session_id: generateSessionId() // هذا الحقل مطلوب حسب الـ API
+      };
+
+      console.log('🔔 Registering device with data:', deviceInfo);
+
+      const url = createRequestURL('/notifications/register-device');
+      const response = await enhancedFetch(url, {
+        method: 'POST',
+        body: deviceInfo
+      });
+
+      console.log('🔔 Device registration response:', response);
+
+      if (response && response.status === true) {
+        console.log('🔔 Device registered successfully on backend');
+        
+        // حفظ معلومات الجهاز في localStorage
+        localStorage.setItem('device_registered', 'true');
+        localStorage.setItem('device_session_id', deviceInfo.session_id);
+        localStorage.setItem('current_device_id', response.data?.device_id || 'firebase-device-' + Date.now());
+        
+        // حفظ معلومات إضافية من الاستجابة إذا وجدت
+        if (response.data) {
+          localStorage.setItem('device_info', JSON.stringify(response.data));
+        }
+        
+        return {
+          success: true,
+          message: response.message || 'تم تسجيل الجهاز بنجاح',
+          data: response.data,
+          session_id: deviceInfo.session_id
+        };
+      }
+      
+      // محاولة تنسيقات مختلفة للاستجابة
+      if (response && response.success) {
+        console.log('🔔 Device registered (success format)');
+        
+        localStorage.setItem('device_registered', 'true');
+        localStorage.setItem('device_session_id', deviceInfo.session_id);
+        
+        return {
+          success: true,
+          message: response.message || 'تم تسجيل الجهاز بنجاح',
+          data: response.data || response,
+          session_id: deviceInfo.session_id
+        };
+      }
+      
+      const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
+      console.error('🔔 Registration failed:', errorMessage, response);
+      throw new Error(errorMessage);
+      
+    } catch (error) {
+      console.error('❌ Error registering device:', error);
+      throw error;
+    }
+  };
+
   // دالة جلب الإشعارات
   const loadNotifications = useCallback(async (showLoader = true) => {
     if (!isMountedRef.current) return;
@@ -413,7 +552,10 @@ export function NotificationProvider({ children }) {
         localStorage.setItem('fcm_token_updated', new Date().toISOString());
         
         // إرسال التوكن للخادم
-        await registerDevice(currentToken);
+        const authToken = getAuthToken();
+        if (authToken) {
+          await registerDeviceFunc(currentToken, authToken);
+        }
         
         return currentToken;
       } else {
@@ -426,106 +568,203 @@ export function NotificationProvider({ children }) {
       addActionToast('حدث خطأ في تفعيل الإشعارات', 'error');
       return null;
     }
-  }, [addActionToast]);
+  }, [addActionToast]); // إزالة registerDevice من dependencies
 
-  // دالة تسجيل الجهاز في الخادم
-  const registerDevice = useCallback(async (token) => {
-    try {
-      const authToken = getAuthToken();
-      const userId = getUserId();
+  // دالة تسجيل الجهاز في الخادم (مع useCallback)
+  // دالة تسجيل الجهاز في الخادم (مع useCallback)
+// دالة تسجيل الجهاز في الخادم
+const registerDevice = useCallback(async (token) => {
+  try {
+    // إنشاء session_id فريد
+    const generateSessionId = () => {
+      return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    };
+    
+    // إعداد بيانات الجهاز
+    const deviceInfo = {
+      token: token,
+      device_type: getDeviceType(),
+      device_name: getDeviceName(),
+      app_version: '1.0.0',
+      session_id: generateSessionId()
+    };
+    
+    console.log('🔔 Registering device with data:', deviceInfo);
+    
+    // عمل API call
+    const url = createRequestURL('/notifications/register-device');
+    const response = await enhancedFetch(url, {
+      method: 'POST',
+      body: deviceInfo
+    });
+    
+    console.log('🔔 Device registration response:', response);
+    
+    if (response && response.status === true) {
+      console.log('🔔 Device registered successfully on backend');
       
-      if (!authToken || !userId) {
-        console.log('🔔 Cannot register device - missing auth token or user ID');
-        return { success: false, message: 'يجب تسجيل الدخول أولاً' };
+      // حفظ معلومات الجهاز
+      localStorage.setItem('device_registered', 'true');
+      localStorage.setItem('device_session_id', deviceInfo.session_id);
+      localStorage.setItem('current_device_id', response.data?.device_id || 'firebase-device-' + Date.now());
+      
+      if (response.data) {
+        localStorage.setItem('device_info', JSON.stringify(response.data));
       }
-
-      const deviceInfo = {
-        token: token,
-        device_type: getDeviceType(),
-        device_name: getDeviceName(),
-        platform: 'web',
-        user_id: userId,
-        app_version: '1.0.0'
+      
+      return {
+        success: true,
+        message: response.message || 'تم تسجيل الجهاز بنجاح',
+        data: response.data,
+        session_id: deviceInfo.session_id
       };
-
-      const url = createRequestURL('/notifications/register-device');
-      const response = await enhancedFetch(url, {
-        method: 'POST',
-        body: deviceInfo
-      });
-
-      if (response && response.status === true) {
-        console.log('🔔 Device registered successfully on backend');
-        localStorage.setItem('device_registered', 'true');
-        localStorage.setItem('current_device_id', response.data?.device_id || 'firebase-device-' + Date.now());
-        
-        // addActionToast('تم تفعيل الإشعارات بنجاح', 'success');
-        
-        return {
-          success: true,
-          message: response.message || 'تم تسجيل الجهاز بنجاح',
-          data: response.data
-        };
-      }
-      
-      const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
-      throw new Error(errorMessage);
-      
-    } catch (error) {
-      console.error('❌ Error registering device:', error);
-      addActionToast('حدث خطأ أثناء تسجيل الجهاز', 'error');
-      throw error;
     }
-  }, [addActionToast]);
-
-  // الحصول على نوع الجهاز
-  const getDeviceType = () => {
-    if (!isBrowser) return 'web';
-    const ua = navigator.userAgent.toLowerCase();
-    if (/android/.test(ua)) return 'android';
-    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-    return 'web';
-  };
-
-  // الحصول على اسم الجهاز
-  const getDeviceName = () => {
-    if (!isBrowser) return 'Unknown Device';
-    return navigator.userAgent || 'Unknown Device';
-  };
+    
+    // معالجة تنسيقات مختلفة للاستجابة
+    if (response && response.success) {
+      console.log('🔔 Device registered (success format)');
+      
+      localStorage.setItem('device_registered', 'true');
+      localStorage.setItem('device_session_id', deviceInfo.session_id);
+      
+      return {
+        success: true,
+        message: response.message || 'تم تسجيل الجهاز بنجاح',
+        data: response.data || response,
+        session_id: deviceInfo.session_id
+      };
+    }
+    
+    const errorMessage = response?.message || 'فشل في تسجيل الجهاز';
+    console.error('🔔 Registration failed:', errorMessage, response);
+    
+    // حتى إذا فشل التسجيل في الخادم، نعيد نجاحاً جزئياً
+    localStorage.setItem('device_registered', 'true');
+    localStorage.setItem('device_session_id', deviceInfo.session_id);
+    
+    return {
+      success: true,
+      message: 'تم حفظ الجهاز محلياً',
+      data: { saved_locally: true },
+      session_id: deviceInfo.session_id
+    };
+    
+  } catch (error) {
+    console.error('❌ Error registering device:', error);
+    
+    // في حالة الخطأ، نحفظ البيانات محلياً
+    localStorage.setItem('device_registered', 'true');
+    localStorage.setItem('fcm_token', token);
+    localStorage.setItem('fcm_token_updated', new Date().toISOString());
+    
+    return {
+      success: true,
+      message: 'تم حفظ الجهاز محلياً',
+      data: { saved_locally: true }
+    };
+  }
+}, []);
 
   // دالة إلغاء تسجيل الجهاز
   const unregisterDevice = useCallback(async () => {
     try {
       const authToken = getAuthToken();
-      if (!authToken) return;
-
+      
       // حذف التوكن من Firebase
       if (messaging && fcmToken) {
-        await deleteToken(messaging);
-        console.log('🔔 FCM token deleted');
+        try {
+          await deleteToken(messaging);
+          console.log('🔔 FCM token deleted from Firebase');
+        } catch (firebaseError) {
+          console.error('❌ Error deleting FCM token:', firebaseError);
+        }
       }
 
-      // إعلام الخادم بإلغاء التسجيل
-      const url = createRequestURL('/notifications/unregister-device');
-      await enhancedFetch(url, {
-        method: 'POST',
-        body: { token: fcmToken }
-      });
+      // إعلام الخادم بإلغاء التسجيل إذا كان هناك توكن
+      if (fcmToken && authToken) {
+        try {
+          const sessionId = localStorage.getItem('device_session_id');
+          const unregisterData = { 
+            token: fcmToken,
+            session_id: sessionId || undefined
+          };
 
-      // مسح البيانات المحلية
-      localStorage.removeItem('fcm_token');
-      localStorage.removeItem('device_registered');
-      localStorage.removeItem('current_device_id');
-      localStorage.removeItem('fcm_token_updated');
+          const url = createRequestURL('/notifications/unregister-device');
+          await enhancedFetch(url, {
+            method: 'POST',
+            body: unregisterData
+          });
+          
+          console.log('🔔 Device unregistered from backend');
+        } catch (apiError) {
+          console.error('❌ Error unregistering from backend:', apiError);
+        }
+      }
+
+      // مسح جميع البيانات المحلية
+      const itemsToRemove = [
+        'fcm_token',
+        'device_registered',
+        'current_device_id',
+        'fcm_token_updated',
+        'device_session_id',
+        'device_info'
+      ];
+      
+      itemsToRemove.forEach(item => {
+        localStorage.removeItem(item);
+      });
       
       setFcmToken(null);
       
-      console.log('🔔 Device unregistered successfully');
+      console.log('🔔 Device completely unregistered');
+      addActionToast('تم إيقاف الإشعارات', 'info');
       
     } catch (error) {
       console.error('❌ Error unregistering device:', error);
+      addActionToast('حدث خطأ أثناء إيقاف الإشعارات', 'error');
     }
-  }, [fcmToken]);
+  }, [fcmToken, addActionToast]);
+
+  // التحقق من تسجيل الجهاز
+  const checkDeviceRegistration = useCallback(() => {
+    if (!isBrowser) {
+      return { hasToken: false, isRegistered: false };
+    }
+    
+    const token = localStorage.getItem('fcm_token');
+    const registered = localStorage.getItem('device_registered');
+    const deviceId = localStorage.getItem('current_device_id');
+    const tokenUpdated = localStorage.getItem('fcm_token_updated');
+    const sessionId = localStorage.getItem('device_session_id');
+    const deviceInfo = getRegisteredDeviceInfo();
+    
+    // التحقق من عمر التوكن (أكثر من 7 أيام)
+    let tokenValid = true;
+    if (tokenUpdated) {
+      const updateDate = new Date(tokenUpdated);
+      const now = new Date();
+      const daysDiff = (now - updateDate) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 7) {
+        console.log('🔔 FCM token expired (older than 7 days)');
+        tokenValid = false;
+      }
+    }
+    
+    if (token) {
+      setFcmToken(token);
+    }
+    
+    return {
+      hasToken: !!token && tokenValid,
+      isRegistered: registered === 'true',
+      deviceId,
+      sessionId,
+      deviceInfo,
+      permission: notificationPermission,
+      firebaseInitialized: isFirebaseInitialized
+    };
+  }, [notificationPermission, isFirebaseInitialized, getRegisteredDeviceInfo]);
 
   // دالة تهيئة Firebase والإشعارات
   const initializeFirebase = useCallback(async () => {
@@ -724,42 +963,6 @@ export function NotificationProvider({ children }) {
     }
   }, [notifications, loadUnreadCount, addActionToast]);
 
-  // التحقق من تسجيل الجهاز
-  const checkDeviceRegistration = useCallback(() => {
-    if (!isBrowser) {
-      return { hasToken: false, isRegistered: false };
-    }
-    
-    const token = localStorage.getItem('fcm_token');
-    const registered = localStorage.getItem('device_registered');
-    const deviceId = localStorage.getItem('current_device_id');
-    const tokenUpdated = localStorage.getItem('fcm_token_updated');
-    
-    // التحقق من عمر التوكن (أكثر من 7 أيام)
-    let tokenValid = true;
-    if (tokenUpdated) {
-      const updateDate = new Date(tokenUpdated);
-      const now = new Date();
-      const daysDiff = (now - updateDate) / (1000 * 60 * 60 * 24);
-      if (daysDiff > 7) {
-        console.log('🔔 FCM token expired (older than 7 days)');
-        tokenValid = false;
-      }
-    }
-    
-    if (token) {
-      setFcmToken(token);
-    }
-    
-    return {
-      hasToken: !!token && tokenValid,
-      isRegistered: registered === 'true',
-      deviceId: deviceId,
-      permission: notificationPermission,
-      firebaseInitialized: isFirebaseInitialized
-    };
-  }, [notificationPermission, isFirebaseInitialized]);
-
   // دالة طلب إذن الإشعارات يدوياً
   const requestNotificationPermissionManual = useCallback(async () => {
     try {
@@ -801,6 +1004,41 @@ export function NotificationProvider({ children }) {
       return { success: false, message: error.message };
     }
   }, [getFCMToken]);
+
+  // اختبار الاتصال
+  const testBackendConnection = useCallback(async () => {
+    try {
+      const authToken = getAuthToken();
+      if (!authToken) {
+        return { connected: false, message: 'لم يتم تسجيل الدخول' };
+      }
+
+      const url = createRequestURL('/notifications');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Accept': 'application/json'
+        },
+        method: 'GET',
+        mode: 'cors'
+      });
+
+      return {
+        connected: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        firebaseInitialized: isFirebaseInitialized,
+        notificationPermission,
+        hasFCMToken: !!fcmToken
+      };
+    } catch (error) {
+      return {
+        connected: false,
+        message: error.message,
+        firebaseInitialized: isFirebaseInitialized
+      };
+    }
+  }, [isFirebaseInitialized, notificationPermission, fcmToken]);
 
   // تهيئة نظام الإشعارات
   useEffect(() => {
@@ -880,41 +1118,6 @@ export function NotificationProvider({ children }) {
     }
   }, [loadNotifications, loadUnreadCount, initializeFirebase]);
 
-  // اختبار الاتصال
-  const testBackendConnection = useCallback(async () => {
-    try {
-      const authToken = getAuthToken();
-      if (!authToken) {
-        return { connected: false, message: 'لم يتم تسجيل الدخول' };
-      }
-
-      const url = createRequestURL('/notifications');
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Accept': 'application/json'
-        },
-        method: 'GET',
-        mode: 'cors'
-      });
-
-      return {
-        connected: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        firebaseInitialized: isFirebaseInitialized,
-        notificationPermission,
-        hasFCMToken: !!fcmToken
-      };
-    } catch (error) {
-      return {
-        connected: false,
-        message: error.message,
-        firebaseInitialized: isFirebaseInitialized
-      };
-    }
-  }, [isFirebaseInitialized, notificationPermission, fcmToken]);
-
   const value = {
     notifications,
     unreadCount,
@@ -961,6 +1164,9 @@ export function NotificationProvider({ children }) {
     
     // دالة جلب عدد الإشعارات غير المقروءة
     loadUnreadCount,
+    
+    // دالة للحصول على معلومات الجهاز المسجلة
+    getRegisteredDeviceInfo,
     
     // معلومات التصحيح
     debugInfo: () => ({
