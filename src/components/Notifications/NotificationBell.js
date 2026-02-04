@@ -483,7 +483,7 @@ const NotificationBell = () => {
                 </button>
                 
                 {/* معلومات Firebase */}
-                {!isFirebaseInitialized && (
+                {/* {!isFirebaseInitialized && (
                   <div className="mt-2 pt-2 border-t border-gray-200">
                     <p className="text-xs text-gray-500 text-center">
                       لتفعيل الإشعارات الفورية، انتقل إلى{' '}
@@ -498,7 +498,7 @@ const NotificationBell = () => {
                       </button>
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
             )}
           </div>
