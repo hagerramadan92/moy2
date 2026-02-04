@@ -572,9 +572,9 @@ class MessageService {
         cacheManager.clearPattern(`messages_${chatId}`);
         
         // عرض رسالة نجاح
-        showLoginToast('تم إرسال الرسالة بنجاح', 'success', {
-          duration: 3000
-        });
+        // showLoginToast('تم إرسال الرسالة بنجاح', 'success', {
+        //   duration: 3000
+        // });
         
         return {
           success: true,
