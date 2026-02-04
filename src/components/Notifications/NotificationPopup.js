@@ -279,19 +279,17 @@ const registerDeviceDirect = async (fcmToken) => {
             سيسمح لنا هذا بإرسال إشعارات فورية عن:
             <br />
             • تحديثات الطلبات
-            <br />
-            • الرسائل الجديدة
-            <br />
-            • العروض والتخفيضات
+           {/* <span className="block md:inline">• الرسائل الجديدة</span> */}
+           <span className="ms-3">• العروض والتخفيضات</span>
           </p>
         </div>
         
-        <div className="flex flex-col gap-2 md:gap-3 md:mt-6 mt-2">
+        <div className="grid grid-cols-2 gap-2 md:gap-3 md:mt-6 mt-2">
           <button 
             onClick={handleAllow}
             disabled={loading}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold
-             md:py-4 md:px-6 py-2 px-2 rounded-md md:rounded-xl transition-all duration-200 
+            className="bg-blue-500  text-sm md:text-base  hover:bg-blue-600 text-white font-semibold
+             md:py-3 md:px-6 py-2 px-1 rounded-md md:rounded-xl transition-all duration-200 
              hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-blue-500/30 
              hover:shadow-blue-500/40 disabled:opacity-70 disabled:cursor-not-allowed 
              disabled:hover:transform-none"
@@ -311,7 +309,7 @@ const registerDeviceDirect = async (fcmToken) => {
             onClick={handleSkip}
             disabled={loading}
             className="bg-transparent hover:bg-gray-50
-             text-gray-500 font-medium md:py-4 md:px-6 py-1 px-2 
+             text-gray-500 font-medium md:py-3 md:px-6 py-1 px-1 text-sm md:text-base 
              rounded-md md:rounded-xl border-2 border-gray-200 
              transition-all duration-200 hover:-translate-y-0.5 
              active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed 
@@ -322,7 +320,7 @@ const registerDeviceDirect = async (fcmToken) => {
         </div>
         
         <div className="mt-3 md:mt-4 text-xs text-gray-400">
-          <p>يمكنك تغيير هذا الإعداد لاحقاً من إعدادات المتصفح</p>
+          <p>يمكنك تغيير هذا الإعداد لاحقاً من الإعدادات </p>
         </div>
       </div>
     </div>

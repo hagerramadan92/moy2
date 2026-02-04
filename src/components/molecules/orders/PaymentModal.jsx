@@ -27,7 +27,6 @@ export default function PaymentModal({
   selectedOfferId,
   orderId,
   offerAmount,
-  useMockData = false,
   onOfferExpired,
   setPendingPaymentOfferId,
 }) {
@@ -72,9 +71,9 @@ export default function PaymentModal({
   };
 
   useEffect(() => {
-    if (isOpen && !useMockData) {
+    if (isOpen) {
       fetchPaymentMethods();
-    } else if (!isOpen) {
+    } else {
       // Reset state when modal closes
       setSelectedMethod(null);
       setSelectedPaymentData(null);
@@ -126,12 +125,6 @@ export default function PaymentModal({
      Handle Payment Method Click - Select method only
   ============================== */
   const handlePaymentMethodClick = async (method) => {
-    if (useMockData) {
-      setSelectedMethod(method);
-      setSelectedPaymentUrl('https://example.com/payment');
-      return;
-    }
-
     try {
       setProcessingMethod(method.id);
       setError(null);

@@ -21,7 +21,6 @@ import DriverCard from './DriverCard';
 import PaymentModal from './PaymentModal';
 import { API_BASE_URL, getAccessToken } from './utils/api';
 import { getPaymentCallbackData, getPendingOfferData } from './utils/paymentHelpers';
-import { generateMockDriver } from './utils/mockData';
 
 // Dynamically import map to avoid SSR
 const DriversMap = dynamic(
@@ -55,7 +54,6 @@ export default function AvailableDriversContent({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [useMockData, setUseMockData] = useState(false);
   const [orderStatus, setOrderStatus] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isOrderExpired, setIsOrderExpired] = useState(false);
@@ -120,13 +118,13 @@ export default function AvailableDriversContent({ onBack }) {
   // Memoize shouldUpdate to prevent map reloads
   const mapShouldUpdate = useMemo(() => {
     // تثبيت shouldUpdate بعد التحميل الأول لمنع إعادة تحميل الخريطة
-    const isReady = !loading && !refreshing && offersData && !useMockData;
+    const isReady = !loading && !refreshing && offersData;
     if (isReady && !mapInitializedRef.current) {
       mapInitializedRef.current = true;
     }
     // بعد التهيئة الأولى، نرجع true دائماً لتحديث البيانات فقط بدون إعادة تحميل الخريطة
     return mapInitializedRef.current ? true : isReady;
-  }, [loading, refreshing, offersData, useMockData]);
+  }, [loading, refreshing, offersData]);
 
   // Get orderId from URL
   const orderId = searchParams.get('orderId');
@@ -482,7 +480,6 @@ export default function AvailableDriversContent({ onBack }) {
         
         // Set data immediately
         setOffersData(offersDataToSet);
-        setUseMockData(false);
         setError(null);
         
         // Set accepted offer ID if exists - prioritize this to show immediately
@@ -529,23 +526,10 @@ export default function AvailableDriversContent({ onBack }) {
         return;
       }
       
-      // استخدام البيانات الوهمية كبديل فقط للأخطاء الأخرى
-      setUseMockData(true);
-      const mockOffers = Array.from({ length: 4 }, (_, i) => generateMockDriver(i, orderId));
-      
-      const mockData = {
-        order_id: orderId,
-        order_status: 'pending',
-        total_offers: mockOffers.length,
-        active_offers: mockOffers.length,
-        accepted_offer: null,
-        offers: mockOffers
-      };
-      
-      setOffersData(mockData);
-      calculateStats(mockOffers);
-      setError(`تم تحميل بيانات تجريبية: ${err.message}`);
+      // عرض رسالة الخطأ
+      setError(`حدث خطأ في جلب البيانات: ${err.message}`);
       setLoading(false);
+      setOffersData(null);
     } finally {
       setRefreshing(false);
     }
@@ -822,13 +806,6 @@ export default function AvailableDriversContent({ onBack }) {
             </button>
 
             <div className="flex items-center gap-4">
-              {useMockData && (
-                <div className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full text-xs font-medium flex items-center gap-1.5">
-                  <AlertCircle className="w-3 h-3" />
-                  بيانات تجريبية
-                </div>
-              )}
-              
               <button
                 onClick={fetchOffers}
                 disabled={refreshing}
@@ -1007,11 +984,6 @@ export default function AvailableDriversContent({ onBack }) {
                 <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-amber-800 text-sm">{error}</p>
-                  {useMockData && (
-                    <p className="text-amber-600 text-xs mt-1">
-                      هذه البيانات للتجربة فقط. تأكد من اتصال الخادم للبيانات الحقيقية.
-                    </p>
-                  )}
                 </div>
               </div>
             </motion.div>
@@ -1203,7 +1175,6 @@ export default function AvailableDriversContent({ onBack }) {
         selectedOfferId={selectedOfferId}
         orderId={orderId}
         offerAmount={selectedOffer?.price}
-        useMockData={useMockData}
         onOfferExpired={handleOfferExpired}
         setPendingPaymentOfferId={setPendingPaymentOfferId}
       />
