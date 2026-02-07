@@ -200,7 +200,7 @@ export default function SettingsPage() {
                     <div className="text-sm text-slate-500 dark:text-slate-400">تفعيل الوضع المظلم</div>
                   </div>
                 </div>
-                {/* <label className="relative inline-flex cursor-pointer items-center">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={darkMode}
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                     className="peer sr-only"
                   />
                   <div className="peer h-6 w-11 rounded-full bg-slate-200 dark:bg-slate-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 dark:after:border-slate-500 after:bg-white dark:after:bg-slate-300 after:transition-all after:content-[''] peer-checked:bg-sky-500 dark:peer-checked:bg-sky-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800"></div>
-                </label> */}
+                </label>
               </div>
 
               <div className="flex items-center justify-between rounded-xl p-4 transition hover:bg-slate-50 dark:hover:bg-slate-700">

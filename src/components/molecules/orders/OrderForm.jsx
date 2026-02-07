@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, Suspense, useRef } from 'react';
+import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, Search, ArrowLeft, ChevronDown, ChevronUp, X, Wifi, WifiOff } from 'lucide-react';
+import { MapPin, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, Search, ArrowLeft, ChevronDown, ChevronUp, X, Wifi, WifiOff, Clock, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FaStar, FaMapMarkerAlt, FaHome, FaBriefcase, FaMapMarkedAlt } from 'react-icons/fa';
 
@@ -59,12 +59,6 @@ function OrderFormContent() {
   const [isManualLocation, setIsManualLocation] = useState(false);
   const [locationData, setLocationData] = useState(null);
   
-  // New states for API data
-  const [waterTypes, setWaterTypes] = useState([]);
-  const [services, setServices] = useState([]);
-  const [loadingWaterTypes, setLoadingWaterTypes] = useState(false);
-  const [loadingServices, setLoadingServices] = useState(false);
-  
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -75,6 +69,13 @@ function OrderFormContent() {
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const [driverAcceptedOrder, setDriverAcceptedOrder] = useState(false);
   const [pusherChannels, setPusherChannels] = useState({ orderChannel: null, userChannel: null });
+  
+  // New states for Pusher only
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [orderStatus, setOrderStatus] = useState('waiting');
+  const [totalSearchTime, setTotalSearchTime] = useState(0); // إجمالي وقت البحث بالثواني
+  const expirationTimeoutRef = useRef(null);
   
   // استخدام custom hook لـ Pusher
   const {
@@ -87,12 +88,22 @@ function OrderFormContent() {
     autoConnect: true,
     onConnected: () => {
       console.log('✅ Pusher connected successfully');
+      if (isWaitingForOffers && !pusherConnected) {
+        setWaitingMessage('جاري الاستماع للعروض في الوقت الفعلي...');
+      }
     },
     onDisconnected: () => {
       console.log('🔴 Pusher disconnected');
+      if (isWaitingForOffers) {
+        setWaitingMessage('فقدنا الاتصال، جاري إعادة المحاولة...');
+        toast.warning('فقدنا الاتصال بالخادم، جاري إعادة المحاولة...');
+      }
     },
     onError: (error) => {
       console.error('❌ Pusher error:', error);
+      if (isWaitingForOffers) {
+        toast.error('حدث خطأ في الاتصال بالخادم');
+      }
     }
   });
   
@@ -261,11 +272,98 @@ function OrderFormContent() {
     }
   };
 
+  // Cleanup all timeouts
+  const cleanupAllTimeouts = useCallback(() => {
+    if (expirationTimeoutRef.current) {
+      clearTimeout(expirationTimeoutRef.current);
+      expirationTimeoutRef.current = null;
+    }
+    
+    if (requestTimeoutRef.current) {
+      clearTimeout(requestTimeoutRef.current);
+      requestTimeoutRef.current = null;
+    }
+    
+    cleanupPusherListener();
+  }, []);
+
+  // Calculate time remaining
+  const calculateTimeRemaining = useCallback(() => {
+    if (!expiresAt) return null;
+    
+    const now = Date.now();
+    const expiresTime = new Date(expiresAt).getTime();
+    const diff = expiresTime - now;
+    
+    if (diff <= 0) {
+      return { expired: true, minutes: 0, seconds: 0 };
+    }
+    
+    const minutes = Math.floor(diff / 1000 / 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+    
+    return { expired: false, minutes, seconds };
+  }, [expiresAt]);
+
+  // Update time remaining effect
+  useEffect(() => {
+    if (!expiresAt || !isWaitingForOffers) return;
+    
+    const interval = setInterval(() => {
+      const remaining = calculateTimeRemaining();
+      setTimeRemaining(remaining);
+      
+      if (remaining?.expired) {
+        clearInterval(interval);
+        handleOrderExpired();
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [expiresAt, isWaitingForOffers, calculateTimeRemaining]);
+
+  // Handle order expired
+  const handleOrderExpired = useCallback(() => {
+    toast.error('انتهى وقت البحث عن سائق ولم يتم العثور على سائق', {
+      duration: 5000,
+      icon: '⏰'
+    });
+    
+    setIsWaitingForOffers(false);
+    setIsLoading(false);
+    cleanupAllTimeouts();
+    cleanupRequestPrevention();
+    
+    router.push(`/orders/available-drivers?orderId=${currentOrderId}&expired=true`);
+  }, [currentOrderId, router, cleanupAllTimeouts]);
+
   // Setup Pusher listener for order updates
-  const setupPusherListener = async (orderId, userId) => {
+  const setupPusherListener = async (orderId, userId, expiresAtFromAPI) => {
     try {
       console.log(`🎯 Setting up Pusher listeners for order ${orderId} and user ${userId}`);
+      console.log(`⏰ Order expires at: ${expiresAtFromAPI}`);
       
+      // Set expiration timeout
+      if (expiresAtFromAPI) {
+        const expiresTime = new Date(expiresAtFromAPI).getTime();
+        const now = Date.now();
+        const timeUntilExpiration = expiresTime - now;
+        
+        console.log(`⏱️ Time until expiration: ${timeUntilExpiration}ms`);
+        console.log(`⏱️ Time until expiration: ${Math.floor(timeUntilExpiration / 1000)} seconds`);
+        
+        if (timeUntilExpiration > 0) {
+          expirationTimeoutRef.current = setTimeout(() => {
+            console.log('⏰ Order search time expired via timeout');
+            handleOrderExpired();
+          }, timeUntilExpiration);
+        } else {
+          console.log('⚠️ Order already expired or invalid expiration time');
+          handleOrderExpired();
+          return null;
+        }
+      }
+
       const channels = subscribeToOrderAndUser(orderId, userId, {
         onDriverAcceptedOrder: (data) => {
           console.log('🚗 Driver accepted order via Pusher:', data);
@@ -281,6 +379,7 @@ function OrderFormContent() {
             // Navigate to order tracking page
             setIsWaitingForOffers(false);
             setIsLoading(false);
+            cleanupAllTimeouts();
             cleanupRequestPrevention();
             
             setTimeout(() => {
@@ -292,43 +391,60 @@ function OrderFormContent() {
         onOfferCreated: (data) => {
           console.log('🎯 New offer received via Pusher:', data);
           
-          toast.success('تم استلام عرض جديد!', {
-            icon: '🎉',
-            duration: 3000,
-          });
+          // Check if this event is for our current order
+          if (data.order_id && data.order_id.toString() === orderId.toString()) {
+            toast.success('تم استلام عرض جديد!', {
+              icon: '🎉',
+              duration: 3000,
+            });
 
-          // Navigate to drivers page when an offer is received
-          setIsWaitingForOffers(false);
-          setIsLoading(false);
-          cleanupRequestPrevention();
-          
-          setTimeout(() => {
-            router.push(`/orders/available-drivers?orderId=${orderId}`);
-          }, 1000);
+            // Navigate to drivers page when an offer is received
+            setIsWaitingForOffers(false);
+            setIsLoading(false);
+            cleanupAllTimeouts();
+            cleanupRequestPrevention();
+            
+            setTimeout(() => {
+              router.push(`/orders/available-drivers?orderId=${orderId}`);
+            }, 1000);
+          }
         },
 
         onOrderStatusUpdated: (data) => {
           console.log('📊 Order status updated:', data);
           
-          if (data.status === 'expired' || data.status === 'cancelled') {
-            toast.error(`تم ${data.status === 'expired' ? 'انتهاء' : 'إلغاء'} الطلب`, {
-              icon: '⚠️',
-              duration: 5000,
-            });
+          // Check if this event is for our current order
+          if (data.order_id && data.order_id.toString() === orderId.toString()) {
+            setOrderStatus(data.status);
             
-            setIsWaitingForOffers(false);
-            setIsLoading(false);
-            cleanupRequestPrevention();
-            
-            if (data.status === 'expired') {
-              localStorage.setItem(`order_${orderId}_expired`, 'true');
+            if (data.status === 'expired' || data.status === 'cancelled') {
+              const message = data.status === 'expired' 
+                ? 'انتهى وقت البحث ولم يتم العثور على سائق' 
+                : 'تم إلغاء الطلب';
+                
+              toast.error(message, {
+                icon: '⚠️',
+                duration: 5000,
+              });
+              
+              setIsWaitingForOffers(false);
+              setIsLoading(false);
+              cleanupAllTimeouts();
+              cleanupRequestPrevention();
+              
+              if (data.status === 'expired') {
+                localStorage.setItem(`order_${orderId}_expired`, 'true');
+                router.push(`/orders/available-drivers?orderId=${orderId}&expired=true`);
+              }
             }
           }
         },
 
         onDriverAssigned: (data) => {
           console.log('👤 Driver assigned to order:', data);
-          // يمكنك إضافة معالجة إضافية هنا
+          if (data.order_id && data.order_id.toString() === orderId.toString()) {
+            setDriverAcceptedOrder(true);
+          }
         },
 
         onOrderUpdated: (data) => {
@@ -338,10 +454,18 @@ function OrderFormContent() {
       });
 
       setPusherChannels(channels);
+      
+      // Update waiting message
+      setWaitingMessage(pusherConnected 
+        ? 'جاري البحث عن سائق...' 
+        : 'جاري الاتصال بالخادم للبحث عن سائق...'
+      );
+      
       return channels;
       
     } catch (error) {
       console.error('❌ Error setting up Pusher listener:', error);
+      toast.error('حدث خطأ في إعداد نظام البحث عن سائق');
       return null;
     }
   };
@@ -400,6 +524,8 @@ function OrderFormContent() {
     }
 
     setIsLoading(true);
+    setIsWaitingForOffers(true);
+    setWaitingMessage('جاري إنشاء الطلب والبحث عن سائق...');
 
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -414,6 +540,7 @@ function OrderFormContent() {
       if (!userId) {
         toast.error("لا يمكن الحصول على معلومات المستخدم");
         setIsLoading(false);
+        setIsWaitingForOffers(false);
         cleanupRequestPrevention();
         return;
       }
@@ -453,6 +580,7 @@ function OrderFormContent() {
         } else {
           toast.error("فشل حفظ العنوان الجديد");
           setIsLoading(false);
+          setIsWaitingForOffers(false);
           cleanupRequestPrevention();
           return;
         }
@@ -477,7 +605,10 @@ function OrderFormContent() {
         toast.success(data.message || "تم إنشاء الطلب بنجاح!");
         
         let orderId;
+        let expiresAtFromAPI = null;
+        let orderExpiresAt = null;
         
+        // استخراج orderId
         if (data.data?.id) {
           orderId = data.data.id;
         } else if (data.data?.order_id) {
@@ -492,6 +623,7 @@ function OrderFormContent() {
           console.warn('⚠️ Could not find orderId in response');
           toast.error('لم يتم الحصول على رقم الطلب من الخادم');
           setIsLoading(false);
+          setIsWaitingForOffers(false);
           cleanupRequestPrevention();
           return;
         }
@@ -499,195 +631,63 @@ function OrderFormContent() {
         console.log('✅ Order ID retrieved:', orderId);
         setCurrentOrderId(orderId);
 
-        // Setup Pusher listener with user ID
-        const channels = await setupPusherListener(orderId, userId);
+        // الحصول على وقت الانتهاء من الرد - البحث في جميع المستويات
+        if (data.data?.expires_in?.expires_at) {
+          expiresAtFromAPI = data.data.expires_in.expires_at;
+          orderExpiresAt = data.data.expires_in.expires_at;
+        } else if (data.data?.expires_at) {
+          expiresAtFromAPI = data.data.expires_at;
+          orderExpiresAt = data.data.expires_at;
+        } else if (data.expires_in?.expires_at) {
+          expiresAtFromAPI = data.expires_in.expires_at;
+          orderExpiresAt = data.expires_in.expires_at;
+        } else if (data.expires_at) {
+          expiresAtFromAPI = data.expires_at;
+          orderExpiresAt = data.expires_at;
+        } else if (data.data?.order?.expires_at) {
+          expiresAtFromAPI = data.data.order.expires_at;
+          orderExpiresAt = data.data.order.expires_at;
+        } else if (data.order?.expires_at) {
+          expiresAtFromAPI = data.order.expires_at;
+          orderExpiresAt = data.order.expires_at;
+        }
         
-        // Start waiting for offers
-        await waitForOffers(orderId, accessToken, channels);
+        console.log('⏰ Expires at from API:', expiresAtFromAPI);
+        
+        if (expiresAtFromAPI) {
+          setExpiresAt(expiresAtFromAPI);
+          
+          // حساب إجمالي وقت البحث بالثواني
+          const now = Date.now();
+          const expiresTime = new Date(expiresAtFromAPI).getTime();
+          const totalSeconds = Math.floor((expiresTime - now) / 1000);
+          setTotalSearchTime(totalSeconds);
+          
+          console.log(`⏱️ Total search time: ${totalSeconds} seconds`);
+          console.log(`⏱️ Search will end at: ${new Date(expiresAtFromAPI).toLocaleTimeString('ar-SA')}`);
+        } else {
+          // وقت افتراضي 5 دقائق إذا لم يكن موجوداً
+          expiresAtFromAPI = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+          setExpiresAt(expiresAtFromAPI);
+          setTotalSearchTime(300); // 5 دقائق
+          console.log('⚠️ Using default expiration time: 5 minutes');
+        }
+
+        // Setup Pusher listener مع وقت الانتهاء
+        await setupPusherListener(orderId, userId, expiresAtFromAPI);
         
       } else {
         toast.error(data.message || "فشل إنشاء الطلب");
         setIsLoading(false);
+        setIsWaitingForOffers(false);
         cleanupRequestPrevention();
       }
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("حدث خطأ أثناء إنشاء الطلب");
       setIsLoading(false);
+      setIsWaitingForOffers(false);
       cleanupRequestPrevention();
-    }
-  };
-
-  const waitForOffers = async (orderId, accessToken, pusherChannels = null) => {
-    setIsWaitingForOffers(true);
-    setWaitingMessage('جاري البحث عن سائقين متاحين...');
-    
-    const startTime = Date.now();
-    let pollIntervalId = null;
-    
-    let expiresAt = null;
-    try {
-      const statusResponse = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        cache: 'no-store'
-      });
-      
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        if (statusData.status && statusData.data) {
-          expiresAt = statusData.data?.expires_in?.expires_at || null;
-          console.log('⏰ Expires at from status:', expiresAt);
-        }
-      }
-    } catch (statusError) {
-      console.warn('⚠️ Could not fetch order status:', statusError);
-    }
-
-    const maxWaitTime = expiresAt ? 
-      Math.min(new Date(expiresAt).getTime() - Date.now(), 60000) : 
-      60000;
-      console.log('⏰ Max wait time:', maxWaitTime);
-
-    // إذا لم يكن Pusher متصلاً، استخدم polling
-    if (!pusherChannels || !pusherConnected) {
-      console.log('🔄 Pusher not connected, falling back to polling');
-      
-      const checkForOffers = async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "Authorization": `Bearer ${accessToken}`,
-            },
-            cache: 'no-store'
-          });
-
-          if (response.status === 404) {
-            return false;
-          }
-
-          const data = await response.json();
-          
-          if (response.ok && data.status && data.data) {
-            const offers = data.data.offers || [];
-            const activeOffers = offers.filter(offer => {
-              return offer.status !== 'expired' && offer.status !== 'cancelled';
-            });
-            
-            if (activeOffers.length > 0) {
-              if (pollIntervalId) {
-                clearInterval(pollIntervalId);
-              }
-              
-              setIsWaitingForOffers(false);
-              setIsLoading(false);
-              cleanupRequestPrevention();
-              toast.success(`تم العثور على ${activeOffers.length} عرض متاح`);
-              
-              router.push(`/orders/available-drivers?orderId=${orderId}`);
-              return true;
-            }
-          }
-          
-          return false;
-        } catch (error) {
-          console.error("Error checking for offers:", error);
-          return false;
-        }
-      };
-
-      const hasOffers = await checkForOffers();
-      if (hasOffers) return;
-
-      pollIntervalId = setInterval(async () => {
-        const elapsedTime = Date.now() - startTime;
-        
-        if (elapsedTime < 10000) {
-          setWaitingMessage('جاري البحث عن سائقين متاحين...');
-        } else if (elapsedTime < 30000) {
-          setWaitingMessage('لا يزال البحث جارياً عن سائقين...');
-        } else {
-          setWaitingMessage('قد يستغرق الأمر بعض الوقت، يرجى الانتظار...');
-        }
-
-        const hasOffers = await checkForOffers();
-        if (hasOffers) {
-          if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-          }
-          return;
-        }
-
-        if (elapsedTime >= maxWaitTime) {
-          if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-          }
-          
-          const isExpired = expiresAt && new Date(expiresAt).getTime() <= Date.now();
-          
-          if (isExpired) {
-            toast.error('تم انتهاء وقت الطلب', {
-              icon: '⏰',
-              duration: 5000,
-            });
-            localStorage.setItem(`order_${orderId}_expired`, 'true');
-          }
-          
-          setIsWaitingForOffers(false);
-          setIsLoading(false);
-          cleanupRequestPrevention();
-          router.push(`/orders/available-drivers?orderId=${orderId}${isExpired ? '&expired=true' : ''}`);
-        }
-      }, 2000);
-
-      return () => {
-        if (pollIntervalId) {
-          clearInterval(pollIntervalId);
-        }
-      };
-    } else {
-      console.log('🎯 Using Pusher for real-time updates');
-      
-      const timeoutId = setTimeout(() => {
-        const isExpired = expiresAt && new Date(expiresAt).getTime() <= Date.now();
-        
-        if (isExpired) {
-          toast.error('تم انتهاء وقت الطلب', {
-            icon: '⏰',
-            duration: 5000,
-          });
-          localStorage.setItem(`order_${orderId}_expired`, 'true');
-        }
-        
-        setIsWaitingForOffers(false);
-        setIsLoading(false);
-        cleanupRequestPrevention();
-        router.push(`/orders/available-drivers?orderId=${orderId}${isExpired ? '&expired=true' : ''}`);
-      }, maxWaitTime);
-
-      const messageIntervalId = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-        
-        if (elapsedTime < 10000) {
-          setWaitingMessage('جاري الاستماع للعروض...');
-        } else if (elapsedTime < 30000) {
-          setWaitingMessage('لا يزال البحث جارياً عن سائقين...');
-        } else {
-          setWaitingMessage('نستقبل العروض في الوقت الفعلي...');
-        }
-      }, 5000);
-
-      return () => {
-        clearTimeout(timeoutId);
-        clearInterval(messageIntervalId);
-      };
     }
   };
 
@@ -850,12 +850,23 @@ function OrderFormContent() {
     </div>
   );
 
+  // دالة لإلغاء الانتظار
+  const cancelWaiting = useCallback(() => {
+    cleanupAllTimeouts();
+    setIsWaitingForOffers(false);
+    setIsLoading(false);
+    cleanupRequestPrevention();
+    
+    toast('تم إلغاء عملية البحث عن سائقين', {
+      icon: '⚠️',
+    });
+  }, [cleanupAllTimeouts]);
+
   useEffect(() => {
     return () => {
-      cleanupRequestPrevention();
-      cleanupPusherListener();
+      cleanupAllTimeouts();
     };
-  }, []);
+  }, [cleanupAllTimeouts]);
 
   if (showSchedule) {
     return <OrderSchedulePage 
@@ -866,8 +877,8 @@ function OrderFormContent() {
       isManualLocation={isManualLocation}
       waterType={waterType}
       quantity={quantity}
-      waterTypes={waterTypes}
-      services={services}
+      waterTypes={[]}
+      services={[]}
     />;
   }
 
@@ -883,6 +894,24 @@ function OrderFormContent() {
   const itemVariants = {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0 }
+  };
+
+  // Format time display
+  const formatTimeDisplay = () => {
+    if (!timeRemaining) return '';
+    
+    if (timeRemaining.expired) {
+      return 'انتهى الوقت';
+    }
+    
+    const minutes = timeRemaining.minutes;
+    const seconds = timeRemaining.seconds;
+    
+    if (minutes > 0) {
+      return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    } else {
+      return `${seconds} ثانية`;
+    }
   };
 
   return (
@@ -1325,7 +1354,7 @@ function OrderFormContent() {
                 ) : isWaitingForOffers ? (
                   <>
                     <Spinner size="sm" />
-                    <span className="text-sm">جاري البحث عن سائقين...</span>
+                    <span className="text-sm">جاري البحث عن سائق...</span>
                   </>
                 ) : (
                   <>
@@ -1366,6 +1395,14 @@ function OrderFormContent() {
                       • 🚗 تم قبول طلبك من قبل سائق! جاري التوجيه...
                     </p>
                   )}
+                  {isWaitingForOffers && expiresAt && (
+                    <p className="text-xs text-[#579BE8] mt-1 font-medium">
+                      • ⏰ وقت البحث ينتهي: {new Date(expiresAt).toLocaleTimeString('ar-SA')}
+                      {totalSearchTime > 0 && (
+                        <span className="text-gray-600 mr-2"> ({Math.floor(totalSearchTime / 60)} دقيقة)</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1392,51 +1429,59 @@ function OrderFormContent() {
               className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl shadow-[#579BE8]/20 border border-[#579BE8]/20 w-full max-w-xs md:max-w-sm relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#579BE8] via-[#4a8dd8] to-[#124987]" />
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="relative flex-shrink-0">
+              <div className="flex flex-col items-center">
+                <div className="relative flex-shrink-0 mb-4">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full border-3 border-[#579BE8]/20 border-t-[#579BE8]"
+                    className="w-12 h-12 md:w-16 md:h-16 rounded-full border-3 border-[#579BE8]/20 border-t-[#579BE8]"
                     style={{ borderWidth: '3px' }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 1, repeat: Infinity }}
-                      className="w-6 h-6 md:w-7 md:h-7 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
+                      className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-[#579BE8] to-[#124987] rounded-lg flex items-center justify-center shadow-md"
                     >
-                      {isWaitingForOffers ? (
-                        pusherConnected ? (
-                          <div className="relative">
-                            <div className="w-3 h-3 bg-white rounded-full" />
-                            <div className="absolute -inset-1 border-2 border-white/30 rounded-full animate-ping" />
-                          </div>
-                        ) : (
-                          <Truck size={12} className="text-white" />
-                        )
-                      ) : (
-                        <Search size={12} className="text-white" />
-                      )}
+                      <div className="relative">
+                        <div className="w-4 h-4 bg-white rounded-full" />
+                        <div className="absolute -inset-1 border-2 border-white/30 rounded-full animate-ping" />
+                      </div>
                     </motion.div>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-[#124987] font-cairo">
-                    {isWaitingForOffers 
-                      ? waitingMessage || 'جاري البحث عن سائقين متاحين...'
-                      : isManualLocation 
-                        ? 'جاري حفظ الموقع وإنشاء الطلب' 
-                        : 'جاري إنشاء الطلب'
-                    }
+                
+                <div className="text-center w-full">
+                  <h3 className="text-sm md:text-base font-bold text-[#124987] font-cairo mb-2">
+                    {waitingMessage || 'جاري البحث عن سائق...'}
                   </h3>
-                  <div className="flex items-center gap-1 mt-1">
-                    <p className="text-gray-400 text-xs">
-                      {isWaitingForOffers 
-                        ? (pusherConnected ? 'نستقبل العروض في الوقت الفعلي' : 'يرجى الانتظار حتى يتوفر عرض')
-                        : 'يرجى الانتظار'
-                      }
-                    </p>
+                  
+                  {isWaitingForOffers && timeRemaining && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-1">
+                        <Clock size={14} />
+                        <span>الوقت المتبقي للبحث:</span>
+                        <span className={`font-bold ${timeRemaining.minutes < 1 ? 'text-red-500' : 'text-[#579BE8]'}`}>
+                          {formatTimeDisplay()}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <motion.div 
+                          className="bg-gradient-to-r from-[#579BE8] to-[#124987] h-1.5 rounded-full"
+                          initial={{ width: '100%' }}
+                          animate={{ 
+                            width: timeRemaining.expired ? '0%' : `${(timeRemaining.minutes * 60 + timeRemaining.seconds) / totalSearchTime * 100}%`
+                          }}
+                          transition={{ duration: 1 }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        البحث ينتهي في: {expiresAt ? new Date(expiresAt).toLocaleTimeString('ar-SA') : '--:--'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-center gap-2 text-gray-400 text-xs mb-4">
                     <div className="flex gap-0.5">
                       {[0, 1, 2].map((i) => (
                         <motion.span
@@ -1451,22 +1496,35 @@ function OrderFormContent() {
                         />
                       ))}
                     </div>
+                    <p>
+                      {pusherConnected 
+                        ? 'جاري الاستماع للعروض في الوقت الفعلي' 
+                        : 'جاري الاتصال بخدمة البحث...'
+                      }
+                    </p>
                   </div>
-                  {isWaitingForOffers && (
-                    <div className={`mt-2 text-xs flex items-center gap-1 ${pusherConnected ? 'text-green-600' : 'text-yellow-600'}`}>
-                      {pusherConnected ? (
-                        <>
-                          <Wifi size={10} />
-                          <span>متصل بخدمة البث المباشر</span>
-                        </>
-                      ) : (
-                        <>
-                          <WifiOff size={10} />
-                          <span>جاري محاولة الاتصال...</span>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  
+                  <div className={`text-xs flex items-center justify-center gap-1 ${pusherConnected ? 'text-green-600' : 'text-yellow-600'} mb-3`}>
+                    {pusherConnected ? (
+                      <>
+                        <Wifi size={10} />
+                        <span>متصل بخدمة البث المباشر</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff size={10} />
+                        <span>جاري الاتصال بالخادم...</span>
+                        <RefreshCw size={10} className="animate-spin" />
+                      </>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={cancelWaiting}
+                    className="w-full py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors border border-red-200"
+                  >
+                    إلغاء البحث
+                  </button>
                 </div>
               </div>
             </motion.div>
