@@ -23,7 +23,7 @@ export async function GET(req) {
     const encodedQuery = encodeURIComponent(trimmedQuery);
     
     // Build API URL with properly encoded query parameter
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/search?q=${encodedQuery}`;
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/search?q=${encodedQuery}`;
     
     console.log('Articles Search API - Original query:', trimmedQuery);
     console.log('Articles Search API - Encoded query:', encodedQuery);

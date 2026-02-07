@@ -1296,7 +1296,6 @@ function OrderFormContent() {
 		</div>
 	);
 }
-
 // Wrapper component with Suspense boundary
 export default function OrderForm() {
 	return (

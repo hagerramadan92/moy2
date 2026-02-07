@@ -20,9 +20,9 @@ export async function GET(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use the comments endpoint: http://moya.talaaljazeera.com/api/v1/articles/{id}/comments
+    // Use the comments endpoint: https://moya.talaaljazeera.com/api/v1/articles/{id}/comments
     const articleId = encodeURIComponent(decodedId);
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
     
     console.log('Comments API - Fetching from:', apiUrl);
     console.log('Comments API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);
@@ -198,9 +198,9 @@ export async function POST(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use the comments endpoint: http://moya.talaaljazeera.com/api/v1/articles/{id}/comments
+    // Use the comments endpoint: https://moya.talaaljazeera.com/api/v1/articles/{id}/comments
     const articleId = encodeURIComponent(decodedId);
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/${articleId}/comments`;
     
     console.log('Post Comment API - Posting to:', apiUrl);
     console.log('Post Comment API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);

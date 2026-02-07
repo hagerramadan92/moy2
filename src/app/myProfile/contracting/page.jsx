@@ -2,14 +2,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
     FaHardHat, FaTools, FaChevronLeft, FaCheckCircle,
     FaBuilding, FaUser, FaPhoneAlt, FaMapMarkerAlt,
-    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight, FaChevronDown, FaGlobe
+    FaCalendarAlt, FaEdit, FaPlus, FaArrowDown, FaChevronRight, FaChevronDown, FaGlobe,
+    FaHome, FaBriefcase, FaStar, FaMapMarkedAlt
 } from 'react-icons/fa';
 import { MdOutlineArchitecture, MdBusinessCenter } from 'react-icons/md';
 import { BiBuildingHouse, BiSolidBusiness } from 'react-icons/bi';
 import { IoDocumentText, IoWalletOutline } from "react-icons/io5";
+import { MapPin, ChevronDown, ChevronUp, X, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -22,6 +25,15 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from "framer-motion";
 import { RxDotsHorizontal } from "react-icons/rx";
 import { toast } from "react-hot-toast";
+
+const LocationPickerModal = dynamic(
+    () => import('@/components/molecules/orders/LocationPickerModal'),
+    { ssr: false, loading: () => <div className="h-0 w-0" /> }
+);
+
+const API_BASE_URL = (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE_URL) 
+    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^http:\/\//, 'https://') 
+    : 'https://moya.talaaljazeera.com/api/v1';
 
 export default function ContractingPage() {
     const router = useRouter();
@@ -58,6 +70,11 @@ export default function ContractingPage() {
     const [addresses, setAddresses] = useState([]);
     const [selectedDeliveryLocations, setSelectedDeliveryLocations] = useState([]);
     const [loadingAddresses, setLoadingAddresses] = useState(false);
+    const [selectedSavedLocation, setSelectedSavedLocation] = useState(null);
+    const [locationData, setLocationData] = useState(null);
+    const [isManualLocation, setIsManualLocation] = useState(false);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [showAllLocations, setShowAllLocations] = useState(false);
 
     const toggleRow = (id) => {
         setExpandedId(expandedId === id ? null : id);
@@ -87,6 +104,16 @@ export default function ContractingPage() {
                 const data = await response.json();
                 if (response.ok && data.status && data.data) {
                     setAddresses(data.data);
+                    if (data.data.length > 0 && !selectedSavedLocation) {
+                        const favorite = data.data.find(loc => loc.is_favorite);
+                        const first = favorite || data.data[0];
+                        setSelectedSavedLocation(first);
+                        setLocationData({
+                            ...first,
+                            latitude: parseFloat(first.latitude),
+                            longitude: parseFloat(first.longitude)
+                        });
+                    }
                 }
             } catch (error) {
                 // Silently fail - addresses are optional
@@ -97,6 +124,33 @@ export default function ContractingPage() {
 
         fetchAddresses();
     }, []);
+
+    const navigateToAddressesPage = () => {
+        router.push('/myProfile/addresses');
+    };
+
+    const handleManualLocationSelect = (data) => {
+        setLocationData(data);
+        setSelectedSavedLocation(null);
+        setIsManualLocation(true);
+        setIsMapOpen(false);
+    };
+
+    const handleSavedLocationSelect = (location) => {
+        setSelectedSavedLocation(location);
+        setLocationData({
+            ...location,
+            latitude: parseFloat(location.latitude),
+            longitude: parseFloat(location.longitude)
+        });
+        setIsManualLocation(false);
+    };
+
+    const handleClearLocation = () => {
+        setLocationData(null);
+        setSelectedSavedLocation(null);
+        setIsManualLocation(false);
+    };
 
     // Get current form data and errors based on active tab
     const formData = activeTab === 'commercial' ? commercialFormData : individualFormData;
@@ -239,6 +293,39 @@ export default function ContractingPage() {
                 return;
             }
 
+            let savedLocationId = selectedSavedLocation?.id || null;
+            if (isManualLocation && locationData) {
+                const newAddressResponse = await fetch(`${API_BASE_URL}/addresses`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                    body: JSON.stringify({
+                        name: locationData.name || 'موقع التعاقد',
+                        address: locationData.address,
+                        city: locationData.city || 'الرياض',
+                        area: locationData.area || 'حي عام',
+                        latitude: locationData.latitude,
+                        longitude: locationData.longitude,
+                    }),
+                });
+                const addressData = await newAddressResponse.json();
+                if (newAddressResponse.ok && addressData.status && addressData.data) {
+                    savedLocationId = addressData.data.id;
+                } else {
+                    toast.dismiss(loadingToast);
+                    toast.error(addressData?.message || 'فشل حفظ العنوان الجديد');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
+            const deliveryLocations = selectedDeliveryLocations.length > 0
+                ? selectedDeliveryLocations
+                : (savedLocationId ? [{ saved_location_id: savedLocationId, priority: 1 }] : []);
+
             // تحضير بيانات الـ API مع إضافة حقل الهاتف المطلوب
             const apiBody = {
                 contract_type: activeTab === 'personal' ? 'individual' : 'company',
@@ -249,11 +336,7 @@ export default function ContractingPage() {
                 total_orders_limit: formData.totalOrdersLimit || 300,
                 total_amount: formData.totalAmount || 0,
                 start_date: formData.startDate,
-                delivery_locations: selectedDeliveryLocations.length > 0 
-                    ? selectedDeliveryLocations 
-                    : (addresses.length > 0 
-                        ? [{ saved_location_id: addresses[0]?.id || 1, priority: 1 }]
-                        : []),
+                delivery_locations: deliveryLocations,
                 notes: formData.notes.trim() || ''
             };
 
@@ -318,8 +401,12 @@ export default function ContractingPage() {
                     setIndividualErrors({});
                 }
                 
-                // إعادة تعيين مواقع التوصيل المختارة
+                // إعادة تعيين مواقع التوصيل والموقع المختار
                 setSelectedDeliveryLocations([]);
+                const firstAddr = addresses.length > 0 ? (addresses.find(loc => loc.is_favorite) || addresses[0]) : null;
+                setSelectedSavedLocation(firstAddr);
+                setLocationData(firstAddr ? { ...firstAddr, latitude: parseFloat(firstAddr.latitude), longitude: parseFloat(firstAddr.longitude) } : null);
+                setIsManualLocation(false);
             } else {
                 // Handle API error
                 const errorMessage = data.message || data.error || 'فشل إرسال طلب التعاقد. يرجى المحاولة مرة أخرى';
@@ -372,7 +459,6 @@ export default function ContractingPage() {
             </div>
         </div>
     );
-
     const FormSkeleton = () => (
         <div className="bg-white dark:bg-card border-2 border-border/60 rounded-xl md:rounded-2xl lg:rounded-3xl shadow-lg md:shadow-xl overflow-hidden flex flex-col">
             {/* Tabs Skeleton */}
@@ -673,23 +759,142 @@ export default function ContractingPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5 md:space-y-2 relative mb-5">
-                                <label className={`${labelClasses} text-xs md:text-sm`}>العنوان</label>
-                                <div className="relative">
-                                    <FaMapMarkerAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        value={formData.address}
-                                        onChange={handleInputChange}
-                                        placeholder="الرياض، حي الملقا، شارع الأمير محمد بن سعد"
-                                        className={`w-full bg-white dark:bg-card border-2 ${errors.address ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
-                                    />
+                            {/* موقع التوصيل - نفس فكرة OrderForm */}
+                            <div className="space-y-3 md:space-y-4 mb-5">
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center gap-2 text-foreground/80 font-bold text-xs md:text-sm">
+                                        <MapPin className="w-4 h-4 text-[#579BE8]" />
+                                        موقع التوصيل / العنوان
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={navigateToAddressesPage}
+                                        className="text-xs px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg hover:bg-[#579BE8]/20 transition-colors font-medium flex items-center gap-1"
+                                    >
+                                        <FaMapMarkerAlt className="w-3 h-3" />
+                                        إدارة العناوين
+                                    </button>
                                 </div>
-                                {errors.address && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
-                                    <span>⚠️</span> {errors.address}
-                                </p>}
+
+                                {loadingAddresses ? (
+                                    <div className="flex items-center justify-center py-4 rounded-xl bg-secondary/20">
+                                        <span className="text-sm text-muted-foreground">جاري تحميل الأماكن المحفوظة...</span>
+                                    </div>
+                                ) : addresses.length > 0 ? (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-xs font-bold text-foreground/80 flex items-center gap-2">
+                                                <FaStar className="text-[#579BE8] w-3 h-3" />
+                                                الأماكن المحفوظة
+                                            </h4>
+                                            {addresses.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAllLocations(!showAllLocations)}
+                                                    className="text-xs text-[#579BE8] hover:text-[#124987] flex items-center gap-1"
+                                                >
+                                                    {showAllLocations ? <><ChevronUp size={12} /> إخفاء</> : <><ChevronDown size={12} /> عرض الكل ({addresses.length})</>}
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            {(showAllLocations ? addresses : addresses.slice(0, 2)).map((location) => (
+                                                <div
+                                                    key={location.id}
+                                                    onClick={() => handleSavedLocationSelect(location)}
+                                                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                                        selectedSavedLocation?.id === location.id && !isManualLocation
+                                                            ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8]'
+                                                            : 'bg-white dark:bg-card border-border/60 hover:border-[#579BE8]/50'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                            selectedSavedLocation?.id === location.id && !isManualLocation ? 'bg-[#579BE8] text-white' : 'bg-secondary/30 text-muted-foreground'
+                                                        }`}>
+                                                            {location.type === 'home' ? <FaHome className="w-4 h-4" /> :
+                                                             location.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
+                                                             <FaMapMarkedAlt className="w-4 h-4" />}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <span className="font-medium text-xs md:text-sm text-foreground truncate">{location.name}</span>
+                                                                {location.is_favorite && <FaStar className="text-[#579BE8] w-3 h-3 flex-shrink-0" />}
+                                                            </div>
+                                                            <p className="text-[10px] md:text-xs text-muted-foreground truncate">{location.address}</p>
+                                                            {selectedSavedLocation?.id === location.id && !isManualLocation && (
+                                                                <span className="text-[10px] px-2 py-0.5 bg-[#579BE8]/10 text-[#579BE8] rounded mt-1 inline-block">محدد</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : null}
+
+                                <div
+                                    onClick={() => setIsMapOpen(true)}
+                                    className={`group cursor-pointer relative w-full min-h-[52px] rounded-xl md:rounded-2xl transition-all duration-300 flex items-center px-3 md:px-4 overflow-hidden border-2 border-dashed ${
+                                        locationData
+                                            ? 'bg-[#579BE8]/5 border-[#579BE8]/50 hover:border-[#579BE8]/70'
+                                            : 'bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 hover:from-[#579BE8]/10 border-[#579BE8]/30 hover:border-[#579BE8]/60'
+                                    }`}
+                                >
+                                    <div className="flex-1 flex items-center gap-2 md:gap-3">
+                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center ${
+                                            locationData ? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white' : 'bg-[#579BE8]/10 text-[#579BE8]'
+                                        }`}>
+                                            <MapPin size={18} />
+                                        </div>
+                                        <div className="flex flex-col items-start overflow-hidden flex-1 min-w-0">
+                                            {locationData ? (
+                                                <>
+                                                    <span className="text-xs md:text-sm font-bold text-foreground truncate w-full text-right">
+                                                        {selectedSavedLocation ? selectedSavedLocation.name : 'موقع على الخريطة'}
+                                                    </span>
+                                                    <span className="text-[10px] md:text-xs text-muted-foreground truncate w-full text-right mt-0.5">
+                                                        {locationData.address || selectedSavedLocation?.address}
+                                                    </span>
+                                                    <span className="text-[#579BE8] text-[10px] mt-0.5">
+                                                        ✓ {isManualLocation ? 'موقع على الخريطة' : 'مكان محفوظ'}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="text-xs md:text-sm font-medium text-muted-foreground truncate w-full text-right">
+                                                    اضغط لتحديد موقع جديد على الخريطة
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {locationData && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleClearLocation(); }}
+                                            className="absolute left-2 md:left-3 p-1.5 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                    <div className="absolute left-2 md:left-3 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-[#579BE8] to-[#124987] text-white p-1.5 rounded-lg">
+                                        <ArrowRight size={14} />
+                                    </div>
+                                </div>
+                                {locationData && isManualLocation && (
+                                    <div className="p-2 md:p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                                        <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-2">
+                                            <CheckCircle2 size={12} />
+                                            سيتم حفظ هذا الموقع تلقائياً مع طلب التعاقد
+                                        </p>
+                                    </div>
+                                )}
                             </div>
+
+                            <LocationPickerModal
+                                isOpen={isMapOpen}
+                                onClose={() => setIsMapOpen(false)}
+                                onSelect={handleManualLocationSelect}
+                            />
 
                             <div className="space-y-1.5 md:space-y-2 relative mb-5">
                                 <label className={`${labelClasses} text-xs md:text-sm`}>رابط الموقع الإلكتروني</label>

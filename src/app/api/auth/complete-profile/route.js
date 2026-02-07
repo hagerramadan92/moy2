@@ -49,7 +49,7 @@ export async function POST(req) {
     }
 
     // Call the external complete-profile API
-    const response = await fetch('http://moya.talaaljazeera.com/api/v1/auth/complete-profile', {
+    const response = await fetch('https://moya.talaaljazeera.com/api/v1/auth/complete-profile', {
       method: 'POST',
       headers: headers,
       body: externalFormData,

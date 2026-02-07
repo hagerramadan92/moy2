@@ -9,7 +9,7 @@ export async function GET(req) {
     const search = url.searchParams.get('search');
     
     // Build API URL with query parameters
-    let apiUrl = `http://moya.talaaljazeera.com/api/v1/articles?page=${page}`;
+    let apiUrl = `https://moya.talaaljazeera.com/api/v1/articles?page=${page}`;
     
     if (category) {
       apiUrl += `&category=${encodeURIComponent(category)}`;

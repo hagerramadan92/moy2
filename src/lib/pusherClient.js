@@ -14,7 +14,7 @@ if (isLocalLaravelBroadcasting) {
     wssPort: 6001,
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
-    authEndpoint: 'http://moya.talaaljazeera.com/api/v1/broadcasting/auth', // Laravel مباشرة
+    authEndpoint: 'https://moya.talaaljazeera.com/api/v1/broadcasting/auth', // Laravel مباشرة
     auth: {
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('accessToken') : ''}`
@@ -29,7 +29,7 @@ if (isLocalLaravelBroadcasting) {
     forceTLS: true,
     
     // استخدام authEndpoint الخاص بـ Next.js الذي يتصل بـ Laravel
-    authEndpoint: 'http://moya.talaaljazeera.com/api/v1/broadcasting/auth',
+    authEndpoint: 'https://moya.talaaljazeera.com/api/v1/broadcasting/auth',
     
     auth: {
       headers: {

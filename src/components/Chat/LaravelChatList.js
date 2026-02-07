@@ -26,7 +26,7 @@ const LaravelChatList = ({ onSelectChat, selectedChatId, userId = 39 }) => {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://moya.talaaljazeera.com/api/v1'}/chats`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1'}/chats`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

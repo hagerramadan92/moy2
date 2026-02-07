@@ -209,7 +209,7 @@ const ContactFormSection = () => {
       // 3. Try to fetch from API endpoint
       if (!csrfToken) {
         try {
-          const csrfResponse = await fetch('http://moya.talaaljazeera.com/sanctum/csrf-cookie', {
+          const csrfResponse = await fetch('https://moya.talaaljazeera.com/sanctum/csrf-cookie', {
             method: 'GET',
             credentials: 'include',
           });

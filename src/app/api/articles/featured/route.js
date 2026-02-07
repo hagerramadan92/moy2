@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(req) {
   try {
-    const apiUrl = `http://moya.talaaljazeera.com/api/v1/articles/featured`;
+    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/featured`;
     
     console.log('Featured Articles API - Fetching from:', apiUrl);
 
