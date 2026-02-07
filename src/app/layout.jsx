@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { NotificationProvider } from "@/context/NotificationContext";
 import NotificationPopup from "@/components/Notifications/NotificationPopup";
 import NotificationToast from "@/components/Notifications/NotificationToast";
+import { PusherProvider } from '@/components/providers/PusherProvider';
 // import LeafletFix from '@/components/ui/leaflet-fix';
 // ✅ Font
 export const almarai = Almarai({
@@ -100,12 +101,15 @@ export default function RootLayout({ children }) {
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={almarai.className}>
         <NotificationProvider>
-            {/* <LeafletFix /> */}
+          <PusherProvider>
+       {/* <LeafletFix /> */}
      <Layout>{children}</Layout>
         <NotificationPopup />
 
 				<Toaster  position="top-center" />
         <NotificationToast />
+          </PusherProvider>
+     
         </NotificationProvider>
    
       </body>

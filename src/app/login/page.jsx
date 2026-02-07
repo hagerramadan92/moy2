@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaPhoneAlt, FaWater, FaChevronLeft } from "react-icons/fa";
+import { FaPhoneAlt, FaWater, FaChevronLeft, FaWhatsapp, FaSms } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { IoWaterOutline } from "react-icons/io5";
 import { IoIosWater } from "react-icons/io";
@@ -28,6 +28,7 @@ export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpMethod, setOtpMethod] = useState("whatsapp"); // القيمة الافتراضية
   const router = useRouter();
 
   const countryCode = SAUDI_ARABIA.dialCode;
@@ -85,6 +86,7 @@ export default function Login() {
         body: JSON.stringify({
           country_code: countryCode,
           phone_number: phoneNumber,
+          otp_method: otpMethod, // إرسال طريقة OTP المختارة
         }),
       });
 
@@ -99,6 +101,7 @@ export default function Login() {
             otp: data.data.otp,
             countryCode,
             phoneNumber,
+            otpMethod: otpMethod, // حفظ طريقة OTP
           })
         );
 
@@ -211,14 +214,12 @@ export default function Login() {
           >
             <div className="space-y-3">
               {/* Country Display - Fixed Saudi Arabia */}
-              <div className="flex  gap-1">
+              <div className="flex gap-1">
                 <div className="">
                   <div className="flex items-center justify-center sm:justify-start bg-gradient-to-br from-gray-50 to-white border-2 border-[#579BE8]/30 rounded-xl px-4 py-3 h-[55px] shadow-md">
                     <div className="flex items-center gap-2">
-                      {/* <span className="text-2xl">{SAUDI_ARABIA.flag}</span> */}
                       <div className="text-right">
                         <p className="text-sm sm:text-base font-bold text-[#579BE8]">{SAUDI_ARABIA.dialCode}</p>
-                        {/* <p className="text-xs text-gray-600">{SAUDI_ARABIA.nameAr}</p> */}
                       </div>
                     </div>
                   </div>
@@ -262,19 +263,86 @@ export default function Login() {
               )}
             </div>
 
+            {/* OTP Method Selection */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="space-y-2"
+            >
+              <p className="text-xs sm:text-sm text-gray-600 text-center font-medium">
+                اختر طريقة إرسال رمز التحقق
+              </p>
+              
+              <div className="grid grid-cols-2 gap-2">
+                {/* WhatsApp Option */}
+                <motion.button
+                  type="button"
+                  onClick={() => setOtpMethod("whatsapp")}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 ${
+                    otpMethod === "whatsapp"
+                      ? "border-[#25D366] bg-gradient-to-r from-[#25D366]/10 to-[#128C7E]/10 shadow-[#25D366]/20 shadow-md"
+                      : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
+                  }`}
+                >
+                  <FaWhatsapp className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                    otpMethod === "whatsapp" ? "text-[#25D366]" : "text-gray-500"
+                  }`} />
+                  <span className={`font-medium text-xs sm:text-sm ${
+                    otpMethod === "whatsapp" ? "text-[#25D366]" : "text-gray-700"
+                  }`}>
+                    واتساب
+                  </span>
+                </motion.button>
+
+                {/* SMS Option */}
+                <motion.button
+                  type="button"
+                  onClick={() => setOtpMethod("sms")}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 ${
+                    otpMethod === "sms"
+                      ? "border-[#579BE8] bg-gradient-to-r from-[#579BE8]/10 to-[#124987]/10 shadow-[#579BE8]/20 shadow-md"
+                      : "border-gray-200 hover:border-gray-300 bg-gradient-to-br from-gray-50 to-white"
+                  }`}
+                >
+                  <FaSms className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                    otpMethod === "sms" ? "text-[#579BE8]" : "text-gray-500"
+                  }`} />
+                  <span className={`font-medium text-xs sm:text-sm ${
+                    otpMethod === "sms" ? "text-[#579BE8]" : "text-gray-700"
+                  }`}>
+                    رسالة نصية
+                  </span>
+                </motion.button>
+              </div>
+
+              {/* Method Info */}
+              <div className="bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[#579BE8]/10">
+                <p className="text-xs sm:text-sm text-gray-600 text-center font-medium flex items-center justify-center gap-1 sm:gap-2">
+                  <span className={`text-base sm:text-lg ${
+                    otpMethod === "whatsapp" ? "text-[#25D366]" : "text-[#579BE8]"
+                  }`}>
+                    {otpMethod === "whatsapp" ? "💬" : "📱"}
+                  </span>
+                  <span>
+                    {otpMethod === "whatsapp" 
+                      ? "سنرسل لك رمز التحقق عبر الواتساب" 
+                      : "سنرسل لك رمز التحقق عبر الرسائل النصية"}
+                  </span>
+                </p>
+              </div>
+            </motion.div>
+
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="space-y-3 sm:space-y-4"
             >
-              <div className="bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[#579BE8]/10">
-                <p className="text-xs sm:text-sm text-gray-600 text-center font-medium flex items-center justify-center gap-1 sm:gap-2">
-                  <span className="text-[#579BE8] text-base sm:text-lg">💬</span>
-                  <span>سنرسل لك رمز التحقق عبر الواتساب</span>
-                </p>
-              </div>
-
               <motion.div
                 whileHover={{ scale: isValidPhone ? 1.02 : 1 }}
                 whileTap={{ scale: isValidPhone ? 0.98 : 1 }}
