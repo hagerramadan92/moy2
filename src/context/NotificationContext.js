@@ -536,6 +536,27 @@ export function NotificationProvider({ children }) {
         }
       }
 
+      // الانتظار حتى يصبح Service Worker نشطاً (مطلوب لـ PushManager)
+      const waitForActiveRegistration = (reg) => {
+        if (reg.active) return Promise.resolve(reg);
+        const sw = reg.installing || reg.waiting;
+        if (!sw) return navigator.serviceWorker.ready.then(() => reg);
+        return new Promise((resolve) => {
+          const onStateChange = () => {
+            if (sw.state === 'activated' && reg.active) {
+              sw.removeEventListener('statechange', onStateChange);
+              resolve(reg);
+            }
+          };
+          sw.addEventListener('statechange', onStateChange);
+          if (reg.active) {
+            sw.removeEventListener('statechange', onStateChange);
+            resolve(reg);
+          }
+        });
+      };
+      registration = await waitForActiveRegistration(registration);
+
       // الحصول على FCM Token
       console.log('🔔 Requesting FCM token...');
       const currentToken = await getToken(messaging, { 
