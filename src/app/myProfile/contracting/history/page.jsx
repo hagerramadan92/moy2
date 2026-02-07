@@ -62,7 +62,7 @@ export default function ContractHistoryPage() {
                 return;
             }
 
-            const response = await fetch('https://moya.talaaljazeera.com/api/v1/contracts', {
+            const response = await fetch(`${Api_Url}/contracts`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -289,7 +289,7 @@ export default function ContractHistoryPage() {
                 contractId = contractId.replace(/^(CONT-|CONTRACT-)/, '');
             }
 
-            const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${contractId}/cancel`, {
+            const response = await fetch(`${Api_Url}/contracts/${contractId}/cancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -382,7 +382,7 @@ export default function ContractHistoryPage() {
                 // Remove CONT- or CONTRACT- prefix if present
                 contractId = contractId.replace(/^(CONT-|CONTRACT-)/, '');
             }
-            const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${contractId}/renew`, {
+            const response = await fetch(`${Api_Url}/contracts/${contractId}/renew`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -430,7 +430,7 @@ export default function ContractHistoryPage() {
         { id: "active", label: "نشط" },
         { id: "pending", label: "قيد الانتظار" },
     ];
-
+   const Api_Url = process.env.NEXT_PUBLIC_API_BASE_URL
     // Calculate statistics - include active and pending contracts
     const totalActive = contractHistory.filter(c => c.status === "active" || c.status === "pending").length;
     const totalValue = contractHistory.reduce((sum, c) => {
