@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import pusherService, { getPusherInstance, disconnectPusher } from '@/utils/pusher';
+import { getPusherInstance, disconnectPusher } from '@/utils/pusher';
 
 export const usePusher = (options = {}) => {
   const {
@@ -12,6 +12,25 @@ export const usePusher = (options = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] = useState('disconnected');
   const channelsRef = useRef([]);
+  const eventListenersRef = useRef({});
+
+  // تسجيل مستمع للأحداث
+  const addEventListener = useCallback((eventName, callback) => {
+    eventListenersRef.current[eventName] = callback;
+  }, []);
+
+  // إزالة مستمع للأحداث
+  const removeEventListener = useCallback((eventName) => {
+    delete eventListenersRef.current[eventName];
+  }, []);
+
+  // تشغيل مستمع حدث
+  const triggerEventListener = useCallback((eventName, data) => {
+    const listener = eventListenersRef.current[eventName];
+    if (listener) {
+      listener(data);
+    }
+  }, []);
 
   // تهيئة Pusher
   const initPusher = useCallback(() => {
@@ -48,12 +67,19 @@ export const usePusher = (options = {}) => {
     return pusher;
   }, [onConnected, onDisconnected, onError]);
 
-  // دالة للاشتراك في قناة
+  // دالة للاشتراك في قناة مع إمكانية إضافة مستمعين
   const subscribe = useCallback((channelName, events) => {
     const pusher = getPusherInstance();
     if (!pusher) return null;
 
     try {
+      // التحقق من عدم الاشتراك مسبقاً
+      const existingChannel = channelsRef.current.find(ch => ch.channelName === channelName);
+      if (existingChannel) {
+        console.log(`ℹ️ Already subscribed to channel ${channelName}`);
+        return existingChannel.channel;
+      }
+
       const channel = pusher.subscribe(channelName);
       
       // ربط الأحداث
@@ -62,6 +88,15 @@ export const usePusher = (options = {}) => {
           channel.bind(eventName, callback);
         });
       }
+
+      // إضافة معالج للخطأ في الاشتراك
+      channel.bind('pusher:subscription_error', (error) => {
+        console.error(`❌ Subscription error for channel ${channelName}:`, error);
+      });
+
+      channel.bind('pusher:subscription_succeeded', () => {
+        console.log(`✅ Successfully subscribed to channel ${channelName}`);
+      });
 
       // إضافة إلى المصفوفة للمتابعة
       channelsRef.current.push({ channelName, channel });
@@ -73,7 +108,7 @@ export const usePusher = (options = {}) => {
     }
   }, []);
 
-  // دالة للاشتراك في قناتين (order + user)
+  // دالة للاشتراك في قناتين (order + user) مع تحسينات
   const subscribeToOrderAndUser = useCallback((orderId, userId, eventHandlers) => {
     const channels = {
       orderChannel: null,
@@ -82,24 +117,65 @@ export const usePusher = (options = {}) => {
 
     if (orderId) {
       channels.orderChannel = subscribe(`order.${orderId}`, {
-        'offer.created': eventHandlers?.onOfferCreated,
-        'order.status.updated': eventHandlers?.onOrderStatusUpdated,
-        'order.expired': eventHandlers?.onOrderExpired,
-        'order.cancelled': eventHandlers?.onOrderCancelled
+        'offer.created': (data) => {
+          console.log('🎯 New offer received via Pusher:', data);
+          if (eventHandlers?.onOfferCreated) {
+            eventHandlers.onOfferCreated(data);
+          }
+          triggerEventListener('offer_created', data);
+        },
+        'order.status.updated': (data) => {
+          if (eventHandlers?.onOrderStatusUpdated) {
+            eventHandlers.onOrderStatusUpdated(data);
+          }
+          triggerEventListener('order_status_updated', data);
+        },
+        'order.expired': (data) => {
+          if (eventHandlers?.onOrderExpired) {
+            eventHandlers.onOrderExpired(data);
+          }
+          triggerEventListener('order_expired', data);
+        },
+        'order.cancelled': (data) => {
+          if (eventHandlers?.onOrderCancelled) {
+            eventHandlers.onOrderCancelled(data);
+          }
+          triggerEventListener('order_cancelled', data);
+        }
       });
     }
 
     if (userId) {
       channels.userChannel = subscribe(`user.${userId}`, {
-        'DriverAcceptedOrder': eventHandlers?.onDriverAcceptedOrder,
-        'driver.assigned': eventHandlers?.onDriverAssigned,
-        'order.updated': eventHandlers?.onOrderUpdated,
-        'driver.location.updated': eventHandlers?.onDriverLocationUpdated
+        'DriverAcceptedOrder': (data) => {
+          if (eventHandlers?.onDriverAcceptedOrder) {
+            eventHandlers.onDriverAcceptedOrder(data);
+          }
+          triggerEventListener('driver_accepted_order', data);
+        },
+        'driver.assigned': (data) => {
+          if (eventHandlers?.onDriverAssigned) {
+            eventHandlers.onDriverAssigned(data);
+          }
+          triggerEventListener('driver_assigned', data);
+        },
+        'order.updated': (data) => {
+          if (eventHandlers?.onOrderUpdated) {
+            eventHandlers.onOrderUpdated(data);
+          }
+          triggerEventListener('order_updated', data);
+        },
+        'driver.location.updated': (data) => {
+          if (eventHandlers?.onDriverLocationUpdated) {
+            eventHandlers.onDriverLocationUpdated(data);
+          }
+          triggerEventListener('driver_location_updated', data);
+        }
       });
     }
 
     return channels;
-  }, [subscribe]);
+  }, [subscribe, triggerEventListener]);
 
   // دالة لإلغاء الاشتراك من قناة
   const unsubscribe = useCallback((channelName) => {
@@ -113,6 +189,7 @@ export const usePusher = (options = {}) => {
       channelsRef.current = channelsRef.current.filter(
         ch => ch.channelName !== channelName
       );
+      console.log(`🔕 Unsubscribed from ${channelName}`);
     } catch (error) {
       console.error(`❌ Error unsubscribing from ${channelName}:`, error);
     }
@@ -132,6 +209,7 @@ export const usePusher = (options = {}) => {
     });
 
     channelsRef.current = [];
+    console.log('🔕 Unsubscribed from all channels');
   }, []);
 
   // دالة لقطع الاتصال
@@ -140,15 +218,29 @@ export const usePusher = (options = {}) => {
     disconnectPusher();
     setIsConnected(false);
     setConnectionState('disconnected');
+    console.log('🔌 Pusher disconnected via hook');
   }, [unsubscribeAll]);
 
   // دالة لإعادة الاتصال
   const reconnect = useCallback(() => {
     disconnect();
     setTimeout(() => {
-      initPusher();
+      const newInstance = initPusher();
+      if (newInstance) {
+        console.log('🔄 Pusher reconnected via hook');
+      }
     }, 1000);
   }, [disconnect, initPusher]);
+
+  // التحقق من الاشتراك في قناة
+  const isSubscribed = useCallback((channelName) => {
+    return channelsRef.current.some(ch => ch.channelName === channelName);
+  }, []);
+
+  // الحصول على معلومات الاشتراكات
+  const getSubscriptions = useCallback(() => {
+    return channelsRef.current.map(ch => ch.channelName);
+  }, []);
 
   // التهيئة التلقائية
   useEffect(() => {
@@ -171,7 +263,12 @@ export const usePusher = (options = {}) => {
     unsubscribeAll,
     disconnect,
     reconnect,
-    getPusherInstance
+    getPusherInstance,
+    addEventListener,
+    removeEventListener,
+    triggerEventListener,
+    isSubscribed,
+    getSubscriptions
   };
 };
 

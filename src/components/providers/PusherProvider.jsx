@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createPusherInstance, getConnectionState, reconnectPusher } from '@/utils/pusher';
+import { createPusherInstance, getPusherInstance, getConnectionState, reconnectPusher } from '@/utils/pusher';
 import Spinner from '@/components/ui/spinner';
 
 const PusherContext = createContext(null);
@@ -61,19 +61,22 @@ export const PusherProvider = ({ children }) => {
     reconnect: reconnectPusher
   };
 
-  // if (!isInitialized) {
-  //   return (
-  //     <div className="fixed inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-50">
-  //       <div className="flex flex-col items-center gap-4">
-  //         <Spinner size="lg" />
-  //         <div className="text-center">
-  //           <p className="text-gray-700 font-medium">جاري تهيئة الاتصال...</p>
-  //           <p className="text-gray-500 text-sm mt-1">يرجى الانتظار</p>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // إذا كنت تريد إظهار spinner أثناء التهيئة، يمكنك إلغاء التعليق
+  /*
+  if (!isInitialized) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-50">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner size="lg" />
+          <div className="text-center">
+            <p className="text-gray-700 font-medium">جاري تهيئة الاتصال...</p>
+            <p className="text-gray-500 text-sm mt-1">يرجى الانتظار</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  */
 
   return (
     <PusherContext.Provider value={value}>

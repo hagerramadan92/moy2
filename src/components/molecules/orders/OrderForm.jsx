@@ -9,7 +9,6 @@ import toast from 'react-hot-toast';
 import { FaStar, FaMapMarkerAlt, FaHome, FaBriefcase, FaMapMarkedAlt } from 'react-icons/fa';
 
 // استيراد ملفات Pusher الجديدة
-import { getPusherInstance, subscribeToOrderAndUserChannels, disconnectPusher } from '@/utils/pusher';
 import usePusher from '@/hooks/usePusher';
 
 import OrderSchedulePage from './OrderSchedulePage';
@@ -74,8 +73,17 @@ function OrderFormContent() {
   const [expiresAt, setExpiresAt] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [orderStatus, setOrderStatus] = useState('waiting');
-  const [totalSearchTime, setTotalSearchTime] = useState(0); // إجمالي وقت البحث بالثواني
+  const [totalSearchTime, setTotalSearchTime] = useState(0);
   const expirationTimeoutRef = useRef(null);
+  
+  // New states for active subscriptions
+  const [activeOrderChannel, setActiveOrderChannel] = useState(null);
+  const [activeUserChannel, setActiveUserChannel] = useState(null);
+  const [offerReceived, setOfferReceived] = useState(false);
+  const [offerData, setOfferData] = useState(null);
+  
+  // استخدام useRef لحفظ orderId لتجنب مشاكل الـ stale closure
+  const currentOrderIdRef = useRef(null);
   
   // استخدام custom hook لـ Pusher
   const {
@@ -83,7 +91,12 @@ function OrderFormContent() {
     connectionState: pusherState,
     subscribeToOrderAndUser,
     unsubscribeAll,
-    reconnect
+    reconnect,
+    addEventListener,
+    removeEventListener,
+    triggerEventListener,
+    getSubscriptions,
+    getPusherInstance: getPusher
   } = usePusher({
     autoConnect: true,
     onConnected: () => {
@@ -272,21 +285,6 @@ function OrderFormContent() {
     }
   };
 
-  // Cleanup all timeouts
-  const cleanupAllTimeouts = useCallback(() => {
-    if (expirationTimeoutRef.current) {
-      clearTimeout(expirationTimeoutRef.current);
-      expirationTimeoutRef.current = null;
-    }
-    
-    if (requestTimeoutRef.current) {
-      clearTimeout(requestTimeoutRef.current);
-      requestTimeoutRef.current = null;
-    }
-    
-    cleanupPusherListener();
-  }, []);
-
   // Calculate time remaining
   const calculateTimeRemaining = useCallback(() => {
     if (!expiresAt) return null;
@@ -305,6 +303,141 @@ function OrderFormContent() {
     return { expired: false, minutes, seconds };
   }, [expiresAt]);
 
+  // Handle order expired
+    // Cleanup all timeouts and Pusher listeners
+    const cleanupAllTimeouts = useCallback(() => {
+      console.log('🧹 Cleaning up all timeouts and listeners');
+    
+      // إلغاء timeouts
+      if (expirationTimeoutRef.current) {
+        clearTimeout(expirationTimeoutRef.current);
+        expirationTimeoutRef.current = null;
+      }
+    
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+    
+      // تنظيف Pusher
+      removeEventListener('offer_created');
+      removeEventListener('order_expired');
+      unsubscribeAll();
+    
+      // إعادة تعيين الحالات
+      setActiveOrderChannel(null);
+      setActiveUserChannel(null);
+      setOfferReceived(false);
+      setOfferData(null);
+    }, [removeEventListener, unsubscribeAll]);
+
+  const handleOrderExpired = useCallback(() => {
+    // استخدام orderId من الـ ref بدلاً من state
+    const orderId = currentOrderIdRef.current || currentOrderId;
+    
+    if (!orderId) {
+      console.error('❌ No order ID found for expired order');
+      toast.error('حدث خطأ في تحديد رقم الطلب');
+      setIsWaitingForOffers(false);
+      setIsLoading(false);
+      cleanupAllTimeouts();
+      cleanupRequestPrevention();
+      return;
+    }
+    
+    console.log(`⏰ Order ${orderId} expired, redirecting to available drivers page...`);
+    
+    toast.error('انتهى وقت البحث عن سائق ولم يتم العثور على سائق', {
+      duration: 5000,
+      icon: '⏰'
+    });
+    
+    setIsWaitingForOffers(false);
+    setIsLoading(false);
+    cleanupAllTimeouts();
+    cleanupRequestPrevention();
+    
+    router.push(`/orders/available-drivers?orderId=${orderId}&expired=true`);
+  }, [currentOrderId, router, cleanupAllTimeouts]);
+
+  // دالة للتوجيه إلى صفحة السائقين المتاحين - يجب أن تكون قبل handleOfferReceived
+  const navigateToAvailableDrivers = useCallback((orderId) => {
+    console.log(`🚗 Navigating to available drivers page for order ${orderId}`);
+    
+    // تنظيف الـ timeouts
+    cleanupAllTimeouts();
+    cleanupRequestPrevention();
+    
+    // إخفاء شاشة الانتظار
+    setIsWaitingForOffers(false);
+    setIsLoading(false);
+    
+    // تأخير بسيط للتأكد من إخفاء شاشة الانتظار أولاً
+    setTimeout(() => {
+      console.log(`📍 Redirecting to: /orders/available-drivers?orderId=${orderId}`);
+      router.push(`/orders/available-drivers?orderId=${orderId}`);
+    }, 500);
+  }, [router, cleanupAllTimeouts]);
+
+
+  // دالة لمعالجة العروض المستلمة - يجب أن تكون بعد navigateToAvailableDrivers
+  const handleOfferReceived = useCallback((data) => {
+    console.log('🎯 Handling offer received:', data);
+    
+    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    if (offerOrderId && offerOrderId.toString() === currentOrderIdRef.current?.toString()) {
+      console.log(`✅ Offer is for our current order ${currentOrderIdRef.current}`);
+      
+      setOfferReceived(true);
+      setOfferData(data);
+      
+      toast.success('🎉 توافر عرض جديد من سائق! جاري التوجيه لصفحة العروض...', {
+        duration: 2500,
+        icon: '🚗'
+      });
+
+      // تأخير بسيط لرؤية الإشعار ثم التوجيه إلى صفحة السائقين المتاحين
+      setTimeout(() => {
+        navigateToAvailableDrivers(currentOrderIdRef.current);
+      }, 800);
+    } else {
+      console.log(`⚠️ Offer is for different order: ${offerOrderId}, our order: ${currentOrderIdRef.current}`);
+    }
+  }, [navigateToAvailableDrivers]);
+
+  // دالة لمعالجة قبول السائق للطلب - يجب أن تكون قبل setupPusherListener
+  const handleDriverAcceptedOrder = useCallback((data) => {
+    console.log('🚗 Handling driver accepted order:', data);
+    
+    const acceptedOrderId = data.order_id || data.order?.id || data.orderId;
+    const currentOrderId = currentOrderIdRef.current;
+    
+    if (acceptedOrderId && acceptedOrderId.toString() === currentOrderId?.toString()) {
+      console.log(`✅ Driver accepted our order ${currentOrderId}`);
+      
+      setDriverAcceptedOrder(true);
+      
+      toast.success('🎉 تم قبول طلبك من قبل السائق! جاري التوجيه...', {
+        duration: 3000,
+        icon: '🚗'
+      });
+
+      setIsWaitingForOffers(false);
+      setIsLoading(false);
+      cleanupAllTimeouts();
+      cleanupRequestPrevention();
+      
+      setTimeout(() => {
+        console.log(`📍 Redirecting to tracking page for order ${currentOrderId}`);
+        router.push(`/orders/tracking?orderId=${currentOrderId}`);
+      }, 1000);
+      
+    } else {
+      console.log(`⚠️ Driver accepted different order: ${acceptedOrderId}, our order: ${currentOrderId}`);
+      console.log('📋 Full event data:', JSON.stringify(data, null, 2));
+    }
+  }, [router, cleanupAllTimeouts]);
+
   // Update time remaining effect
   useEffect(() => {
     if (!expiresAt || !isWaitingForOffers) return;
@@ -320,161 +453,131 @@ function OrderFormContent() {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [expiresAt, isWaitingForOffers, calculateTimeRemaining]);
+  }, [expiresAt, isWaitingForOffers, calculateTimeRemaining, handleOrderExpired]);
 
-  // Handle order expired
-  const handleOrderExpired = useCallback(() => {
-    toast.error('انتهى وقت البحث عن سائق ولم يتم العثور على سائق', {
-      duration: 5000,
-      icon: '⏰'
+  // Setup Pusher listener for order updates - محسنة
+ // Setup Pusher listener for order updates - محسنة
+const setupPusherListener = useCallback(async (orderId, userId, expiresAtFromAPI) => {
+  try {
+    console.log(`🎯 Setting up Pusher listeners for order ${orderId} and user ${userId}`);
+    console.log(`⏰ Order expires at: ${expiresAtFromAPI}`);
+    
+    // تحديث الـ ref مع orderId الحالي
+    currentOrderIdRef.current = orderId;
+    
+    // إلغاء أي اشتراكات سابقة
+    unsubscribeAll();
+    
+    // إضافة مستمع لحدث العروض
+    addEventListener('offer_created', (data) => {
+      handleOfferReceived(data);
     });
-    
-    setIsWaitingForOffers(false);
-    setIsLoading(false);
-    cleanupAllTimeouts();
-    cleanupRequestPrevention();
-    
-    router.push(`/orders/available-drivers?orderId=${currentOrderId}&expired=true`);
-  }, [currentOrderId, router, cleanupAllTimeouts]);
 
-  // Setup Pusher listener for order updates
-  const setupPusherListener = async (orderId, userId, expiresAtFromAPI) => {
-    try {
-      console.log(`🎯 Setting up Pusher listeners for order ${orderId} and user ${userId}`);
-      console.log(`⏰ Order expires at: ${expiresAtFromAPI}`);
+    // إضافة مستمع لحدث انتهاء الطلب
+    addEventListener('order_expired', (data) => {
+      console.log('⏰ Order expired via Pusher:', data);
+      handleOrderExpired();
+    });
+
+    // ✅ إضافة مستمع لحدث قبول السائق للطلب
+    addEventListener('driver_accepted_order', (data) => {
+      console.log('🚗 Driver accepted order via user channel:', data);
+      handleDriverAcceptedOrder(data);
+    });
+
+    // Set expiration timeout
+    if (expiresAtFromAPI) {
+      const expiresTime = new Date(expiresAtFromAPI).getTime();
+      const now = Date.now();
+      const timeUntilExpiration = expiresTime - now;
       
-      // Set expiration timeout
-      if (expiresAtFromAPI) {
-        const expiresTime = new Date(expiresAtFromAPI).getTime();
-        const now = Date.now();
-        const timeUntilExpiration = expiresTime - now;
-        
-        console.log(`⏱️ Time until expiration: ${timeUntilExpiration}ms`);
-        console.log(`⏱️ Time until expiration: ${Math.floor(timeUntilExpiration / 1000)} seconds`);
-        
-        if (timeUntilExpiration > 0) {
-          expirationTimeoutRef.current = setTimeout(() => {
-            console.log('⏰ Order search time expired via timeout');
-            handleOrderExpired();
-          }, timeUntilExpiration);
-        } else {
-          console.log('⚠️ Order already expired or invalid expiration time');
+      console.log(`⏱️ Time until expiration: ${timeUntilExpiration}ms`);
+      
+      if (timeUntilExpiration > 0) {
+        expirationTimeoutRef.current = setTimeout(() => {
+          console.log(`⏰ Order ${orderId} search time expired via timeout`);
           handleOrderExpired();
-          return null;
-        }
+        }, timeUntilExpiration);
+      } else {
+        console.log(`⚠️ Order ${orderId} already expired or invalid expiration time`);
+        handleOrderExpired();
+        return null;
       }
+    }
 
-      const channels = subscribeToOrderAndUser(orderId, userId, {
-        onDriverAcceptedOrder: (data) => {
-          console.log('🚗 Driver accepted order via Pusher:', data);
+    // الاشتراك في القنوات مع معالجة الأحداث
+    const channels = subscribeToOrderAndUser(orderId, userId, {
+      onDriverAcceptedOrder: (data) => {
+        console.log('🚗 Driver accepted order via Pusher:', data);
+        handleDriverAcceptedOrder(data);
+      },
+
+      onOfferCreated: (data) => {
+        console.log('🎯 New offer received via Pusher:', data);
+        handleOfferReceived(data);
+      },
+
+      onOrderStatusUpdated: (data) => {
+        console.log('📊 Order status updated:', data);
+        
+        // Check if this event is for our current order
+        if (data.order_id && data.order_id.toString() === orderId.toString()) {
+          setOrderStatus(data.status);
           
-          // Check if this event is for our current order
-          if (data.order_id && data.order_id.toString() === orderId.toString()) {
-            setDriverAcceptedOrder(true);
+          if (data.status === 'expired' || data.status === 'cancelled') {
+            const message = data.status === 'expired' 
+              ? 'انتهى وقت البحث ولم يتم العثور على سائق' 
+              : 'تم إلغاء الطلب';
             
-            toast.success('🎉 تم قبول طلبك من قبل السائق!', {
+            toast.error(message, {
+              icon: '⚠️',
               duration: 5000,
             });
-
-            // Navigate to order tracking page
+            
             setIsWaitingForOffers(false);
             setIsLoading(false);
             cleanupAllTimeouts();
             cleanupRequestPrevention();
             
-            setTimeout(() => {
-              router.push(`/orders/tracking?orderId=${orderId}`);
-            }, 1000);
-          }
-        },
-
-        onOfferCreated: (data) => {
-          console.log('🎯 New offer received via Pusher:', data);
-          
-          // Check if this event is for our current order
-          if (data.order_id && data.order_id.toString() === orderId.toString()) {
-            toast.success('تم استلام عرض جديد!', {
-              icon: '🎉',
-              duration: 3000,
-            });
-
-            // Navigate to drivers page when an offer is received
-            setIsWaitingForOffers(false);
-            setIsLoading(false);
-            cleanupAllTimeouts();
-            cleanupRequestPrevention();
-            
-            setTimeout(() => {
-              router.push(`/orders/available-drivers?orderId=${orderId}`);
-            }, 1000);
-          }
-        },
-
-        onOrderStatusUpdated: (data) => {
-          console.log('📊 Order status updated:', data);
-          
-          // Check if this event is for our current order
-          if (data.order_id && data.order_id.toString() === orderId.toString()) {
-            setOrderStatus(data.status);
-            
-            if (data.status === 'expired' || data.status === 'cancelled') {
-              const message = data.status === 'expired' 
-                ? 'انتهى وقت البحث ولم يتم العثور على سائق' 
-                : 'تم إلغاء الطلب';
-                
-              toast.error(message, {
-                icon: '⚠️',
-                duration: 5000,
-              });
-              
-              setIsWaitingForOffers(false);
-              setIsLoading(false);
-              cleanupAllTimeouts();
-              cleanupRequestPrevention();
-              
-              if (data.status === 'expired') {
-                localStorage.setItem(`order_${orderId}_expired`, 'true');
-                router.push(`/orders/available-drivers?orderId=${orderId}&expired=true`);
-              }
+            if (data.status === 'expired') {
+              localStorage.setItem(`order_${orderId}_expired`, 'true');
+              router.push(`/orders/available-drivers?orderId=${orderId}&expired=true`);
             }
           }
-        },
-
-        onDriverAssigned: (data) => {
-          console.log('👤 Driver assigned to order:', data);
-          if (data.order_id && data.order_id.toString() === orderId.toString()) {
-            setDriverAcceptedOrder(true);
-          }
-        },
-
-        onOrderUpdated: (data) => {
-          console.log('📝 Order updated:', data);
-          // يمكنك إضافة معالجة إضافية هنا
         }
-      });
+      },
 
-      setPusherChannels(channels);
-      
-      // Update waiting message
-      setWaitingMessage(pusherConnected 
-        ? 'جاري البحث عن سائق...' 
-        : 'جاري الاتصال بالخادم للبحث عن سائق...'
-      );
-      
-      return channels;
-      
-    } catch (error) {
-      console.error('❌ Error setting up Pusher listener:', error);
-      toast.error('حدث خطأ في إعداد نظام البحث عن سائق');
-      return null;
-    }
-  };
+      onDriverAssigned: (data) => {
+        console.log('👤 Driver assigned to order:', data);
+        if (data.order_id && data.order_id.toString() === orderId.toString()) {
+          handleDriverAcceptedOrder(data);
+        }
+      },
 
-  // Cleanup Pusher listener
-  const cleanupPusherListener = () => {
-    unsubscribeAll();
-    setPusherChannels({ orderChannel: null, userChannel: null });
-  };
+      onOrderUpdated: (data) => {
+        console.log('📝 Order updated:', data);
+      }
+    });
+
+    // حفظ مراجع القنوات النشطة
+    setActiveOrderChannel(channels.orderChannel);
+    setActiveUserChannel(channels.userChannel);
+    setPusherChannels(channels);
+    
+    // Update waiting message
+    setWaitingMessage(pusherConnected 
+      ? 'جاري البحث عن سائقين عبر البث المباشر...' 
+      : 'جاري الاتصال بخدمة البث المباشر...'
+    );
+    
+    return channels;
+    
+  } catch (error) {
+    console.error('❌ Error setting up Pusher listener:', error);
+    toast.error('حدث خطأ في إعداد نظام البحث عن سائق');
+    return null;
+  }
+}, [addEventListener, handleOrderExpired, handleOfferReceived, handleDriverAcceptedOrder, router, subscribeToOrderAndUser, unsubscribeAll]);
 
   // دالة للحصول على معرف المستخدم
   const getUserId = async (accessToken) => {
@@ -604,23 +707,32 @@ function OrderFormContent() {
       if (response.ok && data.status) {
         toast.success(data.message || "تم إنشاء الطلب بنجاح!");
         
-        let orderId;
+        let orderId = null;
         let expiresAtFromAPI = null;
-        let orderExpiresAt = null;
         
-        // استخراج orderId
+        // استخراج orderId من جميع المستويات الممكنة
         if (data.data?.id) {
           orderId = data.data.id;
+          console.log('✅ Order ID from data.data.id:', orderId);
         } else if (data.data?.order_id) {
           orderId = data.data.order_id;
+          console.log('✅ Order ID from data.data.order_id:', orderId);
         } else if (data.id) {
           orderId = data.id;
+          console.log('✅ Order ID from data.id:', orderId);
         } else if (data.order_id) {
           orderId = data.order_id;
+          console.log('✅ Order ID from data.order_id:', orderId);
         } else if (data.order?.id) {
           orderId = data.order.id;
-        } else {
-          console.warn('⚠️ Could not find orderId in response');
+          console.log('✅ Order ID from data.order.id:', orderId);
+        } else if (data.data?.order?.id) {
+          orderId = data.data.order.id;
+          console.log('✅ Order ID from data.data.order.id:', orderId);
+        }
+        
+        if (!orderId) {
+          console.warn('⚠️ Could not find orderId in response:', data);
           toast.error('لم يتم الحصول على رقم الطلب من الخادم');
           setIsLoading(false);
           setIsWaitingForOffers(false);
@@ -629,27 +741,24 @@ function OrderFormContent() {
         }
         
         console.log('✅ Order ID retrieved:', orderId);
+        
+        // تحديث state و ref مع orderId
         setCurrentOrderId(orderId);
+        currentOrderIdRef.current = orderId;
 
         // الحصول على وقت الانتهاء من الرد - البحث في جميع المستويات
         if (data.data?.expires_in?.expires_at) {
           expiresAtFromAPI = data.data.expires_in.expires_at;
-          orderExpiresAt = data.data.expires_in.expires_at;
         } else if (data.data?.expires_at) {
           expiresAtFromAPI = data.data.expires_at;
-          orderExpiresAt = data.data.expires_at;
         } else if (data.expires_in?.expires_at) {
           expiresAtFromAPI = data.expires_in.expires_at;
-          orderExpiresAt = data.expires_in.expires_at;
         } else if (data.expires_at) {
           expiresAtFromAPI = data.expires_at;
-          orderExpiresAt = data.expires_at;
         } else if (data.data?.order?.expires_at) {
           expiresAtFromAPI = data.data.order.expires_at;
-          orderExpiresAt = data.data.order.expires_at;
         } else if (data.order?.expires_at) {
           expiresAtFromAPI = data.order.expires_at;
-          orderExpiresAt = data.order.expires_at;
         }
         
         console.log('⏰ Expires at from API:', expiresAtFromAPI);
@@ -675,6 +784,9 @@ function OrderFormContent() {
 
         // Setup Pusher listener مع وقت الانتهاء
         await setupPusherListener(orderId, userId, expiresAtFromAPI);
+        
+        // تحديث رسالة الانتظار
+        setWaitingMessage('✅ تم إنشاء الطلب بنجاح، جاري البحث عن سائقين...');
         
       } else {
         toast.error(data.message || "فشل إنشاء الطلب");
@@ -824,32 +936,6 @@ function OrderFormContent() {
     }
   };
 
-  // إضافة مؤشر حالة اتصال Pusher
-  const PusherStatusIndicator = () => (
-    <div className="fixed bottom-4 left-4 z-40">
-      <div className={`px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm border flex items-center gap-2 ${
-        pusherState === 'connected' 
-          ? 'bg-green-500/10 text-green-700 border-green-500/20' 
-          : pusherState === 'connecting'
-          ? 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20'
-          : 'bg-red-500/10 text-red-700 border-red-500/20'
-      }`}>
-        {pusherState === 'connected' ? (
-          <Wifi size={12} className="text-green-500" />
-        ) : (
-          <WifiOff size={12} className="text-red-500" />
-        )}
-        <span>
-          {pusherState === 'connected' 
-            ? 'متصال' 
-            : pusherState === 'connecting'
-            ? 'جاري الاتصال...'
-            : 'غير متصل'}
-        </span>
-      </div>
-    </div>
-  );
-
   // دالة لإلغاء الانتظار
   const cancelWaiting = useCallback(() => {
     cleanupAllTimeouts();
@@ -862,11 +948,102 @@ function OrderFormContent() {
     });
   }, [cleanupAllTimeouts]);
 
+  // استعادة اشتراكات Pusher عند العودة للصفحة
+  useEffect(() => {
+    const restorePusherConnections = async () => {
+      if (!currentOrderId || !pusherConnected) return;
+      
+      // التحقق من وجود اشتراكات نشطة
+      const hasActiveSubscriptions = getSubscriptions().length > 0;
+      
+      if (!hasActiveSubscriptions && currentOrderId) {
+        console.log(`🔄 Restoring Pusher connections for order ${currentOrderId}`);
+        
+        try {
+          const accessToken = localStorage.getItem("accessToken");
+          if (!accessToken) return;
+          
+          const userId = await getUserId(accessToken);
+          if (!userId) return;
+          
+          // إعادة إعداد Pusher listener
+          await setupPusherListener(currentOrderId, userId, expiresAt);
+          
+          toast.info('تم استعادة الاتصال بخدمة البث المباشر', {
+            duration: 3000,
+            icon: '🔌'
+          });
+        } catch (error) {
+          console.error('❌ Error restoring Pusher connections:', error);
+        }
+      }
+    };
+    
+    // استعادة الاتصالات عند التركيز على الصفحة
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        restorePusherConnections();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [currentOrderId, pusherConnected, setupPusherListener, expiresAt, getSubscriptions]);
+
+  // تنظيف عند إلغاء المكون
   useEffect(() => {
     return () => {
+      console.log('🧹 Cleaning up OrderForm component');
       cleanupAllTimeouts();
+      cleanupRequestPrevention();
     };
-  }, [cleanupAllTimeouts]);
+  }, [cleanupAllTimeouts, cleanupRequestPrevention]);
+
+  // دالة مساعدة للحصول على كلاس الحالة
+  const getPusherStatusClass = (state) => {
+    switch(state) {
+      case 'connected':
+        return 'bg-green-500/10 text-green-700 border-green-500/20';
+      case 'connecting':
+        return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
+      default:
+        return 'bg-red-500/10 text-red-700 border-red-500/20';
+    }
+  };
+
+  // مؤشر اتصال Pusher مع معلومات الاشتراكات
+  const PusherStatusIndicator = () => {
+    const subscriptions = getSubscriptions();
+    
+    return (
+      <div className="fixed bottom-4 left-4 z-40">
+        <div className={`px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm border flex items-center gap-2 ${getPusherStatusClass(pusherState)}`}>
+          {pusherState === 'connected' ? (
+            <Wifi size={12} className="text-green-500" />
+          ) : (
+            <WifiOff size={12} className="text-red-500" />
+          )}
+          <div className="flex flex-col">
+            <span>
+              {pusherState === 'connected' 
+                ? 'متصال بالبث المباشر' 
+                : pusherState === 'connecting'
+                ? 'جاري الاتصال...'
+                : 'غير متصل'}
+            </span>
+            {pusherState === 'connected' && currentOrderId && (
+              <span className="text-[10px] text-gray-600">
+                الطلب #{currentOrderId} | {subscriptions.length} قناة
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (showSchedule) {
     return <OrderSchedulePage 
@@ -1259,9 +1436,7 @@ function OrderFormContent() {
                         </span>
                       </>
                     ) : (
-                      <span className={`text-xs md:text-sm font-medium truncate w-full text-right ${
-                        getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'
-                      }`}>
+                      <span className={`text-xs md:text-sm font-medium truncate w-full text-right ${getFieldStatus('location') === 'error' ? 'text-red-400' : 'text-gray-400'}`}>
                         اضغط لتحديد موقع جديد
                       </span>
                     )}
@@ -1403,6 +1578,9 @@ function OrderFormContent() {
                       )}
                     </p>
                   )}
+                  <p className="text-xs text-green-600 mt-1 font-medium">
+                    • عند وجود عرض جديد، ستتم توجيهك تلقائياً لصفحة السائقين المتاحين
+                  </p>
                 </div>
               </div>
             </div>
@@ -1496,12 +1674,19 @@ function OrderFormContent() {
                         />
                       ))}
                     </div>
-                    <p>
-                      {pusherConnected 
-                        ? 'جاري الاستماع للعروض في الوقت الفعلي' 
-                        : 'جاري الاتصال بخدمة البحث...'
-                      }
-                    </p>
+                    <div className="flex flex-col items-center">
+                      <p>
+                        {pusherConnected 
+                          ? '✅ متصل بالبث المباشر للعروض' 
+                          : 'جاري الاتصال بخدمة البث...'
+                        }
+                      </p>
+                      {pusherConnected && currentOrderId && (
+                        <p className="text-[10px] text-green-600 mt-1">
+                          ✅ جاري الاستماع للعروض على الطلب #{currentOrderId}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className={`text-xs flex items-center justify-center gap-1 ${pusherConnected ? 'text-green-600' : 'text-yellow-600'} mb-3`}>
@@ -1525,6 +1710,10 @@ function OrderFormContent() {
                   >
                     إلغاء البحث
                   </button>
+                  
+                  <p className="text-xs text-green-600 mt-3">
+                    عند وجود عرض جديد، سيتم توجيهك تلقائياً لصفحة السائقين المتاحين
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -1534,7 +1723,6 @@ function OrderFormContent() {
     </div>
   );
 }
-
 
 export default function OrderForm() {
   return (

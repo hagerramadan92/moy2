@@ -136,7 +136,8 @@ export const subscribeToOrderAndUserChannels = (orderId, userId, eventHandlers) 
     channels.orderChannel = subscribeToChannel(`order.${orderId}`, {
       'offer.created': eventHandlers?.onOfferCreated || (() => {}),
       'order.status.updated': eventHandlers?.onOrderStatusUpdated || (() => {}),
-      'order.expired': eventHandlers?.onOrderExpired || (() => {})
+      'order.expired': eventHandlers?.onOrderExpired || (() => {}),
+      'order.cancelled': eventHandlers?.onOrderCancelled || (() => {})
     });
   }
 
@@ -145,7 +146,8 @@ export const subscribeToOrderAndUserChannels = (orderId, userId, eventHandlers) 
     channels.userChannel = subscribeToChannel(`user.${userId}`, {
       'DriverAcceptedOrder': eventHandlers?.onDriverAcceptedOrder || (() => {}),
       'driver.assigned': eventHandlers?.onDriverAssigned || (() => {}),
-      'order.updated': eventHandlers?.onOrderUpdated || (() => {})
+      'order.updated': eventHandlers?.onOrderUpdated || (() => {}),
+      'driver.location.updated': eventHandlers?.onDriverLocationUpdated || (() => {})
     });
   }
 

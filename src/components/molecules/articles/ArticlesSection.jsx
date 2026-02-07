@@ -577,35 +577,17 @@ const ArticlesGrid = ({ articles, selectedCategory, searchQuery, loading }) => {
   if (searchQuery && searchQuery.trim() !== '') {
     // For search, show all articles (don't filter out featured)
     articlesToShow = articles;
-    console.log('ArticlesGrid - Using search mode, showing all articles');
   } else if (selectedCategory === "جميع المقالات" || selectedCategory === null || selectedCategory === '') {
     // For all articles, exclude the first featured one (shown in hero)
     articlesToShow = articles.filter(a => a.id !== firstFeaturedArticleId);
-    console.log('ArticlesGrid - Using all articles mode, filtered out featured');
   } else {
     // For category filter, show only articles in that category
     articlesToShow = articles.filter(article => article.category === selectedCategory);
-    console.log('ArticlesGrid - Using category filter mode');
   }
   
   const trendingArticles = articles.filter(a => a.trending && !a.featured).slice(0, 3);
   
-  // Debug logging
-  console.log('========== ArticlesGrid Debug ==========');
-  console.log('ArticlesGrid - Total articles:', articles.length);
-  console.log('ArticlesGrid - Search query:', searchQuery);
-  console.log('ArticlesGrid - Selected category:', selectedCategory);
-  console.log('ArticlesGrid - Featured articles:', featuredArticles.length);
-  console.log('ArticlesGrid - Articles to show:', articlesToShow.length);
-  console.log('ArticlesGrid - First featured article ID:', firstFeaturedArticleId);
-  console.log('ArticlesGrid - Trending articles:', trendingArticles.length);
-  if (articlesToShow.length > 0) {
-    console.log('ArticlesGrid - First article to show:', articlesToShow[0]);
-  } else {
-    console.log('ArticlesGrid - WARNING: No articles to show!');
-    console.log('ArticlesGrid - Articles array:', articles);
-  }
-  console.log('==========================================');
+
 
   // Show loading state only in results section
   if (loading) {
@@ -760,7 +742,6 @@ const ArticlesSection = () => {
           }));
           
           setApiCategories(transformedCategories);
-          console.log('Categories fetched from API:', transformedCategories);
         } else {
           console.warn('Failed to fetch categories, using static categories');
         }
@@ -789,8 +770,6 @@ const ArticlesSection = () => {
           const encodedQuery = encodeURIComponent(trimmedQuery);
           apiUrl = `/api/articles/search?q=${encodedQuery}`;
           
-          console.log('Search - Original Arabic query:', trimmedQuery);
-          console.log('Search - Encoded query:', encodedQuery);
           
           // Get access token if available
           const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -810,23 +789,7 @@ const ArticlesSection = () => {
         }
         
         const data = await response.json();
-        
-        // Detailed logging of the response
-        console.log('========== API RESPONSE ==========');
-        console.log('API Response Status:', response.status);
-        console.log('Is Search Query:', searchQuery && searchQuery.trim() !== '');
-        console.log('Full API Response:', JSON.stringify(data, null, 2));
-        console.log('Response keys:', Object.keys(data));
-        console.log('data.success:', data.success);
-        console.log('data.data exists:', !!data.data);
-        console.log('data.data is array:', Array.isArray(data.data));
-        if (data.data) {
-          console.log('data.data length:', data.data.length);
-          if (data.data.length > 0) {
-            console.log('First article in data.data:', JSON.stringify(data.data[0], null, 2));
-          }
-        }
-        console.log('===================================');
+   
         
         // Handle successful response
         if (response.ok) {
@@ -847,15 +810,7 @@ const ArticlesSection = () => {
           } else if (data.articles && Array.isArray(data.articles)) {
             articlesData = data.articles;
           }
-          
-          console.log('========== EXTRACTION ==========');
-          console.log('Extracted articlesData:', articlesData);
-          console.log('Is Array:', Array.isArray(articlesData));
-          console.log('Length:', articlesData?.length);
-          if (articlesData && articlesData.length > 0) {
-            console.log('First article raw:', JSON.stringify(articlesData[0], null, 2));
-          }
-          console.log('================================');
+  
           
           if (articlesData && Array.isArray(articlesData)) {
             // Transform articles
@@ -863,12 +818,8 @@ const ArticlesSection = () => {
               ? articlesData.map(transformArticle)
               : [];
             
-            console.log('========== TRANSFORMATION ==========');
-            console.log('Transformed Articles count:', transformedArticles.length);
             if (transformedArticles.length > 0) {
-              console.log('First transformed article:', JSON.stringify(transformedArticles[0], null, 2));
             }
-            console.log('=====================================');
             
           setArticles(transformedArticles);
           
@@ -876,7 +827,6 @@ const ArticlesSection = () => {
             if (transformedArticles.length > 0) {
           const uniqueCategories = [...new Set(transformedArticles.map(a => a.category))];
           setCategories(uniqueCategories);
-          console.log('Categories from articles:', uniqueCategories);
             }
             
             // Clear error for search results (even if empty)

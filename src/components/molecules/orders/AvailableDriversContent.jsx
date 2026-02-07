@@ -21,6 +21,7 @@ import DriverCard from './DriverCard';
 import PaymentModal from './PaymentModal';
 import { API_BASE_URL, getAccessToken } from './utils/api';
 import { getPaymentCallbackData, getPendingOfferData } from './utils/paymentHelpers';
+import usePusher from '@/hooks/usePusher'; // ✅ إضافة استيراد Pusher
 
 // Dynamically import map to avoid SSR
 const DriversMap = dynamic(
@@ -70,8 +71,30 @@ export default function AvailableDriversContent({ onBack }) {
     lowestPrice: 0
   });
   
+  // ✅ إضافة حالة جديدة للعروض الجديدة عبر Pusher
+  const [newOfferNotification, setNewOfferNotification] = useState(null);
+  const [offerUpdates, setOfferUpdates] = useState([]);
+  
   // Ref to track if map has been initialized to prevent unnecessary reloads
   const mapInitializedRef = useRef(false);
+  
+  // ✅ استخدام usePusher للاتصال بالبث المباشر
+  const {
+    isConnected: pusherConnected,
+    connectionState: pusherState,
+    subscribe,
+    unsubscribeAll,
+    addEventListener,
+    removeEventListener
+  } = usePusher({
+    autoConnect: true,
+    onConnected: () => {
+      console.log('✅ Pusher connected in AvailableDrivers');
+    },
+    onDisconnected: () => {
+      console.log('🔴 Pusher disconnected in AvailableDrivers');
+    }
+  });
 
   // Format driver data function - memoized to prevent recreation
   const formatDriverData = useCallback((offer) => {
@@ -133,6 +156,76 @@ export default function AvailableDriversContent({ onBack }) {
   const paymentSuccessParam = searchParams.get('success');
   const paymentCancelParam = searchParams.get('cancel');
   const isExpiredParam = searchParams.get('expired');
+
+  // ✅ إعداد Pusher للاستماع للعروض الجديدة
+  useEffect(() => {
+    if (!orderId || !pusherConnected) return;
+    
+    console.log(`🎯 Setting up Pusher listener for order ${orderId} in AvailableDrivers`);
+    
+    // الاشتراك في قناة الطلب
+    const channel = subscribe(`order.${orderId}`, {
+      'offer.created': (data) => {
+        console.log('🎯 New offer received via Pusher in AvailableDrivers:', data);
+        
+        // التحقق من أن العرض لهذا الطلب
+        const offerOrderId = data.order_id || data.order?.id || data.orderId;
+        if (offerOrderId && offerOrderId.toString() === orderId.toString()) {
+          // إظهار إشعار بالعرض الجديد
+          setNewOfferNotification({
+            id: Date.now(),
+            message: 'تم إضافة عرض جديد',
+            driverName: data.driver?.name || 'سائق جديد',
+            price: data.price,
+            expiresIn: 5 // ثواني
+          });
+          
+          // تحديث قائمة العروض تلقائياً بعد 2 ثانية
+          setTimeout(() => {
+            console.log('🔄 Auto-refreshing offers due to new offer');
+            fetchOffers();
+          }, 2000);
+          
+          // إضافة إلى سجل التحديثات
+          setOfferUpdates(prev => [...prev, {
+            id: data.offer_id || Date.now(),
+            timestamp: new Date().toLocaleTimeString('ar-SA'),
+            message: `عرض جديد من ${data.driver?.name || 'سائق'} بقيمة ${data.price}`,
+            data: data
+          }]);
+        }
+      },
+      
+      'order.status.updated': (data) => {
+        console.log('📊 Order status updated in AvailableDrivers:', data);
+        
+        if (data.order_id && data.order_id.toString() === orderId.toString()) {
+          if (data.status === 'expired') {
+            setIsOrderExpired(true);
+            setNewOfferNotification({
+              id: Date.now(),
+              message: 'انتهت صلاحية الطلب',
+              type: 'warning'
+            });
+          }
+        }
+      },
+      
+      'order.expired': (data) => {
+        console.log('⏰ Order expired via Pusher in AvailableDrivers:', data);
+        if (data.order_id && data.order_id.toString() === orderId.toString()) {
+          setIsOrderExpired(true);
+        }
+      }
+    });
+    
+    // تنظيف عند إلغاء المكون
+    return () => {
+      if (channel) {
+        unsubscribeAll();
+      }
+    };
+  }, [orderId, pusherConnected, subscribe, unsubscribeAll]);
 
   // Check for payment success and pending offers on component mount
   useEffect(() => {
@@ -519,7 +612,7 @@ export default function AvailableDriversContent({ onBack }) {
         // Process stats and fetch status in background (non-blocking)
         setTimeout(() => {
           if (data.data.offers && data.data.offers.length > 0) {
-        calculateStats(data.data.offers);
+            calculateStats(data.data.offers);
           }
           fetchOrderStatus();
         }, 0);
@@ -887,6 +980,55 @@ export default function AvailableDriversContent({ onBack }) {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8">
 
+        {/* ✅ إشعار بالعرض الجديد */}
+        <AnimatePresence>
+          {newOfferNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="fixed top-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96"
+            >
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-2xl p-4 border border-green-300">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">عرض جديد تم إضافته!</h4>
+                      <p className="text-xs opacity-90 mt-1">
+                        {newOfferNotification.message}
+                      </p>
+                      {newOfferNotification.driverName && newOfferNotification.price && (
+                        <p className="text-xs font-medium mt-1">
+                          {newOfferNotification.driverName} - {newOfferNotification.price} ر.س
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setNewOfferNotification(null)}
+                    className="text-white/80 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="mt-3 h-1 bg-white/30 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-white"
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: newOfferNotification.expiresIn || 5, ease: 'linear' }}
+                    onAnimationComplete={() => setNewOfferNotification(null)}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
         <div className="pt-4 sm:pt-6 md:pt-8 pb-4 sm:pb-6">
           <motion.div
@@ -951,6 +1093,32 @@ export default function AvailableDriversContent({ onBack }) {
                             <div className="flex items-center gap-1.5 sm:gap-2">
                               <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span className="font-medium text-xs sm:text-sm">{offersData?.total_offers || 0} عرض</span>
+                            </div>
+                          </div>
+                          
+                          {/* ✅ مؤشر اتصال Pusher */}
+                          <div className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border ${
+                            pusherState === 'connected' 
+                              ? 'bg-green-500/30 border-green-300/50' 
+                              : pusherState === 'connecting'
+                              ? 'bg-yellow-500/30 border-yellow-300/50'
+                              : 'bg-red-500/30 border-red-300/50'
+                          }`}>
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                                pusherState === 'connected' 
+                                  ? 'bg-green-400 animate-pulse' 
+                                  : pusherState === 'connecting'
+                                  ? 'bg-yellow-400 animate-pulse'
+                                  : 'bg-red-400'
+                              }`} />
+                              <span className="font-medium text-xs sm:text-sm">
+                                {pusherState === 'connected' 
+                                  ? 'البث المباشر ✓' 
+                                  : pusherState === 'connecting'
+                                  ? 'جاري الاتصال...'
+                                  : 'غير متصل'}
+                              </span>
                             </div>
                           </div>
                           
@@ -1102,8 +1270,19 @@ export default function AvailableDriversContent({ onBack }) {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                   العروض المتاحة
                 </h2>
-                <div className="text-xs sm:text-sm text-gray-500">
-                  {offersData?.total_offers || 0} عرض
+                <div className="flex items-center gap-2">
+                  <div className="text-xs sm:text-sm text-gray-500">
+                    {offersData?.total_offers || 0} عرض
+                  </div>
+                  {/* ✅ مؤشر تحديث العروض */}
+                  {pusherConnected && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-[10px] sm:text-xs text-green-600 font-medium">
+                        متصل بالبث المباشر
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1115,35 +1294,35 @@ export default function AvailableDriversContent({ onBack }) {
                   const isPendingPayment = pendingPaymentOfferId === offer.id;
                   const isExpired = expiredOfferIds.includes(offer.id);
                   return (
-                <motion.div
-                  key={offer.id}
-                  variants={itemVariants}
-                  custom={index}
+                    <motion.div
+                      key={offer.id}
+                      variants={itemVariants}
+                      custom={index}
                       whileHover={(!isAccepted && !isPendingPayment && !isExpired) ? { y: -5 } : {}}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <DriverCard
-                    {...formatDriverData(offer)}
-                    onAcceptOrder={() => handleDriverSelect(
-                      offer.driver_id, 
-                      offer.id, 
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <DriverCard
+                        {...formatDriverData(offer)}
+                        onAcceptOrder={() => handleDriverSelect(
+                          offer.driver_id, 
+                          offer.id, 
                           formatDriverData(offer),
                           offer
-                    )}
-                    onViewProfile={() => {
-                      const driverData = formatDriverData(offer);
-                      // Use driverUserId (user.id) for profile navigation, fallback to driver_id
-                      const profileId = driverData.driverUserId || offer.driver_id;
-                      const driverAvatar = offer.driver?.user?.avatar || offer.driver?.personal_photo || '/images/driver.png';
-                      router.push(`/orders/driver_profile?id=${profileId}&driverId=${offer.driver_id}&name=${encodeURIComponent(driverData.name)}&phone=${encodeURIComponent(driverData.phone)}&rate=${driverData.rating}&avatar=${encodeURIComponent(driverAvatar)}`);
-                    }}
+                        )}
+                        onViewProfile={() => {
+                          const driverData = formatDriverData(offer);
+                          // Use driverUserId (user.id) for profile navigation, fallback to driver_id
+                          const profileId = driverData.driverUserId || offer.driver_id;
+                          const driverAvatar = offer.driver?.user?.avatar || offer.driver?.personal_photo || '/images/driver.png';
+                          router.push(`/orders/driver_profile?id=${profileId}&driverId=${offer.driver_id}&name=${encodeURIComponent(driverData.name)}&phone=${encodeURIComponent(driverData.phone)}&rate=${driverData.rating}&avatar=${encodeURIComponent(driverAvatar)}`);
+                        }}
                         isPending={!isAccepted && !isPendingPayment && !isExpired}
                         isAccepted={isAccepted}
                         isPendingPayment={isPendingPayment}
                         isExpired={isExpired}
-                    index={index}
-                  />
-                </motion.div>
+                        index={index}
+                      />
+                    </motion.div>
                   );
                 })
               ) : null}
@@ -1260,8 +1439,8 @@ export default function AvailableDriversContent({ onBack }) {
                   </div>
                 </div>
               </div>
-                  </div>
-           </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1336,9 +1515,6 @@ export default function AvailableDriversContent({ onBack }) {
         onOfferExpired={handleOfferExpired}
         setPendingPaymentOfferId={setPendingPaymentOfferId}
       />
-
-    
     </div>
   );
 }
-
