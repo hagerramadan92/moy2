@@ -113,11 +113,7 @@ export default function ContractingPage() {
                             latitude: parseFloat(first.latitude),
                             longitude: parseFloat(first.longitude)
                         });
-                    } else if (data.data.length === 0) {
-                        setIsMapOpen(true);
                     }
-                } else if (response.ok && (!data.data || data.data.length === 0)) {
-                    setIsMapOpen(true);
                 }
             } catch (error) {
                 // Silently fail - addresses are optional
@@ -133,11 +129,52 @@ export default function ContractingPage() {
         router.push('/myProfile/addresses');
     };
 
-    const handleManualLocationSelect = (data) => {
+    const handleManualLocationSelect = async (data) => {
         setLocationData(data);
         setSelectedSavedLocation(null);
         setIsManualLocation(true);
         setIsMapOpen(false);
+
+        // حفظ الموقع تلقائياً في الأماكن المحفوظة
+        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (!accessToken) return;
+
+        try {
+            const newAddressResponse = await fetch(`${API_BASE_URL}/addresses`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    name: data.name || 'موقع التعاقد',
+                    address: data.address,
+                    city: data.city || 'الرياض',
+                    area: data.area || 'حي عام',
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                }),
+            });
+            const addressData = await newAddressResponse.json();
+            if (newAddressResponse.ok && addressData.status && addressData.data) {
+                const newAddress = addressData.data;
+                setAddresses(prev => [...prev, newAddress]);
+                setSelectedSavedLocation(newAddress);
+                setLocationData({
+                    ...newAddress,
+                    latitude: parseFloat(newAddress.latitude),
+                    longitude: parseFloat(newAddress.longitude),
+                });
+                setIsManualLocation(false);
+                toast.success('تم حفظ الموقع في الأماكن المحفوظة', { duration: 3000, icon: '✅' });
+            } else {
+                toast.error(addressData?.message || 'فشل حفظ العنوان في الأماكن المحفوظة');
+            }
+        } catch (err) {
+            console.error('Error saving address:', err);
+            toast.error('حدث خطأ أثناء حفظ الموقع');
+        }
     };
 
     const handleSavedLocationSelect = (location) => {
@@ -784,7 +821,12 @@ export default function ContractingPage() {
                                     <div className="flex items-center justify-center py-4 rounded-xl bg-secondary/20">
                                         <span className="text-sm text-muted-foreground">جاري تحميل الأماكن المحفوظة...</span>
                                     </div>
-                                ) : addresses.length > 0 ? (
+                                ) : addresses.length === 0 ? (
+                                    <div className="p-3 md:p-4 rounded-xl bg-[#579BE8]/10 border-2 border-dashed border-[#579BE8]/40 text-center">
+                                        <p className="text-xs md:text-sm font-medium text-foreground mb-1">لا توجد أماكن محفوظة</p>
+                                        <p className="text-[10px] md:text-xs text-muted-foreground">اختر موقعك من الخريطة وسيتم حفظه تلقائياً في الأماكن المحفوظة</p>
+                                    </div>
+                                ) : (
                                     <>
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-xs font-bold text-foreground/80 flex items-center gap-2">
@@ -835,7 +877,7 @@ export default function ContractingPage() {
                                             ))}
                                         </div>
                                     </>
-                                ) : null}
+                                )}
 
                                 <div
                                     onClick={() => setIsMapOpen(true)}
