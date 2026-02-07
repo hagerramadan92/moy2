@@ -561,7 +561,7 @@ export default function ContractHistoryPage() {
 
                     <div className="relative z-10">
                         <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
-                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl">
+                            <div className="p-1.5 md:p-2 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl ">
                                 <FaCheckCircle className="text-sm md:text-base lg:text-lg" />
                             </div>
                             <p className="text-xs md:text-lg font-bold opacity-90">العقود </p>
