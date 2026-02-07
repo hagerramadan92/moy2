@@ -113,7 +113,11 @@ export default function ContractingPage() {
                             latitude: parseFloat(first.latitude),
                             longitude: parseFloat(first.longitude)
                         });
+                    } else if (data.data.length === 0) {
+                        setIsMapOpen(true);
                     }
+                } else if (response.ok && (!data.data || data.data.length === 0)) {
+                    setIsMapOpen(true);
                 }
             } catch (error) {
                 // Silently fail - addresses are optional
