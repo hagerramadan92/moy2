@@ -17,6 +17,44 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { IoMdEye } from "react-icons/io";
+
+// ✅ إضافة دالة formatDriverData هنا
+const formatDriverData = (offer) => {
+  // Extract location from currect_location (note: API has typo "currect" instead of "current")
+  const location = offer.driver?.currect_location;
+  const lat = location?.lat ? parseFloat(location.lat) : null;
+  const lng = location?.lng ? parseFloat(location.lng) : null;
+  
+  // Get driver name from user object or driver object
+  const driverName = offer.driver?.user?.name || offer.driver?.name || `السائق ${offer.driver_id}`;
+  const driverPhone = offer.driver?.user?.phone || offer.driver?.phone || '+966500000000';
+  const driverUserId = offer.driver?.user?.id || offer.driver_id;
+  const driverAvatar = offer.driver?.user?.avatar || offer.driver?.personal_photo || '/images/driver.png';
+  
+  return {
+    id: offer.id,
+    driverId: offer.driver_id,
+    driverUserId: driverUserId, // User ID for profile navigation
+    name: driverName,
+    deliveryTime: `${offer.delivery_duration_minutes} د`,
+    price: `${offer.price} `,
+    rating: offer.driver?.rating || "4.5",
+    successfulOrders: `(${offer.driver?.completed_orders || '1,439'}) طلب ناجح`,
+    ordersCount: offer.driver?.total_orders || "238",
+    status: offer.status,
+    offerId: offer.id,
+    createdAt: offer.created_at,
+    vehicleType: offer.driver?.vehicle_size || offer.driver?.vehicle_type || 'سيارة صغيرة',
+    phone: driverPhone,
+    avatar: driverAvatar,
+    // Location data for map
+    lat: lat,
+    lng: lng,
+    // Store full location object for reference
+    location: location
+  };
+};
+
 // DriverCard Component - Optimized with memo and useMemo
 const DriverCard = memo(function DriverCard({
   id,
@@ -239,5 +277,6 @@ const DriverCard = memo(function DriverCard({
   );
 });
 
+// ✅ تصدير كل من DriverCard و formatDriverData
+export { DriverCard, formatDriverData };
 export default DriverCard;
-

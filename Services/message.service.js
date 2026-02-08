@@ -490,61 +490,61 @@ class MessageService {
   }
 
   // ==================== الحصول على الإشعارات ====================
-  async getNotifications(params = {}) {
-    // التحقق من المصادقة أولاً
-    if (!checkAuthentication(true, 'notifications')) {
-      return {
-        success: false,
-        data: [],
-        error: 'يجب تسجيل الدخول لعرض الإشعارات',
-        requiresLogin: true,
-        source: 'auth-check'
-      };
-    }
+  // async getNotifications(params = {}) {
+  //   // التحقق من المصادقة أولاً
+  //   if (!checkAuthentication(true, 'notifications')) {
+  //     return {
+  //       success: false,
+  //       data: [],
+  //       error: 'يجب تسجيل الدخول لعرض الإشعارات',
+  //       requiresLogin: true,
+  //       source: 'auth-check'
+  //     };
+  //   }
     
-    // ⛔️ ⛔️ ⛔️ تعطيل جلب الإشعارات في Production نهائياً ⛔️ ⛔️ ⛔️
-    // لأن الإشعارات لها خدمة منفصلة (NotificationContext)
-    if (isProduction) {
-      return {
-        success: true,
-        data: [],
-        message: 'الإشعارات معطلة في الإنتاج - استخدم NotificationContext بدلاً من ذلك',
-        source: 'disabled-production'
-      };
-    }
+  //   // ⛔️ ⛔️ ⛔️ تعطيل جلب الإشعارات في Production نهائياً ⛔️ ⛔️ ⛔️
+  //   // لأن الإشعارات لها خدمة منفصلة (NotificationContext)
+  //   if (isProduction) {
+  //     return {
+  //       success: true,
+  //       data: [],
+  //       message: 'الإشعارات معطلة في الإنتاج - استخدم NotificationContext بدلاً من ذلك',
+  //       source: 'disabled-production'
+  //     };
+  //   }
     
-    // في Development فقط، حاول جلب الإشعارات
-    try {
-      const response = await this.axiosInstance.get('/notifications', { params });
+  //   // في Development فقط، حاول جلب الإشعارات
+  //   try {
+  //     const response = await this.axiosInstance.get('/notifications', { params });
       
-      if (response.data.status === "success") {
-        return {
-          success: true,
-          data: response.data.notifications?.data || [],
-          pagination: response.data.notifications?.meta || {},
-          source: 'axios-development'
-        };
-      }
+  //     if (response.data.status === "success") {
+  //       return {
+  //         success: true,
+  //         data: response.data.notifications?.data || [],
+  //         pagination: response.data.notifications?.meta || {},
+  //         source: 'axios-development'
+  //       };
+  //     }
       
-      return {
-        success: false,
-        data: [],
-        error: 'تنسيق البيانات غير صحيح',
-        source: 'axios-development'
-      };
+  //     return {
+  //       success: false,
+  //       data: [],
+  //       error: 'تنسيق البيانات غير صحيح',
+  //       source: 'axios-development'
+  //     };
       
-    } catch (error) {
-      console.error('❌ Error getting notifications:', error.message);
+  //   } catch (error) {
+  //     console.error('❌ Error getting notifications:', error.message);
       
-      // في Development، نعود بمصفوفة فارغة بدلاً من خطأ
-      return {
-        success: true,
-        data: [],
-        error: 'لا يمكن تحميل الإشعارات حالياً',
-        source: 'empty-fallback-development'
-      };
-    }
-  }
+  //     // في Development، نعود بمصفوفة فارغة بدلاً من خطأ
+  //     return {
+  //       success: true,
+  //       data: [],
+  //       error: 'لا يمكن تحميل الإشعارات حالياً',
+  //       source: 'empty-fallback-development'
+  //     };
+  //   }
+  // }
 
   // ==================== إرسال الرسائل ====================
   async sendMessage(chatId, messageData) {

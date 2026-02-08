@@ -16,19 +16,38 @@ export const usePusher = (options = {}) => {
 
   // تسجيل مستمع للأحداث
   const addEventListener = useCallback((eventName, callback) => {
-    eventListenersRef.current[eventName] = callback;
+    if (!eventListenersRef.current[eventName]) {
+      eventListenersRef.current[eventName] = [];
+    }
+    eventListenersRef.current[eventName].push(callback);
+    console.log(`🎯 Event listener added for: ${eventName}`);
   }, []);
 
   // إزالة مستمع للأحداث
-  const removeEventListener = useCallback((eventName) => {
-    delete eventListenersRef.current[eventName];
+  const removeEventListener = useCallback((eventName, callback = null) => {
+    if (callback && eventListenersRef.current[eventName]) {
+      eventListenersRef.current[eventName] = eventListenersRef.current[eventName].filter(
+        cb => cb !== callback
+      );
+    } else {
+      delete eventListenersRef.current[eventName];
+    }
+    console.log(`🎯 Event listener removed for: ${eventName}`);
   }, []);
 
   // تشغيل مستمع حدث
   const triggerEventListener = useCallback((eventName, data) => {
-    const listener = eventListenersRef.current[eventName];
-    if (listener) {
-      listener(data);
+    console.log(`🎯 Triggering event: ${eventName}`, data);
+    
+    const listeners = eventListenersRef.current[eventName];
+    if (listeners && listeners.length > 0) {
+      listeners.forEach(listener => {
+        try {
+          listener(data);
+        } catch (error) {
+          console.error(`❌ Error in ${eventName} listener:`, error);
+        }
+      });
     }
   }, []);
 
@@ -80,12 +99,16 @@ export const usePusher = (options = {}) => {
         return existingChannel.channel;
       }
 
+      console.log(`🔔 Attempting to subscribe to channel: ${channelName}`);
       const channel = pusher.subscribe(channelName);
       
       // ربط الأحداث
       if (events) {
         Object.entries(events).forEach(([eventName, callback]) => {
-          channel.bind(eventName, callback);
+          channel.bind(eventName, (data) => {
+            console.log(`🎯 Event received on ${channelName}: ${eventName}`, data);
+            callback(data);
+          });
         });
       }
 
@@ -115,6 +138,13 @@ export const usePusher = (options = {}) => {
       userChannel: null
     };
 
+    console.log(`🎯 Setting up subscriptions for:`, {
+      orderId,
+      userId,
+      orderChannel: orderId ? `order.${orderId}` : 'N/A',
+      userChannel: userId ? `user.${userId}` : 'N/A'
+    });
+
     if (orderId) {
       channels.orderChannel = subscribe(`order.${orderId}`, {
         'offer.created': (data) => {
@@ -125,18 +155,21 @@ export const usePusher = (options = {}) => {
           triggerEventListener('offer_created', data);
         },
         'order.status.updated': (data) => {
+          console.log('📊 Order status updated via Pusher:', data);
           if (eventHandlers?.onOrderStatusUpdated) {
             eventHandlers.onOrderStatusUpdated(data);
           }
           triggerEventListener('order_status_updated', data);
         },
         'order.expired': (data) => {
+          console.log('⏰ Order expired via Pusher:', data);
           if (eventHandlers?.onOrderExpired) {
             eventHandlers.onOrderExpired(data);
           }
           triggerEventListener('order_expired', data);
         },
         'order.cancelled': (data) => {
+          console.log('❌ Order cancelled via Pusher:', data);
           if (eventHandlers?.onOrderCancelled) {
             eventHandlers.onOrderCancelled(data);
           }
@@ -147,25 +180,40 @@ export const usePusher = (options = {}) => {
 
     if (userId) {
       channels.userChannel = subscribe(`user.${userId}`, {
+        // ✅ الحدث الصحيح كما يأتي من الخادم
         'DriverAcceptedOrder': (data) => {
+          console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT =====');
+          console.log('📋 Full event data:', JSON.stringify(data, null, 2));
+          console.log('🎯 Channel: user.' + userId);
+          console.log('🎯 Event: DriverAcceptedOrder');
+          
+          // تشغيل المعالج المخصص إذا موجود
           if (eventHandlers?.onDriverAcceptedOrder) {
             eventHandlers.onDriverAcceptedOrder(data);
           }
+          
+          // تشغيل جميع المستمعين المسجلين لهذا الحدث
           triggerEventListener('driver_accepted_order', data);
         },
+        
         'driver.assigned': (data) => {
+          console.log('👤 Driver assigned via Pusher:', data);
           if (eventHandlers?.onDriverAssigned) {
             eventHandlers.onDriverAssigned(data);
           }
           triggerEventListener('driver_assigned', data);
         },
+        
         'order.updated': (data) => {
+          console.log('📝 Order updated via Pusher:', data);
           if (eventHandlers?.onOrderUpdated) {
             eventHandlers.onOrderUpdated(data);
           }
           triggerEventListener('order_updated', data);
         },
+        
         'driver.location.updated': (data) => {
+          console.log('📍 Driver location updated via Pusher:', data);
           if (eventHandlers?.onDriverLocationUpdated) {
             eventHandlers.onDriverLocationUpdated(data);
           }
@@ -239,20 +287,22 @@ export const usePusher = (options = {}) => {
 
   // الحصول على معلومات الاشتراكات
   const getSubscriptions = useCallback(() => {
-    return channelsRef.current.map(ch => ch.channelName);
+    return channelsRef.current.map(ch => ({
+      name: ch.channelName,
+      subscribed: !!ch.channel
+    }));
   }, []);
 
-  // التهيئة التلقائية
+  // التهيئة التلقائية — التشغيل عند التركيب فقط، والتنظيف عند إلغاء المكون فقط (لتجنب إلغاء الاشتراكات عند كل re-render)
   useEffect(() => {
     if (autoConnect) {
       initPusher();
     }
-
     return () => {
-      // تنظيف عند إلغاء المكون
       unsubscribeAll();
     };
-  }, [autoConnect, initPusher, unsubscribeAll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- تعمد الاعتماد على autoConnect فقط لتفادي تفريغ الاشتراكات عند تغيّر initPusher/unsubscribeAll
+  }, [autoConnect]);
 
   return {
     isConnected,

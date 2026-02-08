@@ -521,7 +521,6 @@ class NotificationService {
 
   // ==================== الحصول على عدد الإشعارات غير المقروءة ====================
   async getUnreadCount() {
-    console.log('🔔 getUnreadCount called');
     
     // التحقق من المصادقة أولاً
     if (!checkAuthentication(false)) {
@@ -559,7 +558,7 @@ class NotificationService {
       }
       
       // تخزين في الذاكرة المؤقتة
-      notificationCache.set(cacheKey, count, 15000); // 15 ثانية
+      // notificationCache.set(cacheKey, count, 15000); // 15 ثانية
       
       return count;
       
@@ -714,40 +713,40 @@ class NotificationService {
   }
 
   // ==================== بدء التحديث التلقائي ====================
-  startPolling(callback, interval = 30000) { // 30 ثانية افتراضياً
-    if (this.isPolling) {
-      console.log('🔔 Polling already started');
-      return;
-    }
+  // startPolling(callback, interval = 30000) { // 30 ثانية افتراضياً
+  //   if (this.isPolling) {
+  //     console.log('🔔 Polling already started');
+  //     return;
+  //   }
     
-    this.isPolling = true;
-    console.log('🔔 Starting polling with interval:', interval);
+  //   this.isPolling = true;
+  //   console.log('🔔 Starting polling with interval:', interval);
     
-    const poll = async () => {
-      if (!this.isPolling) return;
+  //   const poll = async () => {
+  //     if (!this.isPolling) return;
       
-      try {
-        const unreadCount = await this.getUnreadCount();
-        const notifications = await this.getRecentNotifications(5);
+  //     try {
+  //       const unreadCount = await this.getUnreadCount();
+  //       const notifications = await this.getRecentNotifications(5);
         
-        if (callback && typeof callback === 'function') {
-          callback({
-            unreadCount,
-            notifications: notifications.success ? notifications.data : []
-          });
-        }
-      } catch (error) {
-        console.error('🔔 Polling error:', error);
-      }
+  //       if (callback && typeof callback === 'function') {
+  //         callback({
+  //           unreadCount,
+  //           notifications: notifications.success ? notifications.data : []
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('🔔 Polling error:', error);
+  //     }
       
-      if (this.isPolling) {
-        this.pollingInterval = setTimeout(poll, interval);
-      }
-    };
+  //     if (this.isPolling) {
+  //       this.pollingInterval = setTimeout(poll, interval);
+  //     }
+  //   };
     
-    // بدء التحديث الفوري
-    poll();
-  }
+  //   // بدء التحديث الفوري
+  //   poll();
+  // }
 
   // ==================== إيقاف التحديث التلقائي ====================
   stopPolling() {

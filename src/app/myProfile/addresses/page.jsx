@@ -249,7 +249,7 @@ function SimpleMapPicker({ initialPosition, onLocationSelect }) {
         address: fallbackComponents.address,
         addressComponents: fallbackComponents
       });
-      toast.info("تم تحديد الموقع مع اقتراح عنوان");
+    toast("تم تحديد الموقع مع اقتراح عنوان", { icon: 'ℹ️' });
     } finally {
       setIsFetchingAddress(false);
     }

@@ -51,11 +51,11 @@ const enhancedFetch = async (url, options = {}) => {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    // const timeoutId = setTimeout(() => controller.abort(), 15000);
     finalOptions.signal = controller.signal;
     
     const response = await fetch(url, finalOptions);
-    clearTimeout(timeoutId);
+    // clearTimeout(timeoutId);
     
     if (!response.ok) {
       if (response.status === 401) {
@@ -415,7 +415,7 @@ export function NotificationProvider({ children }) {
       const localUnread = notifications.filter(n => !n.is_read).length;
       setUnreadCount(localUnread);
     }
-  }, [notifications]);
+  }, []);
 
   // دالة معالجة إشعار Firebase عند استلامه
   const handleFirebaseMessage = useCallback((payload) => {
@@ -455,7 +455,6 @@ export function NotificationProvider({ children }) {
         
         // عرض Toast إذا كان الإشعار غير مقروء
         if (!processed.is_read && showAlerts && !toastNotificationIds.current.has(processed.id)) {
-          console.log('🔔 Firebase: Adding notification toast:', processed.id);
           toastNotificationIds.current.add(processed.id);
           
           setNewNotifications(prev => {
@@ -499,7 +498,6 @@ export function NotificationProvider({ children }) {
   // دالة الحصول على FCM Token
   const getFCMToken = useCallback(async () => {
     if (!isBrowser || !messaging) {
-      console.log('🔔 Firebase Messaging not available');
       return null;
     }
 
@@ -509,14 +507,12 @@ export function NotificationProvider({ children }) {
       setNotificationPermission(permission);
       
       if (permission !== 'granted') {
-        console.log('🔔 Notification permission not granted:', permission);
         addActionToast('تم رفض إذن الإشعارات', 'warning');
         return null;
       }
 
       // التحقق من دعم Service Worker
       if (!checkServiceWorkerSupport()) {
-        console.log('🔔 Service Worker not supported');
         return null;
       }
 
@@ -524,7 +520,6 @@ export function NotificationProvider({ children }) {
       let registration;
       try {
         registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('🔔 Service Worker registered:', registration);
       } catch (swError) {
         console.error('❌ Service Worker registration failed:', swError);
         
@@ -558,14 +553,12 @@ export function NotificationProvider({ children }) {
       registration = await waitForActiveRegistration(registration);
 
       // الحصول على FCM Token
-      console.log('🔔 Requesting FCM token...');
       const currentToken = await getToken(messaging, { 
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: registration
       });
       
       if (currentToken) {
-        console.log('🔔 FCM Token obtained:', currentToken.substring(0, 20) + '...');
         setFcmToken(currentToken);
         
         // حفظ التوكن في localStorage
@@ -580,7 +573,6 @@ export function NotificationProvider({ children }) {
         
         return currentToken;
       } else {
-        console.log('🔔 No registration token available.');
         return null;
       }
       
@@ -610,7 +602,6 @@ const registerDevice = useCallback(async (token) => {
       session_id: generateSessionId()
     };
     
-    console.log('🔔 Registering device with data:', deviceInfo);
     
     // عمل API call
     const url = createRequestURL('/notifications/register-device');
@@ -619,10 +610,8 @@ const registerDevice = useCallback(async (token) => {
       body: deviceInfo
     });
     
-    console.log('🔔 Device registration response:', response);
     
     if (response && response.status === true) {
-      console.log('🔔 Device registered successfully on backend');
       
       // حفظ معلومات الجهاز
       localStorage.setItem('device_registered', 'true');
@@ -643,7 +632,6 @@ const registerDevice = useCallback(async (token) => {
     
     // معالجة تنسيقات مختلفة للاستجابة
     if (response && response.success) {
-      console.log('🔔 Device registered (success format)');
       
       localStorage.setItem('device_registered', 'true');
       localStorage.setItem('device_session_id', deviceInfo.session_id);
@@ -695,7 +683,6 @@ const registerDevice = useCallback(async (token) => {
       if (messaging && fcmToken) {
         try {
           await deleteToken(messaging);
-          console.log('🔔 FCM token deleted from Firebase');
         } catch (firebaseError) {
           console.error('❌ Error deleting FCM token:', firebaseError);
         }
@@ -716,7 +703,6 @@ const registerDevice = useCallback(async (token) => {
             body: unregisterData
           });
           
-          console.log('🔔 Device unregistered from backend');
         } catch (apiError) {
           console.error('❌ Error unregistering from backend:', apiError);
         }
@@ -738,7 +724,6 @@ const registerDevice = useCallback(async (token) => {
       
       setFcmToken(null);
       
-      console.log('🔔 Device completely unregistered');
       addActionToast('تم إيقاف الإشعارات', 'info');
       
     } catch (error) {
@@ -767,7 +752,6 @@ const registerDevice = useCallback(async (token) => {
       const now = new Date();
       const daysDiff = (now - updateDate) / (1000 * 60 * 60 * 24);
       if (daysDiff > 7) {
-        console.log('🔔 FCM token expired (older than 7 days)');
         tokenValid = false;
       }
     }
@@ -790,13 +774,11 @@ const registerDevice = useCallback(async (token) => {
   // دالة تهيئة Firebase والإشعارات
   const initializeFirebase = useCallback(async () => {
     if (!isBrowser || !messaging) {
-      console.log('🔔 Firebase not available in this environment');
       setIsFirebaseInitialized(false);
       return;
     }
 
     try {
-      console.log('🔔 Initializing Firebase notifications...');
       
       // التحقق من إذن الإشعارات
       const permission = Notification.permission;
@@ -810,16 +792,13 @@ const registerDevice = useCallback(async (token) => {
           // الاستماع للرسائل الواردة
           if (!firebaseMessageListener.current) {
             firebaseMessageListener.current = onMessage(messaging, (payload) => {
-              console.log('🔔 Firebase: Message received in foreground');
               handleFirebaseMessage(payload);
             });
           }
           
           setIsFirebaseInitialized(true);
-          console.log('🔔 Firebase notifications initialized successfully');
         }
       } else {
-        console.log('🔔 Notification permission not granted:', permission);
         setIsFirebaseInitialized(false);
       }
       
@@ -830,27 +809,27 @@ const registerDevice = useCallback(async (token) => {
   }, [getFCMToken, handleFirebaseMessage]);
 
   // بدء التحديث التلقائي (fallback polling)
-  const startAutoRefresh = useCallback((interval = 30000) => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
+  // const startAutoRefresh = useCallback((interval = 30000) => {
+  //   if (pollIntervalRef.current) {
+  //     clearInterval(pollIntervalRef.current);
+  //   }
     
-    console.log('🔔 Starting fallback polling with interval:', interval);
+  //   console.log('🔔 Starting fallback polling with interval:', interval);
     
-    // تحميل الإشعارات أولاً
-    loadNotifications(false);
-    loadUnreadCount();
+  //   // تحميل الإشعارات أولاً
+  //   loadNotifications(false);
+  //   loadUnreadCount();
     
-    // التحديث الدوري
-    pollIntervalRef.current = setInterval(() => {
-      if (!isFirebaseInitialized) {
-        console.log('🔔 Fallback polling: Firebase not initialized, checking for updates');
-        loadUnreadCount();
-        loadNotifications(false);
-      }
-    }, interval);
+  //   // التحديث الدوري
+  //   pollIntervalRef.current = setInterval(() => {
+  //     if (!isFirebaseInitialized) {
+  //       console.log('🔔 Fallback polling: Firebase not initialized, checking for updates');
+  //       loadUnreadCount();
+  //       loadNotifications(false);
+  //     }
+  //   }, interval);
     
-  }, [loadNotifications, loadUnreadCount, isFirebaseInitialized]);
+  // }, [loadNotifications, loadUnreadCount, isFirebaseInitialized]);
 
   // إيقاف التحديث التلقائي
   const stopAutoRefresh = useCallback(() => {
@@ -1079,7 +1058,7 @@ const registerDevice = useCallback(async (token) => {
         }
         
         // بدء fallback polling
-        startAutoRefresh(30000);
+        // startAutoRefresh(30000);
       } else {
         setNotifications([]);
         setUnreadCount(0);
@@ -1169,7 +1148,7 @@ const registerDevice = useCallback(async (token) => {
     initializeFirebase,
     
     // التحديث التلقائي
-    startAutoRefresh,
+    // startAutoRefresh,
     stopAutoRefresh,
     
     // التحكم في عرض الـ alerts

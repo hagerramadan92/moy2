@@ -5,8 +5,7 @@ const PUSHER_CONFIG = {
   appKey: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '262509ce3ae27d53f4cd',
   cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
   forceTLS: true,
-  enabledTransports: ['ws', 'wss', 'xhr_streaming', 'xhr_polling'],
-  disableStats: true,
+  enabledTransports: ['ws', 'wss'],
   authEndpoint: process.env.NEXT_PUBLIC_API_BASE_URL 
     ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/broadcasting/auth` 
     : null,
@@ -35,11 +34,16 @@ export const createPusherInstance = () => {
       pusherInstance.disconnect();
     }
 
+    console.log('🔌 Creating new Pusher instance with config:', {
+      appKey: PUSHER_CONFIG.appKey.substring(0, 10) + '...',
+      cluster: PUSHER_CONFIG.cluster,
+      authEndpoint: PUSHER_CONFIG.authEndpoint ? 'Present' : 'Not set'
+    });
+
     pusherInstance = new Pusher(PUSHER_CONFIG.appKey, {
       cluster: PUSHER_CONFIG.cluster,
       forceTLS: PUSHER_CONFIG.forceTLS,
       enabledTransports: PUSHER_CONFIG.enabledTransports,
-      disableStats: PUSHER_CONFIG.disableStats,
       authEndpoint: PUSHER_CONFIG.authEndpoint,
       auth: PUSHER_CONFIG.auth
     });
@@ -60,6 +64,11 @@ export const createPusherInstance = () => {
 
     pusherInstance.connection.bind('disconnected', () => {
       console.log('🔴 Pusher disconnected');
+    });
+
+    // إضافة معالج لأحداث الاشتراك
+    pusherInstance.connection.bind('message', (message) => {
+      console.log('📨 Pusher message:', message);
     });
 
     return pusherInstance;
@@ -86,6 +95,7 @@ export const subscribeToChannel = (channelName, events) => {
   }
 
   try {
+    console.log(`🔔 Subscribing to channel: ${channelName}`);
     const channel = pusher.subscribe(channelName);
     
     // إضافة معالج خطأ للاشتراك
@@ -100,7 +110,11 @@ export const subscribeToChannel = (channelName, events) => {
     // ربط الأحداث
     if (events) {
       Object.entries(events).forEach(([eventName, callback]) => {
-        channel.bind(eventName, callback);
+        channel.bind(eventName, (data) => {
+          console.log(`🎯 Event received on channel ${channelName}: ${eventName}`);
+          console.log('📋 Event data:', data);
+          callback(data);
+        });
       });
     }
 
@@ -131,6 +145,13 @@ export const subscribeToOrderAndUserChannels = (orderId, userId, eventHandlers) 
     userChannel: null
   };
 
+  console.log(`🎯 Setting up channels via utils:`, {
+    orderId,
+    userId,
+    orderChannel: orderId ? `order.${orderId}` : 'N/A',
+    userChannel: userId ? `user.${userId}` : 'N/A'
+  });
+
   // اشتراك في قناة الطلب
   if (orderId) {
     channels.orderChannel = subscribeToChannel(`order.${orderId}`, {
@@ -141,10 +162,20 @@ export const subscribeToOrderAndUserChannels = (orderId, userId, eventHandlers) 
     });
   }
 
-  // اشتراك في قناة المستخدم
+  // ✅ **الاشتراك في قناة المستخدم مع الحدث الصحيح**
   if (userId) {
     channels.userChannel = subscribeToChannel(`user.${userId}`, {
-      'DriverAcceptedOrder': eventHandlers?.onDriverAcceptedOrder || (() => {}),
+      // ✅ الحدث كما يأتي من الخادم: DriverAcceptedOrder (بنفس الحروف)
+      'DriverAcceptedOrder': (data) => {
+        console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT (UTILS) =====');
+        console.log('📋 Full event data:', JSON.stringify(data, null, 2));
+        console.log('🎯 Channel: user.' + userId);
+        console.log('🎯 Event: DriverAcceptedOrder');
+        
+        if (eventHandlers?.onDriverAcceptedOrder) {
+          eventHandlers.onDriverAcceptedOrder(data);
+        }
+      },
       'driver.assigned': eventHandlers?.onDriverAssigned || (() => {}),
       'order.updated': eventHandlers?.onOrderUpdated || (() => {}),
       'driver.location.updated': eventHandlers?.onDriverLocationUpdated || (() => {})

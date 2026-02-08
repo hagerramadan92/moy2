@@ -23,7 +23,7 @@ export const PusherProvider = ({ children }) => {
             
             // محاولة إعادة الاتصال تلقائياً عند فقدان الاتصال
             if (states.current === 'disconnected') {
-              console.log('🔌 Pusher disconnected, attempting to reconnect...');
+              // console.log('🔌 Pusher disconnected, attempting to reconnect...');
               setTimeout(() => {
                 if (getConnectionState() === 'disconnected') {
                   reconnectPusher();
@@ -33,7 +33,7 @@ export const PusherProvider = ({ children }) => {
           });
           
           setIsInitialized(true);
-          console.log('🚀 PusherProvider initialized');
+          // console.log('🚀 PusherProvider initialized');
         } else {
           setIsInitialized(true);
           console.warn('⚠️ Pusher could not be initialized');
@@ -61,29 +61,14 @@ export const PusherProvider = ({ children }) => {
     reconnect: reconnectPusher
   };
 
-  // إذا كنت تريد إظهار spinner أثناء التهيئة، يمكنك إلغاء التعليق
-  /*
-  if (!isInitialized) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-50">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner size="lg" />
-          <div className="text-center">
-            <p className="text-gray-700 font-medium">جاري تهيئة الاتصال...</p>
-            <p className="text-gray-500 text-sm mt-1">يرجى الانتظار</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  */
+ 
 
   return (
     <PusherContext.Provider value={value}>
       {children}
       
       {/* Connection Status Indicator */}
-      <div className="fixed bottom-4 right-4 z-40">
+      {/* <div className="fixed bottom-4 right-4 z-40">
         <div className={`px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm border ${
           connectionState === 'connected' 
             ? 'bg-green-500/10 text-green-700 border-green-500/20' 
@@ -108,7 +93,7 @@ export const PusherProvider = ({ children }) => {
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
     </PusherContext.Provider>
   );
 };
