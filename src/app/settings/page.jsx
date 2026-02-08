@@ -11,7 +11,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  // const [darkMode, setDarkMode] = useState(false);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -32,50 +32,50 @@ export default function SettingsPage() {
       }
 
       // Load dark mode setting
-      const savedDarkMode = localStorage.getItem("darkMode");
-      if (savedDarkMode !== null) {
-        const isDark = savedDarkMode === "true";
-        setDarkMode(isDark);
-        applyDarkMode(isDark);
-      } else {
-        // Check system preference
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setDarkMode(prefersDark);
-        applyDarkMode(prefersDark);
-      }
+      // const savedDarkMode = localStorage.getItem("darkMode");
+      // if (savedDarkMode !== null) {
+      //   const isDark = savedDarkMode === "true";
+      //   setDarkMode(isDark);
+      //   applyDarkMode(isDark);
+      // } else {
+      //   // Check system preference
+      //   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      //   setDarkMode(prefersDark);
+      //   applyDarkMode(prefersDark);
+      // }
     } catch {
       router.push("/login");
     }
   }, [router]);
 
   // Apply dark mode to document
-  const applyDarkMode = (isDark) => {
-    if (typeof window !== 'undefined') {
-      if (isDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  };
+  // const applyDarkMode = (isDark) => {
+  //   if (typeof window !== 'undefined') {
+  //     if (isDark) {
+  //       document.documentElement.classList.add("dark");
+  //     } else {
+  //       document.documentElement.classList.remove("dark");
+  //     }
+  //   }
+  // };
 
   // Listen for system theme changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const savedDarkMode = localStorage.getItem("darkMode");
-    if (savedDarkMode === null) {
-      // Only listen to system preference if user hasn't set a preference
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    // const savedDarkMode = localStorage.getItem("darkMode");
+    // if (savedDarkMode === null) {
+    //   // Only listen to system preference if user hasn't set a preference
+    //   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       
-      const handleChange = (e) => {
-        setDarkMode(e.matches);
-        applyDarkMode(e.matches);
-      };
+    //   const handleChange = (e) => {
+    //     setDarkMode(e.matches);
+    //     applyDarkMode(e.matches);
+    //   };
 
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
+    //   mediaQuery.addEventListener("change", handleChange);
+    //   return () => mediaQuery.removeEventListener("change", handleChange);
+    // }
   }, []);
 
   // Handle notifications toggle
@@ -101,11 +101,11 @@ export default function SettingsPage() {
   };
 
   // Handle dark mode toggle
-  const handleDarkModeToggle = (enabled) => {
-    setDarkMode(enabled);
-    localStorage.setItem("darkMode", enabled.toString());
-    applyDarkMode(enabled);
-  };
+  // const handleDarkModeToggle = (enabled) => {
+  //   setDarkMode(enabled);
+  //   localStorage.setItem("darkMode", enabled.toString());
+  //   applyDarkMode(enabled);
+  // };
 
   if (!user) {
     return null;
@@ -190,26 +190,7 @@ export default function SettingsPage() {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl p-4 transition hover:bg-slate-50 dark:hover:bg-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-400">
-                    {darkMode ? <FaMoon className="h-5 w-5" /> : <FaSun className="h-5 w-5" />}
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-slate-900 dark:text-white">الوضع الليلي</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">تفعيل الوضع المظلم</div>
-                  </div>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={darkMode}
-                    onChange={(e) => handleDarkModeToggle(e.target.checked)}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-slate-200 dark:bg-slate-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 dark:after:border-slate-500 after:bg-white dark:after:bg-slate-300 after:transition-all after:content-[''] peer-checked:bg-sky-500 dark:peer-checked:bg-sky-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800"></div>
-                </label>
-              </div>
+            
 
               <div className="flex items-center justify-between rounded-xl p-4 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                 <div className="flex items-center gap-3">
