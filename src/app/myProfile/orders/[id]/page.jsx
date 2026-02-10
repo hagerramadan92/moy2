@@ -66,7 +66,7 @@ export default function OrderDetailsPage() {
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
     
-    // New states for tracking
+    // States for tracking map
     const [userLocation, setUserLocation] = useState(null);
     const [driverLocation, setDriverLocation] = useState(null);
     const [trackingActive, setTrackingActive] = useState(true);
@@ -80,60 +80,56 @@ export default function OrderDetailsPage() {
         return null;
     };
 
-    // Get user's current location
-    const getUserLocation = () => {
-        if (typeof window !== 'undefined' && navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation([
-                        position.coords.latitude,
-                        position.coords.longitude
-                    ]);
-                },
-                (error) => {
-                    console.error("Error getting location:", error);
-                    // Default to Riyadh if location access denied
-                    setUserLocation([24.7136, 46.6753]);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
+    // Initialize locations from order data
+    const initializeLocations = (order) => {
+        // Set user location from order data (delivery location)
+        if (order?.location?.latitude && order?.location?.longitude) {
+            setUserLocation([
+                parseFloat(order.location.latitude),
+                parseFloat(order.location.longitude)
+            ]);
         } else {
-            // Default to Riyadh
+            // Default to Riyadh if no location in order data
             setUserLocation([24.7136, 46.6753]);
         }
-    };
 
-    // Simulate driver location (in real app, this would come from API)
-    const simulateDriverLocation = () => {
-        if (!userLocation) return;
-        
-        // Simulate driver moving closer to user
-        const latDiff = (Math.random() * 0.01 - 0.005);
-        const lngDiff = (Math.random() * 0.01 - 0.005);
-        
-        const driverLat = userLocation[0] + latDiff;
-        const driverLng = userLocation[1] + lngDiff;
-        
-        setDriverLocation([driverLat, driverLng]);
-    };
-
-    // Initialize tracking
-    const initializeTracking = () => {
-        getUserLocation();
-        
-        // Set initial driver location near user
-        if (userLocation) {
-            const initialDriverLocation = [
-                userLocation[0] + 0.015,
-                userLocation[1] + 0.015
-            ];
-            setDriverLocation(initialDriverLocation);
+        // Set driver location if exists
+        if (order?.driver?.location) {
+            // If driver has location data in API response
+            setDriverLocation([
+                parseFloat(order.driver.location.latitude),
+                parseFloat(order.driver.location.longitude)
+            ]);
+        } else if (order?.driver) {
+            // Simulate driver location near user
+            if (userLocation) {
+                const initialDriverLocation = [
+                    userLocation[0] + 0.015,
+                    userLocation[1] + 0.015
+                ];
+                setDriverLocation(initialDriverLocation);
+            } else {
+                // Default location near Riyadh
+                setDriverLocation([24.7286, 46.6903]);
+            }
         } else {
-            setDriverLocation([24.7286, 46.6903]); // Near Riyadh
+            setDriverLocation(null);
         }
+    };
+
+    // Simulate driver movement (for demo purposes)
+    const simulateDriverMovement = () => {
+        if (!driverLocation || !userLocation) return;
         
-        setTrackingActive(true);
-        setIsMapVisible(true);
+        // Calculate direction towards user
+        const latDiff = userLocation[0] - driverLocation[0];
+        const lngDiff = userLocation[1] - driverLocation[1];
+        
+        // Move 10% closer to user
+        const newLat = driverLocation[0] + (latDiff * 0.1);
+        const newLng = driverLocation[1] + (lngDiff * 0.1);
+        
+        setDriverLocation([newLat, newLng]);
     };
 
     // Fetch order details from API
@@ -173,9 +169,14 @@ export default function OrderDetailsPage() {
                 if (data.status === true) {
                     setOrderData(data.data);
                     
-                    // Initialize tracking if order is in progress
-                    if (data.data.status?.name === 'in_progress' || data.data.status?.name === 'assigned') {
-                        initializeTracking();
+                    // Initialize locations from order data
+                    initializeLocations(data.data);
+                    
+                    // Show map for orders with driver or in progress
+                    if (data.data.driver || 
+                        data.data.status?.name === 'in_progress' || 
+                        data.data.status?.name === 'assigned') {
+                        setIsMapVisible(true);
                     }
                 } else {
                     throw new Error(data.message || "حدث خطأ في جلب البيانات");
@@ -192,21 +193,27 @@ export default function OrderDetailsPage() {
             fetchOrderDetails();
         }
     }, [orderId]);
+        const isProcessing = orderData?.status?.name === 'in_progress' || orderData?.status?.name === 'assigned';
+    const isPending = orderData?.status?.name === 'pendding';
+    const isCancelled = orderData?.status?.name === 'cancelled';
+    const isCompleted = orderData?.status?.name === 'completed';
+    const isConfirmed = orderData?.status?.name === 'confirmed';
 
-    // Update driver location periodically
+
+    // Update driver location periodically for active orders
     useEffect(() => {
         let interval;
         
         if (trackingActive && isProcessing && driverLocation) {
             interval = setInterval(() => {
-                simulateDriverLocation();
+                simulateDriverMovement();
             }, 30000); // Update every 30 seconds
         }
         
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [trackingActive, driverLocation]);
+    }, [trackingActive, driverLocation, isProcessing]);
 
     // Reset rating form when modal closes
     useEffect(() => {
@@ -241,6 +248,8 @@ export default function OrderDetailsPage() {
             if (data.status === true) {
                 setOrderData(data.data);
                 setError(null);
+                // Re-initialize locations
+                initializeLocations(data.data);
             } else {
                 throw new Error(data.message);
             }
@@ -255,7 +264,7 @@ export default function OrderDetailsPage() {
 
     // Handle login redirect
     const handleLoginRedirect = () => {
-        // router.push('/login');
+        router.push('/login');
     };
 
     // Format date
@@ -339,11 +348,11 @@ export default function OrderDetailsPage() {
     };
 
     // Determine if order is in progress
-    const isProcessing = orderData?.status?.name === 'in_progress' || orderData?.status?.name === 'assigned';
-    const isPending = orderData?.status?.name === 'pendding';
-    const isCancelled = orderData?.status?.name === 'cancelled';
-    const isCompleted = orderData?.status?.name === 'completed';
-    const isConfirmed = orderData?.status?.name === 'confirmed';
+    // const isProcessing = orderData?.status?.name === 'in_progress' || orderData?.status?.name === 'assigned';
+    // const isPending = orderData?.status?.name === 'pendding';
+    // const isCancelled = orderData?.status?.name === 'cancelled';
+    // const isCompleted = orderData?.status?.name === 'completed';
+    // const isConfirmed = orderData?.status?.name === 'confirmed';
 
     // Handle rating submit
     const handleRatingSubmit = async () => {
@@ -445,7 +454,8 @@ export default function OrderDetailsPage() {
     const calculateSummary = () => {
         if (!orderData) return null;
 
-        const subtotal = orderData.price || 0;
+        const subtotalRaw = orderData.price ?? 0;
+        const subtotal = typeof subtotalRaw === 'number' ? subtotalRaw : parseFloat(subtotalRaw) || 0;
         const tax = subtotal * 0.15; // 15% ضريبة
         const shipping = 0; // مجاني حالياً
         const total = subtotal + tax + shipping;
@@ -456,6 +466,41 @@ export default function OrderDetailsPage() {
             tax: tax.toFixed(2),
             total: total.toFixed(2)
         };
+    };
+
+    // Calculate distance between two locations
+    const calculateDistance = () => {
+        if (!userLocation || !driverLocation) return "~2.5 كم";
+        
+        const toRad = (x) => (x * Math.PI) / 180;
+        const R = 6371; // Earth's radius in km
+        
+        const dLat = toRad(driverLocation[0] - userLocation[0]);
+        const dLon = toRad(driverLocation[1] - userLocation[1]);
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(userLocation[0])) * Math.cos(toRad(driverLocation[0])) * 
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        
+        return distance < 1 ? `${(distance * 1000).toFixed(0)} م` : `${distance.toFixed(1)} كم`;
+    };
+
+    // Calculate estimated arrival time
+    const calculateETA = () => {
+        if (!userLocation || !driverLocation) return "15 دقيقة";
+        
+        const distance = calculateDistance();
+        if (distance.includes("م")) {
+            const meters = parseInt(distance);
+            const minutes = Math.ceil(meters / 250); // Assuming 250 meters per minute
+            return `${minutes} دقيقة`;
+        } else {
+            const km = parseFloat(distance);
+            const minutes = Math.ceil(km * 10); // Assuming 6 km/h average speed
+            return `${minutes} دقيقة`;
+        }
     };
 
     if (loading) {
@@ -671,7 +716,7 @@ export default function OrderDetailsPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3">
+                        {/* <div className="flex flex-wrap items-center gap-3">
                             <button 
                                 onClick={handleRefresh}
                                 className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm"
@@ -697,7 +742,7 @@ export default function OrderDetailsPage() {
                                     <span>طباعة</span>
                                 </button>
                             )}
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
@@ -718,7 +763,7 @@ export default function OrderDetailsPage() {
                                         </div>
                                         <div className="flex-1 text-center md:text-right">
                                             <h3 className="text-2xl font-black mb-2">جاري التوصيل الآن</h3>
-                                            <p className="text-muted-foreground mb-4">متوقع الوصول خلال 15 دقيقة</p>
+                                            <p className="text-muted-foreground mb-4">متوقع الوصول خلال {calculateETA()}</p>
                                             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-card/70 rounded-xl backdrop-blur-sm border border-border/50">
                                                 <BiMapPin className="w-4 h-4 text-[#579BE8]" />
                                                 <span className="text-sm font-bold">{orderData.location?.address || "جاري تحديث الموقع"}</span>
@@ -852,8 +897,8 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
 
-                        {/* Tracking Map Section - Only for processing orders */}
-                        {(isProcessing || (isCompleted && isMapVisible)) && orderData.driver && (
+                        {/* Tracking Map Section - Show for orders with driver or locations */}
+                        {(isMapVisible && (orderData.driver || userLocation)) && (
                             <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
@@ -865,21 +910,23 @@ export default function OrderDetailsPage() {
                                             <span className={`w-2 h-2 rounded-full ${trackingActive ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
                                             {trackingActive ? 'التتبع نشط' : 'التتبع متوقف'}
                                         </div>
-                                        <button 
-                                            onClick={() => setTrackingActive(!trackingActive)}
-                                            className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-all"
-                                            title={trackingActive ? 'إيقاف التتبع' : 'تشغيل التتبع'}
-                                        >
-                                            {trackingActive ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                        </button>
+                                        {orderData.driver && (
+                                            <button 
+                                                onClick={() => setTrackingActive(!trackingActive)}
+                                                className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-all"
+                                                title={trackingActive ? 'إيقاف التتبع' : 'تشغيل التتبع'}
+                                            >
+                                                {trackingActive ? (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
                                         <button 
                                             onClick={() => setIsMapVisible(false)}
                                             className="p-2 rounded-xl bg-secondary/50 hover:bg-red-500 hover:text-white transition-all"
@@ -893,48 +940,56 @@ export default function OrderDetailsPage() {
                                 <OrderTrackingMap 
                                     userLocation={userLocation}
                                     driverLocation={driverLocation}
-                                    driverName={orderData.driver?.name || "السائق"}
+                                    driverName={orderData.driver?.name || null}
                                     orderStatus={currentStatus}
-                                    isDriverActive={trackingActive}
+                                    isDriverActive={trackingActive && orderData.driver}
+                                    userAddress={orderData.location?.address}
                                 />
                                 
                                 <div className="mt-6 pt-6 border-t border-border/30">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="bg-secondary/30 p-4 rounded-xl text-center">
                                             <p className="text-xs text-muted-foreground mb-1">الحالة</p>
-                                            <p className="text-sm font-bold text-[#579BE8]">{isProcessing ? 'قيد التوصيل' : 'تم التوصيل'}</p>
+                                            <p className="text-sm font-bold text-[#579BE8]">{getStatusText(currentStatus)}</p>
                                         </div>
-                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
-                                            <p className="text-xs text-muted-foreground mb-1">مسافة السائق</p>
-                                            <p className="text-sm font-bold text-amber-600">~2.5 كم</p>
-                                        </div>
-                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
-                                            <p className="text-xs text-muted-foreground mb-1">الوقت المتوقع</p>
-                                            <p className="text-sm font-bold text-green-600">15 دقيقة</p>
-                                        </div>
-                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
-                                            <p className="text-xs text-muted-foreground mb-1">سرعة السائق</p>
-                                            <p className="text-sm font-bold text-blue-600">45 كم/س</p>
-                                        </div>
+                                        {orderData.driver && driverLocation && (
+                                            <>
+                                                <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                                    <p className="text-xs text-muted-foreground mb-1">مسافة السائق</p>
+                                                    <p className="text-sm font-bold text-amber-600">{calculateDistance()}</p>
+                                                </div>
+                                                <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                                    <p className="text-xs text-muted-foreground mb-1">الوقت المتوقع</p>
+                                                    <p className="text-sm font-bold text-green-600">{calculateETA()}</p>
+                                                </div>
+                                                <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                                    <p className="text-xs text-muted-foreground mb-1">سرعة السائق</p>
+                                                    <p className="text-sm font-bold text-blue-600">{isProcessing ? '45 كم/س' : '--'}</p>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Show Map Button for completed orders */}
-                        {isCompleted && !isMapVisible && orderData.driver && (
+                        {/* Show Map Button for orders without map visible */}
+                        {!isMapVisible && (orderData.driver || orderData.location) && (
                             <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-8 text-center">
                                 <div className="w-20 h-20 rounded-2xl bg-[#579BE8]/10 flex items-center justify-center mx-auto mb-6">
                                     <BiMapPin className="w-10 h-10 text-[#579BE8]" />
                                 </div>
-                                <h3 className="text-xl font-black mb-3">مسار التوصيل</h3>
-                                <p className="text-muted-foreground mb-6">عرض مسار التوصيل والمواقع التي تم التحرك خلالها</p>
+                                <h3 className="text-xl font-black mb-3">موقع التوصيل</h3>
+                                <p className="text-muted-foreground mb-4">
+                                    {orderData.location?.address || "موقع التوصيل"}
+                                </p>
+                                <p className="text-muted-foreground mb-6">عرض موقع التوصيل على الخريطة</p>
                                 <button 
                                     onClick={() => setIsMapVisible(true)}
                                     className="px-6 py-3 bg-[#579BE8] text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2"
                                 >
                                     <BiNavigation className="w-5 h-5" />
-                                    عرض خريطة المسار
+                                    عرض الخريطة
                                 </button>
                             </div>
                         )}
@@ -972,7 +1027,7 @@ export default function OrderDetailsPage() {
                     {/* Right Column - Sidebar */}
                     <div className="xl:col-span-4 space-y-6">
                         {/* Driver Card */}
-                        {orderData.driver && (
+                        {orderData.driver ? (
                             <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#579BE8]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                                 
@@ -1030,14 +1085,89 @@ export default function OrderDetailsPage() {
                                             className="w-full py-3 rounded-xl bg-secondary/50 font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-all border border-border/50"
                                         >
                                             <BiNavigation className="w-4 h-4 text-[#579BE8]" />
-                                            تتبع المسار الفعلي
+                                            تتبع الموقع على الخريطة
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                                
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 rounded-lg text-xs font-bold">قيد البحث عن ناقل</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-medium text-muted-foreground">بانتظار التخصيص</span>
+                                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center mb-6">
+                                        <div className="relative inline-block mb-4">
+                                            <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white dark:border-card shadow-lg bg-secondary/50 flex items-center justify-center">
+                                                <BiSolidTruck className="w-12 h-12 text-muted-foreground" />
+                                            </div>
+                                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white dark:bg-card px-3 py-1 rounded-xl border border-border/50 shadow-sm">
+                                                <span className="text-xs font-black text-amber-600">جاري البحث</span>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-xl font-black mb-2">لم يتم تخصيص ناقل بعد</h3>
+                                        <div className="text-sm text-muted-foreground mb-6">
+                                            <p>نحن نبحث عن أفضل ناقل قريب من موقعك</p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="w-full py-3.5 rounded-xl bg-amber-500/10 text-amber-700 font-bold text-sm">
+                                                <BiTimeFive className="w-5 h-5 inline ml-2" />
+                                                متوسط وقت الانتظار: 5 دقائق
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                     
+                        {/* Delivery Location Card */}
+                        <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
+                            <div className="absolute top-0 left-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 -translate-x-1/2"></div>
+                            
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                                        <BiMapPin className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-lg">موقع التوصيل</h3>
+                                        <p className="text-xs text-muted-foreground">عنوان الاستلام</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-6 h-6 rounded-full bg-[#579BE8]/10 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <BiMapPin className="w-3 h-3 text-[#579BE8]" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black mb-1">{orderData.location?.name || "عنوان التوصيل"}</p>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                {orderData.location?.address || "لم يتم تحديد العنوان"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {orderData.location?.latitude && orderData.location?.longitude && (
+                                        <button 
+                                            onClick={() => setIsMapVisible(true)}
+                                            className="w-full py-3 rounded-xl bg-[#579BE8] text-white font-bold text-xs hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <BiNavigation className="w-4 h-4" />
+                                            عرض الموقع على الخريطة
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Invoice Card */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 overflow-hidden relative">
@@ -1060,10 +1190,7 @@ export default function OrderDetailsPage() {
                                                 <span className="text-sm text-[#579BE8] font-medium">الضريبة (15%)</span>
                                                 <span className="text-sm font-black text-[#579BE8]">+{summary.tax} ر.س</span>
                                             </div>
-                                            <div className="flex justify-between items-center py-2">
-                                                <span className="text-sm text-muted-foreground">التوصيل</span>
-                                                <span className="text-sm font-black text-green-600">مجاني</span>
-                                            </div>
+                                            
                                         </div>
 
                                         <div className="pt-6 border-t border-border/30 mb-6">
