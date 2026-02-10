@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { IoWaterOutline, IoLockClosedOutline } from "react-icons/io5";
 import OtpStep from "@/components/molecules/order-now/OtpSmS";
 import toast from "react-hot-toast";
+import { IoIosLock } from "react-icons/io";
 
 export default function OtpPage() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -306,7 +307,7 @@ export default function OtpPage() {
         transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-lg lg:max-w-xl"
       >
-        <div className={`bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-8 lg:p-10 space-y-6 sm:space-y-8 transition-all duration-500 ${isOtpComplete && !useSms ? "ring-2 ring-[#579BE8]/30 shadow-[#579BE8]/20" : ""
+        <div className={`bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 py-4 sm:p-8 lg:p-10 space-y-6 sm:space-y-8 transition-all duration-500 ${isOtpComplete && !useSms ? "ring-2 ring-[#579BE8]/30 shadow-[#579BE8]/20" : ""
           }`}>
           {useSms ? (
             <OtpStep onNext={handleOtpNext} />
@@ -317,7 +318,7 @@ export default function OtpPage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-center space-y-4"
+                className="text-center space-y-4 px-4"
               >
                 <motion.div
                   animate={{
@@ -339,7 +340,7 @@ export default function OtpPage() {
                     رمز التحقق
                   </h1>
                   <p className="text-sm sm:text-base text-gray-600 font-medium flex items-center justify-center gap-2">
-                    <span className="text-[#579BE8]">🔐</span>
+                    <span className="text-[#367ccc]"><IoIosLock size={20}/></span>
                     أدخل رمز التحقق المرسل إليك
                   </p>
                 </div>
@@ -352,7 +353,7 @@ export default function OtpPage() {
                 transition={{ delay: 0.3 }}
                 className="space-y-6"
               >
-                <div className="flex gap-2 sm:gap-3 justify-center flex-wrap" dir="ltr">
+                <div className="flex justify-center gap-0.5 md:gap-2 " dir="ltr">
                   {otp.map((value, index) => (
                     <motion.input
                       key={index}
@@ -376,14 +377,14 @@ export default function OtpPage() {
                       onChange={(e) => handleChange(e, index)}
                       onKeyDown={(e) => handleKeyDown(e, index)}
                       ref={(el) => (inputsRef.current[index] = el)}
-                      className={`w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 text-center text-xl xs:text-2xl font-black rounded-lg sm:rounded-xl border-2 bg-gradient-to-br from-gray-50 to-white focus:border-[#579BE8] focus:ring-2 sm:focus:ring-4 focus:ring-[#579BE8]/20 outline-none transition-all duration-300 text-[#579BE8] shadow-md sm:shadow-lg hover:border-[#579BE8]/70 hover:shadow-lg sm:hover:shadow-xl focus:bg-white ${value ? "border-[#579BE8] shadow-[#579BE8]/20" : "border-gray-200"
+                      className={`w-10 h-10 md:w-14 md:h-14  text-center text-xl xs:text-2xl font-black rounded-lg sm:rounded-xl border-2 bg-gradient-to-br from-gray-50 to-white focus:border-[#579BE8] focus:ring-2 sm:focus:ring-4 focus:ring-[#579BE8]/20 outline-none transition-all duration-300 text-[#579BE8] shadow-md sm:shadow-lg hover:border-[#579BE8]/70 hover:shadow-lg sm:hover:shadow-xl focus:bg-white ${value ? "border-[#579BE8] shadow-[#579BE8]/20" : "border-gray-200"
                         }`}
                     />
                   ))}
                 </div>
 
                 {/* Phone Number Info */}
-                <div className="bg-gradient-to-r from-[#579BE8]/5 to-[#124987]/5 rounded-2xl p-4 border border-[#579BE8]/10">
+                <div className="bg-gradient-to-r mx-4 from-[#579BE8]/5 to-[#124987]/5 rounded-2xl p-4 border border-[#579BE8]/10">
                   <div className="text-center space-y-3">
                     <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-600 font-medium">
                       <span className={`text-lg ${
@@ -442,7 +443,7 @@ export default function OtpPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="space-y-3"
+                className="space-y-3 px-4"
               >
                 <motion.div
                   whileHover={{ scale: isOtpComplete ? 1.02 : 1 }}

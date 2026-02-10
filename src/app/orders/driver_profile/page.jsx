@@ -226,15 +226,7 @@ function DriverProfileContent() {
                 </div>
                 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 mb-4">
-                  {user.phone && (
-                    <a 
-                      href={`tel:${user.phone}`} 
-                      className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/20 backdrop-blur-lg rounded-lg hover:bg-white/30 transition border border-white/30"
-                    >
-                      <Phone className="w-4 h-4" />
-                      <span className="text-sm sm:text-base">{user.phone}</span>
-                    </a>
-                  )}
+                 
                   
                   <button 
                     onClick={openChat}
@@ -291,21 +283,13 @@ function DriverProfileContent() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InfoItem 
-                  icon={<IdCard className="w-5 h-5 text-[#579BE8]" />}
-                  label="الهوية الوطنية"
-                  value={driverData.national_id || driverData.id_number || 'غير محدد'}
-                />
+                
                 <InfoItem 
                   icon={<Calendar className="w-5 h-5 text-[#579BE8]" />}
                   label="تاريخ الميلاد"
                   value={formatDate(driverData.date_of_birth)}
                 />
-                <InfoItem 
-                  icon={<Building className="w-5 h-5 text-[#579BE8]" />}
-                  label="الجنسية"
-                  value={driverData.citizenship === 'saudi' ? 'سعودي' : driverData.citizenship || 'غير محدد'}
-                />
+             
                 <InfoItem 
                   icon={<Mail className="w-5 h-5 text-[#579BE8]" />}
                   label="حالة الحساب"
@@ -334,11 +318,7 @@ function DriverProfileContent() {
                   label="حجم المركبة"
                   value={driverData.vehicle_size ? `${driverData.vehicle_size} طن` : 'غير محدد'}
                 />
-                <InfoItem 
-                  icon={<CheckCircle2 className="w-5 h-5 text-[#579BE8]" />}
-                  label="ملكية المركبة"
-                  value={driverData.is_vehicle_owner ? 'مالك' : 'غير مالك'}
-                />
+              
                 <InfoItem 
                   icon={<IdCard className="w-5 h-5 text-[#579BE8]" />}
                   label="رقم اللوحة"

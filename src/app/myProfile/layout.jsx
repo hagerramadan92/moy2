@@ -3,7 +3,7 @@
 import { useState } from "react";
 import ProfileSidebar from "@/components/molecules/my-profile/ProfileSidebar";
 import { HiMenuAlt2 } from "react-icons/hi";
-
+import 'leaflet/dist/leaflet.css';
 export default function ProfileLayout({ children }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
