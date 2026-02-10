@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from 'next/dynamic';
 
 import { FaDownload, FaPrint, FaStar, FaPhoneAlt, FaCommentDots, FaRegStar, FaInfoCircle, FaExclamationTriangle, FaSyncAlt, FaTimes } from "react-icons/fa";
 import { 
@@ -29,6 +30,19 @@ import {
 // API base URL
 const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
 
+// Dynamic import for map component to avoid SSR issues
+const OrderTrackingMap = dynamic(() => import('@/components/Map/OrderTrackingMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-125 rounded-3xl bg-secondary/20 flex items-center justify-center">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#579BE8]"></div>
+        <p className="mt-4 text-muted-foreground">جاري تحميل الخريطة...</p>
+      </div>
+    </div>
+  )
+});
+
 export default function OrderDetailsPage() {
     const params = useParams();
     const router = useRouter();
@@ -51,6 +65,12 @@ export default function OrderDetailsPage() {
     });
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
+    
+    // New states for tracking
+    const [userLocation, setUserLocation] = useState(null);
+    const [driverLocation, setDriverLocation] = useState(null);
+    const [trackingActive, setTrackingActive] = useState(true);
+    const [isMapVisible, setIsMapVisible] = useState(false);
 
     // دالة للحصول على التوكن
     const getToken = () => {
@@ -58,6 +78,62 @@ export default function OrderDetailsPage() {
             return localStorage.getItem('accessToken')
         }
         return null;
+    };
+
+    // Get user's current location
+    const getUserLocation = () => {
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation([
+                        position.coords.latitude,
+                        position.coords.longitude
+                    ]);
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    // Default to Riyadh if location access denied
+                    setUserLocation([24.7136, 46.6753]);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            // Default to Riyadh
+            setUserLocation([24.7136, 46.6753]);
+        }
+    };
+
+    // Simulate driver location (in real app, this would come from API)
+    const simulateDriverLocation = () => {
+        if (!userLocation) return;
+        
+        // Simulate driver moving closer to user
+        const latDiff = (Math.random() * 0.01 - 0.005);
+        const lngDiff = (Math.random() * 0.01 - 0.005);
+        
+        const driverLat = userLocation[0] + latDiff;
+        const driverLng = userLocation[1] + lngDiff;
+        
+        setDriverLocation([driverLat, driverLng]);
+    };
+
+    // Initialize tracking
+    const initializeTracking = () => {
+        getUserLocation();
+        
+        // Set initial driver location near user
+        if (userLocation) {
+            const initialDriverLocation = [
+                userLocation[0] + 0.015,
+                userLocation[1] + 0.015
+            ];
+            setDriverLocation(initialDriverLocation);
+        } else {
+            setDriverLocation([24.7286, 46.6903]); // Near Riyadh
+        }
+        
+        setTrackingActive(true);
+        setIsMapVisible(true);
     };
 
     // Fetch order details from API
@@ -96,6 +172,11 @@ export default function OrderDetailsPage() {
 
                 if (data.status === true) {
                     setOrderData(data.data);
+                    
+                    // Initialize tracking if order is in progress
+                    if (data.data.status?.name === 'in_progress' || data.data.status?.name === 'assigned') {
+                        initializeTracking();
+                    }
                 } else {
                     throw new Error(data.message || "حدث خطأ في جلب البيانات");
                 }
@@ -111,6 +192,21 @@ export default function OrderDetailsPage() {
             fetchOrderDetails();
         }
     }, [orderId]);
+
+    // Update driver location periodically
+    useEffect(() => {
+        let interval;
+        
+        if (trackingActive && isProcessing && driverLocation) {
+            interval = setInterval(() => {
+                simulateDriverLocation();
+            }, 30000); // Update every 30 seconds
+        }
+        
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [trackingActive, driverLocation]);
 
     // Reset rating form when modal closes
     useEffect(() => {
@@ -576,31 +672,31 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
-                            {/* <button 
+                            <button 
                                 onClick={handleRefresh}
                                 className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm"
                             >
                                 <FaSyncAlt className="w-4 h-4 text-muted-foreground" />
                                 <span>تحديث</span>
-                            </button> */}
+                            </button>
                             
-                            {/* {isCompleted && (
+                            {isCompleted && (
                                 <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95 whitespace-nowrap" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}>
                                     <BiRefresh className="w-5 h-5" />
                                     <span>طلب مرة أخرى</span>
                                 </button>
-                            )} */}
-                            {/* <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
+                            )}
+                            <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                 <FaDownload className="w-4 h-4 text-muted-foreground" />
                                 <span className="hidden sm:inline">تحميل الفاتورة</span>
                                 <span className="sm:hidden">الفاتورة</span>
-                            </button> */}
-                            {/* {!isCancelled && (
+                            </button>
+                            {!isCancelled && (
                                 <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium bg-white dark:bg-card border border-border hover:bg-secondary/50 transition-all shadow-sm">
                                     <FaPrint className="w-4 h-4 text-muted-foreground" />
                                     <span>طباعة</span>
                                 </button>
-                            )} */}
+                            )}
                         </div>
                     </div>
                 </div>
@@ -756,42 +852,92 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
 
-                        {/* Order Information */}
-                        {/* <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="w-1 h-8 rounded-full" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}></div>
-                                <h2 className="text-xl font-black">معلومات الطلب</h2>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold mb-1">اسم المستخدم</p>
-                                        <p className="text-sm font-black">{orderData.user?.name || "غير محدد"}</p>
+                        {/* Tracking Map Section - Only for processing orders */}
+                        {(isProcessing || (isCompleted && isMapVisible)) && orderData.driver && (
+                            <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1 h-8 rounded-full" style={{ backgroundColor: 'lab(62 -4.22 -46.14)' }}></div>
+                                        <h2 className="text-xl font-black">خريطة التتبع المباشر</h2>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold mb-1">رقم الهاتف</p>
-                                        <p className="text-sm font-black">{orderData.user?.phone || "غير محدد"}</p>
-                                    </div>
-                                   
-                                </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold mb-1">العنوان</p>
-                                        <p className="text-sm font-black">{orderData.location?.address || "غير محدد"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold mb-1">تاريخ الطلب</p>
-                                        <p className="text-sm font-black">{formatDate(orderData.created_at)}</p>
-                                    </div>
-                                    {orderData.order_date && (
-                                        <div>
-                                            <p className="text-xs text-muted-foreground font-bold mb-1">تاريخ التسليم المحدد</p>
-                                            <p className="text-sm font-black">{formatOrderDateTime(orderData.order_date)}</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg text-xs font-bold">
+                                            <span className={`w-2 h-2 rounded-full ${trackingActive ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                                            {trackingActive ? 'التتبع نشط' : 'التتبع متوقف'}
                                         </div>
-                                    )}
+                                        <button 
+                                            onClick={() => setTrackingActive(!trackingActive)}
+                                            className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary transition-all"
+                                            title={trackingActive ? 'إيقاف التتبع' : 'تشغيل التتبع'}
+                                        >
+                                            {trackingActive ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#579BE8]" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsMapVisible(false)}
+                                            className="p-2 rounded-xl bg-secondary/50 hover:bg-red-500 hover:text-white transition-all"
+                                            title="إخفاء الخريطة"
+                                        >
+                                            <BiX className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <OrderTrackingMap 
+                                    userLocation={userLocation}
+                                    driverLocation={driverLocation}
+                                    driverName={orderData.driver?.name || "السائق"}
+                                    orderStatus={currentStatus}
+                                    isDriverActive={trackingActive}
+                                />
+                                
+                                <div className="mt-6 pt-6 border-t border-border/30">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                            <p className="text-xs text-muted-foreground mb-1">الحالة</p>
+                                            <p className="text-sm font-bold text-[#579BE8]">{isProcessing ? 'قيد التوصيل' : 'تم التوصيل'}</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                            <p className="text-xs text-muted-foreground mb-1">مسافة السائق</p>
+                                            <p className="text-sm font-bold text-amber-600">~2.5 كم</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                            <p className="text-xs text-muted-foreground mb-1">الوقت المتوقع</p>
+                                            <p className="text-sm font-bold text-green-600">15 دقيقة</p>
+                                        </div>
+                                        <div className="bg-secondary/30 p-4 rounded-xl text-center">
+                                            <p className="text-xs text-muted-foreground mb-1">سرعة السائق</p>
+                                            <p className="text-sm font-bold text-blue-600">45 كم/س</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div> */}
+                        )}
+
+                        {/* Show Map Button for completed orders */}
+                        {isCompleted && !isMapVisible && orderData.driver && (
+                            <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-8 text-center">
+                                <div className="w-20 h-20 rounded-2xl bg-[#579BE8]/10 flex items-center justify-center mx-auto mb-6">
+                                    <BiMapPin className="w-10 h-10 text-[#579BE8]" />
+                                </div>
+                                <h3 className="text-xl font-black mb-3">مسار التوصيل</h3>
+                                <p className="text-muted-foreground mb-6">عرض مسار التوصيل والمواقع التي تم التحرك خلالها</p>
+                                <button 
+                                    onClick={() => setIsMapVisible(true)}
+                                    className="px-6 py-3 bg-[#579BE8] text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2"
+                                >
+                                    <BiNavigation className="w-5 h-5" />
+                                    عرض خريطة المسار
+                                </button>
+                            </div>
+                        )}
 
                         {/* Timeline Section */}
                         <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm p-6 md:p-8">
@@ -879,7 +1025,10 @@ export default function OrderDetailsPage() {
                                             </button>
                                         )}
 
-                                        <button className="w-full py-3 rounded-xl bg-secondary/50 font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-all border border-border/50">
+                                        <button 
+                                            onClick={() => setIsMapVisible(true)}
+                                            className="w-full py-3 rounded-xl bg-secondary/50 font-bold text-xs flex items-center justify-center gap-2 hover:bg-secondary transition-all border border-border/50"
+                                        >
                                             <BiNavigation className="w-4 h-4 text-[#579BE8]" />
                                             تتبع المسار الفعلي
                                         </button>

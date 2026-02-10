@@ -575,12 +575,6 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      {/* Floating Chat Icon */}
-   
-      {/* Chat Modal */}
-     
-
-      {/* Chat with Driver Window */}
       {isChatOpen && (
         <div className="fixed bottom-24 right-4 z-50 w-96 h-[600px]">
           <ChatWithDriver 
@@ -592,12 +586,7 @@ export default function OrderDetailsPage() {
         </div>
       )}
 
-      {/* Cancel Order Modal */}
-      {/* <CancelOrderModal
-        isOpen={isCancelModalOpen}
-        onClose={handleCloseCancelModal}
-        onConfirm={handleCancelOrder}
-      /> */}
+   
     </>
   );
 }

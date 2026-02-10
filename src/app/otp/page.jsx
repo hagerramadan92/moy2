@@ -476,22 +476,7 @@ export default function OtpPage() {
                 </motion.div>
 
                 {/* Show SMS button only if current method is WhatsApp */}
-                {otpData?.otpMethod === "whatsapp" && (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      variant="outline"
-                      onClick={handleSmsClick}
-                      className="w-full h-12 sm:h-14 border-2 bg-white/80 backdrop-blur-sm text-[#579BE8] border-[#579BE8]/30 hover:bg-gradient-to-r hover:from-[#579BE8]/10 hover:to-[#124987]/10 hover:text-[#579BE8] hover:border-[#579BE8]/50 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-                    >
-                      <FaSms className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline">إرسال عبر الرسائل النصية</span>
-                      <span className="xs:hidden">إرسال عبر SMS</span>
-                    </Button>
-                  </motion.div>
-                )}
+              
               </motion.div>
             </>
           )}

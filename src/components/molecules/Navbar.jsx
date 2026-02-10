@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 import NotificationBell from "../Notifications/NotificationBell";
+import Image from "next/image";
 const NAV_LINKS = [
   { href: "/", label: "الرئيسية" },
   { href: "/contact", label: "تواصل معنا" },
@@ -161,10 +162,10 @@ export default function Navbar() {
             <motion.div
               whileHover={{ rotate: -6, scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              className="relative flex md:h-11 md:w-11 w-9 h-9 items-center justify-center rounded-lg md:rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sm ring-1 ring-white/40"
+              className="relative flex md:h-11 md:w-11 w-9 h-9 items-center justify-center rounded-lg md:rounded-2xl  text-white shadow-sm ring-1 ring-white/40"
             >
-              <div className="absolute -inset-1 rounded-[18px] bg-gradient-to-br from-sky-500/25 to-blue-600/25 blur-md" />
-              <DropletIcon className="relative h-6 w-6 " />
+        
+              <Image src="/water.png" width={32} height={32} alt="White Water Logo" />
             </motion.div>
 
             <div className="leading-tight">

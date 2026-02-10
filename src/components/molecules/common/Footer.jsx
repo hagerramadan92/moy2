@@ -14,14 +14,17 @@ export default function Footer() {
           {/* Logo and Description Section */}
           <div className="flex flex-col  gap-1 md:gap-6">
             <div className="flex md:gap-4 items-center">
-              <motion.div
-                whileHover={{ rotate: -6, scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative flex-shrink-0 flex md:h-14 md:w-14 h-8 w-8 items-center justify-center rounded-lg md:rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20"
-              >
-                <div className="absolute -inset-1 rounded-[18px] bg-blue-500/20 blur-lg" />
-                <DropletIcon className="relative h-7 w-7" />
-              </motion.div>
+            
+                 <motion.div
+                             whileHover={{ rotate: -6, scale: 1.03 }}
+                             whileTap={{ scale: 0.98 }}
+                             className="relative flex md:h-11 md:w-11 w-9 h-9 items-center justify-center rounded-lg md:rounded-2xl  text-white 
+                              me-1 bg-white ring-1 ring-white/40"
+                           >
+                       
+                             <Image src="/water.png" width={32} height={32} alt="White Water Logo" />
+                           </motion.div>
+      
               <h3 className="text-xl md:text-3xl font-bold tracking-tight">وايت مياه</h3>
             </div>
             <p className="text-sm md:text-base text-gray-300 leading-relaxed max-w-xs">
