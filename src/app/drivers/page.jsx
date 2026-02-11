@@ -101,31 +101,7 @@ export default function DriversPage() {
     </div>
   );
 
-  const IntroSectionSkeleton = () => (
-    <section className="relative w-full py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-hidden">
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12">
-          {/* Image Skeleton */}
-          <div className="order-1 lg:order-2 relative w-full max-w-[400px] lg:max-w-[450px] aspect-square rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
 
-          {/* Text Section Skeleton */}
-          <div className="order-2 lg:order-1 flex-1 max-w-2xl">
-            <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mb-2 md:mb-3"></div>
-            <div className="space-y-3 mb-4 lg:mb-6">
-              <div className="h-7 sm:h-8 md:h-9 lg:h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-              <div className="h-7 sm:h-8 md:h-9 lg:h-10 w-5/6 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-              <div className="h-7 sm:h-8 md:h-9 lg:h-10 w-4/5 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-            </div>
-            <div className="w-16 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 lg:mb-6 animate-pulse"></div>
-            <div className="space-y-2">
-              <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="h-4 w-5/6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
 
   const StatsSectionSkeleton = () => (
     <section className="relative w-full py-10 md:py-12 bg-gradient-to-b from-white via-gray-50/50 to-white overflow-hidden">
@@ -235,7 +211,7 @@ export default function DriversPage() {
     return (
       <main className="space-y-20">
         <CoverSkeleton />
-        <IntroSectionSkeleton />
+        {/* <IntroSectionSkeleton /> */}
         <StatsSectionSkeleton />
         <StaticSectionSkeleton />
         <DriverServicesSectionSkeleton />
@@ -277,13 +253,13 @@ export default function DriversPage() {
       <main className="space-y-20">
         {/* Hero section - use dynamic if available, otherwise default Cover */}
         {sectionMap['hero'] || <Cover />}
-        <IntroSection />
+        {/* <IntroSection /> */}
         {/* Statistics section - use dynamic if available, otherwise default StatsSection */}
         {sectionMap['statistics'] || <StatsSection />}
         {/* Benefits section - use dynamic if available, otherwise default StaticSection */}
         {sectionMap['benefits'] || <StaticSection />}
         <DriverServicesSection />
-        <StartJourneySection/>
+        {/* <StartJourneySection/> */}
         <HowToUseAppSection />
         <AppPromotionSection/>
         <CallToActionSection />
@@ -300,7 +276,7 @@ export default function DriversPage() {
       <StatsSection />
       <StaticSection />
       <DriverServicesSection />
-      <StartJourneySection/>
+      {/* <StartJourneySection/> */}
       <HowToUseAppSection />
       <AppPromotionSection/>
       <CallToActionSection />

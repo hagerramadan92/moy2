@@ -12,26 +12,26 @@ export default function StaticSection({ data }) {
       progressColor: "#10B981"
     },
     {
-      label: "متوسط عدد الطلبات اليوميه",
+      label: " متوسط عدد الطلبات اليومية لكل سائق",
       value: "8-12 طلب",
       progress: 90,
       progressBorder: "6.88px solid rgba(253, 147, 67, 1)"
     },
-    {
-      label: "وقت استجابه الطلبات",
-      value: "30 ثانيه",
-      progress: 85,
-      progressBorder: "6.88px solid rgba(207, 62, 185, 1)"
-    },
+    // {
+    //   label: "وقت استجابه الطلبات",
+    //   value: "30 ثانيه",
+    //   progress: 85,
+    //   progressBorder: "6.88px solid rgba(207, 62, 185, 1)"
+    // },
   ];
 
   // Extract benefits from API response
   const apiFeatures = data?.contents?.filter(c => c.key === 'benefit').map((c, index) => {
     const benefitData = c.value;
     // Map to default icons based on index
-    const iconMap = ["/Vector (1).png", "/Vector (2).png", "/Vector (13).png"];
+    const iconMap = ["/RS.png", "/time2.png", "/Vector (11).png"];
     return {
-      icon: iconMap[index] || "/Vector (1).png",
+      icon: iconMap[index] || "/RS.png",
       title: benefitData.title || "",
       description: benefitData.description || "",
       bgColor: "#579BE8"
@@ -41,19 +41,19 @@ export default function StaticSection({ data }) {
   // Default features if no data
   const defaultFeatures = [
     {
-      icon: "/Vector (1).png",
+      icon: "/RS.png",
       title: "سريع وسهل",
       description: "واجهة بسيطة تسمح لك بإدارة طلباتك وتحديد أسعارك في ثوانٍ معدودة",
       bgColor: "#579BE8"
     },
     {
-      icon: "/Vector (2).png",
+      icon: "/time2.png",
       title: "أرباح شفافة",
       description: "تتبع أرباحك بشكل لحظي مع إمكانية سحب أموالك في أي وقت",
       bgColor: "#579BE8"
     },
     {
-      icon: "/Vector (13).png",
+      icon: "/Vector (11).png",
       title: "آمن وموثوق",
       description: "نظام دفع آمن 100% مع حماية كاملة لبياناتك المالية والشخصية",
       bgColor: "#579BE8"
@@ -80,8 +80,8 @@ export default function StaticSection({ data }) {
               </h2>
               <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full"></div>
               <p className="font-cairo font-normal text-base lg:text-lg text-gray-700 leading-relaxed mt-2">
-                تطبيق السائقين هو حلّك الكامل لتحويل صهريج المياه الخاص بك إلى مصدر دخل مستقر ومجزي.<br />
-                نربطك بآلاف العملاء الذين يحتاجون لخدماتك يومياً في جميع أنحاء المملكة.
+                تطبيق السائقين هو خيارك الانسب لتحويل صهريجك  لمصدر دخل مضمون ومجزي.<br />
+                نربطك بآلاف العملاء اللي يبون  خدمتك يومياً في جميع أنحاء المملكة.
               </p>
             </div>
 

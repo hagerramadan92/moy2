@@ -19,7 +19,7 @@ const VisionMissionSection = () => {
     {
       id: 2,
       title: 'رسالتنا',
-      description: 'توفير مياه نقية وآمنة لكل منزل ومؤسسة مع الحفاظ على البيئة',
+      description: 'تسهيل الوصول للمياة النقية لكل منزل و مؤسسة في جميع انحاء المملكة',
       icon: FaBullseye,
       image: '/badge.png',
     },
@@ -54,8 +54,8 @@ const VisionMissionSection = () => {
               من نحن
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4 leading-tight">
-            <span className="block text-[#579BE8]">عن WaterHub Express</span>
+          <h2 className="text-xl sm:text-2xl md:text-3xl  font-bold text-gray-900 mb-3 md:mb-4 leading-tight">
+            <span className="block text-[#579BE8]">عن ويت مياة</span>
           </h2>
           <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] rounded-full mx-auto mb-5"></div>
           <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto">

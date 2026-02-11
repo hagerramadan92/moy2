@@ -25,7 +25,7 @@ export default function Footer() {
                              <Image src="/water.png" width={32} height={32} alt="White Water Logo" />
                            </motion.div>
       
-              <h3 className="text-xl md:text-3xl font-bold tracking-tight">وايت مياه</h3>
+              <h3 className="text-xl md:text-3xl font-bold tracking-tight">وايت مياة</h3>
             </div>
             <p className="text-sm md:text-base text-gray-300 leading-relaxed max-w-xs">
               منصة توصيل المياة الرائدة في المملكة العربية السعودية. نربط العملاء مع سواقين موثوقين بأعلى معايير الجودة.

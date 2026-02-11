@@ -120,7 +120,7 @@ export default function StatsSection({ data }) {
     
     // Determine icon based on label
     let icon = FaUsers;
-    if (statData.label?.includes("رضا")) {
+    if (statData.label?.includes("متوسط الربجح بالسعة")) {
       icon = FaHeart;
     } else if (statData.label?.includes("طلب")) {
       icon = FaShoppingCart;
@@ -173,14 +173,15 @@ export default function StatsSection({ data }) {
     { number: "+500", label: "سائق نشط", value: 500, suffix: "+", prefix: "+", icon: FaUsers },
     { number: "15K+", label: "طلب شهرياً", value: 15000, suffix: "+", prefix: "", icon: FaShoppingCart },
     { number: "98%", label: "رضا السائقين", value: 98, suffix: "%", prefix: "", icon: FaHeart },
+    { number: "98%", label: "رضا السائقين", value: 98, suffix: "%", prefix: "", icon: FaHeart },
   ];
 
   const stats = apiStats.length > 0 ? apiStats : defaultStats;
 
   return (
-    <section className="relative w-full py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="relative w-full py-7  px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Animated Water Background - Same as Login */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden">
         {/* Floating Water Drops with Animation */}
         <motion.div
           animate={{
@@ -222,7 +223,7 @@ export default function StatsSection({ data }) {
         />
         
         {/* Water Ripple Effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent" />
+        {/* <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent" /> */}
       </div>
 
       {/* Decorative Water Icons */}
@@ -254,7 +255,7 @@ export default function StatsSection({ data }) {
         </motion.div>
 
         {/* Stats Grid - One Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
           {stats.map((stat, index) => (
             <StatCard key={index} stat={stat} index={index} delay={index * 0.1} icon={stat.icon} />
           ))}

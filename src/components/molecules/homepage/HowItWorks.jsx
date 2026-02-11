@@ -5,13 +5,14 @@ import { IoWaterOutline, IoEyeOutline } from "react-icons/io5";
 import { SlLocationPin } from "react-icons/sl";
 import { FaMoneyBillWave } from "react-icons/fa6";
 import { Package } from "lucide-react";
+import { PiTruck } from "react-icons/pi";
 
 // Icon mapping for dynamic icons
 const iconMap = {
-  location: <SlLocationPin className="w-8 h-8 md:w-9 md:h-9" />,
-  truck: <Package className="w-8 h-8 md:w-9 md:h-9" />,
-  pay: <FaMoneyBillWave className="w-8 h-8 md:w-9 md:h-9" />,
-  done: <IoEyeOutline className="w-8 h-8 md:w-9 md:h-9" />,
+  location: <PiTruck  className="w-8 h-8 md:w-9 md:h-9" />,
+  truck: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
+  pay: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
+  done: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
 };
 
 // Color mapping for icons (matching default steps colors)

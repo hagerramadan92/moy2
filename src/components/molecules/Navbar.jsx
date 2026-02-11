@@ -170,10 +170,10 @@ export default function Navbar() {
 
             <div className="leading-tight">
               <div className="sm:text-2xl text-lg font-extrabold tracking-tight text-slate-900">
-                وايت مياة
+                ويت مياة 
               </div>
               <div className="sm:text-sm text-xs font-medium text-slate-500">
-                خدمة توصيل سريعة
+              أسرع خدمة توصيل
               </div>
             </div>
           </Link>
@@ -212,6 +212,7 @@ export default function Navbar() {
           </nav>
           
           <div className="flex items-center gap-1 md:gap-2">
+            {/* <p>عربي</p> */}
             {/* زر اطلب الآن - يذهب إلى صفحة الطلب */}
                 <div>
                     <NotificationBell />

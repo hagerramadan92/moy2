@@ -158,11 +158,11 @@ export default function HomeCover({ data }) {
 									className="bg-[#EFF5FD] px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-3xl flex flex-col gap-4 sm:gap-6 shadow-xl w-full max-w-md mx-auto h-[420px] sm:h-[440px] md:h-[460px] lg:h-[500px]"
 								>
                 <div className="text-center mb-4">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#579BE8] mb-2">
-                        اختر اللي يناسبك
+                    <h2 className="text-xl sm:text-2xl md:text-2xl font-bold text-[#579BE8] mb-2">
+                       اطلب اللي بخاطرك
                     </h2>
                     <p className="text-sm text-gray-600">
-                        اختر نوع المياه والكمية المناسبة لك
+                       اختر نوع المياة و الكمية اللي تحتاجها
                     </p>
                 </div>
 
@@ -223,7 +223,7 @@ export default function HomeCover({ data }) {
                             <span>جاري المعالجة...</span>
                         </div>
                     ) : (
-                        "ابدأ الطلب"
+                        "اطلب الآن"
                     )}
                 </button>
 								</form>
@@ -233,11 +233,11 @@ export default function HomeCover({ data }) {
 
 					{/* Content Section - Appears second on small screens */}
 					<div className="content-right order-2 md:order-1">
-						<h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-							{title || "اسرع خدمة توصيل في الممكلة"}
+						<h1 className="text-2xl sm:text-3xl md:text-4xl  font-bold mb-4 sm:mb-6">
+							{title || "أول تطبيق وايت مياة في المملكة"}
 						</h1>
-						<p className="desc text-base sm:text-lg md:text-xl mb-6 sm:mb-8">
-							{subtitle || "حدد الكمية والموقع واستقبل عروض الأسعار من السواقين فورا"}
+						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8">
+							{subtitle || " أطلب الكمية اللي تبيها و بتوصلك وين ما كنت "}
 						</p>
 						{image && (
 							<div className="mb-6 sm:mb-8">

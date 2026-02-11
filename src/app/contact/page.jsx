@@ -445,10 +445,10 @@ const ContactPage = () => {
 
       {/* Content */}
       <div className="relative z-10">
-        <ContactHero />
+        {/* <ContactHero /> */}
         <VisionMissionSection/>
         <ContactFormSection />
-        <SpecialOffersSection/>
+        {/* <SpecialOffersSection/> */}
         <Footer />
           
      

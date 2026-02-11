@@ -95,6 +95,15 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
   const handleOpenChatModal = () => {
     checkUnreadMessages();
     setIsExpanded(false);
+    setHasUnreadMessages(false);
+  setMessageCount(0);
+  setUnreadNotifications(0);
+
+  
+  // تحديث localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('unread_messages_count', '0');
+  }
     if (onOpenChat) {
       onOpenChat();
     }

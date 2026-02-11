@@ -103,8 +103,8 @@ export default function AvailableSize() {
               السعات المتاحة
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">اختر السعة المناسبة لك</span>
+          <h2 className="text-xl sm:text-2xl md:text-3xl  font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+            <span className="block text-[#579BE8]">اختر السعة اللي تحتاجها</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
         </motion.div>

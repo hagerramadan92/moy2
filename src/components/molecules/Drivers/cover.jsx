@@ -28,7 +28,7 @@ export default function Cover({ data }) {
                 ارباحك المتوقعه
               </h2>
           {/* Daily Profit Button */}
-          <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5 md:p-6 mb-4 sm:mb-5">
+          <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5  mb-4 sm:mb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4"> {/* Increased gap */}
                     <span className="font-cairo font-normal text-[15px] text-gray-700 text-center sm:text-left whitespace-nowrap">
                       متوسط الربح اليومي
@@ -40,7 +40,7 @@ export default function Cover({ data }) {
                 </div>
 
                 {/* Weekly Profit Button */}
-                <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5 md:p-6 mb-3 sm:mb-4 md:mb-5">
+                <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5  mb-3 sm:mb-4 md:mb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-1"> {/* Increased gap */}
                     <span className="font-cairo font-normal text-[15px] text-gray-700 text-center sm:text-left whitespace-nowrap">
                       متوسط الربح الاسبوعي
@@ -82,11 +82,11 @@ export default function Cover({ data }) {
                 انضم لاكثر من 500 سائق نشط
               </span>
             </div>
-          <h1 className="text-xl sm:text-2xl font-bold mb-3">
+          <h2 className="text-lg md:text-2xl text-white font-bold mb-3">
             {title || "احصل علي دخل اضافي من توصيل المياه"}
-          </h1>
-          <p className="text-lg text-gray-600 mb-4">
-            {description || "كن شريكا معنا و احصل علي طلبات مستمره، ارباح مجزيه، ومرونه كامله في العمل. انضم الان و ابدأ الربح من هاتفك!"}
+          </h2>
+          <p className="text-lg text-gray-700 mb-4 w-100 max-w-md">
+            {description || "انضم الينا و أحصل علي دخل مضمون بخطوات بسيطة و مرونة كاملة في العمل ."}
           </p>
           <AppDownloadButtons />
         </div>

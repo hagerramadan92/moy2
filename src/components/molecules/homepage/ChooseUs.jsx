@@ -6,27 +6,29 @@ import { HiArrowTrendingDown } from "react-icons/hi2";
 import { BsLightningCharge } from "react-icons/bs";
 import { FiHeadphones } from "react-icons/fi";
 import { MdOutlineLocalPolice } from "react-icons/md";
-
+import { FaMoneyBillWave } from "react-icons/fa";
+import { TiPinOutline } from "react-icons/ti";
+import { Ri24HoursFill } from "react-icons/ri";
 // Icon mapping for dynamic icons
 const iconMap = {
-  price: <HiArrowTrendingDown className="w-6 h-6 md:w-9 md:h-9" />,
-  fast: <BsLightningCharge className="w-6 h-6 md:w-9 md:h-9" />,
-  safe: <MdOutlineLocalPolice className="w-6 h-6 md:w-9 md:h-9" />,
-  support: <FiHeadphones className="w-6 h-6 md:w-9 md:h-9" />,
+  price: <FaMoneyBillWave  className="w-7 h-7 " />,
+  fast: <TiPinOutline className="w-7 h-7 " />,
+  safe: <MdOutlineLocalPolice className="w-7 h-7 " />,
+  support: <Ri24HoursFill className="w-7 h-7 " />,
 };
 
 const gradientMap = {
   price: "from-[#9CC6F4] to-[#4787D0]",
-  fast: "from-[#E5BD8A] to-[#D57B06]",
-  safe: "from-[#68E62E] to-[#348C0B]",
-  support: "from-[#E0AAF0] to-[#B508E9]",
+  fast: "from-[#9CC6F4] to-[#4787D0]",
+  safe: "from-[#9CC6F4] to-[#4787D0]",
+  support: "from-[#9CC6F4] to-[#4787D0]",
 };
 
 const shadowColorMap = {
   price: "shadow-blue-200",
-  fast: "shadow-amber-200",
-  safe: "shadow-green-200",
-  support: "shadow-purple-200",
+  fast: "shadow-blue-200",
+  safe: "shadow-blue-200",
+  support: "shadow-blue-200",
 };
 
 export default function ChooseUs({ data }) {
@@ -117,16 +119,16 @@ export default function ChooseUs({ data }) {
           className="text-center mb-6 sm:mb-8 md:mb-10"
         >
           <div className="inline-block mb-2 md:mb-3">
-            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
+            {/* <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
               لماذا نحن
-            </span>
+            </span> */}
           </div>
           <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
             <span className="block text-[#579BE8]">ليش تختارنا ؟</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
           <p className="text-xs sm:text-sm md:text-base max-w-3xl mx-auto leading-relaxed mt-4">
-            نوفر لك أفضل تجربة طلب وتوصيل مياه بأحدث التقنيات وأعلى معايير الجودة
+           نوفر لك أسهل تجربة طلب و توصيل وايت مياة بالمملكة
           </p>
         </motion.div>
 
@@ -152,8 +154,8 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
   return (
     <div
       className="group relative bg-white rounded-2xl
-                 p-2 sm:pb-3 sm:pt-8
-                 text-center w-full
+                 p-2 sm:pb-5 sm:pt-8
+                 text-center w-full 
                  border border-gray-100
                  shadow-[0_8px_30px_rgb(0,0,0,0.04)]
                  hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]
@@ -161,7 +163,7 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
     >
       <div
         className={`absolute -top-5 sm:-top-10 left-1/2 -translate-x-1/2
-                    w-10 h-10  sm:w-20 sm:h-20 md:w-20 md:h-20
+                    w-10 h-10  sm:w-17 sm:h-17 
                     flex items-center justify-center
                     rounded-sm sm:rounded-2xl
                     bg-gradient-to-b ${gradient}
@@ -173,7 +175,7 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
         </div>
       </div>
 
-      <h3 className="font-bold text-base sm:text-lg md:text-xl text-gray-900 mt-6 mb-3">
+      <h3 className="font-bold text-base sm:text-lg md:text-xl text-gray-900 my-3">
         {title}
       </h3>
       <p className="text-gray-500 text-xs sm:text-sm md:text-base leading-relaxed">
