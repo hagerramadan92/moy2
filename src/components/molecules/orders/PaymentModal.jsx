@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   FaCreditCard,
   FaWallet,
@@ -8,6 +8,7 @@ import {
 import { MdCalendarToday, MdAccessTime, MdClose } from "react-icons/md";
 import { BiErrorCircle } from "react-icons/bi";
 import { API_BASE_URL, getAccessToken, getDeviceId, getIpAddress } from './utils/api';
+import Pusher from 'pusher-js';
 
 /* =============================
    ربط icon string من API بـ react-icons
@@ -29,16 +30,95 @@ export default function PaymentModal({
   offerAmount,
   onOfferExpired,
   setPendingPaymentOfferId,
+  onPaymentSuccess, // إضافة callback جديد للنجاح
+  onPaymentFailure, // إضافة callback جديد للفشل
+  router, // إضافة router للتوجيه
 }) {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [selectedPaymentData, setSelectedPaymentData] = useState(null);
-  const [selectedPaymentUrl, setSelectedPaymentUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingMethods, setLoadingMethods] = useState(false);
   const [processingMethod, setProcessingMethod] = useState(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState(null);
+  const [showPaymentStatus, setShowPaymentStatus] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'failure', 'processing'
+  
+  // Refs للتتبع
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
+  const paymentInitiatedRef = useRef(false);
+  const currentOrderIdRef = useRef(orderId);
+  const currentDriverIdRef = useRef(selectedDriverId);
+
+  // تحديث refs عند تغيير props
+  useEffect(() => {
+    currentOrderIdRef.current = orderId;
+    currentDriverIdRef.current = selectedDriverId;
+  }, [orderId, selectedDriverId]);
+
+  /* =============================
+     إعداد Pusher للاستماع للدفع
+  ============================== */
+  const setupPusherListener = (orderId, driverId) => {
+    try {
+      // تنظيف الاتصال السابق إذا وجد
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        channelRef.current.unsubscribe();
+      }
+      
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+      }
+
+      // إنشاء اتصال Pusher جديد
+      pusherRef.current = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER,
+        authEndpoint: `${API_BASE_URL}/broadcasting/auth`,
+        auth: {
+          headers: {
+            Authorization: `Bearer ${getAccessToken()}`,
+            Accept: 'application/json',
+          },
+        },
+      });
+
+      // الاشتراك في القناة
+      const channelName = `TripStartedForDriver`;
+      channelRef.current = pusherRef.current.subscribe(channelName);
+
+      // الاستماع للحدث الخاص بالسائق
+      const eventName = `driver.${driverId}`;
+      
+      channelRef.current.bind(eventName, (data) => {
+        console.log('Pusher event received:', data);
+        
+        // التحقق من حالة الدفع
+        if (data.paid_at || (data.data?.payment?.status === 'paid')) {
+          // دفع ناجح
+          setPaymentStatus('success');
+          setShowPaymentStatus(true);
+          
+          // تأخير التوجيه لصفحة التفاصيل
+          setTimeout(() => {
+            if (router) {
+              router.push(`/orders/${orderId}`);
+            }
+            onClose();
+          }, 2000);
+        }
+      });
+
+      // الاستماع لأخطاء الاتصال
+      pusherRef.current.connection.bind('error', (err) => {
+        console.error('Pusher connection error:', err);
+      });
+
+    } catch (error) {
+      console.error('Error setting up Pusher:', error);
+    }
+  };
 
   /* =============================
      GET payment methods
@@ -73,15 +153,40 @@ export default function PaymentModal({
   useEffect(() => {
     if (isOpen) {
       fetchPaymentMethods();
+      // إعادة تعيين الحالات
+      setPaymentStatus(null);
+      setShowPaymentStatus(false);
+      paymentInitiatedRef.current = false;
     } else {
       // Reset state when modal closes
       setSelectedMethod(null);
-      setSelectedPaymentData(null);
-      setSelectedPaymentUrl(null);
       setProcessingMethod(null);
       setError(null);
       setIsConfirming(false);
+      setPaymentStatus(null);
+      setShowPaymentStatus(false);
+      paymentInitiatedRef.current = false;
+      
+      // تنظيف Pusher عند إغلاق المودال
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        channelRef.current.unsubscribe();
+      }
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+      }
     }
+
+    // تنظيف عند إزالة المكون
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        channelRef.current.unsubscribe();
+      }
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+      }
+    };
   }, [isOpen]);
 
   /* =============================
@@ -122,20 +227,58 @@ export default function PaymentModal({
   };
 
   /* =============================
-     Handle Payment Method Click - Select method only
+     التحقق من حالة الدفع
+  ============================== */
+  const checkPaymentStatus = async (orderId) => {
+    try {
+      const accessToken = getAccessToken();
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.status) {
+        const paymentStatus = data.data?.payment?.status;
+        if (paymentStatus === 'paid') {
+          setPaymentStatus('success');
+          setShowPaymentStatus(true);
+          
+          setTimeout(() => {
+            if (router) {
+              router.push(`/orders/${orderId}`);
+            }
+            onClose();
+          }, 2000);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      return false;
+    }
+  };
+
+  /* =============================
+     Handle Payment Method Click - Direct payment
   ============================== */
   const handlePaymentMethodClick = async (method) => {
+    // منع تكرار النقر إذا كان هناك عملية جارية
+    if (paymentInitiatedRef.current || processingMethod) return;
+    
     try {
       setProcessingMethod(method.id);
       setError(null);
-      setSelectedMethod(null);
-      setSelectedPaymentData(null);
-      setSelectedPaymentUrl(null);
+      paymentInitiatedRef.current = true;
 
       // Get the first payment method from the methods array, or use gateway id
       const paymentMethod = method.methods && method.methods.length > 0
         ? method.methods[0]
-        : method.id; // fallback to gateway id if no methods array
+        : method.id;
       
       // Get save_card preference (default to false)
       const saveCard = false;
@@ -149,7 +292,7 @@ export default function PaymentModal({
         saveCard
       );
       
-      // Extract payment URL from response - check multiple possible locations
+      // Extract payment URL from response
       const payment = paymentData?.payment;
       let paymentUrl = null;
       
@@ -176,34 +319,53 @@ export default function PaymentModal({
       }
 
       if (paymentUrl) {
-        // Store payment data and URL for confirmation
-        setSelectedMethod(method);
-        setSelectedPaymentData(paymentData);
-        setSelectedPaymentUrl(paymentUrl);
-        
-        // ✅ تحديث حالة العرض بناءً على response
-        // الحصول على حالة العرض من response
+        // تحديث حالة العرض
         const offerStatus = paymentData?.offer?.status || paymentData?.status || 'pending_payment';
         
-        // حفظ حالة العرض في localStorage
+        // حفظ بيانات العرض
         localStorage.setItem('pendingOfferData', JSON.stringify({
           orderId,
           offerId: selectedOfferId,
           driverId: selectedDriverId,
           status: offerStatus,
-          paymentData: paymentData // حفظ بيانات الدفع الكاملة
+          paymentData: paymentData
         }));
         
-        // تحديث حالة العرض في state
+        // تحديث حالة العرض
         if (offerStatus === 'pending_payment' || offerStatus === 'accepted') {
           if (setPendingPaymentOfferId && typeof setPendingPaymentOfferId === 'function') {
             setPendingPaymentOfferId(selectedOfferId);
           }
         }
+
+        // تخزين بيانات الدفع للمتابعة بعد العودة من بوابة الدفع
+        const paymentCallbackData = {
+          orderId,
+          driverId: selectedDriverId,
+          offerId: selectedOfferId,
+          paymentId: payment?.payment_id,
+          sessionId: payment?.session_id,
+          gateway: method.id
+        };
+        
+        sessionStorage.setItem('paymentCallbackData', JSON.stringify(paymentCallbackData));
+
+        // إعداد مستمع Pusher قبل التوجيه لبوابة الدفع
+        if (selectedDriverId) {
+          setupPusherListener(orderId, selectedDriverId);
+        }
+
+        // تأخير بسيط للتأكد من إعداد Pusher
+        setTimeout(() => {
+          // التوجيه المباشر لبوابة الدفع
+          window.location.href = paymentUrl;
+        }, 500);
+        
       } else {
         throw new Error("لم يتم الحصول على رابط الدفع من بوابة الدفع");
       }
     } catch (err) {
+      paymentInitiatedRef.current = false;
       const errorMessage = err.message || '';
       
       // Check if offer is expired or not available for payment
@@ -220,7 +382,7 @@ export default function PaymentModal({
         }
         setError('انتهت صلاحية هذا العرض. يرجى اختيار عرض آخر.');
       } else {
-      setError(err.message);
+        setError(err.message);
       }
     } finally {
       setProcessingMethod(null);
@@ -228,58 +390,94 @@ export default function PaymentModal({
   };
 
   /* =============================
-     Handle Confirm Payment - Redirect to payment
+     التحقق من حالة الدفع عند العودة للصفحة
   ============================== */
-  const handleConfirmPayment = async () => {
-    if (!selectedPaymentUrl || !selectedMethod) {
-      setError('يرجى اختيار طريقة الدفع أولاً');
-      return;
-    }
+  useEffect(() => {
+    // التحقق من وجود بيانات دفع معلقة عند فتح المودال
+    const checkPendingPayment = async () => {
+      const pendingData = sessionStorage.getItem('paymentCallbackData');
+      if (pendingData && isOpen && orderId && selectedDriverId) {
+        try {
+          const parsedData = JSON.parse(pendingData);
+          if (parsedData.orderId === orderId) {
+            // إعداد مستمع Pusher
+            setupPusherListener(orderId, selectedDriverId);
+            
+            // التحقق من حالة الدفع
+            await checkPaymentStatus(orderId);
+          }
+        } catch (error) {
+          console.error('Error checking pending payment:', error);
+        }
+      }
+    };
 
-    try {
-      setIsConfirming(true);
-      setError(null);
+    checkPendingPayment();
 
-      const payment = selectedPaymentData?.payment;
-
-      // Store payment and driver confirmation data for after payment callback
-      const paymentCallbackData = {
-        orderId,
-        driverId: selectedDriverId,
-        offerId: selectedOfferId,
-        paymentId: payment?.payment_id,
-        sessionId: payment?.session_id,
-        gateway: selectedMethod.id
-      };
-      
-      // Store in sessionStorage for after payment callback
-      sessionStorage.setItem('paymentCallbackData', JSON.stringify(paymentCallbackData));
-      
-      // Also store temporary data to show "في انتظار الدفع" state
-      localStorage.setItem('pendingOfferData', JSON.stringify({
-        orderId,
-        offerId: selectedOfferId,
-        driverId: selectedDriverId,
-        status: 'pending_payment'
-      }));
-      
-      // Redirect to payment URL
-      window.location.href = selectedPaymentUrl;
-    } catch (err) {
-      setError(err.message || 'حدث خطأ أثناء التوجيه إلى صفحة الدفع');
-      setIsConfirming(false);
-    }
-  };
+    // تنظيف عند إغلاق المودال
+    return () => {
+      if (!isOpen) {
+        sessionStorage.removeItem('paymentCallbackData');
+      }
+    };
+  }, [isOpen, orderId, selectedDriverId]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative">
+        {/* Payment Status Overlay */}
+        {showPaymentStatus && (
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="text-center p-6">
+              {paymentStatus === 'success' ? (
+                <>
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-green-600 mb-2">تم الدفع بنجاح!</h3>
+                  <p className="text-gray-600">جاري تحويلك لصفحة تفاصيل الطلب...</p>
+                </>
+              ) : paymentStatus === 'failure' ? (
+                <>
+                  <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-red-600 mb-2">فشل عملية الدفع</h3>
+                  <p className="text-gray-600 mb-4">يرجى المحاولة مرة أخرى أو اختيار طريقة دفع مختلفة</p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentStatus(false);
+                      setPaymentStatus(null);
+                      paymentInitiatedRef.current = false;
+                    }}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    حاول مرة أخرى
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-blue-600 mb-2">جاري معالجة الدفع</h3>
+                  <p className="text-gray-600">يرجى الانتظار...</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex justify-between">
           <h2 className="text-xl font-bold">تأكيد الدفع</h2>
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={showPaymentStatus}>
             <MdClose size={22} />
           </button>
         </div>
@@ -296,17 +494,14 @@ export default function PaymentModal({
                 const Icon = ICONS_MAP[method.icon] || FaCreditCard;
                 const isProcessing = processingMethod === method.id;
                 const isDisabled = processingMethod !== null && !isProcessing;
-                const isSelected = selectedMethod?.id === method.id;
 
                 return (
                   <button
                     key={method.id}
                     onClick={() => handlePaymentMethodClick(method)}
-                    disabled={isDisabled || isProcessing}
+                    disabled={isDisabled || isProcessing || showPaymentStatus}
                     className={`w-full p-4 rounded-xl border-2 flex gap-4 transition ${
-                      isSelected
-                        ? "border-blue-600 bg-blue-50 shadow-md"
-                        : isProcessing
+                      isProcessing
                         ? "border-blue-500 bg-blue-50"
                         : isDisabled
                         ? "border-gray-200 opacity-50 cursor-not-allowed"
@@ -315,9 +510,7 @@ export default function PaymentModal({
                   >
                     <div
                       className={`p-3 rounded-lg ${
-                        isSelected
-                          ? "bg-blue-600 text-white"
-                          : isProcessing
+                        isProcessing
                           ? "bg-blue-100 text-blue-600"
                           : "bg-gray-100 text-gray-600"
                       }`}
@@ -334,9 +527,6 @@ export default function PaymentModal({
                         <span className="font-medium">{method.name}</span>
                         {isProcessing && (
                           <span className="text-xs text-blue-600">جاري التحضير...</span>
-                        )}
-                        {isSelected && !isProcessing && (
-                          <span className="text-xs text-blue-600 font-bold">✓ تم الاختيار</span>
                         )}
                       </div>
 
@@ -362,38 +552,8 @@ export default function PaymentModal({
               <span>{error}</span>
             </div>
           )}
-
-          {/* Actions */}
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 border rounded-lg py-3 font-medium hover:bg-gray-50 transition"
-              disabled={isConfirming}
-            >
-              إلغاء
-            </button>
-            {selectedMethod && selectedPaymentUrl && (
-            <button
-                onClick={handleConfirmPayment}
-                disabled={isConfirming || !selectedPaymentUrl}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg py-3 font-bold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-                {isConfirming ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>جاري التوجيه...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>تأكيد والدفع</span>
-                  </>
-                )}
-            </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
   );
 }
-

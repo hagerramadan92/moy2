@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BiDotsVerticalRounded, BiSort, BiHelpCircle, BiSolidShow, BiFilter } from "react-icons/bi";
-import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes, FaBox, FaSearch, FaSyncAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaDownload, FaPlus, FaChevronDown, FaTimes, FaBox, FaSearch, FaSyncAlt, FaTruck, FaSpinner } from "react-icons/fa";
 import { IoDocumentText } from "react-icons/io5";
 import {
     Select,
@@ -14,8 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-// import { FaChevronDown, FaTimes, FaBox, FaSearch, FaSyncAlt, FaCalendarAlt } from "react-icons/fa";
-// import { FaBox } from "react-icons/fa";
 import flatpickr from "flatpickr";
 import { Arabic } from "flatpickr/dist/l10n/ar.js";
 import "flatpickr/dist/flatpickr.min.css";
@@ -40,6 +38,8 @@ export default function OrdersPage() {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState("");
     const [authError, setAuthError] = useState(false);
+    const [checkingOrderStatus, setCheckingOrderStatus] = useState({}); // لتتبع حالة التحقق لكل طلب
+    const [orderStatusCache, setOrderStatusCache] = useState({}); // تخزين مؤقت لحالة الطلبات
     
     const router = useRouter();
     const dropdownRef = useRef(null);
@@ -115,6 +115,73 @@ export default function OrdersPage() {
         return true;
     };
 
+    // دالة لجلب حالة الطلب المحدثة من API
+    const fetchOrderStatus = useCallback(async (orderId) => {
+        const token = getToken();
+        if (!token) return null;
+
+        // التحقق من وجود البيانات في الكاش وعدم انتهاء صلاحيتها (مثلاً 30 ثانية)
+        const cached = orderStatusCache[orderId];
+        if (cached && (Date.now() - cached.timestamp) < 30000) {
+            return cached.data;
+        }
+
+        try {
+            setCheckingOrderStatus(prev => ({ ...prev, [orderId]: true }));
+            
+            const response = await fetch(
+                `${API_BASE_URL}/orders/${orderId}/status`,
+                {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    cache: "no-store",
+                }
+            );
+
+            if (response.status === 401) {
+                return null;
+            }
+
+            const data = await response.json();
+
+            if (response.ok && data.status === true) {
+                // تخزين النتيجة في الكاش مع وقت التحقق
+                setOrderStatusCache(prev => ({
+                    ...prev,
+                    [orderId]: {
+                        data: data.data,
+                        timestamp: Date.now()
+                    }
+                }));
+                return data.data;
+            }
+            return null;
+        } catch (error) {
+            console.error(`Error fetching status for order ${orderId}:`, error);
+            return null;
+        } finally {
+            setCheckingOrderStatus(prev => ({ ...prev, [orderId]: false }));
+        }
+    }, [orderStatusCache]);
+
+    // دالة للتحقق مما إذا كان الطلب لا يزال معلقاً وصلاحيته سارية
+    const checkOrderIsValidForDrivers = useCallback(async (order) => {
+        // أولاً: التحقق السريع من البيانات الأساسية
+        if (order.status?.name !== "pendding") return false;
+        
+        // ثانياً: جلب الحالة المحدثة من API
+        const statusData = await fetchOrderStatus(order.id);
+        
+        if (!statusData) return false;
+        
+        // التحقق من صلاحية الطلب
+        // expires_in.minutes يجب أن تكون موجبة (أكبر من 0) وإلا فالطلب منتهي الصلاحية
+        return statusData.expires_in?.minutes > 0;
+    }, [fetchOrderStatus]);
+
     // Fetch orders from API
     const fetchOrders = useCallback(async (isInitialLoad = false) => {
         // التحقق من المصادقة أولاً
@@ -158,9 +225,6 @@ export default function OrdersPage() {
 
             // For debugging - log the URL
             console.log("Fetching orders with URL:", `${API_BASE_URL}/orders?${params.toString()}`);
-            console.log("Selected statuses:", selectedStatuses);
-            console.log("Period:", period);
-            console.log("Date:", selectedDate);
 
             const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
                 method: 'GET',
@@ -340,6 +404,8 @@ export default function OrdersPage() {
     // Handle refresh
     const handleRefresh = () => {
         setRefreshing(true);
+        // مسح الكاش عند التحديث اليدوي
+        setOrderStatusCache({});
         if (initialLoadComplete) {
             fetchOrders();
         } else {
@@ -438,6 +504,24 @@ export default function OrdersPage() {
             icon: "/images/icontruck.png",
         },
     ];
+
+    // دالة للتحقق من صلاحية الطلب وإظهار خيار السائقين
+    const [validOrdersForDrivers, setValidOrdersForDrivers] = useState({});
+
+    // التحقق من صلاحية الطلب عند فتح القائمة
+    useEffect(() => {
+        const checkOrderValidity = async () => {
+            if (openOrderId) {
+                const order = orders.find(o => o.id === openOrderId);
+                if (order) {
+                    const isValid = await checkOrderIsValidForDrivers(order);
+                    setValidOrdersForDrivers(prev => ({ ...prev, [openOrderId]: isValid }));
+                }
+            }
+        };
+
+        checkOrderValidity();
+    }, [openOrderId, orders, checkOrderIsValidForDrivers]);
 
     return (
         <div className="space-y-8 fade-in-up">
@@ -831,7 +915,7 @@ export default function OrdersPage() {
                                                             {openOrderId === order.id && (
                                                                 <div 
                                                                     ref={dropdownRef}
-                                                                    className="absolute left-6 top-[70%] z-[100] w-[180px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200 "
+                                                                    className="absolute left-6 top-[70%] z-[100] w-[220px] bg-white dark:bg-card border border-border rounded-2xl shadow-xl py-2 fade-in animate-in zoom-in-95 duration-200"
                                                                 >
                                                                     <Link 
                                                                         href={`/myProfile/orders/${order.id}`}
@@ -840,10 +924,31 @@ export default function OrdersPage() {
                                                                         <BiSolidShow className="w-4 h-4 text-[#579BE8]" />
                                                                         <span>تفاصيل الطلب</span>
                                                                     </Link>
-                                                          
+
+                                                                    {/* إظهار خيار السائقين المتاحين فقط إذا كان الطلب pending ولم تنتهي صلاحيته */}
+                                                                    {checkingOrderStatus[order.id] ? (
+                                                                        <div className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-muted-foreground border-t border-border/50">
+                                                                            <FaSpinner className="w-4 h-4 animate-spin text-[#579BE8]" />
+                                                                            <span>جاري التحقق...</span>
+                                                                        </div>
+                                                                    ) : validOrdersForDrivers[order.id] ? (
+                                                                        <Link 
+                                                                            href={`/orders/available-drivers?orderId=${order.id}`}
+                                                                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground border-t border-border/50"
+                                                                        >
+                                                                            <FaTruck className="w-4 h-4 text-green-500" />
+                                                                            <span>السائقين المتاحين</span>
+                                                                            <span className="mr-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                                                                جديد
+                                                                            </span>
+                                                                        </Link>
+                                                                    ) : null}
+                                                                    
                                                                     <Link 
                                                                         href="/myProfile/help-center"
-                                                                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground border-t border-border/50"
+                                                                        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-secondary/50 transition-colors text-foreground ${
+                                                                            !checkingOrderStatus[order.id] && !validOrdersForDrivers[order.id] ? 'border-t border-border/50' : ''
+                                                                        }`}
                                                                     >
                                                                         <BiHelpCircle className="w-4 h-4 text-amber-500" />
                                                                         <span>مركز المساعدة</span>
@@ -867,7 +972,7 @@ export default function OrdersPage() {
 
                                     {/* Pagination Controls */}
                                     {!searchOrderNumber && (
-                                        <div className="p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
+                                        <div className="  p-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4">
                                             <div className="text-sm font-medium text-muted-foreground">
                                                 عرض <span className="text-foreground font-bold">
                                                     {Math.min((currentPage - 1) * perPage + 1, totalOrders)}-
