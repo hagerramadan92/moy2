@@ -135,11 +135,11 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
           ) : (
             <>
               <MessageCircle size={18} className="text-white sm:size-6" />
-              {hasUnreadMessages && messageCount > 0 && (
+              {/* {hasUnreadMessages && messageCount > 0 && (
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
                   {messageCount > 9 ? '9+' : messageCount}
                 </div>
-              )}
+              )} */}
             </>
           )}
         </motion.button>
@@ -172,17 +172,17 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                 {/* Statistics */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 text-xs gap-1">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${hasUnreadMessages ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                    <span className="text-gray-600">
+                    {/* <div className={`w-2 h-2 rounded-full ${hasUnreadMessages ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div> */}
+                    {/* <span className="text-gray-600">
                       {hasUnreadMessages ? `${messageCount} رسالة جديدة` : 'لا توجد رسائل جديدة'}
-                    </span>
+                    </span> */}
                   </div>
                   {unreadNotifications > 0 && (
                     <div className="flex items-center gap-2">
                       <Bell size={12} className="text-orange-500" />
-                      <span className="text-orange-600 font-medium">
+                      {/* <span className="text-orange-600 font-medium">
                         {unreadNotifications} إشعار
-                      </span>
+                      </span> */}
                     </div>
                   )}
                 </div>
@@ -196,11 +196,11 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-100 transition-all duration-200 shadow-sm">
                       <Users size={16} className="text-blue-600 group-hover:scale-110 transition-transform sm:size-5" />
                     </div>
-                    {hasUnreadMessages && messageCount > 0 && (
+                    {/* {hasUnreadMessages && messageCount > 0 && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                         {messageCount > 9 ? '9+' : messageCount}
                       </div>
-                    )}
+                    )} */}
                   </div>
                   <div className="flex-1 text-right">
                     <h4 className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors text-sm sm:text-base">محادثاتي</h4>
@@ -220,7 +220,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                 </button>
 
                 {/* Quick Actions */}
-                <div className="pt-3 border-t border-gray-100">
+                {/* <div className="pt-3 border-t border-gray-100">
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => {
@@ -247,7 +247,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                       دعم فني
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Footer Status */}
                 <div className="pt-3 border-t border-gray-100">
