@@ -30,9 +30,9 @@ export default function PaymentModal({
   offerAmount,
   onOfferExpired,
   setPendingPaymentOfferId,
-  onPaymentSuccess, // إضافة callback جديد للنجاح
-  onPaymentFailure, // إضافة callback جديد للفشل
-  router, // إضافة router للتوجيه
+  onPaymentSuccess,
+  onPaymentFailure,
+  router,
 }) {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
@@ -42,7 +42,8 @@ export default function PaymentModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState(null);
   const [showPaymentStatus, setShowPaymentStatus] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'failure', 'processing'
+  const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'failure'
+  const [tripData, setTripData] = useState(null); // تخزين بيانات الرحلة
   
   // Refs للتتبع
   const pusherRef = useRef(null);
@@ -50,17 +51,40 @@ export default function PaymentModal({
   const paymentInitiatedRef = useRef(false);
   const currentOrderIdRef = useRef(orderId);
   const currentDriverIdRef = useRef(selectedDriverId);
+  const successShownRef = useRef(false); // منع عرض شاشة النجاح أكثر من مرة
+  const fetchAttemptedRef = useRef(false); // منع محاولات الجلب المتكررة
 
-  // تحديث refs عند تغيير props
+  // تحديث refs عند تغيير props - ✅ مهم جداً
   useEffect(() => {
+    console.log('🔄 PaymentModal: Updating refs with new props', { orderId, selectedDriverId });
     currentOrderIdRef.current = orderId;
     currentDriverIdRef.current = selectedDriverId;
+    
+    // إعادة تعيين بعض الـ refs عندما يتغير orderId
+    if (orderId) {
+      paymentInitiatedRef.current = false;
+      successShownRef.current = false;
+      
+      // التحقق من وجود بيانات دفع معلقة
+      const pendingData = sessionStorage.getItem('paymentCallbackData');
+      if (pendingData) {
+        try {
+          const parsedData = JSON.parse(pendingData);
+          if (parsedData.orderId === orderId) {
+            console.log('📦 Found pending payment data for order:', orderId);
+            setupPusherListener(orderId);
+          }
+        } catch (error) {
+          console.error('Error checking pending payment:', error);
+        }
+      }
+    }
   }, [orderId, selectedDriverId]);
 
   /* =============================
-     إعداد Pusher للاستماع للدفع
+     إعداد Pusher للاستماع للحدث الخاص بالمستخدم
   ============================== */
-  const setupPusherListener = (orderId, driverId) => {
+  const setupPusherListener = (orderId) => {
     try {
       // تنظيف الاتصال السابق إذا وجد
       if (channelRef.current) {
@@ -72,9 +96,12 @@ export default function PaymentModal({
         pusherRef.current.disconnect();
       }
 
+      // إعادة تعيين ref النجاح عند إعداد مستمع جديد
+      successShownRef.current = false;
+
       // إنشاء اتصال Pusher جديد
       pusherRef.current = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY, {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER,
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
         authEndpoint: `${API_BASE_URL}/broadcasting/auth`,
         auth: {
           headers: {
@@ -84,35 +111,96 @@ export default function PaymentModal({
         },
       });
 
-      // الاشتراك في القناة
-      const channelName = `TripStartedForDriver`;
+      // الاشتراك في القناة الخاصة بالطلب
+      const channelName = `order.${orderId}`;
+      console.log('🔔 Subscribing to channel:', channelName);
       channelRef.current = pusherRef.current.subscribe(channelName);
 
-      // الاستماع للحدث الخاص بالسائق
-      const eventName = `driver.${driverId}`;
+      // الاستماع للحدث TripStartedForUser
+      const eventName = 'TripStartedForUser';
       
       channelRef.current.bind(eventName, (data) => {
-        console.log('Pusher event received:', data);
+        console.log('🎉 Pusher event received - TripStartedForUser:', data);
         
-        // التحقق من حالة الدفع
-        if (data.paid_at || (data.data?.payment?.status === 'paid')) {
-          // دفع ناجح
+        // التأكد من أننا لم نعرض النجاح من قبل
+        if (successShownRef.current) {
+          console.log('Success already shown, ignoring event');
+          return;
+        }
+        
+        // حفظ بيانات الرحلة
+        setTripData(data);
+        
+        // التحقق من حالة الدفع والرحلة
+        if (data.paid_at || data.order?.payment_status === 'paid') {
+          // دفع ناجح وبدء الرحلة - نعرض شاشة النجاح فقط هنا
+          successShownRef.current = true;
           setPaymentStatus('success');
           setShowPaymentStatus(true);
           
-          // تأخير التوجيه لصفحة التفاصيل
+          // استدعاء callback النجاح
+          if (onPaymentSuccess) {
+            onPaymentSuccess(data);
+          }
+          
+          // مسح بيانات الدفع من الجلسة
+          sessionStorage.removeItem('paymentCallbackData');
+          localStorage.removeItem('pendingOfferData');
+          
+          // تأخير التوجيه لصفحة تفاصيل الطلب
           setTimeout(() => {
             if (router) {
               router.push(`/orders/${orderId}`);
             }
             onClose();
-          }, 2000);
+          }, 3000);
+        }
+      });
+
+      // الاستماع لأي أحداث أخرى متعلقة بالدفع
+      channelRef.current.bind('payment.succeeded', (data) => {
+        console.log('💰 Payment succeeded event:', data);
+        // نعرض شاشة النجاح فقط عند نجاح الدفع الفعلي
+        if (!successShownRef.current) {
+          successShownRef.current = true;
+          setPaymentStatus('success');
+          setShowPaymentStatus(true);
+          
+          if (onPaymentSuccess) {
+            onPaymentSuccess(data);
+          }
+          
+          sessionStorage.removeItem('paymentCallbackData');
+          localStorage.removeItem('pendingOfferData');
+          
+          setTimeout(() => {
+            if (router) {
+              router.push(`/orders/${orderId}`);
+            }
+            onClose();
+          }, 3000);
+        }
+      });
+
+      channelRef.current.bind('payment.failed', (data) => {
+        console.log('❌ Payment failed event:', data);
+        // نعرض شاشة الفشل عند فشل الدفع
+        setPaymentStatus('failure');
+        setShowPaymentStatus(true);
+        
+        if (onPaymentFailure) {
+          onPaymentFailure(data);
         }
       });
 
       // الاستماع لأخطاء الاتصال
       pusherRef.current.connection.bind('error', (err) => {
         console.error('Pusher connection error:', err);
+      });
+
+      // الاستماع لحالة الاتصال
+      pusherRef.current.connection.bind('connected', () => {
+        console.log('✅ Pusher connected successfully');
       });
 
     } catch (error) {
@@ -124,11 +212,23 @@ export default function PaymentModal({
      GET payment methods
   ============================== */
   const fetchPaymentMethods = async () => {
+    // منع المحاولات المتكررة
+    if (fetchAttemptedRef.current) return;
+    
     try {
       setLoadingMethods(true);
+      setError(null); // مسح أي أخطاء سابقة
+      fetchAttemptedRef.current = true;
 
       const accessToken = getAccessToken();
+      
+      if (!accessToken) {
+        setError('يرجى تسجيل الدخول أولاً');
+        setLoadingMethods(false);
+        return;
+      }
 
+      console.log('Fetching payment methods...');
       const res = await fetch(`${API_BASE_URL}/payment-methods`, {
         headers: {
           Accept: "application/json",
@@ -137,14 +237,17 @@ export default function PaymentModal({
       });
 
       const data = await res.json();
+      console.log('Payment methods response:', data);
 
       if (res.ok && data.status) {
-        setPaymentMethods(data.data);
+        setPaymentMethods(data.data || []);
+        console.log('Payment methods loaded:', data.data);
       } else {
         throw new Error(data.message || "فشل تحميل طرق الدفع");
       }
     } catch (err) {
       setError(err.message);
+      console.error('Error fetching payment methods:', err);
     } finally {
       setLoadingMethods(false);
     }
@@ -152,11 +255,35 @@ export default function PaymentModal({
 
   useEffect(() => {
     if (isOpen) {
+      console.log('🔓 PaymentModal opened with orderId:', orderId);
+      // إعادة تعيين ref عند الفتح
+      fetchAttemptedRef.current = false;
       fetchPaymentMethods();
-      // إعادة تعيين الحالات
+      
+      // إعادة تعيين الحالات - نعرض فقط شاشة اختيار طرق الدفع
       setPaymentStatus(null);
       setShowPaymentStatus(false);
+      setTripData(null);
+      setError(null);
       paymentInitiatedRef.current = false;
+      successShownRef.current = false;
+      setProcessingMethod(null);
+      setSelectedMethod(null);
+      
+      // التحقق من وجود بيانات دفع معلقة عند فتح المودال
+      const pendingData = sessionStorage.getItem('paymentCallbackData');
+      if (pendingData && orderId) {
+        try {
+          const parsedData = JSON.parse(pendingData);
+          if (parsedData.orderId === orderId) {
+            console.log('Found pending payment data, setting up Pusher listener');
+            // إعداد مستمع Pusher على القناة الصحيحة
+            setupPusherListener(orderId);
+          }
+        } catch (error) {
+          console.error('Error checking pending payment:', error);
+        }
+      }
     } else {
       // Reset state when modal closes
       setSelectedMethod(null);
@@ -165,7 +292,10 @@ export default function PaymentModal({
       setIsConfirming(false);
       setPaymentStatus(null);
       setShowPaymentStatus(false);
+      setTripData(null);
       paymentInitiatedRef.current = false;
+      successShownRef.current = false;
+      fetchAttemptedRef.current = false;
       
       // تنظيف Pusher عند إغلاق المودال
       if (channelRef.current) {
@@ -187,7 +317,7 @@ export default function PaymentModal({
         pusherRef.current.disconnect();
       }
     };
-  }, [isOpen]);
+  }, [isOpen, orderId]);
 
   /* =============================
      Initiate Order Payment API
@@ -196,6 +326,8 @@ export default function PaymentModal({
     const accessToken = getAccessToken();
     const deviceId = getDeviceId();
     const ipAddress = getIpAddress();
+
+    console.log('Initiating payment with:', { orderId, offerId, gateway, paymentMethod });
 
     const res = await fetch(
       `${API_BASE_URL}/orders/payments/${orderId}/initiate`,
@@ -220,47 +352,16 @@ export default function PaymentModal({
     );
 
     const data = await res.json();
+    
+    // طباعة الـ response من API
+    console.log('Initiate Payment Response:', data);
 
-    if (res.ok && data.status) return data.data;
+    if (res.ok && data.status) {
+      // تأكد من إرجاع البيانات كاملة
+      return data;
+    }
 
     throw new Error(data.message || "فشل بدء عملية الدفع");
-  };
-
-  /* =============================
-     التحقق من حالة الدفع
-  ============================== */
-  const checkPaymentStatus = async (orderId) => {
-    try {
-      const accessToken = getAccessToken();
-      const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.status) {
-        const paymentStatus = data.data?.payment?.status;
-        if (paymentStatus === 'paid') {
-          setPaymentStatus('success');
-          setShowPaymentStatus(true);
-          
-          setTimeout(() => {
-            if (router) {
-              router.push(`/orders/${orderId}`);
-            }
-            onClose();
-          }, 2000);
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-      return false;
-    }
   };
 
   /* =============================
@@ -287,40 +388,42 @@ export default function PaymentModal({
       const paymentData = await initiateOrderPayment(
         orderId,
         selectedOfferId,
-        method.id, // gateway (e.g., "tabby", "paymob", "tamara")
-        paymentMethod, // payment_method
+        method.id,
+        paymentMethod,
         saveCard
       );
       
-      // Extract payment URL from response
-      const payment = paymentData?.payment;
+      // طباعة الـ response بالكامل للتحقق
+      console.log('Full Payment Response:', JSON.stringify(paymentData, null, 2));
+      
+      // استخراج رابط الدفع من الـ response
       let paymentUrl = null;
       
-      if (payment) {
-        // Check direct payment URLs first
-        paymentUrl = payment.payment_url || 
-                    payment.checkout_url || 
-                    payment.qr_code_url;
+      // المسار الصحيح للوصول إلى raw_response
+      if (paymentData?.data?.payment?.payment?.raw_response) {
+        const rawResponse = paymentData.data.payment.payment.raw_response;
         
-        // If not found, check raw_response for gateway-specific URLs
-        if (!paymentUrl && payment.raw_response) {
-          const rawResponse = payment.raw_response;
-          
-          // Check for Tabby web_url in installments
-          if (rawResponse.configuration?.available_products?.installments?.[0]?.web_url) {
-            paymentUrl = rawResponse.configuration.available_products.installments[0].web_url;
-          }
-          
-          // Check for QR code URL
-          if (!paymentUrl && rawResponse.configuration?.available_products?.installments?.[0]?.qr_code) {
-            paymentUrl = rawResponse.configuration.available_products.installments[0].qr_code;
-          }
+        // البحث عن رابط Tabby في المكان الصحيح
+        if (rawResponse.configuration?.available_products?.installments?.[0]?.web_url) {
+          paymentUrl = rawResponse.configuration.available_products.installments[0].web_url;
+          console.log('Found Tabby URL:', paymentUrl);
         }
+        // إذا لم يتم العثور على رابط Tabby، جرب البحث عن QR code
+        else if (rawResponse.configuration?.available_products?.installments?.[0]?.qr_code) {
+          paymentUrl = rawResponse.configuration.available_products.installments[0].qr_code;
+        }
+      }
+      
+      // طريقة بديلة للوصول إلى الرابط
+      if (!paymentUrl && paymentData?.data?.payment?.payment?.raw_response?.configuration?.available_products?.installments?.[0]?.web_url) {
+        paymentUrl = paymentData.data.payment.payment.raw_response.configuration.available_products.installments[0].web_url;
       }
 
       if (paymentUrl) {
         // تحديث حالة العرض
-        const offerStatus = paymentData?.offer?.status || paymentData?.status || 'pending_payment';
+        const offerStatus = paymentData?.data?.order?.status || 
+                           paymentData?.data?.payment?.status || 
+                           'pending_payment';
         
         // حفظ بيانات العرض
         localStorage.setItem('pendingOfferData', JSON.stringify({
@@ -343,25 +446,27 @@ export default function PaymentModal({
           orderId,
           driverId: selectedDriverId,
           offerId: selectedOfferId,
-          paymentId: payment?.payment_id,
-          sessionId: payment?.session_id,
+          paymentId: paymentData?.data?.payment?.payment?.payment_id || 
+                     paymentData?.data?.payment?.payment_id,
+          sessionId: paymentData?.data?.payment?.payment?.session_id || 
+                     paymentData?.data?.payment?.session_id,
           gateway: method.id
         };
         
         sessionStorage.setItem('paymentCallbackData', JSON.stringify(paymentCallbackData));
 
-        // إعداد مستمع Pusher قبل التوجيه لبوابة الدفع
-        if (selectedDriverId) {
-          setupPusherListener(orderId, selectedDriverId);
-        }
+        // إعداد مستمع Pusher على القناة الصحيحة قبل التوجيه لبوابة الدفع
+        setupPusherListener(orderId);
 
         // تأخير بسيط للتأكد من إعداد Pusher
         setTimeout(() => {
-          // التوجيه المباشر لبوابة الدفع
+          // التوجيه المباشر لبوابة الدفع - لا نعرض شاشة النجاح هنا
+          console.log('Redirecting to payment URL:', paymentUrl);
           window.location.href = paymentUrl;
         }, 500);
         
       } else {
+        console.error('Payment Data Structure:', paymentData);
         throw new Error("لم يتم الحصول على رابط الدفع من بوابة الدفع");
       }
     } catch (err) {
@@ -389,46 +494,13 @@ export default function PaymentModal({
     }
   };
 
-  /* =============================
-     التحقق من حالة الدفع عند العودة للصفحة
-  ============================== */
-  useEffect(() => {
-    // التحقق من وجود بيانات دفع معلقة عند فتح المودال
-    const checkPendingPayment = async () => {
-      const pendingData = sessionStorage.getItem('paymentCallbackData');
-      if (pendingData && isOpen && orderId && selectedDriverId) {
-        try {
-          const parsedData = JSON.parse(pendingData);
-          if (parsedData.orderId === orderId) {
-            // إعداد مستمع Pusher
-            setupPusherListener(orderId, selectedDriverId);
-            
-            // التحقق من حالة الدفع
-            await checkPaymentStatus(orderId);
-          }
-        } catch (error) {
-          console.error('Error checking pending payment:', error);
-        }
-      }
-    };
-
-    checkPendingPayment();
-
-    // تنظيف عند إغلاق المودال
-    return () => {
-      if (!isOpen) {
-        sessionStorage.removeItem('paymentCallbackData');
-      }
-    };
-  }, [isOpen, orderId, selectedDriverId]);
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative">
-        {/* Payment Status Overlay */}
-        {showPaymentStatus && (
+        {/* Payment Status Overlay - نعرضها فقط عند نجاح أو فشل الدفع الفعلي */}
+        {showPaymentStatus && paymentStatus && (
           <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex items-center justify-center">
             <div className="text-center p-6">
               {paymentStatus === 'success' ? (
@@ -439,6 +511,31 @@ export default function PaymentModal({
                     </svg>
                   </div>
                   <h3 className="text-2xl font-bold text-green-600 mb-2">تم الدفع بنجاح!</h3>
+                  
+                  {/* عرض بيانات الرحلة إذا وجدت */}
+                  {tripData && (
+                    <div className="mb-4 text-right">
+                      {tripData.message && (
+                        <p className="text-gray-700 mb-2">{tripData.message}</p>
+                      )}
+                      
+                      {tripData.driver && (
+                        <div className="bg-gray-50 p-3 rounded-lg mb-2">
+                          <p className="text-sm text-gray-600">السائق: {tripData.driver.name}</p>
+                          <p className="text-sm text-gray-600">رقم السائق: {tripData.driver.phone}</p>
+                        </div>
+                      )}
+                      
+                      {tripData.order && (
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-sm text-gray-600">رقم الطلب: {tripData.order.id}</p>
+                          <p className="text-sm text-gray-600">الحالة: {tripData.order.status.label}</p>
+                          <p className="text-sm text-gray-600">السعر: {tripData.order.price} ريال</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <p className="text-gray-600">جاري تحويلك لصفحة تفاصيل الطلب...</p>
                 </>
               ) : paymentStatus === 'failure' ? (
@@ -455,21 +552,16 @@ export default function PaymentModal({
                       setShowPaymentStatus(false);
                       setPaymentStatus(null);
                       paymentInitiatedRef.current = false;
+                      // إعادة تحميل طرق الدفع
+                      fetchAttemptedRef.current = false;
+                      fetchPaymentMethods();
                     }}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                   >
                     حاول مرة أخرى
                   </button>
                 </>
-              ) : (
-                <>
-                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-blue-600 mb-2">جاري معالجة الدفع</h3>
-                  <p className="text-gray-600">يرجى الانتظار...</p>
-                </>
-              )}
+              ) : null}
             </div>
           </div>
         )}
@@ -482,77 +574,86 @@ export default function PaymentModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <h3 className="font-bold mb-4">اختر طريقة الدفع</h3>
+        {/* Content - نعرض طرق الدفع دائمًا ما لم يكن هناك نجاح أو فشل */}
+        {!showPaymentStatus && (
+          <div className="p-6">
+            <h3 className="font-bold mb-4">اختر طريقة الدفع</h3>
 
-          {loadingMethods ? (
-            <p className="text-sm text-gray-500">جاري تحميل طرق الدفع...</p>
-          ) : (
-            <div className="space-y-3">
-              {paymentMethods.map((method) => {
-                const Icon = ICONS_MAP[method.icon] || FaCreditCard;
-                const isProcessing = processingMethod === method.id;
-                const isDisabled = processingMethod !== null && !isProcessing;
+            {loadingMethods ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-sm text-gray-500">جاري تحميل طرق الدفع...</p>
+              </div>
+            ) : paymentMethods.length === 0 && !error ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">لا توجد طرق دفع متاحة</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paymentMethods.map((method) => {
+                  const Icon = ICONS_MAP[method.icon] || FaCreditCard;
+                  const isProcessing = processingMethod === method.id;
+                  const isDisabled = processingMethod !== null && !isProcessing;
 
-                return (
-                  <button
-                    key={method.id}
-                    onClick={() => handlePaymentMethodClick(method)}
-                    disabled={isDisabled || isProcessing || showPaymentStatus}
-                    className={`w-full p-4 rounded-xl border-2 flex gap-4 transition ${
-                      isProcessing
-                        ? "border-blue-500 bg-blue-50"
-                        : isDisabled
-                        ? "border-gray-200 opacity-50 cursor-not-allowed"
-                        : "border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-                    }`}
-                  >
-                    <div
-                      className={`p-3 rounded-lg ${
+                  return (
+                    <button
+                      key={method.id}
+                      onClick={() => handlePaymentMethodClick(method)}
+                      disabled={isDisabled || isProcessing}
+                      className={`w-full p-4 rounded-xl border-2 flex gap-4 transition ${
                         isProcessing
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-gray-100 text-gray-600"
+                          ? "border-blue-500 bg-blue-50"
+                          : isDisabled
+                          ? "border-gray-200 opacity-50 cursor-not-allowed"
+                          : "border-gray-200 hover:border-blue-300 hover:bg-blue-50"
                       }`}
                     >
-                      {isProcessing ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      ) : (
-                      <Icon size={20} />
-                      )}
-                    </div>
-
-                    <div className="flex-1 text-right">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-medium">{method.name}</span>
-                        {isProcessing && (
-                          <span className="text-xs text-blue-600">جاري التحضير...</span>
+                      <div
+                        className={`p-3 rounded-lg ${
+                          isProcessing
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {isProcessing ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        ) : (
+                        <Icon size={20} />
                         )}
                       </div>
 
-                      <p className="text-xs text-gray-500">
-                        {method.description}
-                      </p>
+                      <div className="flex-1 text-right">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium">{method.name}</span>
+                          {isProcessing && (
+                            <span className="text-xs text-blue-600">جاري التحضير...</span>
+                          )}
+                        </div>
 
-                      {method.supports_installments && (
-                        <p className="text-xs text-indigo-600 mt-1">
-                          يدعم التقسيط
+                        <p className="text-xs text-gray-500">
+                          {method.description}
                         </p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded flex gap-2">
-              <BiErrorCircle size={18} />
-              <span>{error}</span>
-            </div>
-          )}
-        </div>
+                        {method.supports_installments && (
+                          <p className="text-xs text-indigo-600 mt-1">
+                            يدعم التقسيط
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded flex gap-2">
+                <BiErrorCircle size={18} />
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

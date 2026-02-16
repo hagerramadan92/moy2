@@ -6,9 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDriverData } from './DriverCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  CheckCircle2, 
   Clock, 
-  Star, 
   ChevronLeft, 
   Truck, 
   Users, 
@@ -80,7 +78,12 @@ export default function AvailableDriversContent({ onBack }) {
   
   const mapInitializedRef = useRef(false);
   const isLocationInitializedRef = useRef(false); // ✅ إضافة ref لمنع التكرار
+  const paymentProcessedRef = useRef(false); // ✅ إضافة ref لمنع معالجة الدفع أكثر من مرة
   
+  // ✅ حالات جديدة للتمييز بين اختيار الدفع والقبول الفعلي
+  const [selectedForPaymentOfferId, setSelectedForPaymentOfferId] = useState(null); // ✅ عرض تم اختياره للدفع
+  const [processingPaymentOfferId, setProcessingPaymentOfferId] = useState(null); // ✅ عرض جاري معالجة الدفع
+
   const {
     isConnected: pusherConnected,
     connectionState: pusherState,
@@ -226,6 +229,7 @@ export default function AvailableDriversContent({ onBack }) {
       if (data.offer?.id) {
         setAcceptedOfferId(data.offer.id);
         setPendingPaymentOfferId(null);
+        setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
         rejectOtherOffers(data.offer.id);
       }
       
@@ -235,6 +239,62 @@ export default function AvailableDriversContent({ onBack }) {
       }, 3000);
     }
   }, [orderId, selectedOffer, router]);
+
+  // Handle successful payment
+  const handlePaymentSuccess = useCallback((data) => {
+    console.log('💰 Payment success callback received:', data);
+    
+    // تحديث حالة الطلب بعد الدفع الناجح
+    if (data.order?.id === orderId) {
+      setAcceptedOfferId(data.order?.accepted_offer_id || selectedOfferId);
+      setPendingPaymentOfferId(null);
+      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+      setPaymentSuccess(true);
+      
+      // تنظيف البيانات
+      localStorage.removeItem('pendingOfferData');
+      sessionStorage.removeItem('paymentCallbackData');
+      
+      // إظهار إشعار النجاح
+      setDriverAcceptedNotification({
+        id: Date.now(),
+        message: 'تم الدفع بنجاح! جاري تجهيز الرحلة...',
+        driverName: data.driver?.name || 'السائق',
+        expiresIn: 5
+      });
+      
+      // إعادة تحميل العروض بعد ثانية
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
+    }
+  }, [orderId, selectedOfferId]);
+
+  // Handle payment failure
+  const handlePaymentFailure = useCallback((data) => {
+    console.log('❌ Payment failure callback received:', data);
+    
+    // إظهار إشعار الفشل
+    setError('فشلت عملية الدفع. يرجى المحاولة مرة أخرى.');
+    
+    // إعادة تعيين حالة الدفع
+    setPendingPaymentOfferId(null);
+    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+    paymentProcessedRef.current = false;
+  }, []);
+
+  // Handle offer expired
+  const handleOfferExpired = useCallback((offerId) => {
+    console.log('⏰ Offer expired:', offerId);
+    
+    setExpiredOfferIds(prev => [...prev, offerId]);
+    setPendingPaymentOfferId(null);
+    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+    paymentProcessedRef.current = false;
+    
+    // إظهار إشعار انتهاء العرض
+    setError('انتهت صلاحية هذا العرض. يرجى اختيار عرض آخر.');
+  }, []);
 
   // Setup Pusher listeners
   useEffect(() => {
@@ -356,10 +416,15 @@ export default function AvailableDriversContent({ onBack }) {
 
   // Payment status check
   useEffect(() => {
+    // منع المعالجة المتكررة
+    if (paymentProcessedRef.current) return;
+    
     if (paymentStatus === 'cancel' || paymentCancelParam === 'true') {
       setPendingPaymentOfferId(null);
+      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
       setPaymentSuccess(false);
       localStorage.removeItem('pendingOfferData');
+      paymentProcessedRef.current = true;
     }
     
     if (paymentStatus === 'success' || paymentSuccessParam === 'true') {
@@ -369,28 +434,40 @@ export default function AvailableDriversContent({ onBack }) {
         const acceptedId = callbackData.offerId;
         setAcceptedOfferId(acceptedId);
         setPendingPaymentOfferId(null);
+        setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
         localStorage.removeItem('pendingOfferData');
         rejectOtherOffers(acceptedId);
+        paymentProcessedRef.current = true;
       }
     }
     
     const callbackData = getPaymentCallbackData();
-    if (callbackData && callbackData.offerId && !paymentCancelParam) {
+    if (callbackData && callbackData.offerId && !paymentCancelParam && !paymentProcessedRef.current) {
       const acceptedId = callbackData.offerId;
       setAcceptedOfferId(acceptedId);
       setPendingPaymentOfferId(null);
+      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
       setPaymentSuccess(true);
       rejectOtherOffers(acceptedId);
+      paymentProcessedRef.current = true;
     }
     
-    if (!paymentCancelParam && paymentStatus !== 'cancel') {
+    if (!paymentCancelParam && paymentStatus !== 'cancel' && !paymentProcessedRef.current) {
       const pendingOfferData = getPendingOfferData();
       if (pendingOfferData && pendingOfferData.orderId === orderId) {
         setPendingPaymentOfferId(pendingOfferData.offerId);
+        setSelectedForPaymentOfferId(pendingOfferData.offerId); // ✅ تعيين كـ "محدد للدفع"
         setSelectedDriverId(pendingOfferData.driverId);
         setSelectedOfferId(pendingOfferData.offerId);
       }
     }
+
+    // إعادة تعيين ref بعد 5 ثواني للسماح بمحاولة جديدة
+    return () => {
+      setTimeout(() => {
+        paymentProcessedRef.current = false;
+      }, 5000);
+    };
   }, [orderId, paymentStatus, paymentSuccessParam, paymentCancelParam]);
 
   const fetchOffers = async () => {
@@ -442,6 +519,7 @@ export default function AvailableDriversContent({ onBack }) {
           const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
           setAcceptedOfferId(acceptedId);
           setPendingPaymentOfferId(null);
+          setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
           localStorage.removeItem('pendingOfferData');
           
           setTimeout(() => {
@@ -559,15 +637,20 @@ export default function AvailableDriversContent({ onBack }) {
     setSelectedDriverId(driverId);
     setSelectedOfferId(offerId);
     setSelectedOffer(offer);
+    setSelectedForPaymentOfferId(offerId); // ✅ تعيين كـ "محدد للدفع"
     setIsModalOpen(true);
-    setPendingPaymentOfferId(offerId);
     sessionStorage.setItem('selectedDriver', JSON.stringify(driverData));
+    // إعادة تعيين ref عند اختيار سائق جديد
+    paymentProcessedRef.current = false;
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setPendingPaymentOfferId(null);
+    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
     localStorage.removeItem('pendingOfferData');
+    // إعادة تعيين ref عند إغلاق المودال
+    paymentProcessedRef.current = false;
   };
 
   const handleConfirmPayment = async (methodId, driverId, paymentData = null) => {
@@ -795,7 +878,9 @@ export default function AvailableDriversContent({ onBack }) {
                       <Truck className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm">تم قبول طلبك!</h4>
+                      <h4 className="font-bold text-sm">
+                        {driverAcceptedNotification.message.includes('تم الدفع') ? '✅ تم الدفع' : 'تم قبول طلبك!'}
+                      </h4>
                       <p className="text-xs opacity-90 mt-1">
                         {driverAcceptedNotification.message}
                       </p>
@@ -945,6 +1030,8 @@ export default function AvailableDriversContent({ onBack }) {
                 const isAccepted = acceptedOfferId === offer.id;
                 const isPendingPayment = pendingPaymentOfferId === offer.id;
                 const isExpired = expiredOfferIds.includes(offer.id);
+                const isSelectedForPayment = selectedForPaymentOfferId === offer.id && !isAccepted && !isPendingPayment && !isExpired; // ✅ حالة جديدة
+                
                 return (
                   <motion.div
                     key={offer.id}
@@ -964,7 +1051,8 @@ export default function AvailableDriversContent({ onBack }) {
                         const driverData = formatDriverData(offer);
                         router.push(`/orders/driver_profile?driverId=${offer.driver_id}`);
                       }}
-                      isPending={!isAccepted && !isPendingPayment && !isExpired}
+                      isPending={!isAccepted && !isPendingPayment && !isExpired && !isSelectedForPayment} // ✅ تعديل الشرط
+                      isSelectedForPayment={isSelectedForPayment} // ✅ تمرير الخاصية الجديدة
                       isAccepted={isAccepted}
                       isPendingPayment={isPendingPayment}
                       isExpired={isExpired}
@@ -1058,6 +1146,10 @@ export default function AvailableDriversContent({ onBack }) {
         orderId={orderId}
         offerAmount={selectedOffer?.price}
         setPendingPaymentOfferId={setPendingPaymentOfferId}
+        onOfferExpired={handleOfferExpired}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentFailure={handlePaymentFailure}
+        router={router}
       />
     </div>
   );

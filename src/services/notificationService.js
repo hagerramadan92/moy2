@@ -7,7 +7,6 @@ const isProduction = isBrowser &&
                      !window.location.hostname.includes('localhost') && 
                      !window.location.hostname.includes('127.0.0.1');
 
-console.log(`🔔 Notification Service: ${isProduction ? 'Production' : 'Development'} mode`);
 
 // ==================== إعدادات الخدمة ====================
 const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
@@ -43,7 +42,6 @@ const setSessionId = (sessionId) => {
       localStorage.setItem('session_id', sessionId);
       sessionStorage.setItem('session_id', sessionId);
       if (!isProduction) {
-        console.log('🔔 Session ID saved:', sessionId);
       }
     }
   } catch (e) {
@@ -61,7 +59,6 @@ const createSession = async () => {
     const existingSessionId = getSessionId();
     if (existingSessionId) {
       if (!isProduction) {
-        console.log('🔔 Using existing session:', existingSessionId);
       }
       return existingSessionId;
     }
@@ -97,7 +94,6 @@ const createSession = async () => {
           if (sessionId) {
             setSessionId(sessionId);
             if (!isProduction) {
-              console.log('🔔 New session created:', sessionId);
             }
             sessionCreationPromise = null; // إعادة تعيين بعد النجاح
             return sessionId;
@@ -108,7 +104,6 @@ const createSession = async () => {
         const fallbackSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         setSessionId(fallbackSessionId);
         if (!isProduction) {
-          console.log('🔔 Fallback session created:', fallbackSessionId);
         }
         sessionCreationPromise = null;
         return fallbackSessionId;
@@ -296,7 +291,6 @@ const createAxiosInstance = () => {
     }
     
     if (!isProduction) {
-      console.log('🔔 Request:', config.method?.toUpperCase(), config.url);
     }
     
     return config;
@@ -309,7 +303,6 @@ const createAxiosInstance = () => {
   instance.interceptors.response.use(
     (response) => {
       if (!isProduction) {
-        console.log('🔔 Response:', response.status, response.config.url);
       }
       return response;
     },
@@ -370,7 +363,6 @@ const notificationCache = {
         };
         localStorage.setItem(`notification_${key}`, JSON.stringify(cacheItem));
         if (!isProduction) {
-          console.log('🔔 Cache set:', key);
         }
       }
     } catch (e) {
@@ -393,7 +385,6 @@ const notificationCache = {
         }
         
         if (!isProduction) {
-          console.log('🔔 Cache hit:', key);
         }
         return cacheItem.data;
       }
@@ -423,7 +414,6 @@ class NotificationService {
 
   // ==================== الحصول على الإشعارات ====================
   async getNotifications(params = {}) {
-    console.log('🔔 getNotifications called with params:', params);
     
     // التحقق من المصادقة أولاً
     if (!checkAuthentication()) {
@@ -438,7 +428,6 @@ class NotificationService {
     
     // في Production، نعود بمصفوفة فارغة لتجنب مشاكل CORS
     if (isProduction) {
-      console.log('🔔 Returning empty notifications in production');
       return {
         success: true,
         data: [],
@@ -572,7 +561,6 @@ class NotificationService {
 
   // ==================== الحصول على الإشعارات الجديدة ====================
   async getNewNotifications(sinceTimestamp) {
-    console.log(`🔔 getNewNotifications since ${sinceTimestamp}`);
     
     if (!checkAuthentication(false)) {
       return {
@@ -625,7 +613,6 @@ class NotificationService {
 
   // ==================== تحديد الإشعار كمقروء ====================
   async markAsRead(notificationId) {
-    console.log(`🔔 markAsRead ${notificationId}`);
     
     if (!checkAuthentication(false)) {
       return {
@@ -670,7 +657,6 @@ class NotificationService {
 
   // ==================== تحديد جميع الإشعارات كمقروءة ====================
   async markAllAsRead() {
-    console.log('🔔 markAllAsRead called');
     
     if (!checkAuthentication(false)) {
       return {
@@ -712,41 +698,6 @@ class NotificationService {
     }
   }
 
-  // ==================== بدء التحديث التلقائي ====================
-  // startPolling(callback, interval = 30000) { // 30 ثانية افتراضياً
-  //   if (this.isPolling) {
-  //     console.log('🔔 Polling already started');
-  //     return;
-  //   }
-    
-  //   this.isPolling = true;
-  //   console.log('🔔 Starting polling with interval:', interval);
-    
-  //   const poll = async () => {
-  //     if (!this.isPolling) return;
-      
-  //     try {
-  //       const unreadCount = await this.getUnreadCount();
-  //       const notifications = await this.getRecentNotifications(5);
-        
-  //       if (callback && typeof callback === 'function') {
-  //         callback({
-  //           unreadCount,
-  //           notifications: notifications.success ? notifications.data : []
-  //         });
-  //       }
-  //     } catch (error) {
-  //       console.error('🔔 Polling error:', error);
-  //     }
-      
-  //     if (this.isPolling) {
-  //       this.pollingInterval = setTimeout(poll, interval);
-  //     }
-  //   };
-    
-  //   // بدء التحديث الفوري
-  //   poll();
-  // }
 
   // ==================== إيقاف التحديث التلقائي ====================
   stopPolling() {
@@ -754,13 +705,11 @@ class NotificationService {
     if (this.pollingInterval) {
       clearTimeout(this.pollingInterval);
       this.pollingInterval = null;
-      console.log('🔔 Polling stopped');
     }
   }
 
   // ==================== اختبار الاتصال ====================
   async testConnection() {
-    console.log('🔔 Testing connection...');
     
     try {
       // محاولة جلب عدد الإشعارات غير المقروءة كاختبار
@@ -795,7 +744,6 @@ class NotificationService {
             localStorage.removeItem(key);
           }
         });
-        console.log('🔔 Notification cache cleared');
       }
     } catch (e) {
       console.warn('🔔 Error clearing notification cache:', e);
@@ -804,7 +752,6 @@ class NotificationService {
 
   // ==================== تسجيل الجهاز للإشعارات ====================
   async registerDevice(deviceData) {
-    console.log('🔔 registerDevice called with:', deviceData);
     
     try {
       // التأكد من وجود session
@@ -835,7 +782,6 @@ class NotificationService {
 
       if (response.data && response.data.status) {
         if (!isProduction) {
-          console.log('🔔 Device registered successfully:', response.data);
         }
         return {
           success: true,

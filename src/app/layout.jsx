@@ -17,11 +17,11 @@ export const almarai = Almarai({
 });
 
 // ✅ Site constants
-const siteName = "وايت مياة";
+const siteName = "وايت مياه";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-const defaultTitle = "وايت مياة | مياه نقية وتوصيل سريع";
+const defaultTitle = "وايت مياه | مياه نقية وتوصيل سريع";
 const defaultDescription =
-  "وايت مياة: مياه نقية وصحية مع خدمة توصيل سريعة. مقالات ونصائح عن الصحة والمياه، وخدمات للسائقين والتعاقدات وإدارة الحساب.";
+  "وايت مياه: مياه نقية وصحية مع خدمة توصيل سريعة. مقالات ونصائح عن الصحة والمياه، وخدمات للسائقين والتعاقدات وإدارة الحساب.";
 
 // ✅ Next.js Metadata (App Router)
 export const metadata = {
@@ -83,7 +83,7 @@ export const metadata = {
   },
 
   keywords: [
-    "وايت مياة",
+    "وايت مياه",
     "مياه",
     "توصيل مياه",
     "مياه شرب",

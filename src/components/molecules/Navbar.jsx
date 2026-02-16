@@ -170,7 +170,7 @@ export default function Navbar() {
 
             <div className="leading-tight">
               <div className="sm:text-2xl text-lg font-extrabold tracking-tight text-slate-900">
-                ويت مياة 
+                وايت مياه 
               </div>
               <div className="sm:text-sm text-xs font-medium text-slate-500">
               أسرع خدمة توصيل

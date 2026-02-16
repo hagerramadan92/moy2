@@ -128,7 +128,7 @@ export default function ChooseUs({ data }) {
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
           <p className="text-xs sm:text-sm md:text-base max-w-3xl mx-auto leading-relaxed mt-4">
-           نوفر لك أسهل تجربة طلب و توصيل وايت مياة بالمملكة
+           نوفر لك أسهل تجربة طلب و توصيل وايت مياه بالمملكة
           </p>
         </motion.div>
 

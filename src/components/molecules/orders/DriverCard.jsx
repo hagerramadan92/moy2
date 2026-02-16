@@ -4,16 +4,9 @@ import { useState, useMemo, memo } from 'react';
 import { FaStar } from "react-icons/fa";
 import { LiaCertificateSolid } from "react-icons/lia";
 import { 
-  CheckCircle2, 
   Clock, 
-  Star, 
-  Truck, 
   CheckCircle,
   X,
-  Phone,
-  Car,
-  User,
-  Coins,
 } from 'lucide-react';
 import Image from 'next/image';
 import { IoMdEye } from "react-icons/io";
@@ -68,6 +61,7 @@ const DriverCard = memo(function DriverCard({
   status,
   onAcceptOrder,
   onViewProfile,
+  isSelectedForPayment = false, // ✅ خاصية جديدة - تم اختيار العرض للدفع
   isPending = true,
   isAccepted = false,
   isPendingPayment = false,
@@ -82,7 +76,8 @@ const DriverCard = memo(function DriverCard({
   const [accepting, setAccepting] = useState(false);
 
   const handleAccept = async () => {
-    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired) return;
+    // ✅ منع القبول إذا كان العرض محدد للدفع أو في أي حالة أخرى
+    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment) return;
     
     setAccepting(true);
     try {
@@ -128,53 +123,82 @@ const DriverCard = memo(function DriverCard({
     if (isAccepted) return 'border-[#10B981] bg-[#10B981]/10';
     if (isPendingPayment) return 'border-[#F59E0B] bg-[#F59E0B]/10';
     if (isExpired) return 'border-[#EF4444] bg-[#EF4444]/10 opacity-75';
+    if (isSelectedForPayment) return 'border-[#579BE8] bg-[#579BE8]/10 ring-2 ring-[#579BE8] ring-opacity-50'; // ✅ حالة جديدة
     return 'border-gray-200';
-  }, [isAccepted, isPendingPayment, isExpired]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
 
   // Memoize header gradient
   const headerGradient = useMemo(() => {
     if (isAccepted) return 'from-green-50 to-emerald-50';
     if (isPendingPayment) return 'from-amber-50 to-orange-50';
     if (isExpired) return 'from-red-50 to-rose-50';
+    if (isSelectedForPayment) return 'from-blue-50 to-indigo-50'; // ✅ حالة جديدة
     return 'from-gray-50 to-gray-100';
-  }, [isAccepted, isPendingPayment, isExpired]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
 
   // Memoize icon background
   const iconBg = useMemo(() => {
     if (isAccepted) return 'bg-gradient-to-br from-green-500 to-emerald-600';
     if (isPendingPayment) return 'bg-gradient-to-br from-amber-500 to-orange-600';
     if (isExpired) return 'bg-gradient-to-br from-red-500 to-rose-600';
+    if (isSelectedForPayment) return 'bg-gradient-to-br from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
     return 'bg-gradient-to-br from-blue-500 to-indigo-600';
-  }, [isAccepted, isPendingPayment, isExpired]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
 
   // Memoize badge gradient - using site color scheme
   const badgeGradient = useMemo(() => {
     if (isAccepted) return 'from-[#10B981] to-[#059669]';
     if (isPendingPayment) return 'from-[#F59E0B] to-[#D97706]';
     if (isExpired) return 'from-[#EF4444] to-[#DC2626]';
+    if (isSelectedForPayment) return 'from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
     return badgeColor;
-  }, [isAccepted, isPendingPayment, isExpired, badgeColor]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, badgeColor]);
 
   // Memoize button classes - using site color scheme
   const buttonClasses = useMemo(() => {
     if (isAccepted) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg hover:from-[#059669] hover:to-[#047857]';
     if (isPendingPayment) return 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg hover:from-[#D97706] hover:to-[#B45309]';
     if (isExpired) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg opacity-75 cursor-not-allowed';
-    if (isPending) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg hover:from-[#4a8dd8] hover:to-[#3b7bc8] hover:shadow-xl transition-all';
+    if (isSelectedForPayment) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg cursor-wait'; // ✅ حالة جديدة - مع مؤشر انتظار
+    if (isPending) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg hover:from-[#4a8dd8] hover:to-[#3b7bc8] hover:shadow-xl transition-all cursor-pointer';
     return 'bg-gray-100 text-gray-400 cursor-not-allowed';
-  }, [isAccepted, isPendingPayment, isExpired, isPending]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPending]);
+
+  // نص الزر حسب الحالة
+  const buttonText = useMemo(() => {
+    if (accepting) return 'جاري القبول...';
+    if (isAccepted) return 'تم قبول العرض';
+    if (isPendingPayment) return 'في انتظار الدفع';
+    if (isExpired) return 'انتهت صلاحية العرض';
+    if (isSelectedForPayment) return 'جاري تجهيز الدفع...'; // ✅ نص جديد
+    if (isPending) return 'قبول العرض';
+    return 'غير متاح';
+  }, [accepting, isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPending]);
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col relative ${cardClasses}`}>
-      <div className=''>
-          {/* Badge */}
-      {(index !== undefined && index !== null) && (
-        <div className={`absolute top-4 right-4 bg-gradient-to-r ${badgeGradient} text-white text-xs font-bold px-3 py-1 rounded-full z-20 shadow-lg`}>
-          العرض #{index + 1}
+      
+      {/* أيقونة صغيرة للدلالة على أن العرض قيد الدفع */}
+      {isSelectedForPayment && (
+        <div className="absolute top-4 left-4 z-20">
+          <div className="bg-[#579BE8] text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span>تجهيز الدفع</span>
+          </div>
         </div>
       )}
-      <div className='absolute top-4 left-4'>
-      {onViewProfile && (
+
+      <div className=''>
+        {/* Badge */}
+        {(index !== undefined && index !== null) && (
+          <div className={`absolute top-4 right-4 bg-gradient-to-r ${badgeGradient} text-white text-xs font-bold px-3 py-1 rounded-full z-20 shadow-lg`}>
+            العرض #{index + 1}
+          </div>
+        )}
+        
+        {/* زر عرض الملف الشخصي - يختفي أثناء تجهيز الدفع */}
+        <div className='absolute top-4 left-4'>
+          {onViewProfile && !isSelectedForPayment && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -187,13 +211,12 @@ const DriverCard = memo(function DriverCard({
               <p className='md:text-sm font-medium text-xs'>الملف </p>
             </button>
           )}
-      </div>
-       
+        </div>
       </div>
 
       {/* Body */}
       <div className="p-6 flex-1 flex flex-col pt-12">
-        {/* Row 1: Driver Avatar + Profile Icon */}
+        {/* Row 1: Driver Avatar */}
         <div className="">
           <div className="relative flex justify-center">
             <img
@@ -205,8 +228,6 @@ const DriverCard = memo(function DriverCard({
               }}
             />
           </div>
-          
-         
         </div>
 
         {/* Row 2: Driver Name */}
@@ -216,9 +237,10 @@ const DriverCard = memo(function DriverCard({
         <div className="flex items-center gap-3 mb-4 flex-wrap justify-center">
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4 text-[#579BE8]" />
-            <span className="text-sm font-medium text-[#579BE8]">يصل في{deliveryTime}</span>
+            <span className="text-sm font-medium text-[#579BE8]">يصل في {deliveryTime}</span>
           </div>
-            <span className='text-sm font-medium text-gray-400'>|</span>
+          <span className='text-sm font-medium text-gray-400'>|</span>
+          
           <div className="flex items-center gap-1">
             <FaStar className='w-4 h-4 text-[#579BE8]' />
             <p className='text-sm font-medium text-[#579BE8]'>تقييم</p>
@@ -235,40 +257,28 @@ const DriverCard = memo(function DriverCard({
         {/* Row 4: Price + Riyal Icon */}
         <div className="flex items-center gap-2 mb-2 justify-center bg-[#579BE8]/10 rounded-lg py-1">
           <span className="font-bold text-[#579BE8] text-2xl">{price}</span>
-          <Image src="/images/RS2.png" alt="riyal" width={20} height={20} />
+          <Image src="/images/RS2.png" alt="ريال" width={20} height={20} />
         </div>
 
         {/* Row 5: Accept Button */}
         <div className="mt-auto">
           <button
             onClick={handleAccept}
-            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired}
-            className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer ${buttonClasses}`}
+            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment}
+            className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 ${buttonClasses}`}
           >
             {accepting ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>جاري القبول...</span>
+                <span>{buttonText}</span>
               </>
-            ) : isAccepted ? (
-              <>
-                <CheckCircle className="w-5 h-5" />
-                <span>تم قبول العرض</span>
-              </>
-            ) : isPendingPayment ? (
-              <>
-                <Clock className="w-5 h-5 animate-pulse" />
-                <span>في انتظار الدفع</span>
-              </>
-            ) : isExpired ? (
-              <>
-                <X className="w-5 h-5" />
-                <span>انتهت صلاحية العرض</span>
-              </>
-            ) : isPending ? (
-              <span>قبول العرض</span>
             ) : (
-              'غير متاح'
+              <>
+                {isSelectedForPayment && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                <span>{buttonText}</span>
+              </>
             )}
           </button>
         </div>

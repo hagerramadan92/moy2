@@ -162,7 +162,7 @@ export default function HomeCover({ data }) {
                        اطلب اللي بخاطرك
                     </h2>
                     <p className="text-sm text-gray-600">
-                       اختر نوع المياة و الكمية اللي تحتاجها
+                       اختر نوع المياه و الكمية اللي تحتاجها
                     </p>
                 </div>
 
@@ -234,7 +234,7 @@ export default function HomeCover({ data }) {
 					{/* Content Section - Appears second on small screens */}
 					<div className="content-right order-2 md:order-1">
 						<h1 className="text-2xl sm:text-3xl md:text-4xl  font-bold mb-4 sm:mb-6">
-							{title || "أول تطبيق وايت مياة في المملكة"}
+							{title || "أول تطبيق وايت مياه في المملكة"}
 						</h1>
 						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8">
 							{subtitle || " أطلب الكمية اللي تبيها و بتوصلك وين ما كنت "}
