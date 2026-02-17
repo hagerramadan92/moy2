@@ -12,6 +12,8 @@ import {
 
 import { waterApi } from "@/utils/api";
 import { Scale } from "lucide-react";
+import { useId } from "react";
+
 
 export default function ServiceSelect({
 	value,
@@ -27,6 +29,9 @@ export default function ServiceSelect({
 }) {
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(false);
+const selectId = useId();
+const labelId = `${selectId}-label`;
+const errorId = `${selectId}-error`;
 
 	// دمج status مع hasError
 	const finalStatus = useMemo(() => {
@@ -82,7 +87,8 @@ export default function ServiceSelect({
 
 	return (
 		<div className="flex flex-col items-start gap-2 w-full">
-			<label className="flex items-center gap-2 text-gray-700 font-bold text-sm">
+			<label   id={labelId}
+  htmlFor={selectId} className="flex items-center gap-2 text-gray-700 font-bold text-sm">
 				<Scale size={18} className={'text-[#579BE8]'} />
 				{label}
 				{finalStatus === "error" && (
@@ -100,7 +106,10 @@ export default function ServiceSelect({
 				dir={dir}
 				disabled={loading}
 			>
-				<SelectTrigger className={triggerClass}>
+				<SelectTrigger  id={selectId}
+  aria-labelledby={labelId}
+  aria-invalid={finalStatus === "error"}
+  aria-describedby={finalStatus === "error" ? errorId : undefined} className={triggerClass}>
 					<SelectValue
 						placeholder={ placeholder}
 						className="text-[16px]"
@@ -135,7 +144,7 @@ export default function ServiceSelect({
 
 			{/* رسالة خطأ تحت الحقل */}
 			{finalStatus === "error" && !value && (
-				<div className="flex items-center gap-1 text-red-500 text-xs mt-1 md:ms-2">
+				<div  id={errorId} className="flex items-center gap-1 text-red-500 text-xs mt-1 md:ms-2">
 					
 					<span>هذا الحقل مطلوب</span>
 				</div>

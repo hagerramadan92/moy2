@@ -12,6 +12,8 @@ import {
 
 import { waterApi } from "@/utils/api";
 import { Droplets } from "lucide-react";
+import { useId } from "react";
+
 
 export default function WaterTypeSelect({
 	value,
@@ -28,6 +30,9 @@ export default function WaterTypeSelect({
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [isOnline, setIsOnline] = useState(true);
+const selectId = useId();
+const labelId = `${selectId}-label`;
+const errorId = `${selectId}-error`;
 
 	// دمج status مع hasError
 	const finalStatus = useMemo(() => {
@@ -137,7 +142,8 @@ export default function WaterTypeSelect({
 	return (
 		<div className="flex flex-col items-start gap-2 w-full">
 			<div className="flex items-center justify-between w-full">
-				<label className="flex items-center gap-2 text-gray-700 font-bold text-sm">
+				<label className="flex items-center gap-2 text-gray-700 font-bold text-sm" id={labelId}
+  htmlFor={selectId}>
 					<Droplets size={18} className={'text-[#579BE8]'} />
 					{label}
 					{finalStatus === "error" && (
@@ -162,7 +168,13 @@ export default function WaterTypeSelect({
 				dir={dir}
 				disabled={loading}
 			>
-				<SelectTrigger className={triggerClass}>
+				
+				<SelectTrigger 
+				  id={selectId}
+  aria-labelledby={labelId}
+  aria-invalid={finalStatus === "error"}
+  aria-describedby={finalStatus === "error" ? errorId : undefined}
+				className={triggerClass}>
 					<SelectValue
 						placeholder={ placeholder}
 						className="text-[16px]"
@@ -198,7 +210,7 @@ export default function WaterTypeSelect({
 			
 			{/* رسالة خطأ تحت الحقل */}
 			{finalStatus === "error" && !value && (
-				<div className="flex items-center gap-1 text-red-500 text-xs mt-1 md:ms-2">
+				<div   id={errorId} className="flex items-center gap-1 text-red-500 text-xs mt-1 md:ms-2">
 					
 					<span>هذا الحقل مطلوب</span>
 				</div>
