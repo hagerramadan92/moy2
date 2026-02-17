@@ -1216,13 +1216,13 @@ export default function MyProfilePage() {
                         <div className="space-y-1 sm:space-y-2">
                             <label className="block text-xs sm:text-sm font-bold text-foreground/80 mr-2">رقم الجوال</label>
                             <div className="relative group">
-                                <div className="absolute top-1/2 -translate-y-1/2 left-3 sm:left-4 w-[50px] h-[25px] sm:w-[60px] sm:h-[30px] opacity-90">
+                                <div className="absolute top-1/2 -translate-y-1/2 left-3 sm:left-4 w-[55px] h-[25px] sm:w-[70px] sm:h-[30px] opacity-90">
                                     <Image
                                         src="/images/phone-icon.png"
                                         alt="Phone Icon"
                                         width={79}
                                         height={31}
-                                        className="w-full h-full object-contain"
+                                        className="w-full h-full object-cover"
                                     />
                                 </div>
                                 <Input

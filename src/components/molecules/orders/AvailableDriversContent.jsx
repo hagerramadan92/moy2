@@ -51,6 +51,7 @@ export default function AvailableDriversContent({ onBack }) {
   const [pendingPaymentOfferId, setPendingPaymentOfferId] = useState(null);
   const [expiredOfferIds, setExpiredOfferIds] = useState([]);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paidOfferIds, setPaidOfferIds] = useState(new Set()); // ✅ حالة لتتبع العروض المدفوعة
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -209,36 +210,97 @@ export default function AvailableDriversContent({ onBack }) {
 
   // Handle driver accepted order
   const handleDriverAcceptedOrder = useCallback((data) => {
-    console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT RECEIVED =====');
+    console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT RECEIVED =====', data);
     
-    const acceptedOrderId = data.order_id;
+    const acceptedOrderId = data.order_id || data.order?.id;
     const currentOrderId = orderId;
+    const paymentStatus = data.order?.payment_status || data.payment_status;
     
     if (acceptedOrderId && acceptedOrderId.toString() === currentOrderId?.toString()) {
-      console.log(`✅ Driver accepted our order ${currentOrderId}`);
+      console.log(`✅ Driver accepted our order ${currentOrderId}, payment_status: ${paymentStatus}`);
       
-      setDriverAcceptedNotification({
-        id: Date.now(),
-        message: 'تم قبول طلبك من قبل سائق!',
-        driverName: data.driver?.name || 'سائق',
-        price: data.price || selectedOffer?.price,
-        offerId: data.offer?.id,
-        expiresIn: 10
-      });
-      
-      if (data.offer?.id) {
-        setAcceptedOfferId(data.offer.id);
-        setPendingPaymentOfferId(null);
-        setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
-        rejectOtherOffers(data.offer.id);
+      // ✅ فقط إذا كان الدفع مكتملاً (paid) نضبط acceptedOfferId
+      if (paymentStatus === 'paid') {
+        setDriverAcceptedNotification({
+          id: Date.now(),
+          message: 'تم قبول طلبك من قبل سائق!',
+          driverName: data.driver?.name || data.order?.driver?.name || 'سائق',
+          price: data.price || data.order?.price || selectedOffer?.price,
+          offerId: data.offer?.id || data.order?.accepted_offer_id,
+          expiresIn: 10
+        });
+        
+        if (data.offer?.id || data.order?.accepted_offer_id) {
+          const offerId = data.offer?.id || data.order?.accepted_offer_id;
+          setAcceptedOfferId(offerId);
+          setPaidOfferIds(prev => new Set([...prev, offerId]));
+          setPendingPaymentOfferId(null);
+          setSelectedForPaymentOfferId(null);
+          setPaymentSuccess(true);
+          rejectOtherOffers(offerId);
+        }
+        
+        setTimeout(() => {
+          fetchOffers();
+        }, 2000);
+      } else {
+        // ✅ إذا كان الدفع لم يكتمل بعد (processing/pending)
+        console.log(`⚠️ Driver accepted order but payment not completed yet. Status: ${paymentStatus}`);
+        // لا نضبط acceptedOfferId - نتركه null حتى يكتمل الدفع
+        // يمكن إظهار إشعار بأن الدفع قيد المعالجة
+        setDriverAcceptedNotification({
+          id: Date.now(),
+          message: 'تم قبول العرض - في انتظار إتمام الدفع',
+          driverName: data.driver?.name || data.order?.driver?.name || 'سائق',
+          price: data.price || data.order?.price || selectedOffer?.price,
+          offerId: data.offer?.id || data.order?.accepted_offer_id,
+          expiresIn: 10
+        });
       }
-      
-      setTimeout(() => {
-        fetchOffers();
-        router.push(`/orders/available-drivers?orderId=${currentOrderId}`);
-      }, 3000);
     }
   }, [orderId, selectedOffer, router]);
+
+  // ✅ معالج حدث TripStartedForUser (تم الدفع وبدأت الرحلة)
+  const handleTripStartedForUser = useCallback((data) => {
+    console.log('🚀 ===== TRIP STARTED FOR USER EVENT RECEIVED =====', data);
+    
+    const eventOrderId = data.order?.id || data.order_id;
+    const currentOrderId = orderId;
+    
+    if (eventOrderId && eventOrderId.toString() === currentOrderId?.toString()) {
+      console.log(`✅ Trip started for order ${currentOrderId}, payment_status: ${data.order?.payment_status}`);
+      
+      // إذا كان الدفع تم (paid)
+      if (data.order?.payment_status === 'paid' || data.payment_status === 'paid') {
+        // تحديث حالة الدفع للعرض المقبول
+        if (data.order?.accepted_offer_id) {
+          const paidOfferId = data.order.accepted_offer_id;
+          setPaidOfferIds(prev => new Set([...prev, paidOfferId]));
+          setAcceptedOfferId(paidOfferId);
+          setPendingPaymentOfferId(null);
+          setSelectedForPaymentOfferId(null);
+          setPaymentSuccess(true);
+          
+          console.log(`💰 Payment confirmed for offer ${paidOfferId}`);
+          
+          // إظهار إشعار
+          setDriverAcceptedNotification({
+            id: Date.now(),
+            message: data.message || 'تم الدفع والرحلة بدأت الآن',
+            driverName: data.order?.driver?.name || 'سائق',
+            price: data.order?.price,
+            offerId: paidOfferId,
+            expiresIn: 10
+          });
+          
+          // تحديث العروض بعد ثانيتين
+          setTimeout(() => {
+            fetchOffers();
+          }, 2000);
+        }
+      }
+    }
+  }, [orderId]);
 
   // Handle successful payment
   const handlePaymentSuccess = useCallback((data) => {
@@ -270,6 +332,8 @@ export default function AvailableDriversContent({ onBack }) {
     }
   }, [orderId, selectedOfferId]);
 
+
+  
   // Handle payment failure
   const handlePaymentFailure = useCallback((data) => {
     console.log('❌ Payment failure callback received:', data);
@@ -304,9 +368,14 @@ export default function AvailableDriversContent({ onBack }) {
     
     removeEventListener('DriverAcceptedOrder');
     removeEventListener('offer.created');
+    removeEventListener('TripStartedForUser');
     
     addEventListener('DriverAcceptedOrder', (data) => {
       handleDriverAcceptedOrder(data);
+    });
+    
+    addEventListener('TripStartedForUser', (data) => {
+      handleTripStartedForUser(data);
     });
     
     const channel = subscribe(`order.${orderId}`, {
@@ -329,6 +398,11 @@ export default function AvailableDriversContent({ onBack }) {
       
       'DriverAcceptedOrder': (data) => {
         handleDriverAcceptedOrder(data);
+      },
+      
+      // ✅ استماع على حدث TripStartedForUser لتحديث حالة الدفع
+      'TripStartedForUser': (data) => {
+        handleTripStartedForUser(data);
       }
     });
     
@@ -351,9 +425,10 @@ export default function AvailableDriversContent({ onBack }) {
     return () => {
       removeEventListener('DriverAcceptedOrder');
       removeEventListener('offer.created');
+      removeEventListener('TripStartedForUser');
       unsubscribeAll();
     };
-  }, [orderId, pusherConnected, subscribe, unsubscribeAll, addEventListener, removeEventListener, handleDriverAcceptedOrder]);
+  }, [orderId, pusherConnected, subscribe, unsubscribeAll, addEventListener, removeEventListener, handleDriverAcceptedOrder, handleTripStartedForUser]);
 
   // Calculate time remaining
   useEffect(() => {
@@ -515,16 +590,56 @@ export default function AvailableDriversContent({ onBack }) {
         setOffersData(offersDataToSet);
         setError(null);
         
+        // ✅ إعادة تعيين acceptedOfferId في البداية (سيتم ضبطه فقط إذا كان الدفع مكتملاً)
+        setAcceptedOfferId(null);
+        
+        // ✅ التحقق من حالة الدفع من API - فقط إذا كان accepted_offer موجود و payment_status === 'paid'
         if (data.data.accepted_offer) {
           const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
-          setAcceptedOfferId(acceptedId);
-          setPendingPaymentOfferId(null);
-          setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
-          localStorage.removeItem('pendingOfferData');
+          const orderPaymentStatus = data.data.order?.payment_status;
+          const offerPaymentStatus = data.data.accepted_offer?.payment_status;
           
-          setTimeout(() => {
-            rejectOtherOffers(acceptedId);
-          }, 500);
+          // ✅ فقط إذا كان الدفع مكتملاً (paid) نضبط acceptedOfferId
+          if (orderPaymentStatus === 'paid' || offerPaymentStatus === 'paid') {
+            setAcceptedOfferId(acceptedId);
+            setPendingPaymentOfferId(null);
+            setSelectedForPaymentOfferId(null);
+            setPaidOfferIds(prev => new Set([...prev, acceptedId]));
+            setPaymentSuccess(true);
+            localStorage.removeItem('pendingOfferData');
+            console.log(`💰 Payment confirmed from API for offer ${acceptedId}`);
+            
+            setTimeout(() => {
+              rejectOtherOffers(acceptedId);
+            }, 500);
+          } else {
+            // ✅ إذا كان accepted_offer موجود لكن الدفع لم يكتمل بعد (processing/pending)
+            console.log(`⚠️ Accepted offer ${acceptedId} exists but payment not completed yet. Status: ${orderPaymentStatus || offerPaymentStatus}`);
+            // لا نضبط acceptedOfferId - نتركه null حتى يكتمل الدفع
+            setAcceptedOfferId(null);
+          }
+        } else {
+          // ✅ لا يوجد accepted_offer - إعادة تعيين الحالة
+          setAcceptedOfferId(null);
+        }
+        
+        // ✅ التحقق من حالة الدفع في كل عرض من العروض
+        if (data.data.offers && Array.isArray(data.data.offers)) {
+          const paidIds = new Set();
+          data.data.offers.forEach(offer => {
+            // ✅ فقط إذا كان العرض مقبولاً ومدفوعاً بالكامل
+            const offerOrderPaymentStatus = offer.order?.payment_status;
+            const offerStatus = offer.status;
+            
+            // التحقق من أن الدفع مكتمل (paid) وليس في انتظار (payment_pending/processing)
+            if (offerOrderPaymentStatus === 'paid' && offerStatus !== 'payment_pending') {
+              paidIds.add(offer.id);
+            }
+          });
+          if (paidIds.size > 0) {
+            setPaidOfferIds(prev => new Set([...prev, ...paidIds]));
+            setPaymentSuccess(true);
+          }
         }
         
         setLoading(false);
@@ -1027,10 +1142,16 @@ export default function AvailableDriversContent({ onBack }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
               {offersData?.offers?.map((offer, index) => {
-                const isAccepted = acceptedOfferId === offer.id;
+                // ✅ التحقق من حالة العرض - إذا كان status === 'payment_pending' فلا نعتبره مقبولاً حتى يكتمل الدفع
+                const offerStatus = offer.status;
+                const orderPaymentStatus = offer.order?.payment_status;
+                const isPaymentPending = offerStatus === 'payment_pending' || orderPaymentStatus === 'processing' || orderPaymentStatus === 'pending';
+                
+                const isAccepted = acceptedOfferId === offer.id && !isPaymentPending; // ✅ فقط إذا كان مقبولاً ومدفوعاً
                 const isPendingPayment = pendingPaymentOfferId === offer.id;
                 const isExpired = expiredOfferIds.includes(offer.id);
                 const isSelectedForPayment = selectedForPaymentOfferId === offer.id && !isAccepted && !isPendingPayment && !isExpired; // ✅ حالة جديدة
+                const isPaid = paidOfferIds.has(offer.id); // ✅ حالة الدفع من Pusher أو API
                 
                 return (
                   <motion.div
@@ -1051,11 +1172,12 @@ export default function AvailableDriversContent({ onBack }) {
                         const driverData = formatDriverData(offer);
                         router.push(`/orders/driver_profile?driverId=${offer.driver_id}`);
                       }}
-                      isPending={!isAccepted && !isPendingPayment && !isExpired && !isSelectedForPayment} // ✅ تعديل الشرط
-                      isSelectedForPayment={isSelectedForPayment} // ✅ تمرير الخاصية الجديدة
+                      isPending={!isAccepted && !isPendingPayment && !isExpired && !isSelectedForPayment && !isPaid} 
+                      isSelectedForPayment={isSelectedForPayment} 
                       isAccepted={isAccepted}
                       isPendingPayment={isPendingPayment}
                       isExpired={isExpired}
+                      isPaid={isPaid} // ✅ تمرير حالة الدفع للبطاقة
                       index={index}
                     />
                   </motion.div>

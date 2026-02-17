@@ -171,7 +171,11 @@ const EnhancedOrderTrackingMap = ({
       </div>
     );
   }
-
+// في بداية المكون، أضف هذا التحقق
+useEffect(() => {
+    console.log("Received driver location:", driverLocation);
+    console.log("Received user location:", userLocation);
+}, [driverLocation, userLocation]);
   const userCoords = formatCoordinates(userLocation[0], userLocation[1]);
   const driverCoords = driverLocation ? 
     formatCoordinates(driverLocation[0], driverLocation[1]) : 
@@ -240,7 +244,15 @@ const EnhancedOrderTrackingMap = ({
       </div>
        )}
      
-
+{/* في قسم الخريطة، أضف هذا لعرض معلومات الموقع */}
+{driverLocation && (
+    <div className="mt-2 text-xs text-gray-500 text-left">
+        <p>آخر تحديث: {new Date().toLocaleTimeString('ar-SA')}</p>
+        <p className="font-mono">
+            موقع السائق: {driverLocation[0].toFixed(6)}, {driverLocation[1].toFixed(6)}
+        </p>
+    </div>
+)}
   
       <MapContainer
         center={userLocation}

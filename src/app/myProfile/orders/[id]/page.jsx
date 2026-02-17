@@ -84,118 +84,147 @@ export default function OrderDetailsPage() {
         return null;
     };
 
-    // تحويل موقع السائق من البيانات الحقيقية
-    const parseDriverLocation = (driverData) => {
-        if (!driverData?.currect_location) return null;
+  // في ملف OrderDetailsPage.jsx - تعديل دالة parseDriverLocation
+
+// تحويل موقع السائق من البيانات الحقيقية
+const parseDriverLocation = (driverData) => {
+    if (!driverData?.currect_location) return null;
+    
+    try {
+        const location = driverData.currect_location;
         
-        try {
-            // إذا كان الموقع مخزنًا كـ JSON string
-            if (typeof driverData.currect_location === 'string') {
-                const location = JSON.parse(driverData.currect_location);
-                if (location.latitude && location.longitude) {
-                    return [
-                        parseFloat(location.latitude),
-                        parseFloat(location.longitude)
-                    ];
-                }
-            }
-            // إذا كان مخزنًا كـ object مباشرة
-            else if (driverData.currect_location.latitude && driverData.currect_location.longitude) {
-                return [
-                    parseFloat(driverData.currect_location.latitude),
-                    parseFloat(driverData.currect_location.longitude)
-                ];
-            }
-        } catch (error) {
-            console.error("Error parsing driver location:", error);
+        // البيانات تأتي مباشرة كـ object من الـ API
+        if (location.lat && location.lng) {
+            return [
+                parseFloat(location.lat),
+                parseFloat(location.lng)
+            ];
         }
-        
-        return null;
-    };
+        // إذا كانت القيم تحت أسماء مختلفة
+        else if (location.latitude && location.longitude) {
+            return [
+                parseFloat(location.latitude),
+                parseFloat(location.longitude)
+            ];
+        }
+    } catch (error) {
+        console.error("Error parsing driver location:", error);
+    }
+    
+    return null;
+};
 
     // Initialize locations from real API data
-    const initializeLocations = (order) => {
-        // Set user location from order data (delivery location)
-        if (order?.location?.latitude && order?.location?.longitude) {
-            setUserLocation([
-                parseFloat(order.location.latitude),
-                parseFloat(order.location.longitude)
-            ]);
-        } else {
-            // Default to Riyadh if no location in order data
-            setUserLocation([24.7136, 46.6753]);
-        }
+   // Initialize locations from real API data
+const initializeLocations = (order) => {
+    // Set user location from order data (delivery location)
+    if (order?.location?.latitude && order?.location?.longitude) {
+        setUserLocation([
+            parseFloat(order.location.latitude),
+            parseFloat(order.location.longitude)
+        ]);
+    } else {
+        // Default to Riyadh if no location in order data
+        setUserLocation([24.7136, 46.6753]);
+    }
 
-        // Set driver location from real data if exists
-        const driverLoc = parseDriverLocation(order?.driver);
+    // Set driver location from real data if exists
+    if (order?.driver?.currect_location) {
+        const driverLoc = parseDriverLocation(order.driver);
         if (driverLoc) {
+            console.log("Driver location found:", driverLoc); // للتأكد من وجود الموقع
             setDriverLocation(driverLoc);
-        } else if (order?.driver) {
-            // If no location in data, simulate near user location
-            if (userLocation) {
-                const simulatedLocation = [
-                    userLocation[0] + 0.01,
-                    userLocation[1] + 0.01
-                ];
-                setDriverLocation(simulatedLocation);
-            } else {
-                setDriverLocation([24.7286, 46.6903]);
-            }
-        } else {
-            setDriverLocation(null);
         }
-    };
+    } else {
+        console.log("No driver location in order data");
+        setDriverLocation(null);
+    }
+};
 
     // Fetch driver's current location from API
-    const fetchDriverCurrentLocation = async () => {
-        if (!orderData?.driver?.id) return;
+    // const fetchDriverCurrentLocation = async () => {
+    //     if (!orderData?.driver?.id) return;
         
-        const token = getToken();
-        try {
-            const response = await fetch(`${API_BASE_URL}/drivers/${orderData.driver.id}/location`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+    //     const token = getToken();
+    //     try {
+    //         const response = await fetch(`${API_BASE_URL}/drivers/${orderData.driver.id}/location`, {
+    //             method: 'GET',
+    //             headers: {
+    //                 'Accept': 'application/json',
+    //                 'Authorization': `Bearer ${token}`,
+    //             },
+    //         });
 
-            if (response.ok) {
-                const data = await response.json();
-                setDriverData(data.data);
-                if (data.status === true && data.data) {
-                    const newLocation = [
-                        parseFloat(data.data.latitude),
-                        parseFloat(data.data.longitude)
-                    ];
+    //         if (response.ok) {
+    //             const data = await response.json();
+    //             setDriverData(data.data);
+    //             if (data.status === true && data.data) {
+    //                 const newLocation = [
+    //                     parseFloat(data.data.latitude),
+    //                     parseFloat(data.data.longitude)
+    //                 ];
+    //                 setDriverLocation(newLocation);
+    //                 return true;
+    //             }
+    //         }
+    //     } catch (error) {
+    //         console.error("Error fetching driver location:", error);
+    //     }
+    //     return false;
+    // };
+
+
+    // Fetch driver's current location from API
+const fetchDriverCurrentLocation = async () => {
+    if (!orderData?.driver?.id) return;
+    
+    const token = getToken();
+    try {
+        // استخدام endpoint جلب تفاصيل الطلب الذي يحتوي على موقع السائق المحدث
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === true && data.data?.driver?.currect_location) {
+                const newLocation = parseDriverLocation(data.data.driver);
+                if (newLocation) {
                     setDriverLocation(newLocation);
+                    setOrderData(data.data); // تحديث بيانات الطلب كاملة
                     return true;
                 }
             }
-        } catch (error) {
-            console.error("Error fetching driver location:", error);
         }
-        return false;
-    };
+    } catch (error) {
+        console.error("Error fetching driver location:", error);
+    }
+    return false;
+};
 
     // Start real-time tracking for active orders
-    const startRealTimeTracking = () => {
-        if (driverTrackingInterval) {
-            clearInterval(driverTrackingInterval);
-        }
+  // Start real-time tracking for active orders
+const startRealTimeTracking = () => {
+    if (driverTrackingInterval) {
+        clearInterval(driverTrackingInterval);
+    }
 
-        if (trackingActive && orderData?.driver && isProcessing) {
-            // Fetch immediately
+    if (trackingActive && orderData?.driver && isProcessing) {
+        // Fetch immediately
+        fetchDriverCurrentLocation();
+        
+        // ثم كل 15 ثانية بدلاً من 30 ثانية لتحديث أسرع
+        const interval = setInterval(() => {
             fetchDriverCurrentLocation();
-            
-            // Then every 30 seconds
-            const interval = setInterval(() => {
-                fetchDriverCurrentLocation();
-            }, 30000);
-            
-            setDriverTrackingInterval(interval);
-        }
-    };
+        }, 15000); // 15 ثانية
+        
+        setDriverTrackingInterval(interval);
+    }
+};
 
     // Fetch order details from API
     useEffect(() => {

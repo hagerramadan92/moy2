@@ -32,6 +32,7 @@ export default function PaymentModal({
   setPendingPaymentOfferId,
   onPaymentSuccess,
   onPaymentFailure,
+  onPaymentCompleted, // ✅ callback جديد - يتم استدعاؤه عند إتمام الدفع (للمحفظة أو عند الاستلام)
   router,
 }) {
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -44,6 +45,8 @@ export default function PaymentModal({
   const [showPaymentStatus, setShowPaymentStatus] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'failure'
   const [tripData, setTripData] = useState(null); // تخزين بيانات الرحلة
+  const [successMessage, setSuccessMessage] = useState(''); // رسالة النجاح المخصصة
+  const [paymentType, setPaymentType] = useState(''); // نوع الدفع (wallet, cash, gateway)
   
   // Refs للتتبع
   const pusherRef = useRef(null);
@@ -136,11 +139,17 @@ export default function PaymentModal({
           // دفع ناجح وبدء الرحلة - نعرض شاشة النجاح فقط هنا
           successShownRef.current = true;
           setPaymentStatus('success');
+          setSuccessMessage('تم الدفع بنجاح! جاري تحويلك لصفحة تفاصيل الطلب...');
           setShowPaymentStatus(true);
           
           // استدعاء callback النجاح
           if (onPaymentSuccess) {
             onPaymentSuccess(data);
+          }
+          
+          // ✅ استدعاء callback إتمام الدفع لتحديث حالة العرض في الصفحة الرئيسية
+          if (onPaymentCompleted) {
+            onPaymentCompleted(selectedOfferId, 'paid');
           }
           
           // مسح بيانات الدفع من الجلسة
@@ -150,7 +159,7 @@ export default function PaymentModal({
           // تأخير التوجيه لصفحة تفاصيل الطلب
           setTimeout(() => {
             if (router) {
-              router.push(`/orders/${orderId}`);
+              router.push(`/myProfile/orders/${orderId}`);
             }
             onClose();
           }, 3000);
@@ -164,10 +173,16 @@ export default function PaymentModal({
         if (!successShownRef.current) {
           successShownRef.current = true;
           setPaymentStatus('success');
+          setSuccessMessage('تم الدفع بنجاح! جاري تحويلك لصفحة تفاصيل الطلب...');
           setShowPaymentStatus(true);
           
           if (onPaymentSuccess) {
             onPaymentSuccess(data);
+          }
+          
+          // ✅ استدعاء callback إتمام الدفع لتحديث حالة العرض في الصفحة الرئيسية
+          if (onPaymentCompleted) {
+            onPaymentCompleted(selectedOfferId, 'paid');
           }
           
           sessionStorage.removeItem('paymentCallbackData');
@@ -175,7 +190,7 @@ export default function PaymentModal({
           
           setTimeout(() => {
             if (router) {
-              router.push(`/orders/${orderId}`);
+              router.push(`/myProfile/orders/${orderId}`);
             }
             onClose();
           }, 3000);
@@ -269,6 +284,8 @@ export default function PaymentModal({
       successShownRef.current = false;
       setProcessingMethod(null);
       setSelectedMethod(null);
+      setSuccessMessage('');
+      setPaymentType('');
       
       // التحقق من وجود بيانات دفع معلقة عند فتح المودال
       const pendingData = sessionStorage.getItem('paymentCallbackData');
@@ -293,6 +310,8 @@ export default function PaymentModal({
       setPaymentStatus(null);
       setShowPaymentStatus(false);
       setTripData(null);
+      setSuccessMessage('');
+      setPaymentType('');
       paymentInitiatedRef.current = false;
       successShownRef.current = false;
       fetchAttemptedRef.current = false;
@@ -395,28 +414,112 @@ export default function PaymentModal({
       
       // طباعة الـ response بالكامل للتحقق
       console.log('Full Payment Response:', JSON.stringify(paymentData, null, 2));
+
+      // ========== منطق مختلف حسب طريقة الدفع ==========
       
-      // استخراج رابط الدفع من الـ response
-      let paymentUrl = null;
-      
-      // المسار الصحيح للوصول إلى raw_response
-      if (paymentData?.data?.payment?.payment?.raw_response) {
-        const rawResponse = paymentData.data.payment.payment.raw_response;
+      // 1. طريقة الدفع "عند الاستلام" - ينتقل مباشرة لتفاصيل الطلب
+      if (method.id === 'cash_on_delivery' || method.id === 'cash' || method.id === 'cod') {
+        console.log('💰 Cash on delivery selected - redirecting to order details');
         
-        // البحث عن رابط Tabby في المكان الصحيح
-        if (rawResponse.configuration?.available_products?.installments?.[0]?.web_url) {
-          paymentUrl = rawResponse.configuration.available_products.installments[0].web_url;
-          console.log('Found Tabby URL:', paymentUrl);
+        // تعيين نوع الدفع
+        setPaymentType('cash');
+        
+        // عرض رسالة نجاح سريعة
+        setPaymentStatus('success');
+        setSuccessMessage('تم تأكيد الطلب بنجاح! جاري تحويلك لصفحة تفاصيل الطلب...');
+        setShowPaymentStatus(true);
+        
+        // مسح أي بيانات معلقة
+        sessionStorage.removeItem('paymentCallbackData');
+        localStorage.removeItem('pendingOfferData');
+        
+        // تحديث حالة العرض
+        if (setPendingPaymentOfferId && typeof setPendingPaymentOfferId === 'function') {
+          setPendingPaymentOfferId(null); // مسح العرض المعلق لأنه تم تأكيده
         }
-        // إذا لم يتم العثور على رابط Tabby، جرب البحث عن QR code
-        else if (rawResponse.configuration?.available_products?.installments?.[0]?.qr_code) {
-          paymentUrl = rawResponse.configuration.available_products.installments[0].qr_code;
+        
+        // ✅ استدعاء callback إتمام الدفع لتحديث حالة العرض في الصفحة الرئيسية
+        if (onPaymentCompleted) {
+          onPaymentCompleted(selectedOfferId, 'paid');
         }
+        
+        // تأخير بسيط ثم التوجيه لصفحة تفاصيل الطلب
+        setTimeout(() => {
+          if (router) {
+            router.push(`/myProfile/orders/${orderId}`);
+          }
+          onClose();
+        }, 1500);
+        
+        return;
       }
       
-      // طريقة بديلة للوصول إلى الرابط
-      if (!paymentUrl && paymentData?.data?.payment?.payment?.raw_response?.configuration?.available_products?.installments?.[0]?.web_url) {
-        paymentUrl = paymentData.data.payment.payment.raw_response.configuration.available_products.installments[0].web_url;
+      // 2. طريقة الدفع "المحفظة" - دفع فوري (لا يحتاج لتوجيه لرابط)
+      if (method.id === 'wallet') {
+        console.log('💰 Wallet payment selected - processing wallet payment');
+        
+        // تعيين نوع الدفع
+        setPaymentType('wallet');
+        
+        // عرض رسالة نجاح
+        setPaymentStatus('success');
+        setSuccessMessage('تم الدفع من المحفظة بنجاح! جاري تحويلك لصفحة تفاصيل الطلب...');
+        setShowPaymentStatus(true);
+        
+        // تحديث حالة العرض
+        const offerStatus = 'paid'; // المحفظة تعني دفع فوري
+        
+        // حفظ بيانات العرض
+        localStorage.setItem('pendingOfferData', JSON.stringify({
+          orderId,
+          offerId: selectedOfferId,
+          driverId: selectedDriverId,
+          status: offerStatus,
+          paymentData: paymentData
+        }));
+        
+        // تحديث حالة العرض
+        if (offerStatus === 'paid') {
+          if (setPendingPaymentOfferId && typeof setPendingPaymentOfferId === 'function') {
+            setPendingPaymentOfferId(null); // مسح العرض المعلق لأنه تم دفعه
+          }
+        }
+        
+        // ✅ استدعاء callback إتمام الدفع لتحديث حالة العرض في الصفحة الرئيسية
+        if (onPaymentCompleted) {
+          onPaymentCompleted(selectedOfferId, 'paid');
+        }
+        
+        // إعداد مستمع Pusher للمتابعة (اختياري)
+        setupPusherListener(orderId);
+        
+        // تأخير بسيط ثم التوجيه لصفحة تفاصيل الطلب
+        setTimeout(() => {
+          if (router) {
+            router.push(`/myProfile/orders/${orderId}`);
+          }
+          onClose();
+        }, 2000);
+        
+        return;
+      }
+      
+      // 3. بوابات الدفع الأخرى (مدى، تابي، تمارا) - تحتاج توجيه لرابط
+      
+      // تعيين نوع الدفع
+      setPaymentType('gateway');
+      
+      // استخراج رابط الدفع مباشرة من payment_url
+      let paymentUrl = paymentData.payment_url || null;
+      
+      // إذا لم نجد payment_url، نحاول البحث في المسارات الأخرى كـ fallback
+      if (!paymentUrl) {
+        // البحث في البيانات المتداخلة (احتياطي للتوافق مع الإصدارات السابقة)
+        if (paymentData?.data?.payment?.payment_url) {
+          paymentUrl = paymentData.data.payment.payment_url;
+        } else if (paymentData?.data?.payment_url) {
+          paymentUrl = paymentData.data.payment_url;
+        }
       }
 
       if (paymentUrl) {
@@ -446,10 +549,10 @@ export default function PaymentModal({
           orderId,
           driverId: selectedDriverId,
           offerId: selectedOfferId,
-          paymentId: paymentData?.data?.payment?.payment?.payment_id || 
-                     paymentData?.data?.payment?.payment_id,
-          sessionId: paymentData?.data?.payment?.payment?.session_id || 
-                     paymentData?.data?.payment?.session_id,
+          paymentId: paymentData?.data?.payment?.payment_id || 
+                     paymentData?.data?.payment_id,
+          sessionId: paymentData?.data?.payment?.session_id || 
+                     paymentData?.data?.session_id,
           gateway: method.id
         };
         
@@ -510,7 +613,12 @@ export default function PaymentModal({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-green-600 mb-2">تم الدفع بنجاح!</h3>
+                  <h3 className="text-2xl font-bold text-green-600 mb-2">
+                    {paymentType === 'cash' ? 'تم تأكيد الطلب!' : 'تم الدفع بنجاح!'}
+                  </h3>
+                  
+                  {/* رسالة مخصصة حسب نوع الدفع */}
+                  <p className="text-gray-700 mb-4">{successMessage}</p>
                   
                   {/* عرض بيانات الرحلة إذا وجدت */}
                   {tripData && (
@@ -529,14 +637,12 @@ export default function PaymentModal({
                       {tripData.order && (
                         <div className="bg-gray-50 p-3 rounded-lg">
                           <p className="text-sm text-gray-600">رقم الطلب: {tripData.order.id}</p>
-                          <p className="text-sm text-gray-600">الحالة: {tripData.order.status.label}</p>
+                          <p className="text-sm text-gray-600">الحالة: {tripData.order.status?.label || 'قيد التنفيذ'}</p>
                           <p className="text-sm text-gray-600">السعر: {tripData.order.price} ريال</p>
                         </div>
                       )}
                     </div>
                   )}
-                  
-                  <p className="text-gray-600">جاري تحويلك لصفحة تفاصيل الطلب...</p>
                 </>
               ) : paymentStatus === 'failure' ? (
                 <>
@@ -637,6 +743,19 @@ export default function PaymentModal({
                         {method.supports_installments && (
                           <p className="text-xs text-indigo-600 mt-1">
                             يدعم التقسيط
+                          </p>
+                        )}
+                        
+                        {/* إضافة تلميحات حسب نوع الدفع */}
+                        {method.id === 'wallet' && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✓ سيتم خصم المبلغ من محفظتك فوراً
+                          </p>
+                        )}
+                        
+                        {method.id === 'cash_on_delivery' && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            💵 الدفع نقداً عند الاستلام
                           </p>
                         )}
                       </div>

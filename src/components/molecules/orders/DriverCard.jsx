@@ -66,6 +66,7 @@ const DriverCard = memo(function DriverCard({
   isAccepted = false,
   isPendingPayment = false,
   isExpired = false,
+  isPaid = false, // ✅ حالة الدفع (تم الدفع وبدأت الرحلة)
   offerId,
   createdAt,
   vehicleType,
@@ -77,7 +78,7 @@ const DriverCard = memo(function DriverCard({
 
   const handleAccept = async () => {
     // ✅ منع القبول إذا كان العرض محدد للدفع أو في أي حالة أخرى
-    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment) return;
+    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment || isPaid) return;
     
     setAccepting(true);
     try {
@@ -120,60 +121,66 @@ const DriverCard = memo(function DriverCard({
 
   // Memoize card classes - using site color scheme
   const cardClasses = useMemo(() => {
+    if (isPaid) return 'border-[#10B981] bg-[#10B981]/10 ring-2 ring-[#10B981] ring-opacity-50'; // ✅ حالة الدفع
     if (isAccepted) return 'border-[#10B981] bg-[#10B981]/10';
     if (isPendingPayment) return 'border-[#F59E0B] bg-[#F59E0B]/10';
     if (isExpired) return 'border-[#EF4444] bg-[#EF4444]/10 opacity-75';
     if (isSelectedForPayment) return 'border-[#579BE8] bg-[#579BE8]/10 ring-2 ring-[#579BE8] ring-opacity-50'; // ✅ حالة جديدة
     return 'border-gray-200';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
 
   // Memoize header gradient
   const headerGradient = useMemo(() => {
+    if (isPaid) return 'from-green-50 to-emerald-50'; // ✅ حالة الدفع
     if (isAccepted) return 'from-green-50 to-emerald-50';
     if (isPendingPayment) return 'from-amber-50 to-orange-50';
     if (isExpired) return 'from-red-50 to-rose-50';
     if (isSelectedForPayment) return 'from-blue-50 to-indigo-50'; // ✅ حالة جديدة
     return 'from-gray-50 to-gray-100';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
 
   // Memoize icon background
   const iconBg = useMemo(() => {
+    if (isPaid) return 'bg-gradient-to-br from-green-500 to-emerald-600'; // ✅ حالة الدفع
     if (isAccepted) return 'bg-gradient-to-br from-green-500 to-emerald-600';
     if (isPendingPayment) return 'bg-gradient-to-br from-amber-500 to-orange-600';
     if (isExpired) return 'bg-gradient-to-br from-red-500 to-rose-600';
     if (isSelectedForPayment) return 'bg-gradient-to-br from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
     return 'bg-gradient-to-br from-blue-500 to-indigo-600';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
 
   // Memoize badge gradient - using site color scheme
   const badgeGradient = useMemo(() => {
+    if (isPaid) return 'from-[#10B981] to-[#059669]'; // ✅ حالة الدفع
     if (isAccepted) return 'from-[#10B981] to-[#059669]';
     if (isPendingPayment) return 'from-[#F59E0B] to-[#D97706]';
     if (isExpired) return 'from-[#EF4444] to-[#DC2626]';
     if (isSelectedForPayment) return 'from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
     return badgeColor;
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, badgeColor]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, badgeColor]);
 
   // Memoize button classes - using site color scheme
   const buttonClasses = useMemo(() => {
+    if (isPaid) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg cursor-default'; // ✅ حالة الدفع - لا يمكن النقر
     if (isAccepted) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg hover:from-[#059669] hover:to-[#047857]';
     if (isPendingPayment) return 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg hover:from-[#D97706] hover:to-[#B45309]';
     if (isExpired) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg opacity-75 cursor-not-allowed';
     if (isSelectedForPayment) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg cursor-wait'; // ✅ حالة جديدة - مع مؤشر انتظار
     if (isPending) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg hover:from-[#4a8dd8] hover:to-[#3b7bc8] hover:shadow-xl transition-all cursor-pointer';
     return 'bg-gray-100 text-gray-400 cursor-not-allowed';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPending]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isPending]);
 
   // نص الزر حسب الحالة
   const buttonText = useMemo(() => {
     if (accepting) return 'جاري القبول...';
+    if (isPaid) return 'تم الدفع - الرحلة بدأت'; // ✅ نص حالة الدفع
     if (isAccepted) return 'تم قبول العرض';
     if (isPendingPayment) return 'في انتظار الدفع';
     if (isExpired) return 'انتهت صلاحية العرض';
     if (isSelectedForPayment) return 'جاري تجهيز الدفع...'; // ✅ نص جديد
     if (isPending) return 'قبول العرض';
     return 'غير متاح';
-  }, [accepting, isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPending]);
+  }, [accepting, isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isPending]);
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col relative ${cardClasses}`}>
@@ -264,7 +271,7 @@ const DriverCard = memo(function DriverCard({
         <div className="mt-auto">
           <button
             onClick={handleAccept}
-            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment}
+            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment || isPaid}
             className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 ${buttonClasses}`}
           >
             {accepting ? (
