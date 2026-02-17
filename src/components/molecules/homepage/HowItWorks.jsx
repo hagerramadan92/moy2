@@ -6,21 +6,22 @@ import { SlLocationPin } from "react-icons/sl";
 import { FaMoneyBillWave } from "react-icons/fa6";
 import { Package } from "lucide-react";
 import { PiTruck } from "react-icons/pi";
-
+import { FaLocationDot } from "react-icons/fa6";
+import { MdCloudDone } from "react-icons/md";
 // Icon mapping for dynamic icons
 const iconMap = {
-  location: <PiTruck  className="w-8 h-8 md:w-9 md:h-9" />,
+  location: <FaLocationDot  className="w-8 h-8 md:w-9 md:h-9" />,
   truck: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
-  pay: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
-  done: <PiTruck className="w-8 h-8 md:w-9 md:h-9" />,
+  pay: <FaMoneyBillWave className="w-8 h-8 md:w-9 md:h-9" />,
+  done: <MdCloudDone className="w-8 h-8 md:w-9 md:h-9" />,
 };
 
 // Color mapping for icons (matching default steps colors)
 const colorMap = {
-  location: "#DF4F3C",  // Red - matches default step 2
-  truck: "#44A816",     // Green - matches default step 3
-  pay: "#5B72EE",       // Purple - matches default step 4
-  done: "#F48C06",      // Orange - matches default step 5 (if exists)
+  location: "#5a9cf0",  // Red - matches default step 2
+  truck: "#5a9cf0",     // Green - matches default step 3
+  pay: "#5a9cf0",       // Purple - matches default step 4
+  done: "#5a9cf0",      // Orange - matches default step 5 (if exists)
 };
 
 // Default steps (4 steps)
@@ -94,7 +95,7 @@ const HowItWorks = ({ data }) => {
 
         {/* Desktop Wave Line SVG */}
         {/* Visible only on XL/LG screens where the 4-col grid exists */}
-        <div className="hidden xl:block absolute top-[140px] left-0 right-0 w-full h-[100px] pointer-events-none z-0">
+        <div className="hidden xl:block absolute top-[125px] left-0 right-0 w-full h-[100px] pointer-events-none z-0">
           <svg className="w-full h-full" viewBox="0 0 1440 120" preserveAspectRatio="none">
              {/* 
                 Path logic for 4 steps:
@@ -125,7 +126,7 @@ const HowItWorks = ({ data }) => {
               className="group flex flex-col items-center text-center relative"
             >
               <div 
-                className={`w-16 h-16 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105 ${isBottomRow ? "sm:mb-8 lg:mb-6" : ""}`}
+                className={`w-16 h-16 md:w-18 md:h-18 rounded-xl flex items-center justify-center text-white shadow-xl mb-6 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-105 ${isBottomRow ? "sm:mb-8 lg:mb-6" : ""}`}
                 style={{ backgroundColor: step.color, boxShadow: `0 10px 25px -5px ${step.color}60` }}
               >
                 {step.icon}

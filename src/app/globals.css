@@ -289,7 +289,7 @@ section {
 
 
 .cover{
-  background-image: url("/images/cover.png");
+  background-image: url("/images/cover.webp");
   width: 100%;
   min-height: 679px;
   height: auto;

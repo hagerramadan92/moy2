@@ -178,7 +178,7 @@ function Card({ icon, title, desc, gradient, shadowColor }) {
       <h3 className="font-bold text-base sm:text-lg md:text-xl text-gray-900 mb-1 mt-6 md:mt-3">
         {title}
       </h3>
-      <p className="text-gray-700 text-xs sm:text-sm md:text-base leading-relaxed">
+      <p className="text-gray-500 text-xs sm:text-sm md:text-base leading-relaxed">
         {desc}
       </p>
     </div>
