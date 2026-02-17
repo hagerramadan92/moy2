@@ -421,7 +421,7 @@ const ChatApp = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-          <div className="text-red-500 mb-4">
+          <div className="text-red-600 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -446,7 +446,7 @@ const ChatApp = () => {
         {/* Header */}
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold text-gray-900">Messages</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-700 mt-1">
             {chats.length} conversation{chats.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -457,13 +457,13 @@ const ChatApp = () => {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-500">Loading chats...</p>
+                <p className="mt-2 text-gray-700">Loading chats...</p>
               </div>
             </div>
           ) : chats.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-gray-500">No chats yet</p>
+                <p className="text-gray-700">No chats yet</p>
               </div>
             </div>
           ) : (
@@ -492,7 +492,7 @@ const ChatApp = () => {
                             {getOtherParticipant(chat)}
                           </p>
                           {chat.last_message && (
-                            <p className="text-xs text-gray-500 truncate mt-1">
+                            <p className="text-xs text-gray-700 truncate mt-1">
                               {chat.last_message}
                             </p>
                           )}
@@ -526,7 +526,7 @@ const ChatApp = () => {
                   <h2 className="font-semibold text-gray-900">
                     {getOtherParticipant(currentChat)}
                   </h2>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-700">
                     Chat ID: {currentChat.id}
                   </p>
                 </div>
@@ -539,7 +539,7 @@ const ChatApp = () => {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Loading messages...</p>
+                    <p className="mt-2 text-gray-700">Loading messages...</p>
                   </div>
                 </div>
               ) : messages.length === 0 ? (
@@ -549,7 +549,7 @@ const ChatApp = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <p className="text-gray-500 text-lg font-medium">No messages yet</p>
+                  <p className="text-gray-700 text-lg font-medium">No messages yet</p>
                   <p className="text-gray-400 mt-2">Start the conversation!</p>
                 </div>
               ) : (
@@ -570,7 +570,7 @@ const ChatApp = () => {
                       >
                         <div className="text-sm break-words">{msg.text}</div>
                         <div className="flex items-center justify-between mt-1">
-                          <span className={`text-xs ${msg.sender === "user" ? 'text-blue-200' : 'text-gray-500'}`}>
+                          <span className={`text-xs ${msg.sender === "user" ? 'text-blue-200' : 'text-gray-700'}`}>
                             {formatTime(msg.createdAt || msg.timestamp)}
                           </span>
                           <div className="flex items-center ml-2">
@@ -580,7 +580,7 @@ const ChatApp = () => {
                             {msg.status === "failed" && (
                               <button
                                 onClick={() => retryFailedMessage(msg)}
-                                className="text-xs text-red-500 hover:text-red-700 flex items-center"
+                                className="text-xs text-red-600 hover:text-red-700 flex items-center"
                               >
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -616,7 +616,7 @@ const ChatApp = () => {
                   disabled={!message.trim() || isSending}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                     !message.trim() || isSending
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      ? "bg-gray-300 text-gray-700 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
@@ -631,7 +631,7 @@ const ChatApp = () => {
                   ) : "Send"}
                 </button>
               </div>
-              <div className="text-xs text-gray-500 mt-2 px-1">
+              <div className="text-xs text-gray-700 mt-2 px-1">
                 Press Enter to send
               </div>
             </div>

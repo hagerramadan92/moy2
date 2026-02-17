@@ -865,7 +865,7 @@ export default function ContractHistoryPage() {
 
                                     <div className="mb-6">
                                         <label className="block text-sm font-bold text-foreground mb-2">
-                                            سبب إنهاء العقد <span className="text-red-500">*</span>
+                                            سبب إنهاء العقد <span className="text-red-600">*</span>
                                         </label>
                                         <textarea
                                             value={terminationReason}

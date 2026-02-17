@@ -582,11 +582,11 @@ export default function PaymentModal({
             {loadingMethods ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-sm text-gray-500">جاري تحميل طرق الدفع...</p>
+                <p className="text-sm text-gray-700">جاري تحميل طرق الدفع...</p>
               </div>
             ) : paymentMethods.length === 0 && !error ? (
               <div className="text-center py-8">
-                <p className="text-sm text-gray-500">لا توجد طرق دفع متاحة</p>
+                <p className="text-sm text-gray-700">لا توجد طرق دفع متاحة</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -630,7 +630,7 @@ export default function PaymentModal({
                           )}
                         </div>
 
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-700">
                           {method.description}
                         </p>
 

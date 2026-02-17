@@ -92,7 +92,7 @@ const errorId = `${selectId}-error`;
 				<Scale size={18} className={'text-[#579BE8]'} />
 				{label}
 				{finalStatus === "error" && (
-					<span className="text-red-500 text-xs font-normal mr-1">*</span>
+					<span className="text-red-600 text-xs font-normal mr-1">*</span>
 				)}
 			</label>
 
@@ -118,7 +118,7 @@ const errorId = `${selectId}-error`;
 
 				<SelectContent className="text-right max-h-[300px] overflow-y-auto">
 					{items.length === 0 && !loading ? (
-						<div className="py-4 text-center text-gray-500 text-sm">
+						<div className="py-4 text-center text-gray-700 text-sm">
 							لا توجد أحجام متاحة
 						</div>
 					) : (
@@ -131,7 +131,7 @@ const errorId = `${selectId}-error`;
 								<div className="flex items-center justify-between w-full">
 									<span>{it.name}</span>
 									{it.description && (
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-gray-700">
 											{it.description}
 										</span>
 									)}
@@ -144,14 +144,14 @@ const errorId = `${selectId}-error`;
 
 			{/* رسالة خطأ تحت الحقل */}
 			{finalStatus === "error" && !value && (
-				<div  id={errorId} className="flex items-center gap-1 text-red-500 text-xs mt-1 md:ms-2">
+				<div  id={errorId} className="flex items-center gap-1 text-red-600 text-xs mt-1 md:ms-2">
 					
 					<span>هذا الحقل مطلوب</span>
 				</div>
 			)}
 
 			{/* {loading && (
-				<div className="flex items-center gap-2 text-gray-500 text-xs mt-1">
+				<div className="flex items-center gap-2 text-gray-700 text-xs mt-1">
 					<div className="w-3 h-3 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
 					<span>جاري التحميل...</span>
 				</div>

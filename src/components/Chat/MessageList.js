@@ -167,7 +167,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm">جاري تحميل الرسائل...</p>
+          <p className="text-gray-700 text-sm">جاري تحميل الرسائل...</p>
         </div>
       </div>
     );
@@ -177,7 +177,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
     return (
       <div className="h-full flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-red-500 mb-2">{error}</p>
+          <p className="text-red-600 mb-2">{error}</p>
           <button
             onClick={() => loadMessages(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
@@ -238,7 +238,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
                     {/* اسم المرسل للرسائل الواردة */}
                     {!isCurrentUser && (
                       <div className="flex items-center gap-2 mb-1">
-                        <User size={12} className="text-gray-500" />
+                        <User size={12} className="text-gray-700" />
                         <span className="text-xs font-medium text-gray-700">
                           {message.sender_type === "App\\Models\\User" 
                             ? `المستخدم ${message.sender_id}` 
@@ -255,7 +255,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
                     {/* وقت الرسالة وحالة القراءة */}
                     <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-opacity-20">
                       <span className={`text-xs ${
-                        isCurrentUser ? 'text-blue-200' : 'text-gray-500'
+                        isCurrentUser ? 'text-blue-200' : 'text-gray-700'
                       }`}>
                         {formatMessageTime(message.created_at)}
                       </span>
@@ -303,7 +303,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
             </svg>
           </div>
           <h3 className="font-bold text-gray-700 mb-2">بداية المحادثة</h3>
-          <p className="text-gray-500">ابدأ المحادثة بإرسال رسالة</p>
+          <p className="text-gray-700">ابدأ المحادثة بإرسال رسالة</p>
         </div>
       )}
       

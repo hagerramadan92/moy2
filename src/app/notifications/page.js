@@ -114,7 +114,7 @@ const EmptyState = ({ filter }) => (
        filter === 'unread' ? 'لا توجد إشعارات غير مقروءة' : 
        'لا توجد إشعارات مقروءة'}
     </h3>
-    <p className="text-xs sm:text-sm md:text-base text-gray-500 max-w-md mx-auto px-2">
+    <p className="text-xs sm:text-sm md:text-base text-gray-700 max-w-md mx-auto px-2">
       {filter === 'all' ? 'عندما تتلقى إشعارات جديدة، ستظهر هنا' :
        filter === 'unread' ? 'جميع إشعاراتك تمت قراءتها' :
        'لم تقرأ أي إشعارات بعد'}
@@ -237,11 +237,11 @@ export default function NotificationsPage() {
       case 'warning':
         return <FaExclamationCircle className="h-5 w-5 text-yellow-500" />;
       case 'error':
-        return <FaExclamationCircle className="h-5 w-5 text-red-500" />;
+        return <FaExclamationCircle className="h-5 w-5 text-red-600" />;
       case 'success':
         return <FaCheckCircle className="h-5 w-5 text-green-500" />;
       default:
-        return <FaEnvelope className="h-5 w-5 text-gray-500" />;
+        return <FaEnvelope className="h-5 w-5 text-gray-700" />;
     }
   };
 
@@ -369,7 +369,7 @@ export default function NotificationsPage() {
               
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3 w-full sm:w-auto justify-start sm:justify-end">
                 <div className="flex items-center space-x-1 sm:space-x-2">
-                  <FaFilter className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 hidden sm:block" />
+                  <FaFilter className="h-3 w-3 sm:h-4 sm:w-4 text-gray-700 hidden sm:block" />
                   <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
@@ -498,7 +498,7 @@ export default function NotificationsPage() {
                           )}
                         </div>
                         
-                        <span className="text-xs sm:text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-700">
                           {formatDate(notification.created_at)}
                         </span>
                       </div>

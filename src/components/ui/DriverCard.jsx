@@ -85,10 +85,10 @@ export default function DriverCard({
               ))}
             </div>
             <span className="font-bold text-gray-900 mr-1">{rating}</span>
-            <span className="text-xs text-gray-500">({successfulOrders} تقييم)</span>
+            <span className="text-xs text-gray-700">({successfulOrders} تقييم)</span>
           </div>
           
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-700">
             العرض #{offerId} • {getTimeAgo(createdAt)}
           </div>
         </div>
@@ -101,7 +101,7 @@ export default function DriverCard({
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span className="text-xs text-gray-500">الوقت المتوقع</span>
+              <span className="text-xs text-gray-700">الوقت المتوقع</span>
             </div>
             <p className="font-bold text-gray-900">{deliveryTime}</p>
           </div>
@@ -109,7 +109,7 @@ export default function DriverCard({
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div className="flex items-center gap-2 mb-1">
               <Truck className="w-4 h-4 text-green-600" />
-              <span className="text-xs text-gray-500">نوع المركبة</span>
+              <span className="text-xs text-gray-700">نوع المركبة</span>
             </div>
             <p className="font-bold text-gray-900">{vehicleType}</p>
           </div>
@@ -119,7 +119,7 @@ export default function DriverCard({
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div className="flex items-center gap-2 mb-1">
               <Package className="w-4 h-4 text-purple-600" />
-              <span className="text-xs text-gray-500">الطلبات المكتملة</span>
+              <span className="text-xs text-gray-700">الطلبات المكتملة</span>
             </div>
             <p className="font-bold text-gray-900">{ordersCount}</p>
           </div>
@@ -127,7 +127,7 @@ export default function DriverCard({
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div className="flex items-center gap-2 mb-1">
               <Phone className="w-4 h-4 text-amber-600" />
-              <span className="text-xs text-gray-500">رقم الهاتف</span>
+              <span className="text-xs text-gray-700">رقم الهاتف</span>
             </div>
             <p className="font-bold text-gray-900">{formatPhoneNumber(phone)}</p>
           </div>
@@ -141,7 +141,7 @@ export default function DriverCard({
               <p className="font-bold text-gray-900 text-2xl">{price} ر.س</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500 mb-1">ترتيب العرض</p>
+              <p className="text-xs text-gray-700 mb-1">ترتيب العرض</p>
               <div className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold">
                 {index + 1}
               </div>

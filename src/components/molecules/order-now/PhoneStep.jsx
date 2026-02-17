@@ -24,7 +24,7 @@ export default function PhoneStep({ phone, countryCode, onPhoneChange, onCountry
     <div className="space-y-8 text-right">
       <div className="space-y-2">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center text-gray-900 tracking-tight">مرحبًا بك</h2>
-        <p className="text-gray-500 text-center text-sm sm:text-base md:text-lg font-medium">سجل دخولك للاستمرار</p>
+        <p className="text-gray-700 text-center text-sm sm:text-base md:text-lg font-medium">سجل دخولك للاستمرار</p>
       </div>
       
       <div className="space-y-5">
@@ -63,7 +63,7 @@ export default function PhoneStep({ phone, countryCode, onPhoneChange, onCountry
           </div>
         </div>
         {error && (
-          <p className="text-red-500 text-xs sm:text-sm font-medium mr-1">
+          <p className="text-red-600 text-xs sm:text-sm font-medium mr-1">
             {error}
           </p>
         )}

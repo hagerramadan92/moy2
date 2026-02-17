@@ -724,7 +724,7 @@ export default function ContractingPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                                 {activeTab === 'commercial' && (
                                     <div className="space-y-1.5 md:space-y-2 relative">
-                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة <span className="text-red-500">*</span></label>
+                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة <span className="text-red-600">*</span></label>
                                         <div className="relative">
                                             <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                             <input
@@ -736,13 +736,13 @@ export default function ContractingPage() {
                                                 className={`w-full bg-white dark:bg-card border-2 ${errors.name ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
                                             />
                                         </div>
-                                        {errors.name && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                        {errors.name && <p className="text-[10px] md:text-xs text-red-600 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                             <span>⚠️</span> {errors.name}
                                         </p>}
                                     </div>
                                 )}
                                 <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>اسم مقدم الطلب <span className="text-red-500">*</span></label>
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>اسم مقدم الطلب <span className="text-red-600">*</span></label>
                                     <div className="relative">
                                         <FaUser className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
@@ -754,12 +754,12 @@ export default function ContractingPage() {
                                             className={`w-full bg-white dark:bg-card border-2 ${errors.applicantName ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
                                         />
                                     </div>
-                                    {errors.applicantName && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                    {errors.applicantName && <p className="text-[10px] md:text-xs text-red-600 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.applicantName}
                                     </p>}
                                 </div>
                                 <div className="space-y-1.5 md:space-y-2 relative">
-                                    <label className={`${labelClasses} text-xs md:text-sm`}>رقم الجوال <span className="text-red-500">*</span></label>
+                                    <label className={`${labelClasses} text-xs md:text-sm`}>رقم الجوال <span className="text-red-600">*</span></label>
                                     <div className="relative">
                                         <FaPhoneAlt className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                         <input
@@ -771,7 +771,7 @@ export default function ContractingPage() {
                                             className={`w-full bg-white dark:bg-card border-2 ${errors.phone ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
                                         />
                                     </div>
-                                    {errors.phone && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                    {errors.phone && <p className="text-[10px] md:text-xs text-red-600 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                         <span>⚠️</span> {errors.phone}
                                     </p>}
                                     <p className="text-[10px] md:text-xs text-muted-foreground mr-3 md:mr-4">
@@ -917,7 +917,7 @@ export default function ContractingPage() {
                                         <button
                                             type="button"
                                             onClick={(e) => { e.stopPropagation(); handleClearLocation(); }}
-                                            className="absolute left-2 md:left-3 p-1.5 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-200 transition-colors"
+                                            className="absolute left-2 md:left-3 p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
                                         >
                                             <X size={12} />
                                         </button>
@@ -955,7 +955,7 @@ export default function ContractingPage() {
                                         className={`w-full bg-white dark:bg-card border-2 ${errors.website ? 'border-red-500/50 ring-2 ring-red-500/10' : 'border-border/60 focus:border-[#579BE8]'} rounded-lg md:rounded-xl lg:rounded-2xl px-10 md:px-12 py-2.5 md:py-3 lg:py-3.5 outline-none focus:ring-4 focus:ring-[#579BE8]/10 transition-all text-xs md:text-sm lg:text-base font-medium shadow-sm hover:shadow-md placeholder:font-medium`}
                                     />
                                 </div>
-                                {errors.website && <p className="text-[10px] md:text-xs text-red-500 mr-3 md:mr-4 font-bold flex items-center gap-1">
+                                {errors.website && <p className="text-[10px] md:text-xs text-red-600 mr-3 md:mr-4 font-bold flex items-center gap-1">
                                     <span>⚠️</span> {errors.website}
                                 </p>}
                             </div>

@@ -528,7 +528,7 @@ export default function OrdersPage() {
             {/* Error Message for Authentication */}
             {authError && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-                    <div className="text-red-500 mb-4">
+                    <div className="text-red-600 mb-4">
                         <FaTimes className="w-12 h-12 mx-auto" />
                     </div>
                     <p className="text-red-600 font-bold mb-2">يجب تسجيل الدخول</p>
@@ -733,7 +733,7 @@ export default function OrdersPage() {
                             {(selectedStatuses.length > 0 || period !== "all" || selectedDate || searchOrderNumber) && (
                                 <button 
                                     onClick={clearAllFilters}
-                                    className="md:flex hidden items-center md:gap-2 md:px-5 md:py-3.5 px-3 py-1.5 bg-white dark:bg-card border-2 border-border/60 rounded-lg md:rounded-2xl hover:shadow-md hover:border-red-500/50 transition-all font-bold shadow-sm text-red-500 hover:text-red-600"
+                                    className="md:flex hidden items-center md:gap-2 md:px-5 md:py-3.5 px-3 py-1.5 bg-white dark:bg-card border-2 border-border/60 rounded-lg md:rounded-2xl hover:shadow-md hover:border-red-500/50 transition-all font-bold shadow-sm text-red-600 hover:text-red-600"
                                 >
                                     <FaTimes className="" />
                                     <span className="text-sm">إلغاء الفلتر</span>
@@ -838,7 +838,7 @@ export default function OrdersPage() {
                                 </div>
                             ) : error && !authError ? (
                                 <div className="p-10 text-center">
-                                    <div className="text-red-500 mb-4">
+                                    <div className="text-red-600 mb-4">
                                         <FaTimes className="w-12 h-12 mx-auto" />
                                     </div>
                                     <p className="text-red-600 font-bold mb-2">حدث خطأ في جلب البيانات</p>

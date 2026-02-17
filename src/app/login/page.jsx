@@ -255,7 +255,7 @@ export default function Login() {
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-xs sm:text-sm font-medium flex items-center gap-1 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
+                  className="text-red-600 text-xs sm:text-sm font-medium flex items-center gap-1 bg-red-50 px-3 py-2 rounded-lg border border-red-200"
                 >
                   <span>⚠</span>
                   {error}
@@ -288,7 +288,7 @@ export default function Login() {
                   }`}
                 >
                   <FaWhatsapp className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                    otpMethod === "whatsapp" ? "text-[#25D366]" : "text-gray-500"
+                    otpMethod === "whatsapp" ? "text-[#25D366]" : "text-gray-700"
                   }`} />
                   <span className={`font-medium text-xs sm:text-sm ${
                     otpMethod === "whatsapp" ? "text-[#25D366]" : "text-gray-700"
@@ -310,7 +310,7 @@ export default function Login() {
                   }`}
                 >
                   <FaSms className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                    otpMethod === "sms" ? "text-[#579BE8]" : "text-gray-500"
+                    otpMethod === "sms" ? "text-[#579BE8]" : "text-gray-700"
                   }`} />
                   <span className={`font-medium text-xs sm:text-sm ${
                     otpMethod === "sms" ? "text-[#579BE8]" : "text-gray-700"
@@ -387,7 +387,7 @@ export default function Login() {
             className="pt-3 sm:pt-4 border-t border-gray-200"
           >
             <div className="flex flex-col items-center gap-1 sm:gap-2">
-              <p className="text-xs text-center text-gray-500 flex items-center gap-1 sm:gap-2">
+              <p className="text-xs text-center text-gray-700 flex items-center gap-1 sm:gap-2">
                 <span>📋</span>
                 <span className="text-xs sm:text-sm">بتسجيل الدخول، أنت توافق على</span>
               </p>

@@ -853,7 +853,7 @@ export default function AvailableDriversContent({ onBack }) {
                     </button>
                   </div>
                   
-                  <p className="text-xs text-gray-500 mt-4">
+                  <p className="text-xs text-gray-700 mt-4">
                     يمكنك تغيير هذا الإعداد لاحقاً من إعدادات التطبيق
                   </p>
                 </div>

@@ -923,7 +923,7 @@ const ChatModal = ({
               </div>
               <div>
                 <h2 className="font-bold text-gray-800">المحادثات</h2>
-                <p className="text-sm text-gray-500">{currentUser.name}</p>
+                <p className="text-sm text-gray-700">{currentUser.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -982,7 +982,7 @@ const ChatModal = ({
                           setParticipantId("");
                           setParticipantName("");
                         }}
-                        className="text-gray-500 hover:text-gray-700 p-1"
+                        className="text-gray-700 hover:text-gray-700 p-1"
                       >
                         <X size={18} />
                       </button>
@@ -1031,7 +1031,7 @@ const ChatModal = ({
                           )}
                         </button>
                       </div>
-                      <p className="text-sm text-gray-500 mt-2">أدخل معرف السائق أو الشخص الذي تريد التواصل معه</p>
+                      <p className="text-sm text-gray-700 mt-2">أدخل معرف السائق أو الشخص الذي تريد التواصل معه</p>
                     </div>
                   </div>
                 </div>
@@ -1050,7 +1050,7 @@ const ChatModal = ({
                   <LogIn size={32} className="text-gray-400" />
                 </div>
                 <h3 className="font-bold text-gray-700 mb-2">يجب تسجيل الدخول</h3>
-                <p className="text-gray-500 text-center mb-6">سجل الدخول لعرض المحادثات والرسائل</p>
+                <p className="text-gray-700 text-center mb-6">سجل الدخول لعرض المحادثات والرسائل</p>
                 <button
                   onClick={() => window.location.href = '/login'}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -1062,7 +1062,7 @@ const ChatModal = ({
             ) : loading ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
-                <p className="text-gray-500 mt-3">جاري تحميل المحادثات...</p>
+                <p className="text-gray-700 mt-3">جاري تحميل المحادثات...</p>
               </div>
             ) : filteredChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8">
@@ -1070,7 +1070,7 @@ const ChatModal = ({
                   <MessageCircle size={32} className="text-gray-400" />
                 </div>
                 <h3 className="font-bold text-gray-700 mb-2">لا توجد محادثات</h3>
-                <p className="text-gray-500 text-center mb-6">ابدأ محادثتك الأولى</p>
+                <p className="text-gray-700 text-center mb-6">ابدأ محادثتك الأولى</p>
                 <button
                   onClick={() => setShowNewChatForm(true)}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -1117,7 +1117,7 @@ const ChatModal = ({
                             {chatName}
                           </h3>
                           <span className="text-xs whitespace-nowrap flex-shrink-0">
-                            <span className={isActive ? 'text-blue-600' : 'text-gray-500'}>
+                            <span className={isActive ? 'text-blue-600' : 'text-gray-700'}>
                               {formatChatTime(chat.lastActive)}
                             </span>
                           </span>
@@ -1185,7 +1185,7 @@ const ChatModal = ({
                   </button>
                   <div>
                     <h3 className="font-bold text-gray-800">محادثة مع {defaultParticipantName || 'السائق'}</h3>
-                    <p className="text-sm text-gray-500">ابدأ المحادثة الآن</p>
+                    <p className="text-sm text-gray-700">ابدأ المحادثة الآن</p>
                   </div>
                 </div>
               </div>
@@ -1285,7 +1285,7 @@ const ChatModal = ({
                       <LogIn size={32} className="text-gray-400" />
                     </div>
                     <h3 className="font-bold text-gray-700 mb-2">يجب تسجيل الدخول</h3>
-                    <p className="text-gray-500 text-center mb-6">سجل الدخول لعرض وإرسال الرسائل</p>
+                    <p className="text-gray-700 text-center mb-6">سجل الدخول لعرض وإرسال الرسائل</p>
                     <button
                       onClick={() => window.location.href = '/login'}
                       className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"

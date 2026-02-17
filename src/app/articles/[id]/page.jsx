@@ -1197,17 +1197,17 @@ const ArticleDetails = () => {
                               {comment.is_guest && comment.guest_name ? comment.guest_name : 'مستخدم'}
                             </span>
                             {comment.is_edited && (
-                              <span className="text-xs text-gray-500 font-cairo">(تم التعديل)</span>
+                              <span className="text-xs text-gray-700 font-cairo">(تم التعديل)</span>
                             )}
                           </div>
                           <p className="font-cairo font-normal text-sm md:text-base text-gray-700 leading-relaxed mb-3">
                             {comment.content}
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-4 text-xs text-gray-700">
                             <span className="font-cairo">{comment.created_at_human}</span>
                             {comment.likes_count > 0 && (
                               <div className="flex items-center gap-1">
-                                <FaHeart className="text-red-500 text-xs" />
+                                <FaHeart className="text-red-600 text-xs" />
                                 <span className="font-cairo">{comment.likes_count}</span>
                               </div>
                             )}

@@ -108,7 +108,7 @@ const ArticleCard = ({ article, isActive = false }) => {
         
         {/* Meta Info */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-          <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-700">
             <div className="flex items-center gap-1.5">
               <FaUser className="text-xs" />
               <span className="truncate max-w-[80px]">{article.author}</span>

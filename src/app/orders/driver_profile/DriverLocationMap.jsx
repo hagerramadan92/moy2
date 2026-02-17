@@ -130,7 +130,7 @@ export default function DriverLocationMap({ lat, lng, driverName, speed, heading
             <Popup>
               <div className="text-right">
                 <strong className="block text-sm mb-1">{driverName || 'سائق'}</strong>
-                <span className="text-xs text-gray-500 block mb-1">الموقع الحالي</span>
+                <span className="text-xs text-gray-700 block mb-1">الموقع الحالي</span>
                 {speed && (
                   <span className="text-xs text-blue-600 block mb-1">
                     السرعة: {speed} كم/ساعة

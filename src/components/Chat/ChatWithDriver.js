@@ -386,7 +386,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
               <MessageCircle size={40} className="text-blue-400" />
             </div>
             <h3 className="font-bold text-gray-700 mb-2 text-lg">بداية المحادثة</h3>
-            <p className="text-gray-500 text-sm mb-6">ابدأ محادثتك الأولى مع سائق الطلب</p>
+            <p className="text-gray-700 text-sm mb-6">ابدأ محادثتك الأولى مع سائق الطلب</p>
             <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
               {quickReplies.slice(0, 4).map((reply, index) => (
                 <button
@@ -407,7 +407,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
             {/* Welcome Message */}
             <div className="text-center mb-6">
               <div className="inline-block bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm">
-                <p className="text-xs text-gray-500">بدأت المحادثة حول الطلب #{driverInfo?.orderId}</p>
+                <p className="text-xs text-gray-700">بدأت المحادثة حول الطلب #{driverInfo?.orderId}</p>
               </div>
             </div>
 
@@ -447,7 +447,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
                   {/* Message Footer */}
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-opacity-20">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs ${message.isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
+                      <span className={`text-xs ${message.isCurrentUser ? 'text-blue-100' : 'text-gray-700'}`}>
                         {formatMessageTime(message.time)}
                       </span>
                       {message.is_temp && (
@@ -480,7 +480,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    <span className="text-xs text-gray-500 mr-2">يكتب...</span>
+                    <span className="text-xs text-gray-700 mr-2">يكتب...</span>
                   </div>
                 </div>
               </div>
@@ -555,7 +555,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
                     onClick={handleSendLocation}
                     className="p-3 rounded-lg hover:bg-gray-50 flex flex-col items-center gap-1"
                   >
-                    <MapPin size={18} className="text-red-500" />
+                    <MapPin size={18} className="text-red-600" />
                     <span className="text-xs">موقع</span>
                   </button>
                 </div>
@@ -599,7 +599,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
         </div>
 
         {/* Input Helpers */}
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+        <div className="flex items-center justify-between mt-2 text-xs text-gray-700">
           <div className="flex items-center gap-4">
             <button className="hover:text-gray-700 flex items-center gap-1">
               <Mic size={14} />
@@ -621,7 +621,7 @@ const ChatWithDriver = ({ driverId, userId, chatId, onClose }) => {
             </div>
             <div>
               <p className="text-xs font-medium text-gray-700">الطلب قيد التوصيل</p>
-              <p className="text-xs text-gray-500">التوصيل خلال {driverInfo?.estimatedTime}</p>
+              <p className="text-xs text-gray-700">التوصيل خلال {driverInfo?.estimatedTime}</p>
             </div>
           </div>
           <button

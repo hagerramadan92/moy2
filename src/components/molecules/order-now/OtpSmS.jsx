@@ -92,7 +92,7 @@ export default function OtpStep({ onNext }) {
         </div>
 
         {/* Info Text */}
-        <p className="text-xs text-gray-500 text-center font-medium flex items-center justify-center gap-2">
+        <p className="text-xs text-gray-700 text-center font-medium flex items-center justify-center gap-2">
           <span className="text-[#579BE8]">📱</span>
           تحقق من رسائلك النصية
         </p>
@@ -112,7 +112,7 @@ export default function OtpStep({ onNext }) {
           <FaWhatsapp className="w-4 h-4" />
           <span>إرسال عبر الواتساب</span>
         </button>
-        <div className="text-gray-500 font-medium text-center">
+        <div className="text-gray-700 font-medium text-center">
           {timer > 0 ? (
             <span>
               إعادة الإرسال{" "}

@@ -63,7 +63,7 @@ export default function OrderDetailsPage() {
               </svg>
             </button>
             
-            <p className="text-sm text-gray-500 text-center mt-3">
+            <p className="text-sm text-gray-700 text-center mt-3">
               سيتم عرض جميع السائقين المتاحين لتوصيل طلبك
             </p>
           </div>

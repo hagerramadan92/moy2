@@ -149,7 +149,7 @@ export default function StaticPageContent({
               <p className="text-gray-600 dark:text-gray-400">
                 يرجى المحاولة مرة أخرى لاحقاً أو التواصل مع الدعم الفني إذا استمرت المشكلة.
               </p>
-              <div className="text-sm text-gray-500 dark:text-gray-500">
+              <div className="text-sm text-gray-700 dark:text-gray-700">
                 <p>Slug: {slug}</p>
               </div>
             </div>

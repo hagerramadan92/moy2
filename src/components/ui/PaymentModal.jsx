@@ -134,7 +134,7 @@ export default function PaymentModal({
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 text-right">{method.description}</p>
+                      <p className="text-xs text-gray-700 text-right">{method.description}</p>
                     </div>
                   </button>
                 );

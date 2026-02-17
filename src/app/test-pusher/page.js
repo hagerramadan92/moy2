@@ -262,7 +262,7 @@ export default function TestPusherPage() {
                   <span>{getStatusText(connectionState)}</span>
                 </div>
               </div>
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-gray-700 mt-2">
                 Socket ID: {pusherClient?.connection?.socket_id || 'N/A'}
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function TestPusherPage() {
                   <span>{isSubscribed ? 'مشترك' : 'غير مشترك'}</span>
                 </div>
               </div>
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-gray-700 mt-2">
                 القناة: chat-app
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function TestPusherPage() {
               disabled={connectionState !== 'connected' || isSubscribed}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 connectionState !== 'connected' || isSubscribed
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >
@@ -307,7 +307,7 @@ export default function TestPusherPage() {
               disabled={!isSubscribed}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 !isSubscribed
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
                   : 'bg-red-600 text-white hover:bg-red-700'
               }`}
             >
@@ -339,7 +339,7 @@ export default function TestPusherPage() {
                 disabled={!testMessage.trim()}
                 className={`px-4 py-2 rounded-lg ${
                   !testMessage.trim()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -372,7 +372,7 @@ export default function TestPusherPage() {
           
           <div className="h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
             {events.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-gray-700 py-8">
                 لا توجد أحداث حتى الآن. ابدأ باختبار الاتصال.
               </div>
             ) : (
@@ -390,7 +390,7 @@ export default function TestPusherPage() {
                   >
                     <div className="flex justify-between items-start">
                       <div className="font-medium break-words max-w-[80%]">{event.message}</div>
-                      <div className="text-sm text-gray-500 whitespace-nowrap ml-2">
+                      <div className="text-sm text-gray-700 whitespace-nowrap ml-2">
                         {event.timestamp}
                       </div>
                     </div>
@@ -400,7 +400,7 @@ export default function TestPusherPage() {
             )}
           </div>
           
-          <div className="text-sm text-gray-500 mt-4 flex justify-between items-center">
+          <div className="text-sm text-gray-700 mt-4 flex justify-between items-center">
             <span>{events.length} حدث • يتم تحديث السجل تلقائياً</span>
             <span className="text-xs">آخر ID: {events[0]?.id?.split('_')[0] || 'N/A'}</span>
           </div>

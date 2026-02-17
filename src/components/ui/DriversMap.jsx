@@ -122,7 +122,7 @@ export default function DriversMap({ drivers, className }) {
           <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
             <Truck className="w-8 h-8 text-gray-400" />
           </div>
-          <p className="text-gray-500">لا توجد سائقين على الخريطة</p>
+          <p className="text-gray-700">لا توجد سائقين على الخريطة</p>
         </div>
       </div>
     );

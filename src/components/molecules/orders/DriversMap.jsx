@@ -586,7 +586,7 @@ export default function DriversMap({
                         <Popup>
                             <div className="text-right">
                                 <strong className="block text-sm mb-1">📍 موقعك الحالي</strong>
-                                <span className="text-xs text-gray-500 block mb-1">موقع التوصيل</span>
+                                <span className="text-xs text-gray-700 block mb-1">موقع التوصيل</span>
                                 <span className="text-xs text-blue-600 block mb-1">
                                     {validCenter.lat.toFixed(8)}, {validCenter.lng.toFixed(8)}
                                 </span>
@@ -660,7 +660,7 @@ export default function DriversMap({
                             <Popup>
                                 <div className="text-right">
                                     <strong className="block text-sm mb-1">{driver.name || 'سائق'}</strong>
-                                    <span className="text-xs text-gray-500 block mb-1">{driver.deliveryTime || 'غير محدد'}</span>
+                                    <span className="text-xs text-gray-700 block mb-1">{driver.deliveryTime || 'غير محدد'}</span>
                                     {driver.price && (
                                         <span className="text-xs text-green-600 font-medium block mb-1">{driver.price}</span>
                                     )}

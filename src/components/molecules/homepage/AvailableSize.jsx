@@ -114,15 +114,15 @@ export default function AvailableSize() {
             {loading ? (
               <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] gap-4">
                 <Spinner size="lg" />
-                {/* <p className="text-gray-500 text-sm sm:text-base">جاري التحميل...</p> */}
+                {/* <p className="text-gray-700 text-sm sm:text-base">جاري التحميل...</p> */}
               </div>
             ) : error ? (
               <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] px-4">
-                <p className="text-red-500 text-sm sm:text-base text-center">خطأ في تحميل البيانات: {error}</p>
+                <p className="text-red-600 text-sm sm:text-base text-center">خطأ في تحميل البيانات: {error}</p>
               </div>
             ) : services.length === 0 ? (
               <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px]">
-                <p className="text-gray-500 text-sm sm:text-base">لا توجد خدمات متاحة</p>
+                <p className="text-gray-700 text-sm sm:text-base">لا توجد خدمات متاحة</p>
               </div>
             ) : (
               <Swiper

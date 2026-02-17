@@ -82,7 +82,7 @@ const SpecialOffersSection = () => {
                         {offer.mainText}
                       </p>
                       {offer.description && (
-                        <p className="text-sm text-gray-500 leading-relaxed">
+                        <p className="text-sm text-gray-700 leading-relaxed">
                           {offer.description}
                         </p>
                       )}

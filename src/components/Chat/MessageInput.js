@@ -183,12 +183,12 @@ const MessageInput = ({ chatId, currentUserId = 39, onMessageSent }) => {
           <div className="p-2 bg-red-50 border border-red-200 rounded-lg animate-fadeIn">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-red-500">⚠️</span>
+                <span className="text-red-600">⚠️</span>
                 <span className="text-red-700 text-sm">{error}</span>
               </div>
               <button
                 onClick={() => setError("")}
-                className="text-red-500 hover:text-red-700 text-sm"
+                className="text-red-600 hover:text-red-700 text-sm"
               >
                 ✕
               </button>
@@ -225,7 +225,7 @@ const MessageInput = ({ chatId, currentUserId = 39, onMessageSent }) => {
                   onClick={sendLocation}
                   className="p-2 rounded-lg hover:bg-gray-50 flex flex-col items-center gap-1"
                 >
-                  <MapPin size={18} className="text-red-500" />
+                  <MapPin size={18} className="text-red-600" />
                   <span className="text-xs">موقع</span>
                 </button>
                 <button className="p-2 rounded-lg hover:bg-gray-50 flex flex-col items-center gap-1">
@@ -308,7 +308,7 @@ const MessageInput = ({ chatId, currentUserId = 39, onMessageSent }) => {
       </div>
       
       {/* تلميحات وأرقام */}
-      <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+      <div className="flex items-center justify-between mt-2 text-xs text-gray-700">
         <div>
           {message.length > 0 && (
             <span>{message.length}/1000 حرف</span>

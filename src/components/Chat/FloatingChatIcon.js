@@ -127,6 +127,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+           aria-label="إضافة طلب جديد"
           onClick={() => setIsExpanded(!isExpanded)}
           className={`relative rounded-full shadow-lg flex items-center justify-center transition-all duration-300 bg-gradient-to-br from-[#579BE8] to-[#124987] w-11 h-11 sm:w-14 sm:h-14 hover:shadow-xl`}
         >
@@ -204,7 +205,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                   </div>
                   <div className="flex-1 text-right">
                     <h4 className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors text-sm sm:text-base">محادثاتي</h4>
-                    <p className="text-xs text-gray-500">عرض جميع المحادثات</p>
+                    <p className="text-xs text-gray-700">عرض جميع المحادثات</p>
                     {/* <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                         مباشر
@@ -258,15 +259,15 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                         <span className="text-green-600 font-medium">الدعم متاح</span>
                       </div>
                       {/* <span className="text-gray-400 hidden sm:inline">•</span> */}
-                      {/* <span className="text-gray-500 text-[10px] sm:text-xs">آخر تحديث: {lastUpdate}</span> */}
+                      {/* <span className="text-gray-700 text-[10px] sm:text-xs">آخر تحديث: {lastUpdate}</span> */}
                     </div>
-                    <span className="text-gray-500 font-medium text-xs">٢٤/٧</span>
+                    <span className="text-gray-700 font-medium text-xs">٢٤/٧</span>
                   </div>
                   
                   {/* <div className="flex items-center justify-between mt-1 sm:mt-2 text-xs">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-500">متصل</span>
+                      <span className="text-gray-700">متصل</span>
                     </div>
                     <span className="text-gray-400 text-[10px]">
                       v1.0 • {new Date().getFullYear()}

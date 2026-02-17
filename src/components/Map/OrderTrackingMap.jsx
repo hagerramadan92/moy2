@@ -85,7 +85,7 @@ export default function OrderTrackingMap({
               <div className="text-right p-2">
                 <h3 className="font-bold text-lg mb-1">موقع التوصيل</h3>
                 <p className="text-sm text-gray-600">{userAddress || "عنوان التوصيل"}</p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-700 mt-2">
                   {isCompleted ? "تم التوصيل هنا" : "يتم التوصيل إلى هذا الموقع"}
                 </p>
               </div>

@@ -88,7 +88,7 @@ const ReviewCard = ({ review, x, isDragging }) => {
                 <span className="text-gray-900 font-bold text-lg sm:text-xl md:text-2xl block">
                   {review.name}
                 </span>
-                <span className="text-gray-500 text-xs sm:text-sm font-medium">
+                <span className="text-gray-700 text-xs sm:text-sm font-medium">
                   {review.date}
                 </span>
               </div>

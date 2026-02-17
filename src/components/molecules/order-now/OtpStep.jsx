@@ -46,7 +46,7 @@ export default function OtpStep({ otp, onOtpChange, error, onNext, onBack, onRes
       <div className="space-y-6">
            <div className="space-y-2">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center text-gray-900 tracking-tight">التحقق</h2>
-                <p className="text-gray-500 text-center text-sm sm:text-base md:text-lg font-medium">أدخل الرمز المرسل لجوالك</p>
+                <p className="text-gray-700 text-center text-sm sm:text-base md:text-lg font-medium">أدخل الرمز المرسل لجوالك</p>
            </div>
            
            <div className="flex justify-center">
@@ -73,7 +73,7 @@ export default function OtpStep({ otp, onOtpChange, error, onNext, onBack, onRes
         ))}
       </div>
       {error && (
-        <p className="text-red-500 text-xs sm:text-sm font-medium text-center">
+        <p className="text-red-600 text-xs sm:text-sm font-medium text-center">
           {error}
         </p>
       )}
@@ -97,7 +97,7 @@ export default function OtpStep({ otp, onOtpChange, error, onNext, onBack, onRes
       <div className="grid grid-cols-2 gap-4">
         <Button 
             variant="outline"
-            className="w-full h-[55px] sm:h-[60px] border-2 border-gray-100 text-gray-500 hover:bg-gray-50 hover:text-[#579BE8] hover:border-[#579BE8]/20 rounded-2xl text-sm sm:text-base md:text-lg font-bold"
+            className="w-full h-[55px] sm:h-[60px] border-2 border-gray-100 text-gray-700 hover:bg-gray-50 hover:text-[#579BE8] hover:border-[#579BE8]/20 rounded-2xl text-sm sm:text-base md:text-lg font-bold"
             onClick={onBack}
         >
             رجوع

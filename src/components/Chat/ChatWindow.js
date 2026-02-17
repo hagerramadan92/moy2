@@ -110,7 +110,7 @@ const ChatWindow = ({ chatId, userId, otherUser, onBack, onSendMessage }) => {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#579BE8] border-t-transparent mx-auto"></div>
-          <p className="text-gray-500 mt-4">جاري تحميل المحادثة...</p>
+          <p className="text-gray-700 mt-4">جاري تحميل المحادثة...</p>
         </div>
       </div>
     );
@@ -126,7 +126,7 @@ const ChatWindow = ({ chatId, userId, otherUser, onBack, onSendMessage }) => {
               <User size={40} className="text-blue-400" />
             </div>
             <h3 className="font-bold text-gray-700 mb-2">بداية المحادثة</h3>
-            <p className="text-gray-500">ابدأ المحادثة مع {otherUser?.name || 'المستخدم'}</p>
+            <p className="text-gray-700">ابدأ المحادثة مع {otherUser?.name || 'المستخدم'}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -146,7 +146,7 @@ const ChatWindow = ({ chatId, userId, otherUser, onBack, onSendMessage }) => {
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.message}</p>
                   <div className="flex items-center justify-end gap-2 mt-1">
-                    <span className={`text-xs ${message.isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
+                    <span className={`text-xs ${message.isCurrentUser ? 'text-blue-100' : 'text-gray-700'}`}>
                       {formatMessageTime(message.time)}
                     </span>
                     {message.isCurrentUser && (

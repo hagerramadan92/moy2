@@ -89,13 +89,13 @@ const ConfirmationModal = ({
                     {title}
                   </h3>
                   <div className="mt-2">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-700">
                       {message}
                     </p>
                     {itemCount > 0 && (
                       <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
                         <div className="flex items-center">
-                          <FaTrash className="h-4 w-4 text-red-500 ml-2" />
+                          <FaTrash className="h-4 w-4 text-red-600 ml-2" />
                           <span className="text-sm font-medium text-red-700">
                             سيتم حذف {itemCount} إشعار
                           </span>

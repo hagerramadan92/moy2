@@ -160,7 +160,7 @@ export default function ChatPage() {
                         return `الدردشة ${selectedChat.id}`;
                       })()}
                     </h2>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
                       <span>
                         {selectedChat.type === "user_driver" ? "سائق" : "مستخدم"}
                       </span>
@@ -264,7 +264,7 @@ export default function ChatPage() {
                   placeholder="أدخل معرف المستخدم (ID)"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-700 mt-2">
                   أدخل معرف المستخدم أو السائق الذي تريد التواصل معه
                 </p>
               </div>

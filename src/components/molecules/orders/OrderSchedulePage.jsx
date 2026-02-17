@@ -428,7 +428,7 @@ export default function OrderSchedulePage({
 										<motion.p
 											initial={{ opacity: 0, y: -5 }}
 											animate={{ opacity: 1, y: 0 }}
-											className="text-red-500 text-xs mt-1 flex items-center gap-1 px-1"
+											className="text-red-600 text-xs mt-1 flex items-center gap-1 px-1"
 										>
 											<AlertCircle size={12} />
 											{errors.date}
@@ -473,7 +473,7 @@ export default function OrderSchedulePage({
 													{/* Day Headers */}
 													<div className="grid grid-cols-7 gap-1 mb-2">
 														{['أ', 'إ', 'ث', 'أ', 'خ', 'ج', 'س'].map((day, idx) => (
-															<div key={idx} className="text-center text-xs font-medium text-gray-500 p-1">
+															<div key={idx} className="text-center text-xs font-medium text-gray-700 p-1">
 																{day}
 															</div>
 														))}
@@ -536,7 +536,7 @@ export default function OrderSchedulePage({
 															<span className="text-xs text-gray-600">غير متاح</span>
 														</div>
 													</div>
-													<p className="text-xs text-gray-500 mt-2 text-center">
+													<p className="text-xs text-gray-700 mt-2 text-center">
 														من {format(tomorrow, 'dd/MM')} إلى {format(maxDate, 'dd/MM')}
 													</p>
 												</div>
@@ -596,7 +596,7 @@ export default function OrderSchedulePage({
 										<motion.p
 											initial={{ opacity: 0, y: -5 }}
 											animate={{ opacity: 1, y: 0 }}
-											className="text-red-500 text-xs mt-1 flex items-center gap-1 px-1"
+											className="text-red-600 text-xs mt-1 flex items-center gap-1 px-1"
 										>
 											<AlertCircle size={12} />
 											{errors.time}
@@ -626,7 +626,7 @@ export default function OrderSchedulePage({
 												<div className="flex-1 overflow-y-auto p-3 sm:p-4">
 													{Object.entries(timeGroups).map(([period, times]) => (
 														<div key={period} className="mb-4 last:mb-0">
-															<h5 className="text-xs font-bold text-gray-500 mb-2 sticky top-0 bg-white py-1">
+															<h5 className="text-xs font-bold text-gray-700 mb-2 sticky top-0 bg-white py-1">
 																{period}
 															</h5>
 															<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -687,7 +687,7 @@ export default function OrderSchedulePage({
 						<div className="space-y-2 sm:space-y-3 sm:mb-2 mb-0">
 							<div className="flex items-center justify-between">
 								<label className="text-gray-700 font-bold text-sm sm:text-base">ملاحظات إضافية (اختياري)</label>
-								<span className="text-xs text-gray-500">
+								<span className="text-xs text-gray-700">
 									{notes.length}/500 حرف
 								</span>
 							</div>
@@ -713,7 +713,7 @@ export default function OrderSchedulePage({
 								maxLength={500}
 							/>
 							{errors.notes && (
-								<p className="text-red-500 text-xs flex items-center gap-1">
+								<p className="text-red-600 text-xs flex items-center gap-1">
 									<AlertCircle size={12} />
 									{errors.notes}
 								</p>

@@ -345,7 +345,7 @@ export default function OrderDetailsPage() {
                       <MapPin size={24} className="text-[#579BE8]" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-500 mb-1">موقع التسليم</p>
+                      <p className="text-sm text-gray-700 mb-1">موقع التسليم</p>
                       <p className="text-lg font-bold text-gray-900">الرياض - مستشفى الملك فيصل</p>
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export default function OrderDetailsPage() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">نوع المياه</p>
+                          <p className="text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-2">نوع المياه</p>
                           <p className="text-base font-bold text-gray-900 leading-tight">غير صالحة للشرب</p>
                         </div>
                       </div>
@@ -378,7 +378,7 @@ export default function OrderDetailsPage() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">الكمية</p>
+                          <p className="text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-2">الكمية</p>
                           <p className="text-base font-bold text-gray-900 leading-tight">6 طن</p>
                         </div>
                       </div>
@@ -394,7 +394,7 @@ export default function OrderDetailsPage() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">رقم الطلب</p>
+                          <p className="text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-2">رقم الطلب</p>
                           <p className="text-base font-bold text-gray-900 font-mono leading-tight">112312121</p>
                         </div>
                       </div>
@@ -410,10 +410,10 @@ export default function OrderDetailsPage() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">التاريخ</p>
+                          <p className="text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-2">التاريخ</p>
                           <div className="space-y-1">
                             <p className="text-base font-bold text-gray-900 leading-tight">3 نوفمبر</p>
-                            <p className="text-xs font-medium text-gray-500">12:00 ص</p>
+                            <p className="text-xs font-medium text-gray-700">12:00 ص</p>
                           </div>
                         </div>
                       </div>
@@ -486,7 +486,7 @@ export default function OrderDetailsPage() {
                           className="object-contain"
                         />
                       </div>
-                      <span className="font-cairo font-medium text-[10px] text-gray-500">الملف</span>
+                      <span className="font-cairo font-medium text-[10px] text-gray-700">الملف</span>
                     </button>
                   </div>
 
@@ -519,10 +519,10 @@ export default function OrderDetailsPage() {
                   {/* Stats Row */}
                   <div className="flex items-center justify-between gap-2 bg-gray-50/50 rounded-xl p-3 border border-gray-100 mb-4">
                     <div className="flex items-center gap-1.5 flex-1">
-                      <Clock size={14} className="text-gray-500" />
+                      <Clock size={14} className="text-gray-700" />
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-gray-900">55 د</span>
-                        <span className="text-[9px] text-gray-500">دقيقة</span>
+                        <span className="text-[9px] text-gray-700">دقيقة</span>
                       </div>
                     </div>
                     <div className="w-px h-8 bg-gray-200" />
@@ -530,15 +530,15 @@ export default function OrderDetailsPage() {
                       <Star size={14} className="fill-yellow-400 text-yellow-400" />
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-gray-900">4.5</span>
-                        <span className="text-[9px] text-gray-500">تقييم</span>
+                        <span className="text-[9px] text-gray-700">تقييم</span>
                       </div>
                     </div>
                     <div className="w-px h-8 bg-gray-200" />
                     <div className="flex items-center gap-1.5 flex-1">
-                      <TrendingUp size={14} className="text-gray-500" />
+                      <TrendingUp size={14} className="text-gray-700" />
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-gray-900">1,439</span>
-                        <span className="text-[9px] text-gray-500">طلب</span>
+                        <span className="text-[9px] text-gray-700">طلب</span>
                       </div>
                     </div>
                   </div>

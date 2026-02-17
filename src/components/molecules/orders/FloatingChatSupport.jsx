@@ -208,7 +208,7 @@ export default function FloatingChatSupport({ orderId, userId, driverId, driverI
                       </div>
                     </div>
                   ) : drivers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-700">
                       <MessageCircle size={32} className="mb-2 opacity-30" />
                       <p className="text-xs">لا توجد محادثات سابقة</p>
                     </div>

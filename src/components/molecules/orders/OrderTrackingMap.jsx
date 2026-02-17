@@ -103,7 +103,7 @@ export default function OrderTrackingMap({
                 <Popup>
                     <div className="text-right">
                         <strong className="block text-sm">موقع التسليم</strong>
-                        <span className="text-xs text-gray-500">الرياض - مستشفى الملك فيصل</span>
+                        <span className="text-xs text-gray-700">الرياض - مستشفى الملك فيصل</span>
                     </div>
                 </Popup>
             </Marker>
@@ -114,7 +114,7 @@ export default function OrderTrackingMap({
                     <Popup>
                         <div className="text-right">
                             <strong className="block text-sm">السائق في الطريق</strong>
-                            <span className="text-xs text-gray-500">جاري التوصيل</span>
+                            <span className="text-xs text-gray-700">جاري التوصيل</span>
                         </div>
                     </Popup>
                 </Marker>

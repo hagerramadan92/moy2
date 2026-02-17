@@ -107,7 +107,7 @@ const NotificationsPage = () => {
               <div className="p-12 text-center">
                 <BellIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد إشعارات</h3>
-                <p className="text-gray-500">عندما تتلقى إشعارات جديدة، ستظهر هنا</p>
+                <p className="text-gray-700">عندما تتلقى إشعارات جديدة، ستظهر هنا</p>
               </div>
             ) : (
               <>
@@ -155,7 +155,7 @@ const NotificationsPage = () => {
                           </button>
                         </div>
                         
-                        <div className="mt-3 flex items-center text-sm text-gray-500">
+                        <div className="mt-3 flex items-center text-sm text-gray-700">
                           <span className="ml-4">
                             {new Date(notification.created_at).toLocaleString('ar-EG')}
                           </span>

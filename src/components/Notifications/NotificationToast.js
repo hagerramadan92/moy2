@@ -150,7 +150,7 @@ const NotificationToast = () => {
       case 'warning':
         return <FaExclamationCircle className="h-5 w-5 text-yellow-500" />;
       case 'error':
-        return <FaExclamationCircle className="h-5 w-5 text-red-500" />;
+        return <FaExclamationCircle className="h-5 w-5 text-red-600" />;
       case 'info':
       default:
         return <FaInfoCircle className="h-5 w-5 text-blue-500" />;
@@ -255,7 +255,7 @@ const NotificationToast = () => {
                 {notification.message}
               </p>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-700">
                   {formatTime(notification.created_at)}
                 </span>
                 {!notification.is_read && (

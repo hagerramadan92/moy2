@@ -295,7 +295,7 @@ const ArticleCard = ({ article, variant = 'default' }) => {
                 <h3 className="font-bold text-sm text-gray-900 mb-2 line-clamp-2 group-hover:text-gray-600 transition-colors leading-tight h-[40px]">
                   {article.title}
                 </h3>
-                <div className="flex items-center gap-3 text-xs text-gray-500 mt-auto">
+                <div className="flex items-center gap-3 text-xs text-gray-700 mt-auto">
                   <span>{article.readTime}</span>
                   <span>•</span>
                   <span>{article.views.toLocaleString()} مشاهدة</span>
@@ -348,7 +348,7 @@ const ArticleCard = ({ article, variant = 'default' }) => {
             
             {/* Meta Info */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-gray-700">
                 <div className="flex items-center gap-1.5">
                   <FaUser className="text-xs" />
                   <span className="truncate max-w-[80px]">{article.author}</span>

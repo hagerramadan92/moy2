@@ -182,11 +182,11 @@ const NotificationBell = () => {
       case 'warning':
         return <FaExclamationCircle className="h-4 w-4 text-yellow-500" />;
       case 'error':
-        return <FaExclamationCircle className="h-4 w-4 text-red-500" />;
+        return <FaExclamationCircle className="h-4 w-4 text-red-600" />;
       case 'success':
         return <FaCheckCircle className="h-4 w-4 text-green-500" />;
       default:
-        return <FaEnvelope className="h-4 w-4 text-gray-500" />;
+        return <FaEnvelope className="h-4 w-4 text-gray-700" />;
     }
   };
 
@@ -378,12 +378,12 @@ const NotificationBell = () => {
                   <p className="mt-3 text-gray-600 text-sm">جاري تحميل الإشعارات...</p>
                 </div>
               ) : localNotifications.length === 0 ? (
-                <div className="p-6 md:p-8 text-center text-gray-500">
+                <div className="p-6 md:p-8 text-center text-gray-700">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                     <FaBell className="h-8 w-8 text-gray-400" />
                   </div>
                   <p className="text-gray-700 font-medium">لا توجد إشعارات</p>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-700 mt-2">
                     عندما تتلقى إشعارات جديدة ستظهر هنا
                   </p>
                   {!isFirebaseInitialized && (
@@ -446,7 +446,7 @@ const NotificationBell = () => {
                                   {notification.data.sender}
                                 </span>
                               )}
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-700">
                                 {formatTimeAgo(notification.created_at)}
                               </span>
                             </div>
@@ -485,7 +485,7 @@ const NotificationBell = () => {
                 {/* معلومات Firebase */}
                 {/* {!isFirebaseInitialized && (
                   <div className="mt-2 pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 text-center">
+                    <p className="text-xs text-gray-700 text-center">
                       لتفعيل الإشعارات الفورية، انتقل إلى{' '}
                       <button
                         onClick={() => {

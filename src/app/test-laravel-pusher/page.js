@@ -216,7 +216,7 @@ export default function TestLaravelPusherPage() {
           
           <div className="h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
             {events.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-gray-700 py-8">
                 لا توجد أحداث حتى الآن. ابدأ باختبار الاشتراك.
               </div>
             ) : (
@@ -242,7 +242,7 @@ export default function TestLaravelPusherPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 whitespace-nowrap ml-2">
+                      <div className="text-sm text-gray-700 whitespace-nowrap ml-2">
                         {event.timestamp}
                       </div>
                     </div>

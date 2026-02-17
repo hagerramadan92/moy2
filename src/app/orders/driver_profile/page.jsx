@@ -152,7 +152,7 @@ function DriverProfileContent() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <XCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">حدث خطأ</h2>
           <p className="text-gray-600 mb-6">{error || 'لم يتم العثور على بيانات السائق'}</p>
           <button
@@ -413,7 +413,7 @@ function DriverProfileContent() {
                   )}
                   {driverData.rejection_reason && (
                     <InfoItem 
-                      icon={<XCircle className="w-5 h-5 text-red-500" />}
+                      icon={<XCircle className="w-5 h-5 text-red-600" />}
                       label="سبب الرفض"
                       value={driverData.rejection_reason}
                       className="sm:col-span-2"
@@ -532,7 +532,7 @@ function InfoItem({ icon, label, value, className = '' }) {
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 mb-1">{label}</p>
+        <p className="text-xs text-gray-700 mb-1">{label}</p>
         <p className="text-sm sm:text-base font-medium text-gray-900 break-words">{value}</p>
       </div>
     </div>
@@ -606,7 +606,7 @@ function ReviewCard({ review, formatDateTime }) {
               {user.name || 'عميل'}
             </h4>
             {user.phone && (
-              <p className="text-xs text-gray-500 truncate">{user.phone}</p>
+              <p className="text-xs text-gray-700 truncate">{user.phone}</p>
             )}
           </div>
         </div>
@@ -634,7 +634,7 @@ function ReviewCard({ review, formatDateTime }) {
       )}
 
       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-700">
           <Calendar className="w-3.5 h-3.5" />
           <span>{formatDateTime(review.created_at)}</span>
         </div>

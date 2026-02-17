@@ -39,7 +39,7 @@ const EnhancedOrderTrackingMap = dynamic(() => import('@/components/Map/Enhanced
       <div className="text-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-t-2 border-b-2 border-[#3B82F6] mb-4 sm:mb-6"></div>
         <p className="text-gray-600 font-medium text-sm sm:text-base mb-1 sm:mb-2">جاري تحميل الخريطة...</p>
-        <p className="text-gray-500 text-xs sm:text-sm">تحميل مواقع التتبع المباشر</p>
+        <p className="text-gray-700 text-xs sm:text-sm">تحميل مواقع التتبع المباشر</p>
       </div>
     </div>
   )
@@ -536,7 +536,7 @@ export default function OrderDetailsPage() {
                 </div>
                 <div className="text-center">
                     <p className="text-gray-700 font-bold text-base mb-1">جاري تحميل تفاصيل الطلب...</p>
-                    <p className="text-gray-500 text-xs">الرجاء الانتظار</p>
+                    <p className="text-gray-700 text-xs">الرجاء الانتظار</p>
                 </div>
             </div>
         );
@@ -545,7 +545,7 @@ export default function OrderDetailsPage() {
     if (authError) {
         return (
             <div className="bg-gradient-to-br from-red-50 to-white rounded-2xl sm:rounded-3xl border border-red-200 p-6 sm:p-8 text-center shadow-lg mx-4 sm:mx-0">
-                <div className="text-red-500 mb-4 sm:mb-6">
+                <div className="text-red-600 mb-4 sm:mb-6">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto">
                         <FaTimes className="w-8 h-8 sm:w-10 sm:h-10" />
                     </div>
@@ -567,7 +567,7 @@ export default function OrderDetailsPage() {
     if (error && !authError) {
         return (
             <div className="bg-gradient-to-br from-red-50 to-white rounded-2xl sm:rounded-3xl border border-red-200 p-6 sm:p-8 text-center shadow-lg mx-4 sm:mx-0">
-                <div className="text-red-500 mb-4 sm:mb-6">
+                <div className="text-red-600 mb-4 sm:mb-6">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto">
                         <BiError className="w-8 h-8 sm:w-10 sm:h-10" />
                     </div>
@@ -922,7 +922,7 @@ export default function OrderDetailsPage() {
                                             />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm text-gray-500 font-bold mb-1 sm:mb-2">الخدمة</p>
+                                            <p className="text-xs sm:text-sm text-gray-700 font-bold mb-1 sm:mb-2">الخدمة</p>
                                             <p className="text-sm sm:text-base  font-black text-gray-900 truncate">{orderData.service?.name || "غير محدد"}</p>
                                         </div>
                                     </div>
@@ -931,7 +931,7 @@ export default function OrderDetailsPage() {
                                             <BiWater className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-600" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm text-gray-500 font-bold mb-1 sm:mb-2">نوع المياه</p>
+                                            <p className="text-xs sm:text-sm text-gray-700 font-bold mb-1 sm:mb-2">نوع المياه</p>
                                             <p className="text-sm sm:text-base  font-black text-gray-900 truncate">{orderData.water_type?.name || "غير محدد"}</p>
                                         </div>
                                     </div>
@@ -940,7 +940,7 @@ export default function OrderDetailsPage() {
                                             <BiCalendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-600" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-xs sm:text-sm text-gray-500 font-bold mb-1 sm:mb-2">تاريخ الطلب</p>
+                                            <p className="text-xs sm:text-sm text-gray-700 font-bold mb-1 sm:mb-2">تاريخ الطلب</p>
                                             <p className="text-sm sm:text-base  font-black text-gray-900 truncate">{formatDate(orderData.created_at)}</p>
                                         </div>
                                     </div>
@@ -1002,7 +1002,7 @@ export default function OrderDetailsPage() {
                                     <div className="mt-4 sm:mt-6 lg:mt-8 pt-4 sm:pt-6 lg:pt-8 border-t border-gray-200">
                                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
                                             <div className="bg-gradient-to-br from-gray-50 to-white p-3 sm:p-4 rounded-lg sm:rounded-xl lg:rounded-2xl text-center border border-gray-200">
-                                                <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">حالة السائق</p>
+                                                <p className="text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2">حالة السائق</p>
                                                 <p className="text-sm sm:text-base  font-bold text-blue-600">
                                                     {currentStatus === 'in-road' ? '🚚 في الطريق' : getStatusText(currentStatus)}
                                                 </p>
@@ -1047,7 +1047,7 @@ export default function OrderDetailsPage() {
                                 <p className="text-gray-600 mb-3 sm:mb-4  text-sm sm:text-base  truncate">
                                     {orderData.location?.address || "موقع التوصيل"}
                                 </p>
-                                <p className="text-gray-500 mb-4 sm:mb-6  text-xs sm:text-sm">عرض موقع التوصيل على الخريطة التفاعلية</p>
+                                <p className="text-gray-700 mb-4 sm:mb-6  text-xs sm:text-sm">عرض موقع التوصيل على الخريطة التفاعلية</p>
                                 <button 
                                     onClick={() => setIsMapVisible(true)}
                                     className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base  shadow-lg hover:scale-105 transition-all inline-flex items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto"

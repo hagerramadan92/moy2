@@ -493,7 +493,7 @@ const ContactFormSection = () => {
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-xs font-medium flex items-center gap-1"
+                  className="text-red-600 text-xs font-medium flex items-center gap-1"
                 >
                   <span>⚠</span>
                   {errors.name}
@@ -526,7 +526,7 @@ const ContactFormSection = () => {
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-xs font-medium flex items-center gap-1"
+                  className="text-red-600 text-xs font-medium flex items-center gap-1"
                 >
                   <span>⚠</span>
                   {errors.phone}
@@ -568,7 +568,7 @@ const ContactFormSection = () => {
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-xs font-medium flex items-center gap-1"
+                  className="text-red-600 text-xs font-medium flex items-center gap-1"
                 >
                   <span>⚠</span>
                   {errors.subject}
@@ -582,7 +582,7 @@ const ContactFormSection = () => {
                 <FaEnvelope className="w-4 h-4 text-[#579BE8]" />
                 <span>رسالتك</span>
                 {formData.message && (
-                  <span className="text-xs text-gray-500 font-normal">
+                  <span className="text-xs text-gray-700 font-normal">
                     ({formData.message.trim().length}/500)
                   </span>
                 )}
@@ -606,7 +606,7 @@ const ContactFormSection = () => {
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-xs font-medium flex items-center gap-1"
+                  className="text-red-600 text-xs font-medium flex items-center gap-1"
                 >
                   <span>⚠</span>
                   {errors.message}

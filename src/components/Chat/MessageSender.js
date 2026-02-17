@@ -141,12 +141,12 @@ const MessageSender = ({ chatId, currentUserId = 39, onMessageSent }) => {
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg animate-fadeIn">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-red-500">⚠️</span>
+                <span className="text-red-600">⚠️</span>
                 <span className="text-red-700 text-sm">{error}</span>
               </div>
               <button
                 onClick={() => setError("")}
-                className="text-red-500 hover:text-red-700 text-sm"
+                className="text-red-600 hover:text-red-700 text-sm"
               >
                 ✕
               </button>
@@ -221,7 +221,7 @@ const MessageSender = ({ chatId, currentUserId = 39, onMessageSent }) => {
 
       {/* تلميحات */}
       <div className="mt-3 pt-3 border-t border-gray-100">
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-gray-700 text-center">
           اضغط <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Enter</kbd> للإرسال • اضغط <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Shift + Enter</kbd> للسطر الجديد
         </p>
       </div>

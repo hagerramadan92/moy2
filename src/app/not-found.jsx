@@ -88,7 +88,7 @@ export default function NotFound() {
                         transition={{ delay: 0.3 }}
                         className="space-y-4"
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/10 text-[10px] md:text-[12px] font-black uppercase tracking-widest">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 text-red-600 border border-red-500/10 text-[10px] md:text-[12px] font-black uppercase tracking-widest">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                             خطأ في المسار
                         </div>

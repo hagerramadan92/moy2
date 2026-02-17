@@ -309,7 +309,7 @@ const registerDeviceDirect = async (fcmToken) => {
             onClick={handleSkip}
             disabled={loading}
             className="bg-transparent hover:bg-gray-50
-             text-gray-500 font-medium md:py-3 md:px-6 py-1 px-1 text-sm md:text-base 
+             text-gray-700 font-medium md:py-3 md:px-6 py-1 px-1 text-sm md:text-base 
              rounded-md md:rounded-xl border-2 border-gray-200 
              transition-all duration-200 hover:-translate-y-0.5 
              active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed 

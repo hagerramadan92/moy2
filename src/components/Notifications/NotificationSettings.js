@@ -143,7 +143,7 @@ export default function NotificationSettings() {
                   : 'يجب تفعيل الإشعارات لتلقي التحديثات الفورية'
                 }
               </p>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-700 mt-2">
                 إذن الإشعارات: {notificationPermission === 'granted' ? '✓ مسموح' : '✗ غير مسموح'}
                 {fcmToken && ' • التوكن: ✓ موجود'}
               </p>
@@ -154,12 +154,12 @@ export default function NotificationSettings() {
         {loading ? (
           <div className="text-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-            <p className="mt-2 text-gray-500">جاري تحميل الأجهزة...</p>
+            <p className="mt-2 text-gray-700">جاري تحميل الأجهزة...</p>
           </div>
         ) : devices.length === 0 ? (
           <div className="text-center py-8">
             <Smartphone className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">لا توجد أجهزة مسجلة</p>
+            <p className="text-gray-700">لا توجد أجهزة مسجلة</p>
             <p className="text-sm text-gray-400 mt-1">
               سجل جهازك لتلقي الإشعارات
             </p>
@@ -191,7 +191,7 @@ export default function NotificationSettings() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-700">
                         {device.device_type === 'android' && 'أندرويد'}
                         {device.device_type === 'ios' && 'آيفون'}
                         {device.device_type === 'web' && 'ويب'}
@@ -207,7 +207,7 @@ export default function NotificationSettings() {
                         نشط
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-gray-500">
+                      <Badge variant="outline" className="text-gray-700">
                         غير نشط
                       </Badge>
                     )}
@@ -215,7 +215,7 @@ export default function NotificationSettings() {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-700">
                     <p>الإصدار: {device.app_version}</p>
                     <p>
                       مسجل منذ: {new Date(device.created_at).toLocaleDateString('ar-EG')}
@@ -250,7 +250,7 @@ export default function NotificationSettings() {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium">نصائح للإشعارات</h4>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-700">
                 • تأكد من تفعيل الإشعارات في إعدادات المتصفح
                 <br />
                 • اضغط "تفعيل الإشعارات" في الأعلى إذا لم تكن مفعلة

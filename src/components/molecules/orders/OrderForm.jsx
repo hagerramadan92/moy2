@@ -991,7 +991,7 @@ function OrderFormContent() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <label className="flex items-center gap-2 text-gray-700 font-bold text-sm md:text-base">
-                    <MapPin size={18} className={getFieldStatus('location') === 'error' ? 'text-red-500' : 'text-[#579BE8]'} />
+                    <MapPin size={18} className={getFieldStatus('location') === 'error' ? 'text-red-600' : 'text-[#579BE8]'} />
                     موقع التوصيل
                   </label>
                   <div className="flex gap-2">
@@ -1030,7 +1030,7 @@ function OrderFormContent() {
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                               selectedSavedLocation?.id === location.id
                                 ? 'bg-[#579BE8] text-white'
-                                : 'bg-gray-100 text-gray-500'
+                                : 'bg-gray-100 text-gray-700'
                             }`}>
                               {location.type === 'home' ? <FaHome className="w-4 h-4" /> :
                                location.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
@@ -1040,7 +1040,7 @@ function OrderFormContent() {
                               <h4 className="font-medium text-sm text-gray-900">
                                 {location.name}
                               </h4>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-700">
                                 {location.address}
                               </p>
                             </div>
@@ -1078,7 +1078,7 @@ function OrderFormContent() {
                       ${getFieldStatus('location') === 'success'
                         ? 'bg-gradient-to-r from-[#579BE8] to-[#124987] text-white'
                         : getFieldStatus('location') === 'error'
-                          ? 'bg-red-100 text-red-500'
+                          ? 'bg-red-100 text-red-600'
                           : 'bg-[#579BE8]/10 text-[#579BE8]'
                       }`}>
                       <MapPin size={18} />
@@ -1106,7 +1106,7 @@ function OrderFormContent() {
                         e.stopPropagation();
                         handleClearLocation();
                       }}
-                      className="p-1.5 bg-red-100 text-red-500 rounded-lg hover:bg-red-200 transition-colors"
+                      className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
                     >
                       <X size={12} />
                     </button>

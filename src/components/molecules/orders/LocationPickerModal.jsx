@@ -124,7 +124,7 @@ function SearchBox({ onPick }) {
       <div className="relative">
         {/* Input */}
         <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg p-2 flex items-center gap-2">
-          <Search size={18} className="text-gray-500" />
+          <Search size={18} className="text-gray-700" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -166,7 +166,7 @@ function SearchBox({ onPick }) {
             </ul>
 
             <div className="p-2 border-t bg-gray-50 flex justify-between items-center">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-700">
                 اختر نتيجة لتحديدها على الخريطة
               </span>
               <button
@@ -373,7 +373,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
           {lastLocateError && !loading && (
             <div className="absolute top-20 left-4 right-4 z-[1100]">
               <div className="bg-white/95 backdrop-blur-sm border border-red-200 rounded-2xl shadow-lg p-3 flex items-start gap-2">
-                <AlertCircle className="text-red-500 mt-0.5" size={18} />
+                <AlertCircle className="text-red-600 mt-0.5" size={18} />
                 <div className="flex-1 text-right">
                   <p className="font-bold text-gray-800">تعذر تحديد موقعك تلقائيًا</p>
                   <p className="text-xs text-gray-600 mt-1">
@@ -406,7 +406,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
           </div>
         </div>
 
-        <div className="p-3 bg-white border-t text-center text-sm text-gray-500">
+        <div className="p-3 bg-white border-t text-center text-sm text-gray-700">
           يمكنك تحريك الخريطة والنقر لتحديد موقعك بدقة
         </div>
       </div>

@@ -82,7 +82,7 @@ export default function CancelOrderModal({ isOpen, onClose, onCancelOrder, onCon
           <div className="relative bg-white rounded-[24px] shadow-2xl border border-gray-200 w-full max-w-[400px] md:max-w-[360px] lg:max-w-[340px] xl:max-w-[360px] max-h-[75vh] my-auto flex flex-col">
             
             {/* Close Button */}
-            <button onClick={onClose} className="absolute top-3 right-4 w-6 h-6 flex items-center justify-center text-gray-500 hover:text-black transition-colors text-lg z-10">
+            <button onClick={onClose} className="absolute top-3 right-4 w-6 h-6 flex items-center justify-center text-gray-700 hover:text-black transition-colors text-lg z-10">
               ✕
             </button>
 

@@ -136,7 +136,7 @@ export default function AddMoneyPage() {
                                 <p class="mb-1 text-xs sm:text-sm md:text-base"><strong>رقم الطلب:</strong> ${response.data.order_id || 'N/A'}</p>
                                 <p class="mb-1 text-xs sm:text-sm md:text-base"><strong>المبلغ:</strong> ${response.data.amount || amount} ر.س</p>
                                 <p class="mb-3 text-xs sm:text-sm md:text-base"><strong>طريقة الدفع:</strong> ${selectedMethod}</p>
-                                <p class="text-xs sm:text-sm text-gray-500">يرجى عدم إغلاق هذه النافذة حتى تكمل عملية الدفع</p>
+                                <p class="text-xs sm:text-sm text-gray-700">يرجى عدم إغلاق هذه النافذة حتى تكمل عملية الدفع</p>
                             </div>
                         `,
                         icon: "info",
@@ -538,7 +538,7 @@ export default function AddMoneyPage() {
                                             <span className="font-bold text-xs sm:text-sm block">{method.name}</span>
                                             <span className="text-xs text-muted-foreground mt-1">{method.description}</span>
                                             {method.requires_balance && (
-                                                <span className="text-xs text-red-500 mt-1 block">(يتطلب رصيد في المحفظة)</span>
+                                                <span className="text-xs text-red-600 mt-1 block">(يتطلب رصيد في المحفظة)</span>
                                             )}
                                         </div>
                                     </button>
@@ -622,7 +622,7 @@ export default function AddMoneyPage() {
                         </div>
 
                         <div className="bg-secondary/10 border border-border/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex gap-2 sm:gap-3">
-                            <div className="text-xl sm:text-2xl text-gray-500 flex-shrink-0">
+                            <div className="text-xl sm:text-2xl text-gray-700 flex-shrink-0">
                                 <MdSecurity />
                             </div>
                             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">

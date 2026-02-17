@@ -166,7 +166,7 @@ const EnhancedOrderTrackingMap = ({
             <FaMapMarkerAlt className="w-10 h-10 text-gray-400" />
           </div>
           <p className="text-gray-600 font-medium mb-2 text-lg">لم يتم تحديد موقع التوصيل</p>
-          <p className="text-gray-500">يرجى التحقق من معلومات العنوان في الطلب</p>
+          <p className="text-gray-700">يرجى التحقق من معلومات العنوان في الطلب</p>
         </div>
       </div>
     );
@@ -205,7 +205,7 @@ const EnhancedOrderTrackingMap = ({
                         </div>
                       )}
                       {vehiclePlate && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        <span className="text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
                           {vehiclePlate}
                         </span>
                       )}
@@ -218,14 +218,14 @@ const EnhancedOrderTrackingMap = ({
                 {distance && (
               <div className="flex flex-col items-end">
                 <div className="text-right">
-                  <div className="text-xs text-gray-500 mb-1">المسافة المتبقية</div>
+                  <div className="text-xs text-gray-700 mb-1">المسافة المتبقية</div>
                   <div className="text-2xl font-black text-blue-600">
                     {formatDistance()}
                   </div>
                 </div>
                 {estimatedTime && (
                   <div className="text-right mt-2">
-                    <div className="text-xs text-gray-500">الوقت المتوقع</div>
+                    <div className="text-xs text-gray-700">الوقت المتوقع</div>
                     <div className="text-sm font-bold text-green-600">
                       {estimatedTime} د
                     </div>
@@ -267,7 +267,7 @@ const EnhancedOrderTrackingMap = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-green-700 text-lg">موقع التوصيل</h3>
-                  <p className="text-xs text-gray-500">موقع الطلب</p>
+                  <p className="text-xs text-gray-700">موقع الطلب</p>
                 </div>
               </div>
               
@@ -279,11 +279,11 @@ const EnhancedOrderTrackingMap = ({
               
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-gray-50 p-2 rounded">
-                  <div className="text-gray-500">خط العرض</div>
+                  <div className="text-gray-700">خط العرض</div>
                   <div className="font-mono font-bold">{userCoords.lat}</div>
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
-                  <div className="text-gray-500">خط الطول</div>
+                  <div className="text-gray-700">خط الطول</div>
                   <div className="font-mono font-bold">{userCoords.lng}</div>
                 </div>
               </div>
@@ -306,7 +306,7 @@ const EnhancedOrderTrackingMap = ({
                     </div>
                     <div>
                       <h3 className="font-bold text-blue-700 text-lg">موقع السائق</h3>
-                      <p className="text-xs text-gray-500">ناقل الطلب</p>
+                      <p className="text-xs text-gray-700">ناقل الطلب</p>
                     </div>
                   </div>
                   
@@ -329,11 +329,11 @@ const EnhancedOrderTrackingMap = ({
                   
                   <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                     <div className="bg-gray-50 p-2 rounded">
-                      <div className="text-gray-500">خط العرض</div>
+                      <div className="text-gray-700">خط العرض</div>
                       <div className="font-mono font-bold">{driverCoords.lat}</div>
                     </div>
                     <div className="bg-gray-50 p-2 rounded">
-                      <div className="text-gray-500">خط الطول</div>
+                      <div className="text-gray-700">خط الطول</div>
                       <div className="font-mono font-bold">{driverCoords.lng}</div>
                     </div>
                   </div>

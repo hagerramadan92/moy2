@@ -99,7 +99,7 @@ export default function PusherConnectionTest() {
           {isConnected ? (
             <Wifi className="text-green-500" size={20} />
           ) : (
-            <WifiOff className="text-red-500" size={20} />
+            <WifiOff className="text-red-600" size={20} />
           )}
           <h3 className="font-bold text-gray-800">حالة اتصال Pusher</h3>
         </div>
@@ -148,7 +148,7 @@ export default function PusherConnectionTest() {
               {testResult.success ? (
                 <CheckCircle className="text-green-500 mt-0.5" size={16} />
               ) : (
-                <AlertCircle className="text-red-500 mt-0.5" size={16} />
+                <AlertCircle className="text-red-600 mt-0.5" size={16} />
               )}
               <div>
                 <p className={`font-medium ${

@@ -410,7 +410,7 @@ export default function OtpPage() {
                       </button>
                     </div>
                     <div className="pt-2 border-t border-[#579BE8]/10">
-                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium">
+                      <p className="text-[10px] sm:text-xs text-gray-700 font-medium">
                         إرسال مرة أخرى{" "}
                         {timer > 0 ? (
                           <span className="inline-flex items-center gap-1 text-[#579BE8] font-bold bg-[#579BE8]/10 px-2 py-1 rounded-lg">

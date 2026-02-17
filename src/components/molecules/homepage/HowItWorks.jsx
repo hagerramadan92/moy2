@@ -134,7 +134,7 @@ const HowItWorks = ({ data }) => {
               <h3 className="text-xl font-bold text-[#333] mb-2">
                 {step.title}
               </h3>
-              <p className="text-gray-500 text-sm md:text-base max-w-[200px]">
+              <p className="text-gray-700 text-sm md:text-base max-w-[200px]">
                 {step.desc}
               </p>
 

@@ -63,7 +63,7 @@ export default function ProfileStep({ name, onNameChange, error, onNext, onSkip 
                 onChange={handleChange}
             />
         </label>
-        <p className="text-gray-500 text-xs sm:text-sm font-semibold">اضف صورة شخصية</p>
+        <p className="text-gray-700 text-xs sm:text-sm font-semibold">اضف صورة شخصية</p>
       </div>
 
       <div className="space-y-4">
@@ -79,7 +79,7 @@ export default function ProfileStep({ name, onNameChange, error, onNext, onSkip 
                 } rounded-2xl transition-all shadow-sm font-medium text-gray-800`} 
             />
             {error && (
-              <p className="text-red-500 text-xs sm:text-sm font-medium mr-1">
+              <p className="text-red-600 text-xs sm:text-sm font-medium mr-1">
                 {error}
               </p>
             )}

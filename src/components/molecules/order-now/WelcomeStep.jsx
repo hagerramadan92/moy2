@@ -23,7 +23,7 @@ export default function WelcomeStep({ onFinish }) {
 
       <div className="space-y-2">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">أهلاً بك في وايت مياه</h2>
-        <p className="text-sm sm:text-base text-gray-500">تم تسجيل دخولك بنجاح</p>
+        <p className="text-sm sm:text-base text-gray-700">تم تسجيل دخولك بنجاح</p>
       </div>
 
       <motion.div
