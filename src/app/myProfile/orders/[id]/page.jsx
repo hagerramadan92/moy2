@@ -58,9 +58,9 @@ const [cancelReason, setCancelReason] = useState("");
 const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 const [otherReason, setOtherReason] = useState("");
 const cancelReasons = [
-    { id: 'change_mind', label: 'غيرت رأيي' },
-    { id: 'wrong_order', label: 'طلبت بالخطأ' },
-    { id: 'found_another', label: 'وجدت خدمة أفضل' },
+    // { id: 'change_mind', label: 'غيرت رأيي' },
+    // { id: 'wrong_order', label: 'طلبت بالخطأ' },
+    // { id: 'found_another', label: 'وجدت خدمة أفضل' },
     { id: 'delivery_time', label: 'وقت التوصيل طويل' },
     { id: 'price_issue', label: 'مشكلة في السعر' },
     { id: 'other', label: 'سبب آخر' }
@@ -912,7 +912,7 @@ const startRealTimeTracking = () => {
             {/* Rating Modal - Mobile Responsive */}
             {showRatingModal && (
                 <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md top-[-200px]" onClick={() => setShowRatingModal(false)}></div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md " onClick={() => setShowRatingModal(false)}></div>
                     <div className="relative bg-white dark:bg-gray-900 w-full max-w-2xl rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
                         <button onClick={() => setShowRatingModal(false)} className="absolute top-4 left-4 sm:top-6 sm:left-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]">
                             <BiX className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1516,7 +1516,7 @@ const startRealTimeTracking = () => {
                 {/* Cancel Order Modal */}
 {showCancelModal && (
     <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowCancelModal(false)}></div>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-md -top-[200px]" onClick={() => setShowCancelModal(false)}></div>
         <div className="relative bg-white dark:bg-gray-900 w-full max-w-md rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden">
             <button 
                 onClick={() => setShowCancelModal(false)} 
