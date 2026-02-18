@@ -1,6 +1,6 @@
 // API Configuration and Helper Functions
 
-export const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
+export const API_BASE_URL = 'https://dashboard.waytmiah.com/api/v1';
 
 /**
  * Get access token from localStorage

@@ -33,7 +33,7 @@ const LocationPickerModal = dynamic(
 
 const API_BASE_URL = (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE_URL) 
     ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^http:\/\//, 'https://') 
-    : 'https://moya.talaaljazeera.com/api/v1';
+    : 'https://dashboard.waytmiah.com/api/v1';
 
 export default function ContractingPage() {
     const router = useRouter();

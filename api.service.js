@@ -1,7 +1,7 @@
 // services/message.service.js
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://moya.talaaljazeera.com/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://dashboard.waytmiah.com/api/v1";
 
 // إنشاء مثيل axios بنفس إعدادات الـ auth
 const axiosInstance = axios.create({

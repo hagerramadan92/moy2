@@ -20,9 +20,9 @@ export async function GET(req, { params }) {
     // Decode the key in case it's URL encoded
     const decodedKey = decodeURIComponent(key);
     
-    // Use the pages endpoint: https://moya.talaaljazeera.com/api/v1/pages/{key}
+    // Use the pages endpoint: https://dashboard.waytmiah.com/api/v1/pages/{key}
     const pageKey = encodeURIComponent(decodedKey);
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/pages/${pageKey}`;
+    const apiUrl = `https://dashboard.waytmiah.com/api/v1/pages/${pageKey}`;
     
     console.log('Pages API - Fetching from:', apiUrl);
     console.log('Pages API - Page key:', key, 'Decoded:', decodedKey, 'Encoded:', pageKey);

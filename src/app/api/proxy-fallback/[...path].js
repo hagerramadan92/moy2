@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   });
   
   try {
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1';
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1';
     const targetUrl = `${API_BASE}/${Array.isArray(path) ? path.join('/') : path}`;
     
     const response = await fetch(targetUrl, {

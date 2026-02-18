@@ -20,10 +20,10 @@ export async function GET(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use slug-based endpoint: https://moya.talaaljazeera.com/api/v1/articles/{slug}
+    // Use slug-based endpoint: https://dashboard.waytmiah.com/api/v1/articles/{slug}
     // The API accepts both numeric IDs and slugs, but we'll use slug format
     const slug = encodeURIComponent(decodedId);
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/${slug}`;
+    const apiUrl = `https://dashboard.waytmiah.com/api/v1/articles/${slug}`;
     
     console.log('Article API - Fetching from:', apiUrl);
     console.log('Article API - Original ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', slug);

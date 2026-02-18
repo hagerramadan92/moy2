@@ -50,7 +50,7 @@ export default function ContractDetailsPage() {
                 return;
             }
 
-            const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${contractId}`, {
+            const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${contractId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -166,7 +166,7 @@ export default function ContractDetailsPage() {
                 return;
             }
 
-            const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${contractId}/renew`, {
+            const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${contractId}/renew`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function ContractDetailsPage() {
                 return;
             }
 
-            const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${contractId}/cancel`, {
+            const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${contractId}/cancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

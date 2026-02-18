@@ -9,7 +9,7 @@ const NotificationContext = createContext(undefined);
 const isBrowser = typeof window !== 'undefined';
 
 // API الحقيقي للباك إند
-const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
+const API_BASE_URL = 'https://dashboard.waytmiah.com/api/v1';
 
 const createRequestURL = (path) => {
   const cleanBase = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;

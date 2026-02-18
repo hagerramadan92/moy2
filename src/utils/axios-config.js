@@ -7,11 +7,11 @@ const isBrowser = typeof window !== 'undefined';
 // Base URL للإنتاج - استخدم Next.js API routes كـ proxy
 export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 
   (process.env.NODE_ENV === 'production' 
-    ? 'https://moya.talaaljazeera.com/api/v1' 
-    : 'https://moya.talaaljazeera.com/api/v1');
+    ? 'https://dashboard.waytmiah.com/api/v1' 
+    : 'https://dashboard.waytmiah.com/api/v1');
 
 // عنوان الـ API الحقيقي
-export const REAL_API_URL = 'https://moya.talaaljazeera.com/api/v1';
+export const REAL_API_URL = 'https://dashboard.waytmiah.com/api/v1';
 
 // دالة لبناء الـ URL الصحيح بناءً على البيئة
 const getApiUrl = (path) => {

@@ -57,7 +57,7 @@ export async function POST(req, { params }) {
     }
 
     // Forward the request to the external API
-    const response = await fetch(`https://moya.talaaljazeera.com/api/v1/contracts/${id}/renew`, {
+    const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${id}/renew`, {
       method: 'POST',
       headers: headers,
     });

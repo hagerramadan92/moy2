@@ -20,7 +20,7 @@ export async function POST(req) {
     // Call the external logout API
     let logoutResponse;
     try {
-      logoutResponse = await fetch('https://moya.talaaljazeera.com/api/v1/auth/logout', {
+      logoutResponse = await fetch('https://dashboard.waytmiah.com/api/v1/auth/logout', {
         method: 'POST',
         headers: headers,
       });

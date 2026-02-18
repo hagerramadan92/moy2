@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/proxy/:path*",
-      "destination": "https://moya.talaaljazeera.com/api/v1/:path*"
+      "destination": "https://dashboard.waytmiah.com/api/v1/:path*"
     }
   ],
   "headers": [

@@ -27,7 +27,7 @@ export async function POST(req) {
     }
 
     // Forward the request to the external API
-    const response = await fetch('https://moya.talaaljazeera.com/api/v1/auth/verify-otp', {
+    const response = await fetch('https://dashboard.waytmiah.com/api/v1/auth/verify-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

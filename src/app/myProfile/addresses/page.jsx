@@ -50,7 +50,7 @@ const fixLeafletIcons = () => {
   }
 };
 
-const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+const API_BASE_URL = "https://dashboard.waytmiah.com/api/v1";
 
 // Saudi Arabia coordinates and cities data
 const SAUDI_CITIES = [

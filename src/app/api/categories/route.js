@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(req) {
   try {
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/categories`;
+    const apiUrl = `https://dashboard.waytmiah.com/api/v1/categories`;
     
     console.log('Categories API - Fetching from:', apiUrl);
 

@@ -61,7 +61,7 @@ export default function ServiceSelect({
 			setLoading(true);
 			try {
 				// استخدام fetch مباشرة على الرابط
-				const response = await fetch('https://moya.talaaljazeera.com/api/v1/services');
+				const response = await fetch('https://dashboard.waytmiah.com/api/v1/services');
 				const data = await response.json();
 
 				if (!mounted) return;

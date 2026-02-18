@@ -1333,7 +1333,7 @@ const ChatModal = ({
                             return (
                               <div
                                 key={message.id}
-                                className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
+                                className={`flex ${isOutgoing ? 'justify-start' : 'justify-end'}`}
                               >
                                 <div
                                   style={{

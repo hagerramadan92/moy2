@@ -36,7 +36,7 @@ const LocationPickerModal = dynamic(
   }
 );
 
-const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+const API_BASE_URL = "https://dashboard.waytmiah.com/api/v1";
 
 // دالة للحصول على اسم المكان من الإحداثيات
 const getAddressFromCoordinates = async (lat, lng) => {
@@ -845,7 +845,7 @@ function OrderFormContent() {
         service_id: parseInt(scheduleData.quantity),
         water_type_id: parseInt(scheduleData.waterType),
         saved_location_id: scheduleData.selectedSavedLocation ? scheduleData.selectedSavedLocation.id : null,
-        scheduled_at: scheduleData.dateTime,
+        order_date: scheduleData.dateTime,
         notes: scheduleData.notes
       };
 

@@ -103,7 +103,7 @@ export default function TestLaravelPusherPage() {
       
       // إرسال رسالة حقيقية عبر Laravel API
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1'}/chats/25/send`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1'}/chats/25/send`,
         {
           method: 'POST',
           headers: {

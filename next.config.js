@@ -18,13 +18,13 @@ const nextConfig = {
       },
       {
         protocol: 'http',
-        hostname: 'moya.talaaljazeera.com',
+        hostname: 'dashboard.waytmiah.com',
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'moya.talaaljazeera.com',
+        hostname: 'dashboard.waytmiah.com',
         port: '',
         pathname: '/**',
       },
@@ -61,12 +61,12 @@ const nextConfig = {
     return [
       {
         source: '/api/moya/:path*',
-        destination: 'https://moya.talaaljazeera.com/api/v1/:path*',
+        destination: 'https://dashboard.waytmiah.com/api/v1/:path*',
       },
       // إضافة rewrite إضافي للطريق المباشر
       {
         source: '/api/v1/:path*',
-        destination: 'https://moya.talaaljazeera.com/api/v1/:path*',
+        destination: 'https://dashboard.waytmiah.com/api/v1/:path*',
       },
     ];
   },

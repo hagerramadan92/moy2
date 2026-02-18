@@ -29,7 +29,7 @@ import {
 } from "react-icons/bi";
 
 // API base URL
-const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+const API_BASE_URL = "https://dashboard.waytmiah.com/api/v1";
 
 // Dynamic import for enhanced map component
 const EnhancedOrderTrackingMap = dynamic(() => import('@/components/Map/EnhancedOrderTrackingMap'), {
@@ -68,6 +68,10 @@ export default function OrderDetailsPage() {
     });
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [showSuccessToast, setShowSuccessToast] = useState(false);
+    
+    // New state for existing rating
+    const [existingRating, setExistingRating] = useState(null);
+    const [showViewRatingModal, setShowViewRatingModal] = useState(false);
     
     // States for tracking map
     const [userLocation, setUserLocation] = useState(null);
@@ -140,39 +144,6 @@ const initializeLocations = (order) => {
         setDriverLocation(null);
     }
 };
-
-    // Fetch driver's current location from API
-    // const fetchDriverCurrentLocation = async () => {
-    //     if (!orderData?.driver?.id) return;
-        
-    //     const token = getToken();
-    //     try {
-    //         const response = await fetch(`${API_BASE_URL}/drivers/${orderData.driver.id}/location`, {
-    //             method: 'GET',
-    //             headers: {
-    //                 'Accept': 'application/json',
-    //                 'Authorization': `Bearer ${token}`,
-    //             },
-    //         });
-
-    //         if (response.ok) {
-    //             const data = await response.json();
-    //             setDriverData(data.data);
-    //             if (data.status === true && data.data) {
-    //                 const newLocation = [
-    //                     parseFloat(data.data.latitude),
-    //                     parseFloat(data.data.longitude)
-    //                 ];
-    //                 setDriverLocation(newLocation);
-    //                 return true;
-    //             }
-    //         }
-    //     } catch (error) {
-    //         console.error("Error fetching driver location:", error);
-    //     }
-    //     return false;
-    // };
-
 
     // Fetch driver's current location from API
 const fetchDriverCurrentLocation = async () => {
@@ -263,6 +234,11 @@ const startRealTimeTracking = () => {
                 if (data.status === true) {
                     setOrderData(data.data);
                     
+                    // Check if order has existing rating
+                    if (data.data.rating) {
+                        setExistingRating(data.data.rating);
+                    }
+                    
                     // Initialize locations from real order data
                     initializeLocations(data.data);
                     
@@ -314,8 +290,10 @@ const startRealTimeTracking = () => {
     const isProcessing = orderData?.status?.name === 'in-road' || orderData?.status?.name === 'in_progress' || orderData?.status?.name === 'assigned';
     const isPending = orderData?.status?.name === 'pendding';
     const isCancelled = orderData?.status?.name === 'cancelled';
-    const isCompleted = orderData?.status?.name === 'completed';
+    const isScheduled = orderData?.status?.name === 'scheduled';
+   
     const isConfirmed = orderData?.status?.name === 'confirmed';
+    const isCompleted = orderData?.status?.name === 'completed' || orderData?.status?.name === 'delivered'; // تعديل هنا
 
     // Reset rating form when modal closes
     useEffect(() => {
@@ -399,6 +377,7 @@ const startRealTimeTracking = () => {
     const getStatusStyle = (statusName) => {
         switch (statusName) {
             case 'completed':
+            case 'delivered':  // إضافة delivered هنا
                 return "bg-gradient-to-r from-green-100 to-green-50 text-green-700 border border-green-200";
             case 'in-road':
             case 'in_progress':
@@ -411,6 +390,7 @@ const startRealTimeTracking = () => {
                 return "bg-gradient-to-r from-sky-100 to-sky-50 text-sky-700 border border-sky-200";
             case 'assigned':
                 return "bg-gradient-to-r from-purple-100 to-purple-50 text-purple-700 border border-purple-200";
+            
             default:
                 return "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200";
         }
@@ -425,6 +405,7 @@ const startRealTimeTracking = () => {
             'in_progress': 'قيد التنفيذ',
             'in-road': 'في الطريق',
             'completed': 'مكتمل',
+            'scheduled': 'مجدول',
             'cancelled': 'ملغي'
         };
         return statusMap[statusName] || statusName;
@@ -438,9 +419,10 @@ const startRealTimeTracking = () => {
             'confirmed': 'تم التأكيد',
             'assigned': 'معين للسائق',
             'in_progress': 'جاري التجهيز',
-            'in-road': '🚚 في الطريق إليك',
-            'completed': '✅ مكتمل التسليم',
-            'cancelled': '❌ ملغي'
+            'in-road': ' في الطريق إليك',
+            'completed': ' مكتمل التسليم',
+            'scheduled': ' مجدول',
+            'cancelled': ' ملغي'
         };
         return statusMap[statusName] || statusName;
     };
@@ -482,6 +464,14 @@ const startRealTimeTracking = () => {
                 // Success - show toast and close modal
                 setShowRatingModal(false);
                 setShowSuccessToast(true);
+                
+                // Update existing rating with new data
+                setExistingRating({
+                    rating: userRating,
+                    comment: ratingComment,
+                    aspects: aspects
+                });
+                
                 setTimeout(() => setShowSuccessToast(false), 5000);
             } else {
                 throw new Error(data.message || "حدث خطأ في إرسال التقييم");
@@ -552,6 +542,15 @@ const startRealTimeTracking = () => {
     const navigateToDriverProfile = () => {
         if (orderData?.driver?.id) {
             router.push(`/orders/driver_profile?id=${orderData.driver.id}`);
+        }
+    };
+
+    // Function to handle rating button click
+    const handleRatingClick = () => {
+        if (existingRating) {
+            setShowViewRatingModal(true);
+        } else {
+            setShowRatingModal(true);
         }
     };
 
@@ -659,6 +658,90 @@ const startRealTimeTracking = () => {
                     <button onClick={() => setShowSuccessToast(false)} className="text-white/80 hover:text-white">
                         <BiX className="w-5 h-5" />
                     </button>
+                </div>
+            )}
+
+            {/* View Rating Modal - Mobile Responsive */}
+            {showViewRatingModal && existingRating && (
+                <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowViewRatingModal(false)}></div>
+                    <div className="relative bg-white dark:bg-gray-900 w-full max-w-2xl rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
+                        <button onClick={() => setShowViewRatingModal(false)} className="absolute top-4 left-4 sm:top-6 sm:left-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]">
+                            <BiX className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </button>
+                        <div className="p-4 sm:p-8 text-center relative z-[215]">
+                            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center mb-4 sm:mb-6 bg-gradient-to-br from-green-50 to-green-100">
+                                <FaStar className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500" />
+                            </div>
+                            <h3 className="text-xl sm:text-xl font-black mb-2">تقييمك للتجربة</h3>
+                            <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8">شكراً لك على تقييمك السابق</p>
+                            
+                            <div className="flex flex-col items-center gap-6 sm:gap-8">
+                                {/* Overall Rating */}
+                                <div className="w-full">
+                                    <label className="text-xs sm:text-sm font-bold text-right block mb-3 sm:mb-4 text-[#3B82F6]">التقييم العام</label>
+                                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <div key={star} className="transition-transform">
+                                                {star <= existingRating.rating ? 
+                                                    <FaStar className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 drop-shadow-lg" /> : 
+                                                    <FaRegStar className="w-8 h-8 sm:w-12 sm:h-12 text-gray-300" />
+                                                }
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Aspects Rating */}
+                                {existingRating.aspects && (
+                                    <div className="w-full">
+                                        <label className="text-xs sm:text-sm font-bold text-right block mb-4 sm:mb-6 text-[#3B82F6]">تقييم الجوانب</label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                            {[
+                                                { key: 'punctuality', label: 'الالتزام بالمواعيد' },
+                                                { key: 'service_quality', label: 'جودة الخدمة' },
+                                                { key: 'communication', label: 'التواصل' },
+                                                { key: 'carefulness', label: 'الدقة والاهتمام' }
+                                            ].map((aspect) => (
+                                                <div key={aspect.key} className="space-y-2 sm:space-y-3">
+                                                    <label className="text-xs sm:text-sm font-medium text-right block text-gray-600">
+                                                        {aspect.label}
+                                                    </label>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <div key={star} className="transition-transform">
+                                                                {star <= (existingRating.aspects[aspect.key] || existingRating.rating) ? 
+                                                                    <FaStar className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" /> : 
+                                                                    <FaRegStar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
+                                                                }
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Comment */}
+                                {existingRating.comment && (
+                                    <div className="w-full text-right space-y-3 sm:space-y-4">
+                                        <label className="text-xs sm:text-sm font-bold text-[#3B82F6]">ملاحظاتك</label>
+                                        <div className="w-full bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-xs sm:text-sm border-2 border-gray-200 text-right">
+                                            {existingRating.comment}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <button 
+                                    onClick={() => setShowViewRatingModal(false)}
+                                    className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-base sm:text-lg transition-all text-white shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8]"
+                                >
+                                    إغلاق
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -904,18 +987,28 @@ const startRealTimeTracking = () => {
                                             <h3 className="text-lg sm:text-xl lg:text-xl  xl:text-xl font-black mb-2 sm:mb-3 lg:mb-4 text-gray-900">✅ تم التوصيل بنجاح</h3>
                                             <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base ">شكراً لك على استخدام خدماتنا</p>
                                             <div className="flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3 lg:gap-4">
-                                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold shadow-lg bg-gradient-to-r from-yellow-500 to-amber-500">
-                                                    تقييمك: 4.9 <FaStar className="inline mb-0.5 sm:mb-1 ms-1" />
-                                                </div>
-                                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 bg-gray-100 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-gray-700">
-                                                    ⏱️ مدة الانتظار: 25 دقيقة
-                                                </div>
-                                                <button 
-                                                    onClick={() => setShowRatingModal(true)}
-                                                    className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:shadow-xl"
-                                                >
-                                                    ⭐ تقييم الخدمة
-                                                </button>
+                                                {existingRating ? (
+                                                    <>
+                                                        <div className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold shadow-lg bg-gradient-to-r from-yellow-500 to-amber-500">
+                                                            تقييمك: {existingRating.rating} <FaStar className="inline mb-0.5 sm:mb-1 ms-1" />
+                                                        </div>
+                                                        <button 
+                                                            onClick={handleRatingClick}
+                                                            className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:shadow-xl"
+                                                        >
+                                                            👁️ عرض تقييمك
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button 
+                                                            onClick={handleRatingClick}
+                                                            className="px-3 py-1.5 sm:px-4 sm:py-2 lg:px-5 lg:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold shadow-lg hover:shadow-xl"
+                                                        >
+                                                            ⭐ تقييم الخدمة
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1143,11 +1236,15 @@ const startRealTimeTracking = () => {
 
                                         {isCompleted && (
                                             <button 
-                                                onClick={() => setShowRatingModal(true)} 
-                                                className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl text-white font-bold text-sm sm:text-base  transition-all hover:scale-[1.02] active:scale-95 mb-3 sm:mb-4 shadow-lg hover:shadow-xl bg-gradient-to-r from-yellow-500 to-amber-500"
+                                                onClick={handleRatingClick} 
+                                                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl text-white font-bold text-sm sm:text-base transition-all hover:scale-[1.02] active:scale-95 mb-3 sm:mb-4 shadow-lg hover:shadow-xl ${
+                                                    existingRating 
+                                                        ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                                                        : 'bg-gradient-to-r from-yellow-500 to-amber-500'
+                                                }`}
                                             >
                                                 <FaStar className="w-4 h-4 sm:w-5 sm:h-5 inline ml-1 sm:ml-2" />
-                                                تقييم تجربة التوصيل
+                                                {existingRating ? 'عرض تقييمك' : 'تقييم تجربة التوصيل'}
                                             </button>
                                         )}
 
@@ -1224,7 +1321,9 @@ const startRealTimeTracking = () => {
                                         <div className="space-y-4 sm:space-y-6 mb-4 sm:mb-6 ">
                                             <div className="flex justify-between items-center py-2 sm:py-3 border-b border-gray-200">
                                                 <span className="text-gray-600 text-sm sm:text-base">سعر الخدمة</span>
-                                                <span className="text-base sm:text-lg font-black text-gray-900">{summary.subtotal} ر.س</span>
+                                                <span className="text-base sm:text-lg font-black text-gray-900">
+  {summary?.subtotal && summary.subtotal > 0 ? `${summary.subtotal} ر.س` : "لم يتم التسعير"}
+</span>
                                             </div>
                                             
                                            

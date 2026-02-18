@@ -187,7 +187,7 @@ const showChatsIconToast = () => {
 // ==================== إنشاء Axios Instance ====================
 const createAxiosInstance = () => {
   const instance = axios.create({
-    baseURL: 'https://moya.talaaljazeera.com/api/v1',
+    baseURL: 'https://dashboard.waytmiah.com/api/v1',
     timeout: 20000,
     headers: {
       'Content-Type': 'application/json',

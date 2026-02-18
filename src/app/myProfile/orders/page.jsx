@@ -19,7 +19,7 @@ import { Arabic } from "flatpickr/dist/l10n/ar.js";
 import "flatpickr/dist/flatpickr.min.css";
 
 // API base URL
-const API_BASE_URL = "https://moya.talaaljazeera.com/api/v1";
+const API_BASE_URL = "https://dashboard.waytmiah.com/api/v1";
 
 export default function OrdersPage() {
     const [orders, setOrders] = useState([]);

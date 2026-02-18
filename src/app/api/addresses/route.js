@@ -24,7 +24,7 @@ export async function GET(req) {
     };
 
     // Call the external addresses API
-    const response = await fetch('https://moya.talaaljazeera.com/api/v1/addresses', {
+    const response = await fetch('https://dashboard.waytmiah.com/api/v1/addresses', {
       method: 'GET',
       headers: headers,
     });

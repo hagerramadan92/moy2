@@ -180,7 +180,7 @@ const registerDeviceDirect = async (fcmToken) => {
     console.log('🔔 Sending device data to API:', deviceData);
     
     // عمل API call مباشر
-    const API_BASE_URL = 'https://moya.talaaljazeera.com/api/v1';
+    const API_BASE_URL = 'https://dashboard.waytmiah.com/api/v1';
     const url = `${API_BASE_URL.replace(/\/$/, '')}/notifications/register-device`;
     
     // إعداد headers

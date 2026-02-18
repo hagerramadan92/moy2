@@ -656,7 +656,7 @@ export const testProxyConnection = async () => {
 // دالة للحصول على الـ services مباشرة (بدون proxy)
 export const getServicesDirect = async () => {
   try {
-    const response = await fetch('https://moya.talaaljazeera.com/api/v1/services', {
+    const response = await fetch('https://dashboard.waytmiah.com/api/v1/services', {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'

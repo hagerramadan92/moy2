@@ -430,7 +430,7 @@ export default function ContractHistoryPage() {
         { id: "active", label: "نشط" },
         { id: "pending", label: "قيد الانتظار" },
     ];
-   const Api_Url = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1').replace(/^http:\/\//, 'https://')
+   const Api_Url = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1').replace(/^http:\/\//, 'https://')
     // Calculate statistics - include active and pending contracts
     const totalActive = contractHistory.filter(c => c.status === "active" || c.status === "pending").length;
     const totalValue = contractHistory.reduce((sum, c) => {

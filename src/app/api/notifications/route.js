@@ -3,7 +3,7 @@ export async function GET(request) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     
-    const response = await fetch('https://moya.talaaljazeera.com/api/v1/notifications', {
+    const response = await fetch('https://dashboard.waytmiah.com/api/v1/notifications', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

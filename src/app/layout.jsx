@@ -18,7 +18,7 @@ export const almarai = Almarai({
 
 // ✅ Site constants
 const siteName = "وايت مياه";
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dashboard.waytmiah.com";
 const defaultTitle = "وايت مياه | مياه نقية وتوصيل سريع";
 const defaultDescription =
   "وايت مياه: مياه نقية وصحية مع خدمة توصيل سريعة. مقالات ونصائح عن الصحة والمياه، وخدمات للسائقين والتعاقدات وإدارة الحساب.";

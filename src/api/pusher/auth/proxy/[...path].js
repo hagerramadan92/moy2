@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   const { path, ...queryParams } = req.query;
   
   // Base URL للـ API الأصلية - غيرت إلى HTTPS
-  const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
+  const API_BASE = 'https://dashboard.waytmiah.com/api/v1';
   
   // بناء الـ endpoint
   const endpoint = Array.isArray(path) ? path.join('/') : path || '';

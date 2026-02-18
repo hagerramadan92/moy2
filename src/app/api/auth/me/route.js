@@ -24,7 +24,7 @@ export async function GET(req) {
     };
 
     // Call the external user API (auth/me typically maps to auth/user)
-    const response = await fetch('https://moya.talaaljazeera.com/api/v1/auth/user', {
+    const response = await fetch('https://dashboard.waytmiah.com/api/v1/auth/user', {
       method: 'GET',
       headers: headers,
     });

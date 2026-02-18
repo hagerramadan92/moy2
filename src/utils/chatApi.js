@@ -5,7 +5,7 @@
 
 import { getCsrfToken } from './csrf';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://moya.talaaljazeera.com/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1';
 
 /**
  * Get authorization headers with access token and CSRF token

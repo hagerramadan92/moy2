@@ -15,9 +15,9 @@ export async function GET(req) {
       );
     }
 
-    // Base URL: https://moya.talaaljazeera.com/api/v1
+    // Base URL: https://dashboard.waytmiah.com/api/v1
     // Endpoint: /static-pages/{slug}
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/static-pages/${encodeURIComponent(slug)}`;
+    const apiUrl = `https://dashboard.waytmiah.com/api/v1/static-pages/${encodeURIComponent(slug)}`;
     console.log('Static page API - Fetching from:', apiUrl);
 
     // Create AbortController for timeout

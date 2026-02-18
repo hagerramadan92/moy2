@@ -37,7 +37,7 @@ export async function GET(req, { params }) {
     };
 
     // Call the external address API
-    const response = await fetch(`https://moya.talaaljazeera.com/api/v1/addresses/${id}`, {
+    const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${id}`, {
       method: 'GET',
       headers: headers,
     });
@@ -107,7 +107,7 @@ export async function PUT(req, { params }) {
     };
 
     // Call the external address API to update
-    const response = await fetch(`https://moya.talaaljazeera.com/api/v1/addresses/${id}`, {
+    const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${id}`, {
       method: 'PUT',
       headers: headers,
       body: JSON.stringify(body),

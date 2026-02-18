@@ -1,6 +1,6 @@
 // pages/api/services.js
 export default async function handler(req, res) {
-  const API_URL = 'https://moya.talaaljazeera.com/api/v1/services';
+  const API_URL = 'https://dashboard.waytmiah.com/api/v1/services';
   
   console.log('🔄 Services Proxy:', req.method, API_URL);
 

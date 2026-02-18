@@ -9,7 +9,7 @@ const isProduction = isBrowser &&
 
 
 // ==================== إعدادات الخدمة ====================
-const API_BASE = 'https://moya.talaaljazeera.com/api/v1';
+const API_BASE = 'https://dashboard.waytmiah.com/api/v1';
 
 // الحصول على التوكن
 const getToken = () => {

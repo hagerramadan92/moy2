@@ -20,9 +20,9 @@ export async function POST(req, { params }) {
     // Decode the ID/slug in case it's URL encoded
     const decodedId = decodeURIComponent(id);
     
-    // Use the like endpoint: https://moya.talaaljazeera.com/api/v1/articles/{id}/like
+    // Use the like endpoint: https://dashboard.waytmiah.com/api/v1/articles/{id}/like
     const articleId = encodeURIComponent(decodedId);
-    const apiUrl = `https://moya.talaaljazeera.com/api/v1/articles/${articleId}/like`;
+    const apiUrl = `https://dashboard.waytmiah.com/api/v1/articles/${articleId}/like`;
     
     console.log('Like API - Posting to:', apiUrl);
     console.log('Like API - Article ID/Slug:', id, 'Decoded:', decodedId, 'Encoded:', articleId);

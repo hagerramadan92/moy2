@@ -83,7 +83,7 @@ useEffect(() => {
 			}
 
 			// جلب البيانات من الرابط الجديد
-			const response = await fetch('https://moya.talaaljazeera.com/api/v1/type-water');
+			const response = await fetch('https://dashboard.waytmiah.com/api/v1/type-water');
 			
 			if (!response.ok) {
 				throw new Error(`فشل في تحميل البيانات: ${response.status}`);

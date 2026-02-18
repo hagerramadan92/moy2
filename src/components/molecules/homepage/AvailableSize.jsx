@@ -60,7 +60,7 @@ export default function AvailableSize() {
         setError(null);
 
         // استخدام الرابط مباشرة هنا
-        const response = await fetch('https://moya.talaaljazeera.com/api/v1/services');
+        const response = await fetch('https://dashboard.waytmiah.com/api/v1/services');
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
