@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
+import { FaTrashAlt } from "react-icons/fa";
 import { FaRegUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaBell, FaHeart, FaChevronLeft, FaStar, FaPlus, FaRegBellSlash, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaShareAlt, FaTimes, FaBuilding } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import Image from "next/image";
@@ -12,11 +12,13 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import Spinner from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 export default function MyProfilePage() {
     const [showSavedPlaces, setShowSavedPlaces] = useState(false);
     const [showAllPlaces, setShowAllPlaces] = useState(false);
     const [notificationsActive, setNotificationsActive] = useState(true);
     const [locationSharingActive, setLocationSharingActive] = useState(false);
+     const [userData, setUserData] = useState(null);
     const router = useRouter();
     // Form States
     const [fullName, setFullName] = useState("");
@@ -57,7 +59,186 @@ export default function MyProfilePage() {
     const [avatar, setAvatar] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const [removeImage, setRemoveImage] = useState(false);
+     useEffect(() => {
+        // جلب بيانات المستخدم من localStorage
+        const fetchUserData = () => {
+            try {
+                // محاولة جلب بيانات المستخدم من localStorage
+                const storedUser = localStorage.getItem('user');
+                const storedToken = localStorage.getItem('token');
+                
+                if (storedUser) {
+                    const parsedUser = JSON.parse(storedUser);
+                    // إضافة التوكن إلى بيانات المستخدم
+                    setUserData({
+                        ...parsedUser,
+                        token: storedToken || parsedUser.token
+                    });
+                } else {
+                    // إذا لم تكن هناك بيانات، يمكنك جلبها من API
+                    // هذا مثال - عدله حسب الـ API الخاص بك
+                    const fetchUserFromAPI = async () => {
+                        try {
+                            const response = await fetch('/auth/user', {
+                                headers: {
+                                    'Authorization': `Bearer ${storedToken}`
+                                }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                setUserData({
+                                    ...data,
+                                    token: storedToken
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error fetching user data:', error);
+                        }
+                    };
+                    
+                    if (storedToken) {
+                        fetchUserFromAPI();
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
+        fetchUserData();
+    }, []);
+        const handleDeleteAccount = () => {
+    // التحقق من وجود بيانات المستخدم
+    if (!userData || !userData.phoneNumber) {
+        Swal.fire({
+            title: "خطأ",
+            text: "بيانات المستخدم غير متوفرة",
+            icon: "error",
+            confirmButtonColor: "#579BE8",
+            confirmButtonText: "حسنًا",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            width: window.innerWidth < 640 ? '90%' : '32rem',
+            customClass: {
+                popup: "rounded-2xl border border-border shadow-xl mx-4",
+                confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+                title: "text-sm",
+                htmlContainer: "text-sm sm:text-base"
+            }
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: "حذف الحساب",
+        text: "هل أنت متأكد تمامًا من رغبتك في حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه وسيؤدي إلى حذف جميع بياناتك نهائيًا",
+        icon: "error",
+        showCancelButton: true,
+        confirmButtonColor: "#F75A65",
+        cancelButtonColor: "#579BE8",
+        confirmButtonText: "نعم، احذف حسابي",
+        cancelButtonText: "إلغاء",
+        background: "var(--background)",
+        color: "var(--foreground)",
+        width: window.innerWidth < 640 ? '90%' : '32rem',
+        customClass: {
+            popup: "rounded-2xl border border-border shadow-xl mx-4",
+            confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 ml-2 text-sm sm:text-base",
+            cancelButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+            title: "text-sm text-right",
+            htmlContainer: "text-sm sm:text-base text-right"
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: "جاري حذف الحساب",
+                text: "الرجاء الانتظار...",
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                background: "var(--background)",
+                color: "var(--foreground)",
+                width: window.innerWidth < 640 ? '90%' : '32rem',
+                customClass: {
+                    popup: "rounded-2xl border border-border shadow-xl mx-4",
+                    title: "text-sm",
+                    htmlContainer: "text-sm sm:text-base"
+                },
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // بناء URL الحذف مع رقم الهاتف
+            const deleteUrl = `https://dashboard.waytmiah.com/api/v1/delete/account/${userData.phoneNumber}`;
+            
+            // Call delete API
+            fetch(deleteUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userData.token}`,
+                    'Accept': 'application/json',
+                },
+            })
+            .then(async (response) => {
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { message: 'حدث خطأ غير متوقع' };
+                }
+                
+                if (response.ok) {
+                    Swal.fire({
+                        title: "تم حذف الحساب",
+                        text: "تم حذف حسابك بنجاح. سيتم تحويلك إلى الصفحة الرئيسية",
+                        icon: "success",
+                        confirmButtonColor: "#579BE8",
+                        confirmButtonText: "حسنًا",
+                        background: "var(--background)",
+                        color: "var(--foreground)",
+                        width: window.innerWidth < 640 ? '90%' : '32rem',
+                        customClass: {
+                            popup: "rounded-2xl border border-border shadow-xl mx-4",
+                            confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+                            title: "text-sm",
+                            htmlContainer: "text-sm sm:text-base"
+                        }
+                    }).then(() => {
+                        // Clear tokens/session and redirect
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('accessToken');
+                        window.location.href = "/";
+                    });
+                } else {
+                    throw new Error(data.message || data.error || "حدث خطأ أثناء حذف الحساب");
+                }
+            })
+            .catch((error) => {
+                Swal.fire({
+                    title: "خطأ",
+                    text: error.message || "حدث خطأ أثناء حذف الحساب. الرجاء المحاولة مرة أخرى",
+                    icon: "error",
+                    confirmButtonColor: "#579BE8",
+                    confirmButtonText: "حسنًا",
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    width: window.innerWidth < 640 ? '90%' : '32rem',
+                    customClass: {
+                        popup: "rounded-2xl border border-border shadow-xl mx-4",
+                        confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+                        title: "text-sm",
+                        htmlContainer: "text-sm sm:text-base"
+                    }
+                });
+            });
+        }
+    });
+};
     // Fetch user data on component mount
     useEffect(() => {
         const fetchUserData = async () => {
@@ -1512,6 +1693,16 @@ export default function MyProfilePage() {
                                 )}
                             </div>
                         )}
+                       {/* Delete Account Button */}
+                                           <div className="flex flex-col gap-4">
+                                               <div
+                                                   onClick={handleDeleteAccount}
+                                                   className="flex items-center gap-2 text-red-600 dark:text-red-400 rounded-lg hover:translate-x-[-2px] cursor-pointer transition-all duration-200 font-bold px-2 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-900/50"
+                                               >
+                                                   <FaTrashAlt className="w-5 h-5" />
+                                                   <h2 className="text-lg">حذف الحساب</h2>
+                                               </div>
+                                           </div>
                     </div>
  
                 </div>

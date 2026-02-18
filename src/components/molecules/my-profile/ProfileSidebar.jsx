@@ -447,7 +447,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                     </div>
 
                     {/* Delete Account Button */}
-                    <div className="flex flex-col gap-4">
+                    {/* <div className="flex flex-col gap-4">
                         <div
                             onClick={handleDeleteAccount}
                             className="flex items-center gap-2 text-red-600 dark:text-red-400 rounded-lg hover:translate-x-[-2px] cursor-pointer transition-all duration-200 font-bold px-2 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-900/50"
@@ -455,7 +455,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                             <FaTrashAlt className="w-5 h-5" />
                             <h2 className="text-lg">حذف الحساب</h2>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </aside>
 

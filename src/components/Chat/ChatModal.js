@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { messageService } from "../../../Services/message.service";
+import Pusher from 'pusher-js';
 
 import { 
   X, Users, MessageCircle, Plus, Search, Clock, User, CheckCircle, 
@@ -19,7 +20,7 @@ const ChatModal = ({
   defaultParticipantName = null,
   isSupport = false,
   initialChatId = null,
-  showDriversOnly = false // عرض السائقين فقط عند فتح المحادثة من صفحة السائق
+  showDriversOnly = false
 }) => {
   // States
   const [chats, setChats] = useState([]);
@@ -36,6 +37,7 @@ const ChatModal = ({
   const [showNewChatForm, setShowNewChatForm] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [pusherChannel, setPusherChannel] = useState(null);
   const [currentUser, setCurrentUser] = useState({
     id: currentUserId,
     name: 'المستخدم',
@@ -53,6 +55,7 @@ const ChatModal = ({
   const chatCreationFailedRef = useRef(null);
   const errorShownRef = useRef(null);
   const lastLoadedChatIdRef = useRef(null);
+  const pusherInitializedRef = useRef(false);
 
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
@@ -71,6 +74,168 @@ const ChatModal = ({
       border: '1px solid #e4e6eb',
       shadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
     }
+  };
+
+  // ================ تهيئة Pusher ================
+  const initializePusher = useCallback((chatId, chatUuid) => {
+    if (!chatUuid || !isLoggedIn || !chatId) return null;
+    
+    try {
+      // إذا كان هناك قناة سابقة، قم بإلغاء الاشتراك
+      if (pusherChannel) {
+        pusherChannel.unbind_all();
+        pusherChannel.unsubscribe();
+      }
+      
+      // إنشاء اتصال Pusher جديد
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+        authEndpoint: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1'}/broadcasting/auth`,
+        auth: {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Accept': 'application/json'
+          }
+        },
+        enabledTransports: ['ws', 'wss']
+      });
+      
+      // الاشتراك في القناة الخاصة بالدردشة - المفتاح هو UUID
+      const channelName = `chat.${chatUuid}`;
+      
+      const channel = pusher.subscribe(channelName);
+      
+      // الاستماع لحدث MessageSent
+      channel.bind('MessageSent', (data) => {
+        console.log('📨 [Pusher] رسالة جديدة:', data);
+        
+        // التحقق من أن الرسالة تخص الدردشة الحالية
+        if (data.message && data.message.chat_id === chatId) {
+          handleNewPusherMessage(data.message);
+        }
+        
+        // تحديث قائمة المحادثات
+        if (data.chat) {
+          updateChatListWithNewMessage(data.chat, data.message);
+        }
+      });
+      
+      // الاستماع لأحداث أخرى
+      channel.bind('pusher:subscription_succeeded', () => {
+        console.log(`✅ [Pusher] تم الاشتراك في القناة: ${channelName}`);
+      });
+      
+      channel.bind('pusher:subscription_error', (error) => {
+        console.error('❌ [Pusher] خطأ في الاشتراك:', error);
+      });
+      
+      setPusherChannel(channel);
+      
+      return channel;
+    } catch (error) {
+      console.error('❌ [Pusher] فشل التهيئة:', error);
+      return null;
+    }
+  }, [isLoggedIn, pusherChannel]);
+
+  // ================ معالجة الرسائل الجديدة من Pusher ================
+  const handleNewPusherMessage = (newMessage) => {
+    console.log('📨 معالجة رسالة جديدة من Pusher:', newMessage);
+    
+    // التأكد من أن الرسالة تخص الدردشة الحالية
+    if (selectedChat && selectedChat.id === newMessage.chat_id) {
+      // إضافة الرسالة إلى قائمة الرسائل
+      setMessages(prevMessages => {
+        // التحقق من عدم وجود الرسالة مسبقاً (لمنع التكرار)
+        const messageExists = prevMessages.some(msg => msg.id === newMessage.id);
+        if (messageExists) return prevMessages;
+        
+        // تنسيق الرسالة الجديدة
+        const formattedMessage = {
+          ...newMessage,
+          isCurrentUser: newMessage.sender_id === currentUser.id,
+          is_outgoing: newMessage.sender_id === currentUser.id,
+          formattedTime: formatMessageTime(newMessage.created_at)
+        };
+        
+        // إضافة الرسالة وترتيبها
+        const updatedMessages = [...prevMessages, formattedMessage];
+        return updatedMessages.sort((a, b) => {
+          const timeA = new Date(a.created_at || 0).getTime();
+          const timeB = new Date(b.created_at || 0).getTime();
+          return timeA - timeB;
+        });
+      });
+      
+      // التمرير لأسفل
+      setTimeout(scrollToBottom, 100);
+    }
+  };
+
+  // ================ تحديث قائمة المحادثات بعد رسالة جديدة ================
+  const updateChatListWithNewMessage = (updatedChat, newMessage) => {
+    setChats(prevChats => {
+      // البحث عن المحادثة وتحديثها
+      const chatExists = prevChats.some(chat => chat.id === updatedChat.id);
+      
+      if (chatExists) {
+        // تحديث المحادثة الموجودة
+        return prevChats.map(chat => {
+          if (chat.id === updatedChat.id) {
+            return {
+              ...chat,
+              last_message: newMessage.message,
+              last_message_at: newMessage.created_at,
+              updated_at: newMessage.created_at,
+              unreadCount: selectedChat?.id === chat.id 
+                ? 0 
+                : (chat.unreadCount || 0) + 1
+            };
+          }
+          return chat;
+        }).sort((a, b) => {
+          // ترتيب حسب آخر رسالة
+          const timeA = new Date(a.last_message_at || a.updated_at || 0).getTime();
+          const timeB = new Date(b.last_message_at || b.updated_at || 0).getTime();
+          return timeB - timeA;
+        });
+      } else {
+        // إضافة محادثة جديدة
+        return [{
+          ...updatedChat,
+          unreadCount: 1
+        }, ...prevChats];
+      }
+    });
+    
+    // تحديث filteredChats أيضاً
+    setFilteredChats(prev => {
+      const chatExists = prev.some(chat => chat.id === updatedChat.id);
+      
+      if (chatExists) {
+        return prev.map(chat => {
+          if (chat.id === updatedChat.id) {
+            return {
+              ...chat,
+              last_message: newMessage.message,
+              last_message_at: newMessage.created_at,
+              updated_at: newMessage.created_at,
+              unreadCount: selectedChat?.id === chat.id ? 0 : (chat.unreadCount || 0) + 1
+            };
+          }
+          return chat;
+        }).sort((a, b) => {
+          const timeA = new Date(a.last_message_at || a.updated_at || 0).getTime();
+          const timeB = new Date(b.last_message_at || b.updated_at || 0).getTime();
+          return timeB - timeA;
+        });
+      } else {
+        return [{
+          ...updatedChat,
+          unreadCount: 1
+        }, ...prev];
+      }
+    });
   };
 
   // دالة للتحقق من حالة تسجيل الدخول وتحديثها
@@ -114,17 +279,14 @@ const ChatModal = ({
 
   // جلب بيانات المستخدم والتحقق من تسجيل الدخول
   useEffect(() => {
-    // التحقق فوراً عند التحميل
     checkAuthStatus();
     
-    // الاستماع لتغييرات localStorage
     const handleStorageChange = (e) => {
       if (e.key === 'accessToken' || e.key === 'user' || e.key === null) {
         checkAuthStatus();
       }
     };
     
-    // الاستماع للأحداث المخصصة لتسجيل الدخول
     const handleUserLoggedIn = () => {
       checkAuthStatus();
     };
@@ -137,7 +299,6 @@ const ChatModal = ({
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
     window.addEventListener('userLoggedOut', handleUserLoggedOut);
     
-    // التحقق دورياً كل ثانية (للحالات التي لا يتم فيها إطلاق events)
     const interval = setInterval(() => {
       checkAuthStatus();
     }, 1000);
@@ -168,7 +329,6 @@ const ChatModal = ({
   const showLoginToast = (customMessage = '') => {
     if (typeof window === 'undefined') return;
 
-    // إنشاء عنصر toast
     const toast = document.createElement('div');
     toast.id = 'chat-login-toast';
     
@@ -207,7 +367,6 @@ const ChatModal = ({
       </button>
     `;
     
-    // إضافة CSS إذا لم يكن موجوداً
     if (!document.getElementById('chat-toast-styles')) {
       const style = document.createElement('style');
       style.id = 'chat-toast-styles';
@@ -239,22 +398,18 @@ const ChatModal = ({
       document.head.appendChild(style);
     }
     
-    // إزالة أي toast قديم
     const existingToast = document.getElementById('chat-login-toast');
     if (existingToast) {
       existingToast.remove();
     }
     
-    // إضافة الـ toast
     document.body.appendChild(toast);
     
-    // زر الإغلاق
     const closeBtn = toast.querySelector('#close-chat-toast');
     closeBtn.addEventListener('click', () => {
       removeToast(toast);
     });
     
-    // إزالة تلقائية بعد 6 ثوانٍ
     setTimeout(() => {
       removeToast(toast);
     }, 6000);
@@ -337,7 +492,6 @@ const ChatModal = ({
       return;
     }
     
-    // Prevent loading the same chat multiple times
     if (lastLoadedChatIdRef.current === chatId) {
       return;
     }
@@ -365,40 +519,44 @@ const ChatModal = ({
         
         setMessages(formattedMsgs);
         
-        // تحديث حالة القراءة (after a small delay to avoid state update conflicts)
+        // تحديث حالة القراءة
         setTimeout(() => {
           markChatAsRead(chatId);
         }, 100);
         
         scrollToBottom();
+        
+        // الحصول على chat_uuid للدردشة الحالية
+        const currentChat = chats.find(chat => chat.id === chatId);
+        if (currentChat && currentChat.chat_uuid) {
+          // تهيئة Pusher لهذه الدردشة
+          initializePusher(chatId, currentChat.chat_uuid);
+        }
       } else {
         setMessages([]);
       }
     } catch (error) {
       console.error('خطأ في تحميل الرسائل:', error);
       setMessages([]);
-      lastLoadedChatIdRef.current = null; // Reset on error
+      lastLoadedChatIdRef.current = null;
     } finally {
       setMessagesLoading(false);
     }
-  }, [isLoggedIn, currentUser.id]);
+  }, [isLoggedIn, currentUser.id, chats, initializePusher]);
 
   // دالة مساعدة لإنشاء محادثة مع مشارك محدد
   const createNewChatWithParticipant = useCallback(async () => {
     if (!defaultParticipantId || creatingChat || !isLoggedIn) return;
     
-    // منع التكرار: إذا تمت محاولة إنشاء المحادثة لنفس المعرف بالفعل
     if (chatCreationAttemptedRef.current === defaultParticipantId) {
       return;
     }
     
-    // منع المحاولة إذا فشلت المحادثة لهذا المعرف من قبل
     if (chatCreationFailedRef.current === defaultParticipantId) {
       return;
     }
     
     try {
-      // وضع علامة أننا حاولنا إنشاء المحادثة لهذا المعرف
       chatCreationAttemptedRef.current = defaultParticipantId;
       processedParticipantIdRef.current = defaultParticipantId;
       
@@ -412,11 +570,9 @@ const ChatModal = ({
       );
       
       if (result.success) {
-        // نجح إنشاء المحادثة - إزالة من قائمة الفاشلة
         chatCreationFailedRef.current = null;
         errorShownRef.current = null;
         
-        // إعادة تحميل المحادثات مباشرة
         try {
           setLoading(true);
           const response = await messageService.getChats();
@@ -450,23 +606,13 @@ const ChatModal = ({
           }
         }
       } else {
-        // فشل إنشاء المحادثة - وضع علامة بالفشل
         chatCreationFailedRef.current = defaultParticipantId;
-        
-        // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
-        // فقط نضع علامة أننا عرضنا الخطأ
         errorShownRef.current = defaultParticipantId;
-        
         setShowNewChatForm(false);
       }
     } catch (error) {
-      // فشل إنشاء المحادثة - وضع علامة بالفشل
       chatCreationFailedRef.current = defaultParticipantId;
-      
-      // لا نعرض toast هنا لأن message.service.js يعرضه بالفعل
-      // فقط نضع علامة أننا عرضنا الخطأ
       errorShownRef.current = defaultParticipantId;
-      
       setShowNewChatForm(false);
     } finally {
       setCreatingChat(false);
@@ -495,10 +641,8 @@ const ChatModal = ({
       );
       
       if (result.success) {
-        // إعادة تحميل المحادثات
         await loadChats();
         
-        // البحث عن المحادثة الجديدة وتحديدها
         if (result.chat) {
           setSelectedChat(result.chat);
         } else {
@@ -582,6 +726,10 @@ const ChatModal = ({
         
         // إعادة تحميل قائمة المحادثات لتحديث آخر رسالة
         await loadChats();
+        
+        // بعد إرسال الرسالة، تأكد من أن Pusher يعمل
+        // الرسالة ستصلك عبر Pusher من الطرف الآخر، لكن لن تحتاجها لأنك أرسلتها
+        
       } else {
         // إزالة الرسالة المؤقتة في حالة الفشل
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
@@ -598,7 +746,6 @@ const ChatModal = ({
 
   const markChatAsRead = useCallback(async (chatId) => {
     try {
-      // تحديث الحالة المحلية - only update if unreadCount > 0
       setChats(prev => {
         const needsUpdate = prev.some(chat => 
           chat.id === chatId && chat.unreadCount > 0
@@ -613,7 +760,6 @@ const ChatModal = ({
         });
       });
       
-      // تحديث الرسائل المحلية - only update unread messages
       setMessages(prev => {
         const needsUpdate = prev.some(msg => 
           !msg.isCurrentUser && !msg.is_read
@@ -769,18 +915,24 @@ const ChatModal = ({
       setChats([]);
       setFilteredChats([]);
     }
+    
+    // تنظيف Pusher عند إغلاق المودال
+    return () => {
+      if (pusherChannel) {
+        pusherChannel.unbind_all();
+        pusherChannel.unsubscribe();
+      }
+    };
   }, [isOpen, isLoggedIn]);
 
   // تصفية المحادثات عند البحث وعند عرض السائقين فقط
   useEffect(() => {
     let filtered = chats;
     
-    // تصفية حسب نوع المحادثة (السائقين فقط) إذا كان showDriversOnly مفعلاً
     if (showDriversOnly) {
       filtered = chats.filter(chat => chat.type === "user_driver");
     }
     
-    // تصفية حسب البحث
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(chat => {
@@ -814,12 +966,10 @@ const ChatModal = ({
     if (selectedChat?.id && isLoggedIn) {
       const chatId = selectedChat.id;
       
-      // Only load messages if this is a different chat
       if (lastLoadedChatIdRef.current !== chatId) {
         loadMessages(chatId);
       }
       
-      // Update chat active state (only if it actually changed)
       setChats(prev => {
         const needsUpdate = prev.some(chat => 
           (chat.isActive && chat.id !== chatId) || 
@@ -834,15 +984,20 @@ const ChatModal = ({
         }));
       });
     } else if (!selectedChat) {
-      // Reset when no chat is selected
       lastLoadedChatIdRef.current = null;
       setMessages([]);
+      
+      // إلغاء الاشتراك من قناة Pusher
+      if (pusherChannel) {
+        pusherChannel.unbind_all();
+        pusherChannel.unsubscribe();
+        setPusherChannel(null);
+      }
     }
-  }, [selectedChat?.id, isLoggedIn, loadMessages]);
+  }, [selectedChat?.id, isLoggedIn, loadMessages, pusherChannel]);
 
   // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
   useEffect(() => {
-    // إعادة تعيين المرجع عند إغلاق الـ modal
     if (!isOpen) {
       chatCreationAttemptedRef.current = null;
       processedParticipantIdRef.current = null;
@@ -851,7 +1006,6 @@ const ChatModal = ({
       return;
     }
     
-    // إذا تغير defaultParticipantId، إعادة تعيين المراجع
     if (processedParticipantIdRef.current !== defaultParticipantId) {
       chatCreationAttemptedRef.current = null;
       chatCreationFailedRef.current = null;
@@ -859,7 +1013,6 @@ const ChatModal = ({
     }
     
     if (isOpen && isLoggedIn && defaultParticipantId && chats.length > 0 && !loading && !creatingChat) {
-      // منع التكرار: إذا تمت معالجة هذا المعرف بالفعل أو فشل من قبل
       if (
         (processedParticipantIdRef.current === defaultParticipantId && chatCreationAttemptedRef.current === defaultParticipantId) ||
         chatCreationFailedRef.current === defaultParticipantId
@@ -881,7 +1034,6 @@ const ChatModal = ({
         chatCreationFailedRef.current = null;
         errorShownRef.current = null;
       } else {
-        // إنشاء المحادثة تلقائياً فقط إذا لم نحاول من قبل ولم تفشل من قبل
         if (
           chatCreationAttemptedRef.current !== defaultParticipantId &&
           chatCreationFailedRef.current !== defaultParticipantId
@@ -896,7 +1048,7 @@ const ChatModal = ({
 
   return (
     <div className="fixed inset-0 z-[9999]">
-      {/* Backdrop */}
+      {/* باقي الكود كما هو - لم يتغير شيء في JSX */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1159,7 +1311,7 @@ const ChatModal = ({
         {/* Main Chat Area */}
         <div className={`${
           defaultParticipantId 
-            ? 'flex-1 flex flex-col' // عند فتح من صفحة السائق، عرض المحادثة مباشرة
+            ? 'flex-1 flex flex-col'
             : selectedChat 
               ? 'flex-1 flex flex-col' 
               : 'hidden md:flex md:flex-1 md:flex-col'
@@ -1246,7 +1398,7 @@ const ChatModal = ({
                     <h3 className="font-bold text-gray-800 truncate">
                       {getChatName(selectedChat)}
                       {selectedChat.type === "user_driver" && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full whitespace-nowrap">سائق</span>
+                        <span className="mr-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full whitespace-nowrap">سائق</span>
                       )}
                     </h3>
                     <div className="text-xs text-green-600 flex items-center gap-1 mt-0.5">

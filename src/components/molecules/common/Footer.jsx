@@ -70,14 +70,14 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/terms" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
-                  المصطلحات والتحكم
+                  الشروط والأحكام
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="/terms" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   سياسة الاستخدام
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link href="/myProfile/help-center" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الأسئلة الشائعة
