@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
-
-import { FaDownload, FaPrint, FaStar, FaPhoneAlt, FaCommentDots, FaRegStar, FaInfoCircle, FaExclamationTriangle, FaSyncAlt, FaTimes, FaUser } from "react-icons/fa";
+import { TbCancel } from "react-icons/tb";
+import { FiAlertCircle } from "react-icons/fi";
+import { FaDownload, FaPrint, FaStar, FaPhoneAlt, FaCommentDots, FaRegStar, FaInfoCircle, FaExclamationTriangle, FaSyncAlt, FaTimes, FaUser, FaClosedCaptioning } from "react-icons/fa";
 import { 
     BiArrowBack, 
     BiCalendar, 
@@ -27,7 +28,9 @@ import {
     BiRefresh,
     BiIdCard
 } from "react-icons/bi";
-
+import { FaX } from "react-icons/fa6";
+import { TiCancel } from "react-icons/ti";
+import toast from 'react-hot-toast';
 // API base URL
 const API_BASE_URL = "https://dashboard.waytmiah.com/api/v1";
 
@@ -50,7 +53,18 @@ export default function OrderDetailsPage() {
     const router = useRouter();
     const orderId = params.id;
     const [driverData, setDriverData] = useState(null);
-    
+    const [showCancelModal, setShowCancelModal] = useState(false);
+const [cancelReason, setCancelReason] = useState("");
+const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+const [otherReason, setOtherReason] = useState("");
+const cancelReasons = [
+    { id: 'change_mind', label: 'غيرت رأيي' },
+    { id: 'wrong_order', label: 'طلبت بالخطأ' },
+    { id: 'found_another', label: 'وجدت خدمة أفضل' },
+    { id: 'delivery_time', label: 'وقت التوصيل طويل' },
+    { id: 'price_issue', label: 'مشكلة في السعر' },
+    { id: 'other', label: 'سبب آخر' }
+];
     // States
     const [orderData, setOrderData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -80,6 +94,112 @@ export default function OrderDetailsPage() {
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [driverTrackingInterval, setDriverTrackingInterval] = useState(null);
 
+
+   const handleCancelOrder = async () => {
+    if (!cancelReason) {
+        toast.error('الرجاء اختيار سبب الإلغاء', {
+            icon: '⚠️',
+            duration: 4000,
+            style: {
+                background: '#f97316',
+                color: '#fff',
+            },
+        });
+        return;
+    }
+
+    if (cancelReason === 'other' && !otherReason.trim()) {
+        toast.error('الرجاء كتابة سبب الإلغاء', {
+            icon: '📝',
+            duration: 4000,
+            style: {
+                background: '#f97316',
+                color: '#fff',
+            },
+        });
+        return;
+    }
+
+    setIsSubmittingCancel(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading('جاري إلغاء الطلب...', {
+        style: {
+            background: '#3b82f6',
+            color: '#fff',
+        },
+    });
+
+    const token = getToken();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                reason: cancelReason === 'other' ? otherReason : cancelReasons.find(r => r.id === cancelReason)?.label || cancelReason
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "فشل في إلغاء الطلب");
+        }
+
+        if (data.status === true) {
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Success toast
+            toast.success('تم إلغاء الطلب بنجاح', {
+                icon: '✅',
+                duration: 5000,
+                style: {
+                    background: '#10b981',
+                    color: '#fff',
+                },
+            });
+            
+            // Close modal and refresh order data
+            setShowCancelModal(false);
+            setCancelReason("");
+            setOtherReason("");
+            
+            // Refresh order data to show cancelled status
+            handleRefresh();
+        } else {
+            throw new Error(data.message || "حدث خطأ في إلغاء الطلب");
+        }
+    } catch (err) {
+        console.error("Error cancelling order:", err);
+        
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Error toast
+        toast.error(err.message || "حدث خطأ في إلغاء الطلب. يرجى المحاولة مرة أخرى.", {
+            icon: '❌',
+            duration: 5000,
+            style: {
+                background: '#ef4444',
+                color: '#fff',
+            },
+        });
+    } finally {
+        setIsSubmittingCancel(false);
+    }
+};
+
+// تحقق مما إذا كان يمكن إلغاء الطلب
+const canCancelOrder = () => {
+    // يمكن إلغاء الطلب فقط إذا كان في حالة pending أو confirmed
+    return orderData?.status?.name === 'pendding' || orderData?.status?.name === 'confirmed';
+};
     // دالة للحصول على التوكن
     const getToken = () => {
         if (typeof window !== 'undefined') {
@@ -429,60 +549,104 @@ const startRealTimeTracking = () => {
 
     // Handle rating submit
     const handleRatingSubmit = async () => {
-        if (userRating === 0) return;
+    if (userRating === 0) {
+        toast.error('الرجاء اختيار التقييم', {
+            icon: '⭐',
+            duration: 4000,
+            style: {
+                background: '#f97316',
+                color: '#fff',
+            },
+        });
+        return;
+    }
 
-        setIsSubmittingRating(true);
-        const token = getToken();
+    setIsSubmittingRating(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading('جاري إرسال التقييم...', {
+        style: {
+            background: '#3b82f6',
+            color: '#fff',
+        },
+    });
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/orders/${orderId}/rate`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    rating: userRating,
-                    comment: ratingComment || "",
-                    aspects: {
-                        punctuality: aspects.punctuality || userRating,
-                        service_quality: aspects.service_quality || userRating,
-                        communication: aspects.communication || userRating,
-                        carefulness: aspects.carefulness || userRating
-                    }
-                }),
-            });
+    const token = getToken();
 
-            const data = await response.json();
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders/${orderId}/rate`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                rating: userRating,
+                comment: ratingComment || "",
+                aspects: {
+                    punctuality: aspects.punctuality || userRating,
+                    service_quality: aspects.service_quality || userRating,
+                    communication: aspects.communication || userRating,
+                    carefulness: aspects.carefulness || userRating
+                }
+            }),
+        });
 
-            if (!response.ok) {
-                throw new Error(data.message || "فشل في إرسال التقييم");
-            }
+        const data = await response.json();
 
-            if (data.status === true) {
-                // Success - show toast and close modal
-                setShowRatingModal(false);
-                setShowSuccessToast(true);
-                
-                // Update existing rating with new data
-                setExistingRating({
-                    rating: userRating,
-                    comment: ratingComment,
-                    aspects: aspects
-                });
-                
-                setTimeout(() => setShowSuccessToast(false), 5000);
-            } else {
-                throw new Error(data.message || "حدث خطأ في إرسال التقييم");
-            }
-        } catch (err) {
-            console.error("Error submitting rating:", err);
-            alert(err.message || "حدث خطأ في إرسال التقييم. يرجى المحاولة مرة أخرى.");
-        } finally {
-            setIsSubmittingRating(false);
+        if (!response.ok) {
+            throw new Error(data.message || "فشل في إرسال التقييم");
         }
-    };
+
+        if (data.status === true) {
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
+            
+            // Success toast
+            toast.success('تم إرسال تقييمك بنجاح! شكراً لك', {
+                icon: '🎉',
+                duration: 5000,
+                style: {
+                    background: '#10b981',
+                    color: '#fff',
+                },
+            });
+            
+            // Close modal and update
+            setShowRatingModal(false);
+            setShowSuccessToast(true);
+            
+            // Update existing rating with new data
+            setExistingRating({
+                rating: userRating,
+                comment: ratingComment,
+                aspects: aspects
+            });
+            
+            setTimeout(() => setShowSuccessToast(false), 5000);
+        } else {
+            throw new Error(data.message || "حدث خطأ في إرسال التقييم");
+        }
+    } catch (err) {
+        console.error("Error submitting rating:", err);
+        
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Error toast
+        toast.error(err.message || "حدث خطأ في إرسال التقييم. يرجى المحاولة مرة أخرى.", {
+            icon: '❌',
+            duration: 5000,
+            style: {
+                background: '#ef4444',
+                color: '#fff',
+            },
+        });
+    } finally {
+        setIsSubmittingRating(false);
+    }
+};
 
     // Calculate order summary
     const calculateSummary = () => {
@@ -664,12 +828,12 @@ const startRealTimeTracking = () => {
             {/* View Rating Modal - Mobile Responsive */}
             {showViewRatingModal && existingRating && (
                 <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowViewRatingModal(false)}></div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md " onClick={() => setShowViewRatingModal(false)}></div>
                     <div className="relative bg-white dark:bg-gray-900 w-full max-w-2xl rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
                         <button onClick={() => setShowViewRatingModal(false)} className="absolute top-4 left-4 sm:top-6 sm:left-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]">
                             <BiX className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
-                        <div className="p-4 sm:p-8 text-center relative z-[215]">
+                        <div className="p-4 sm:p-8 text-center relative z-[215] ">
                             <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center mb-4 sm:mb-6 bg-gradient-to-br from-green-50 to-green-100">
                                 <FaStar className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500" />
                             </div>
@@ -748,7 +912,7 @@ const startRealTimeTracking = () => {
             {/* Rating Modal - Mobile Responsive */}
             {showRatingModal && (
                 <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowRatingModal(false)}></div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md top-[-200px]" onClick={() => setShowRatingModal(false)}></div>
                     <div className="relative bg-white dark:bg-gray-900 w-full max-w-2xl rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden max-h-[90vh] overflow-y-auto">
                         <button onClick={() => setShowRatingModal(false)} className="absolute top-4 left-4 sm:top-6 sm:left-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]">
                             <BiX className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -888,22 +1052,32 @@ const startRealTimeTracking = () => {
                             </div>
                         </div>
                         
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 lg:mt-0">
-                            <button 
-                                onClick={handleRefresh}
-                                className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow hover:shadow-md flex-1 sm:flex-none"
-                            >
-                                <FaSyncAlt className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
-                                <span>تحديث</span>
-                            </button>
-                            
-                            {isCompleted && (
-                                <button className="flex items-center justify-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all bg-gradient-to-r from-green-500 to-emerald-600 flex-1 sm:flex-none">
-                                    <BiRefresh className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    <span>طلب مرة أخرى</span>
-                                </button>
-                            )}
-                        </div>
+                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 lg:mt-0">
+    <button 
+        onClick={handleRefresh}
+        className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow hover:shadow-md flex-1 sm:flex-none"
+    >
+        <FaSyncAlt className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+        <span>تحديث</span>
+    </button>
+    
+    {canCancelOrder() && (
+        <button 
+            onClick={() => setShowCancelModal(true)}
+            className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white border border-red-200 hover:bg-red-50 transition-all shadow hover:shadow-md flex-1 sm:flex-none text-red-600"
+        >
+            <TbCancel className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+            <span>إلغاء الطلب</span>
+        </button>
+    )}
+    
+    {isCompleted && (
+        <button className="flex items-center justify-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all bg-gradient-to-r from-green-500 to-emerald-600 flex-1 sm:flex-none">
+            <BiRefresh className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>طلب مرة أخرى</span>
+        </button>
+    )}
+</div>
                     </div>
                 </div>
 
@@ -1339,6 +1513,107 @@ const startRealTimeTracking = () => {
                         </div>
                     </div>
                 </div>
+                {/* Cancel Order Modal */}
+{showCancelModal && (
+    <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowCancelModal(false)}></div>
+        <div className="relative bg-white dark:bg-gray-900 w-full max-w-md rounded-xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-scale-in overflow-hidden">
+            <button 
+                onClick={() => setShowCancelModal(false)} 
+                className="absolute top-4 left-4 sm:top-6 sm:left-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all z-[220]"
+            >
+                <BiX className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+            
+            <div className="p-4 sm:p-8 text-center relative z-[215]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center mb-4 sm:mb-6 bg-gradient-to-br from-red-50 to-red-100">
+                    <FiAlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
+                </div>
+                
+                <h3 className="text-xl sm:text-2xl font-black mb-2">تأكيد إلغاء الطلب</h3>
+                <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8">
+                    هل أنت متأكد من رغبتك في إلغاء الطلب #{orderData.id}؟
+                </p>
+                
+                <div className="space-y-4 sm:space-y-6">
+                    {/* Reasons */}
+                    <div className="text-right">
+                        <label className="text-xs sm:text-sm font-bold text-right block mb-3 text-red-600">
+                            سبب الإلغاء <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-1 gap-2">
+                            {cancelReasons.map((reason) => (
+                                <label 
+                                    key={reason.id}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                        cancelReason === reason.id 
+                                            ? 'border-red-500 bg-red-50' 
+                                            : 'border-gray-200 hover:border-red-200'
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="cancelReason"
+                                        value={reason.id}
+                                        checked={cancelReason === reason.id}
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                        className="w-4 h-4 text-red-600 focus:ring-red-500"
+                                    />
+                                    <span className="text-sm sm:text-base font-medium text-gray-700">
+                                        {reason.label}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Other reason textarea */}
+                    {cancelReason === 'other' && (
+                        <div className="text-right">
+                            <label className="text-xs sm:text-sm font-bold text-right block mb-2 text-gray-700">
+                                اذكر السبب
+                            </label>
+                            <textarea
+                                value={otherReason}
+                                onChange={(e) => setOtherReason(e.target.value)}
+                                placeholder="اكتب سبب الإلغاء هنا..."
+                                className="w-full h-24 bg-gray-50 rounded-xl p-4 text-sm border-2 border-gray-200 focus:border-red-500 outline-none transition-all resize-none focus:ring-2 focus:ring-red-100"
+                                required={cancelReason === 'other'}
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <button
+                            onClick={handleCancelOrder}
+                            disabled={!cancelReason || isSubmittingCancel || (cancelReason === 'other' && !otherReason.trim())}
+                            className={`flex-1 py-3 sm:py-4 rounded-xl font-black text-sm sm:text-base transition-all ${
+                                !cancelReason || isSubmittingCancel || (cancelReason === 'other' && !otherReason.trim())
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95'
+                            }`}
+                        >
+                            {isSubmittingCancel ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    جاري الإلغاء...
+                                </span>
+                            ) : 'تأكيد الإلغاء'}
+                        </button>
+                        
+                        <button
+                            onClick={() => setShowCancelModal(false)}
+                            className="flex-1 py-3 sm:py-4 rounded-xl font-black text-sm sm:text-base bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                        >
+                            تراجع
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
             </div>
         </>
     );
