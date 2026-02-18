@@ -9,26 +9,26 @@ import {
   FaArrowLeft
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-
+import { MdOutlineLocalOffer } from "react-icons/md";
 export default function Deals() {
   const router = useRouter();
   
   const services = [
     {
       id: 1,
-      title: "توصيل مجاني",
+      title: "توصيل سريع ",
       subtitle: "للطلبات الكبيرة",
-      description: "توصيل مجاني لجميع الطلبات التي تزيد عن 500 ريال",
-      gradient: "from-[#1C7C4B] via-[#2A9D5F] to-[#1C7C4B]",
-      color: "#1C7C4B",
+      description: "أي طلبية تصلك في الموعد المحدد",
+      gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
+      color: "#579BE8",
       icon: FaTruck,
-      bgPattern: "bg-[#1C7C4B]/5",
+     bgPattern: "bg-[#579BE8]/5",
     },
     {
       id: 2,
       title: "دعم مخصص",
-      subtitle: "24/7 للشركات",
-      description: "دعم فني متخصص على مدار الساعة للشركات والمؤسسات",
+      subtitle: "24/7 للتعاقدات",
+      description: "دعم فني متخصص على مدار الساعة للشركات والمؤسسات والافراد",
       gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
       color: "#579BE8",
       icon: FaHeadset,
@@ -36,13 +36,13 @@ export default function Deals() {
     },
     {
       id: 3,
-      title: "خصم 20%",
+      title: "خصم حصري",
       subtitle: "للعقود السنوية",
-      description: "احصل على خصم 20% عند الاشتراك في عقد سنوي",
-      gradient: "from-[#B3000D] via-[#D40015] to-[#B3000D]",
-      color: "#B3000D",
-      icon: FaPercent,
-      bgPattern: "bg-[#B3000D]/5",
+      description:"احصل على خصم حصري عند الاشتراك في عقد سنوي",
+      gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
+      color: "#579BE8",
+      icon: MdOutlineLocalOffer,
+      bgPattern: "bg-[#579BE8]/5",
     },
   ];
 

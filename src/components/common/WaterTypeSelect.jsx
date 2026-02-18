@@ -69,75 +69,93 @@ const errorId = `${selectId}-error`;
 		return `${base} border border-[#579BE8]/30 focus:ring-[#579BE8] hover:border-[#579BE8]/50 ${className}`;
 	}, [finalStatus, className]);
 
-	useEffect(() => {
-		let mounted = true;
+useEffect(() => {
+	let mounted = true;
 
-		const fetchData = async () => {
-			try {
-				setLoading(true);
-				setError(null);
-				
-				// التحقق من الاتصال بالإنترنت
-				if (!navigator.onLine) {
-					throw new Error('لا يوجد اتصال بالإنترنت');
-				}
-
-				const response = await waterApi.getWaterTypes();
-				
-				if (!mounted) return;
-
-				// معالجة البيانات
-				let waterTypes = [];
-				
-				if (response.data && Array.isArray(response.data)) {
-					waterTypes = response.data;
-				} else if (Array.isArray(response)) {
-					waterTypes = response;
-				}
-
-				// إذا كان هناك بيانات، استخدمها
-				if (waterTypes && waterTypes.length > 0) {
-					setItems(waterTypes);
-				} else {
-					// استخدام بيانات افتراضية
-					const defaultTypes = [
-						{ id: 1, name: 'مياه عادية', description: 'مياه شرب عادية' },
-						{ id: 2, name: 'مياه معدنية', description: 'مياه غنية بالمعادن' },
-						{ id: 3, name: 'مياه قلوية', description: 'مياه قلوية متوازنة' }
-					];
-					setItems(defaultTypes);
-				}
-			} catch (err) {
-				console.error('Error fetching water types:', err);
-				
-				let errorMessage = 'حدث خطأ في تحميل أنواع المياه';
-				
-				if (err.message === 'لا يوجد اتصال بالإنترنت') {
-					errorMessage = 'لا يوجد اتصال بالإنترنت';
-				} else if (err.message?.includes('Network Error')) {
-					errorMessage = 'تعذر الاتصال بالخادم';
-				}
-				
-				setError(errorMessage);
-				
-				// بيانات افتراضية في حالة الخطأ
-				const defaultTypes = [
-					{ id: 1, name: 'مياه عادية', description: 'مياه شرب عادية' },
-					{ id: 2, name: 'مياه معدنية', description: 'مياه غنية بالمعادن' },
-					{ id: 3, name: 'مياه قلوية', description: 'مياه قلوية متوازنة' }
-				];
-				setItems(defaultTypes);
-			} finally {
-				if (mounted) setLoading(false);
+	const fetchData = async () => {
+		try {
+			setLoading(true);
+			setError(null);
+			
+			// التحقق من الاتصال بالإنترنت
+			if (!navigator.onLine) {
+				throw new Error('لا يوجد اتصال بالإنترنت');
 			}
-		};
 
+			// جلب البيانات من الرابط الجديد
+			const response = await fetch('https://moya.talaaljazeera.com/api/v1/type-water');
+			
+			if (!response.ok) {
+				throw new Error(`فشل في تحميل البيانات: ${response.status}`);
+			}
+			
+			const data = await response.json();
+			
+			if (!mounted) return;
+
+			// معالجة البيانات بناءً على هيكل الاستجابة المتوقع
+			let waterTypes = [];
+			
+			if (data.data && Array.isArray(data.data)) {
+				waterTypes = data.data;
+			} else if (Array.isArray(data)) {
+				waterTypes = data;
+			} else if (data && typeof data === 'object') {
+				const possibleArrays = Object.values(data).find(Array.isArray);
+				if (possibleArrays) {
+					waterTypes = possibleArrays;
+				}
+			}
+
+			// التحقق من صحة البيانات
+			if (waterTypes && waterTypes.length > 0) {
+				const validTypes = waterTypes.filter(item => item.id && item.name);
+				if (validTypes.length > 0) {
+					setItems(validTypes);
+				} else {
+					setItems(getDefaultTypes());
+				}
+			} else {
+				setItems(getDefaultTypes());
+			}
+		} catch (err) {
+			console.error('Error fetching water types:', err);
+			
+			let errorMessage = 'حدث خطأ في تحميل أنواع المياه';
+			
+			if (err.message === 'لا يوجد اتصال بالإنترنت') {
+				errorMessage = 'لا يوجد اتصال بالإنترنت';
+			} else if (err.message?.includes('Network Error')) {
+				errorMessage = 'تعذر الاتصال بالخادم';
+			} else if (err.message?.includes('فشل في تحميل البيانات')) {
+				errorMessage = err.message;
+			}
+			
+			setError(errorMessage);
+			
+			// بيانات افتراضية في حالة الخطأ
+			setItems(getDefaultTypes());
+		} finally {
+			if (mounted) setLoading(false);
+		}
+	};
+
+	// دالة للحصول على البيانات الافتراضية
+	const getDefaultTypes = () => [
+		{ id: 1, name: 'مياه عادية', description: 'مياه شرب عادية' },
+		{ id: 2, name: 'مياه معدنية', description: 'مياه غنية بالمعادن' },
+		{ id: 3, name: 'مياه قلوية', description: 'مياه قلوية متوازنة' }
+	];
+
+	// تحقق إضافي لمنع الاستدعاء المزدوج
+	if (mounted && items.length === 0) {
 		fetchData();
-		
-		return () => {
-			mounted = false;
-		};
-	}, [isOnline]);
+	}
+	
+	return () => {
+		mounted = false;
+	};
+}, []); // مصفوفة تبعيات فارغة - يتم التشغيل مرة واحدة فقط عند تحميل المكون
 
 	return (
 		<div className="flex flex-col items-start gap-2 w-full">

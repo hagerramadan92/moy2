@@ -173,8 +173,7 @@ const EnhancedOrderTrackingMap = ({
   }
 // في بداية المكون، أضف هذا التحقق
 useEffect(() => {
-    console.log("Received driver location:", driverLocation);
-    console.log("Received user location:", userLocation);
+
 }, [driverLocation, userLocation]);
   const userCoords = formatCoordinates(userLocation[0], userLocation[1]);
   const driverCoords = driverLocation ? 
@@ -183,76 +182,7 @@ useEffect(() => {
 
   return (
     <div className="relative h-80 md:h-120 rounded-3xl overflow-hidden border-2 border-gray-200 shadow-xl">
-      {/* شريط معلومات التتبع العلوي */}
-      {driverName
-       && ( 
- <div className="absolute top-4 left-4 right-4 z-[1000]">
-        {/* <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-gray-100">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex-1">
-             
-              
-              {driverName && (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow">
-                    <span className="text-white text-sm font-bold">
-                      {driverName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{driverName}</p>
-                    <div className="flex items-center gap-2">
-                      {driverRating && (
-                        <div className="flex items-center gap-1">
-                          <FaStar className="w-3 h-3 text-yellow-500" />
-                          <span className="text-xs font-bold text-gray-700">{driverRating}</span>
-                        </div>
-                      )}
-                      {vehiclePlate && (
-                        <span className="text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                          {vehiclePlate}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className='flex items-center'>
-                {distance && (
-              <div className="flex flex-col items-end">
-                <div className="text-right">
-                  <div className="text-xs text-gray-700 mb-1">المسافة المتبقية</div>
-                  <div className="text-2xl font-black text-blue-600">
-                    {formatDistance()}
-                  </div>
-                </div>
-                {estimatedTime && (
-                  <div className="text-right mt-2">
-                    <div className="text-xs text-gray-700">الوقت المتوقع</div>
-                    <div className="text-sm font-bold text-green-600">
-                      {estimatedTime} د
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            </div>
-            
-          </div>
-        </div> */}
-      </div>
-       )}
-     
-{/* في قسم الخريطة، أضف هذا لعرض معلومات الموقع */}
-{driverLocation && (
-    <div className="mt-2 text-xs text-gray-500 text-left">
-        <p>آخر تحديث: {new Date().toLocaleTimeString('ar-SA')}</p>
-        <p className="font-mono">
-            موقع السائق: {driverLocation[0].toFixed(6)}, {driverLocation[1].toFixed(6)}
-        </p>
-    </div>
-)}
+ 
   
       <MapContainer
         center={userLocation}

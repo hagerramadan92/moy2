@@ -434,6 +434,7 @@ const startRealTimeTracking = () => {
     const getStatusText = (statusName) => {
         const statusMap = {
             'pendding': 'انتظار التأكيد',
+            'delivered': 'تم التوصيل',
             'confirmed': 'تم التأكيد',
             'assigned': 'معين للسائق',
             'in_progress': 'جاري التجهيز',

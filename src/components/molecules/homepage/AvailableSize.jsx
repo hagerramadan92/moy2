@@ -51,40 +51,46 @@ export default function AvailableSize() {
     }
   };
 
-  // Fetch services from API
   useEffect(() => {
-	let mounted = true;
+    let mounted = true;
 
-	const fetchServices = async () => {
-		try {
-			setLoading(true);
-			setError(null);
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-			const data = await waterApi.getWaterServices();
+        // استخدام الرابط مباشرة هنا
+        const response = await fetch('https://moya.talaaljazeera.com/api/v1/services');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
 
-			if (!mounted) return;
+        if (!mounted) return;
 
-			if (data?.status && Array.isArray(data.data)) {
-				setServices(data.data);
-			} else {
-				setServices([]);
-				setError(data?.message || "فشل تحميل السعات");
-			}
-		} catch (err) {
-			console.error("Error fetching services:", err);
-			setError("فشل تحميل السعات");
-			setServices([]);
-		} finally {
-			if (mounted) setLoading(false);
-		}
-	};
+        if (data?.status && Array.isArray(data.data)) {
+          setServices(data.data);
+        } else {
+          setServices([]);
+          setError(data?.message || "فشل تحميل السعات");
+        }
+      } catch (err) {
+        console.error("Error fetching services:", err);
+        setError("فشل تحميل السعات");
+        setServices([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
 
-	fetchServices();
+    fetchServices();
 
-	return () => {
-		mounted = false;
-	};
-}, []);
+    return () => {
+      mounted = false;
+    };
+  }, []); // لا توجد dependencies لأننا نريد جلب البيانات مرة واحدة فقط
 
 
   return (
@@ -258,11 +264,14 @@ export default function AvailableSize() {
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
+                            // استخدام serviceId كمعرف للخدمة المختارة
+                            const selectedServiceId = serviceId;
+                            
                             // Check if user is logged in
                             const accessToken = localStorage.getItem("accessToken");
                             if (accessToken) {
-                              // User is logged in, navigate to orders page
-                              router.push("/orders");
+                              // User is logged in, navigate to orders page with service ID
+                              router.push(`/orders?waterSize=${encodeURIComponent(selectedServiceId)}`);
                             } else {
                               // User is not logged in, open login dialog
                               setIsLoginDialogOpen(true);

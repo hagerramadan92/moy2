@@ -243,7 +243,7 @@ export default function CallToActionSection() {
             </span>
           </div>
           <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">جاهز تطلب المويه؟</span>
+            <span className="block text-[#579BE8] font-bold">جاهز تطلب المويه؟</span>
             <span className="block text-sm sm:text-base md:text-lg text-gray-600 mt-1">
               احصل علي عروض أسعار فورية من السائقين في منطقتك الان
             </span>

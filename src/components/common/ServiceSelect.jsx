@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import {
 	Select,
@@ -10,7 +10,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import { waterApi } from "@/utils/api";
 import { Scale } from "lucide-react";
 import { useId } from "react";
 
@@ -29,9 +28,12 @@ export default function ServiceSelect({
 }) {
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(false);
-const selectId = useId();
-const labelId = `${selectId}-label`;
-const errorId = `${selectId}-error`;
+    const selectId = useId();
+    const labelId = `${selectId}-label`;
+    const errorId = `${selectId}-error`;
+    
+    // استخدام useRef لتخزين قيمة onlyActive الأولية
+    const onlyActiveRef = useRef(onlyActive);
 
 	// دمج status مع hasError
 	const finalStatus = useMemo(() => {
@@ -58,12 +60,15 @@ const errorId = `${selectId}-error`;
 		async function loadServices() {
 			setLoading(true);
 			try {
-				const data = await waterApi.getWaterServices();
+				// استخدام fetch مباشرة على الرابط
+				const response = await fetch('https://moya.talaaljazeera.com/api/v1/services');
+				const data = await response.json();
 
 				if (!mounted) return;
 
 				if (data?.status && Array.isArray(data.data)) {
-					const list = onlyActive
+					// استخدام onlyActiveRef.current بدلاً من onlyActive
+					const list = onlyActiveRef.current
 						? data.data.filter((x) => String(x.is_active) === "1")
 						: data.data;
 
@@ -72,6 +77,7 @@ const errorId = `${selectId}-error`;
 					toast.error(data?.message || "فشل تحميل أحجام المويه");
 				}
 			} catch (error) {
+				console.error("Error fetching services:", error);
 				toast.error("فشل تحميل أحجام المويه");
 			} finally {
 				if (mounted) setLoading(false);
@@ -83,12 +89,11 @@ const errorId = `${selectId}-error`;
 		return () => {
 			mounted = false;
 		};
-	}, [onlyActive]);
+	}, []); // ✅ array فاضي عشان الـ useEffect يشغل مرة واحدة بس
 
 	return (
 		<div className="flex flex-col items-start gap-2 w-full">
-			<label   id={labelId}
-  htmlFor={selectId} className="flex items-center gap-2 text-gray-700 font-bold text-sm">
+			<label id={labelId} htmlFor={selectId} className="flex items-center gap-2 text-gray-700 font-bold text-sm">
 				<Scale size={18} className={'text-[#579BE8]'} />
 				{label}
 				{finalStatus === "error" && (
@@ -106,18 +111,23 @@ const errorId = `${selectId}-error`;
 				dir={dir}
 				disabled={loading}
 			>
-				<SelectTrigger  id={selectId}
-  aria-labelledby={labelId}
-  aria-invalid={finalStatus === "error"}
-  aria-describedby={finalStatus === "error" ? errorId : undefined} className={triggerClass}>
+				<SelectTrigger id={selectId}
+                    aria-labelledby={labelId}
+                    aria-invalid={finalStatus === "error"}
+                    aria-describedby={finalStatus === "error" ? errorId : undefined} 
+                    className={triggerClass}>
 					<SelectValue
-						placeholder={ placeholder}
+						placeholder={loading ? "جاري التحميل..." : placeholder}
 						className="text-[16px]"
 					/>
 				</SelectTrigger>
 
 				<SelectContent className="text-right max-h-[300px] overflow-y-auto">
-					{items.length === 0 && !loading ? (
+					{loading ? (
+						<div className="py-4 text-center text-gray-700 text-sm">
+							جاري التحميل...
+						</div>
+					) : items.length === 0 ? (
 						<div className="py-4 text-center text-gray-700 text-sm">
 							لا توجد أحجام متاحة
 						</div>
@@ -128,13 +138,9 @@ const errorId = `${selectId}-error`;
 								value={String(it.id)}
 								className="text-[16px] py-3 text-right flex-row-reverse justify-end hover:bg-gray-50 transition-colors"
 							>
-								<div className="flex items-center justify-between w-full">
+								<div className="flex items-center justify-between w-full gap-4">
 									<span>{it.name}</span>
-									{it.description && (
-										<span className="text-xs text-gray-700">
-											{it.description}
-										</span>
-									)}
+									
 								</div>
 							</SelectItem>
 						))
@@ -144,18 +150,11 @@ const errorId = `${selectId}-error`;
 
 			{/* رسالة خطأ تحت الحقل */}
 			{finalStatus === "error" && !value && (
-				<div  id={errorId} className="flex items-center gap-1 text-red-600 text-xs mt-1 md:ms-2">
-					
+				<div id={errorId} className="flex items-center gap-1 text-red-600 text-xs mt-1 md:ms-2">
 					<span>هذا الحقل مطلوب</span>
 				</div>
 			)}
 
-			{/* {loading && (
-				<div className="flex items-center gap-2 text-gray-700 text-xs mt-1">
-					<div className="w-3 h-3 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
-					<span>جاري التحميل...</span>
-				</div>
-			)} */}
 		</div>
 	);
 }
