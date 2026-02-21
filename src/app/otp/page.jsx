@@ -26,12 +26,7 @@ export default function OtpPage() {
       try {
         const parsed = JSON.parse(storedOtpData);
         setOtpData(parsed);
-
-        // Auto-fill OTP from response if available
-        if (parsed.otp && parsed.otp.length === 6) {
-          const otpArray = parsed.otp.split("").slice(0, 6);
-          setOtp(otpArray);
-        }
+        // تمت إزالة الجزء الخاص بالملء التلقائي للرمز
       } catch (err) {
         console.error("Error parsing OTP data:", err);
         // If no valid OTP data, redirect back to login
@@ -207,7 +202,7 @@ export default function OtpPage() {
         const updatedOtpData = {
           phone: data.data.phone,
           method: data.data.method,
-          otp: data.data.otp,
+          // تمت إزالة تخزين otp من البيانات
           countryCode: otpData.countryCode,
           phoneNumber: otpData.phoneNumber,
           otpMethod: otpData.otpMethod || "whatsapp",
@@ -215,11 +210,8 @@ export default function OtpPage() {
         sessionStorage.setItem("otpData", JSON.stringify(updatedOtpData));
         setOtpData(updatedOtpData);
 
-        // Auto-fill new OTP
-        if (data.data.otp && data.data.otp.length === 6) {
-          const otpArray = data.data.otp.split("").slice(0, 6);
-          setOtp(otpArray);
-        }
+        // تمت إزالة الملء التلقائي للرمز الجديد
+        // المستخدم سيقوم بإدخال الرمز بنفسه
 
         setTimer(60); // Reset timer
 
