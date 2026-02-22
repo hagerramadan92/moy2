@@ -194,7 +194,10 @@ export default function AppPromotionSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.7 }}
             >
-              <AppDownloadButtons className="justify-start" />
+              <div className="w-60 md:w-full mx-auto">
+              <AppDownloadButtons  />
+
+              </div>
             </motion.div>
           </motion.div>
         </div>

@@ -226,17 +226,17 @@ export default function HomeCover({ data }) {
                         "اطلب الآن"
                     )}
                 </button>
-								</form>
+			</form>
 							)}
 						</div>
 					</div>
 
 					{/* Content Section - Appears second on small screens */}
-					<div className="content-right order-2 md:order-1">
+					<div className="md:content-right order-2 md:order-1">
 						<h1 className="text-2xl sm:text-3xl md:text-4xl  font-bold mb-4 sm:mb-6">
 							{title || "أول تطبيق وايت مياه في المملكة"}
 						</h1>
-						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8">
+						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8 text-center md:text-right">
 							{subtitle || " أطلب الكمية اللي تبيها و بتوصلك وين ما كنت "}
 						</p>
 						{image && (
@@ -250,7 +250,10 @@ export default function HomeCover({ data }) {
 								/>
 							</div>
 						)}
-						<AppDownloadButtons />
+					 <div className="w-60 md:w-full mx-auto">
+                                  <AppDownloadButtons  />
+                    
+                                  </div>
 					</div>
 				</div>
 			</div>
