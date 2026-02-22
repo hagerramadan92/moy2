@@ -4,15 +4,15 @@ import React from "react";
 
 export default function ServicesSection() {
   const services = [
-    {
-      id: 1,
-      title: "عروض خاصة",
-      subItems: [
-        "عروض ومكافآت حصرية للسائقين",
-        "خصومات على المعدات وخدمات الصيانة",
-        "كوبونات بأسعار تفضيلية",
-      ],
-    },
+    // {
+    //   id: 1,
+    //   title: "عروض خاصة",
+    //   subItems: [
+    //     "عروض ومكافآت حصرية للسائقين",
+    //     "خصومات على المعدات وخدمات الصيانة",
+    //     "كوبونات بأسعار تفضيلية",
+    //   ],
+    // },
     {
       id: 2,
       title: "الترقيات والمستويات",
@@ -51,12 +51,12 @@ export default function ServicesSection() {
         </div>
 
         {/* Services Cards Container */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 text-center">
           
           {services.map((service) => (
             <div 
               key={service.id}
-              className="group bg-white rounded-2xl border border-gray-200 p-6 lg:p-8 transition-all duration-300 hover:shadow-lg hover:border-[#579BE8]/30"
+              className="group items-center flex flex-col bg-white rounded-2xl border border-gray-200 p-6 lg:p-8 transition-all duration-300 hover:shadow-lg hover:border-[#579BE8]/30"
             >
               {/* Title */}
               <div className="text-right mb-6">
