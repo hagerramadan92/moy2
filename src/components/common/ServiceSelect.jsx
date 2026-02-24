@@ -20,7 +20,7 @@ export default function ServiceSelect({
 	onTouched,
 	label,
 	status = "default",
-	placeholder = "اختر حجم المويه",
+	placeholder = "اختر حجم الوايت",
 	dir = "rtl",
 	className = "",
 	onlyActive = true,

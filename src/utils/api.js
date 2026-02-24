@@ -74,7 +74,7 @@ export const waterApi = {
             image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
             is_active: 1,
             start_price: 'يبدا من 30',
-            title: 'افضل سعر'
+            title: ''
           },
           { 
             id: 2, 
@@ -82,7 +82,7 @@ export const waterApi = {
             image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
             is_active: 1,
             start_price: 'يبدا من 30',
-            title: 'افضل سعر'
+            title: ''
           },
           { 
             id: 3, 
@@ -90,7 +90,7 @@ export const waterApi = {
             image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
             is_active: 1,
             start_price: 'يبدا من 30',
-            title: 'افضل سعر'
+            title: ''
           },
           { 
             id: 4, 
@@ -98,7 +98,7 @@ export const waterApi = {
             image_url: 'https://i.ibb.co/HfQygsxR/Whats-App-Image-2025-12-25-at-12-09-56-AM.jpg',
             is_active: 1,
             start_price: 'يبدا من 30',
-            title: 'افضل سعر'
+            title: ''
           }
         ]
       };

@@ -455,7 +455,7 @@ const ContactFormSection = () => {
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl md:text-3xl  font-black text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">أرسل لنا رسالتك وسنرد عليك في أقرب وقت</span>
+            <span className="block text-[#579BE8]">فريق دعم متكامل علي مدار الساعة</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
         </motion.div>
@@ -487,7 +487,7 @@ const ContactFormSection = () => {
                     ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
                     : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
                 }`}
-                placeholder="أدخل اسمك الكامل"
+                placeholder="الاسم "
               />
               {errors.name && (
                 <motion.p

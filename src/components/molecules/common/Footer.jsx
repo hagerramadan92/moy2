@@ -4,13 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
-
+import { useRouter } from 'next/navigation';
 
 
 export default function Footer() {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(true);
-
+ const router = useRouter();
   // جلب طرق الدفع من API
   useEffect(() => {
     const fetchPaymentMethods = async () => {
@@ -29,6 +29,20 @@ export default function Footer() {
 
     fetchPaymentMethods();
   }, []);
+  const handleSupportClick = (e) => {
+    e.preventDefault();
+    
+    // التحقق من وجود window أولاً ثم localStorage
+    if (typeof window !== 'undefined') {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (accessToken) {
+        router.push('/myProfile/support');
+      } else {
+        router.push('/login?redirect=/myProfile/support');
+      }
+    }
+  };
 
   return (
     <footer dir="rtl" className="bg-[#072D58] text-white py-12 sm:py-16">
@@ -48,7 +62,7 @@ export default function Footer() {
               <h3 className="text-xl md:text-3xl font-bold tracking-tight">وايت مياه</h3>
             </div>
             <p className="text-sm md:text-base text-gray-300 leading-relaxed max-w-xs">
-              منصة توصيل المياه الرائدة في المملكة العربية السعودية. نربط العملاء مع سواقين موثوقين بأعلى معايير الجودة.
+              منصة توصيل وايتات المياه الرائدة في المملكة العربية السعودية. نربط العملاء مع سواقين موثوقين بأعلى معايير الجودة.
             </p>
           </div>
 
@@ -62,7 +76,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link onClick={handleSupportClick} href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الدعم الفني
                 </Link>
               </li>
@@ -72,7 +86,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link onClick={handleSupportClick} href="/myProfile/support" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   بلغ عن مشكلة
                 </Link>
               </li>
@@ -94,7 +108,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/myProfile/help-center" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/faqs" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   الأسئلة الشائعة
                 </Link>
               </li>
@@ -111,7 +125,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/drivers" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
+                <Link href="/how_work" className="text-gray-300 text-sm hover:text-white hover:translate-x-[-4px] transition-all duration-200 block">
                   كيفية العمل
                 </Link>
               </li>

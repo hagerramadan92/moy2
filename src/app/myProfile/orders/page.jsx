@@ -110,6 +110,7 @@ export default function OrdersPage() {
         if (!token) {
             setAuthError(true);
             setError("يجب تسجيل الدخول للوصول إلى هذه الصفحة");
+            router.push('/login');
             return false;
         }
         return true;

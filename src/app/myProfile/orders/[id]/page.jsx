@@ -324,6 +324,7 @@ const startRealTimeTracking = () => {
             if (!token) {
                 setAuthError(true);
                 setError("يجب تسجيل الدخول للوصول إلى هذه الصفحة");
+                router.push('/login');
                 setLoading(false);
                 return;
             }

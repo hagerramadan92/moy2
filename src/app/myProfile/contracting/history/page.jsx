@@ -58,6 +58,8 @@ export default function ContractHistoryPage() {
                     duration: 3000,
                     icon: "❌",
                 });
+                router.push('/login');  
+
                 setLoading(false);
                 return;
             }

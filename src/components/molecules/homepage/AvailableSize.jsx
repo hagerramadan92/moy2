@@ -104,13 +104,13 @@ export default function AvailableSize() {
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-8 md:mb-10"
         >
-          <div className="inline-block mb-2 md:mb-3">
+          {/* <div className="inline-block mb-2 md:mb-3">
             <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
               السعات المتاحة
             </span>
-          </div>
+          </div> */}
           <h2 className="text-xl sm:text-2xl md:text-3xl  font-black text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">اختر السعة اللي تحتاجها</span>
+            <span className="block text-[#579BE8]">اختر الوايت اللي تحتاجها</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
         </motion.div>
@@ -221,7 +221,7 @@ export default function AvailableSize() {
 
                           <h3
                             className={`
-                            text-base sm:text-xl md:text-2xl lg:text-[34.29px] font-bold mb-2 sm:mb-3 transition-all duration-300
+                            text-base sm:text-xl md:text-2xl  font-bold mb-2 sm:mb-3 transition-all duration-300
                             ${
                               isCenterCard(index)
                                 ? "text-black"
@@ -232,9 +232,9 @@ export default function AvailableSize() {
                             {capacity}
                           </h3>
 
-                          <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
+                          {/* <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
                             {description}
-                          </p>
+                          </p> */}
 
                           <p
                             className={`

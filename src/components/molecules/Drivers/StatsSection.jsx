@@ -120,7 +120,7 @@ export default function StatsSection({ data }) {
     
     // Determine icon based on label
     let icon = FaUsers;
-    if (statData.label?.includes("متوسط الربجح بالسعة")) {
+    if (statData.label?.includes("متوسط الربجح بالوايت")) {
       icon = FaHeart;
     } else if (statData.label?.includes("طلب")) {
       icon = FaShoppingCart;

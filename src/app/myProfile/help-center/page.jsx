@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { IoIosSearch, IoIosArrowDown, IoIosArrowBack, IoIosWater } from "react-icons/io";
 import { FaBox, FaUserCircle, FaTag, FaHeadset, FaQuestionCircle, FaRegUser } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+
 import Link from "next/link";
 import { FaRegHandshake } from "react-icons/fa6";
 import { CgCreditCard } from "react-icons/cg";
@@ -32,32 +32,7 @@ export default function SupportPage() {
         { id: "gift", title: "العروض والخصومات", icon: <BsGift />, description: "كوبونات - عروض خاصة  ", link: "/myProfile/help-center" },
     ];
 
-    const faqs = [
-        {
-            q:"كيف اعدل طلبي؟",
-            a: "يمكنك تتبع شحنتك من خلال الانتقال إلى صفحة 'طلباتي' والضغط على زر تتبع الشحنة بجانب الطلب المعني."
-        },
-        {
-            q: "كيف أتواصل مع السائق؟",
-            a: "نقبل الاسترجاع خلال 14 يوماً من تاريخ الاستلام، بشرط أن يكون المنتج في حالته الأصلية وبتغليفه الأصلي."
-        },
-        {
-            q: "ما هي طرق الدفع المتاحة؟",
-            a: "يمكنك تعديل عنوان التوصيل للطلبات التي لم يتم شحنها بعد عبر التواصل مع الدعم الفني فوراً."
-        },
-        {
-            q: "كيف الغي طلبي؟",
-            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
-        },
-        {
-            q: "كم المدة المتوفعة للتوصيل؟",
-            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
-        },
-        {
-            q: "هل يمكنني جدولة الطلب مسبقا؟",
-            a: "تابع صفحة العروض لدينا واشترك في النشرة البريدية للحصول على أحدث الكوبونات والخصومات الحصرية."
-        }
-    ];
+  
 
     // Skeleton Components
     const SupportSkeleton = () => (
@@ -139,9 +114,9 @@ export default function SupportPage() {
                 </div>
 
                 <div className="relative z-10 space-y-4">
-                    <h2 className="text-3xl sm:text-4xl font-black tracking-tight">مركز المساعدة</h2>
+                    <h2 className="text-3xl sm:text-4xl font-black tracking-tight"> المساعدة</h2>
                     <p className="text-white/80 max-w-lg mx-auto text-sm sm:text-base">
-                        اسأل وابحث واحصل على المساعدة بكل سهولة
+                        المساعدة اللي تبيها في مكان واحد أسأل و ابحث بسهولة
                     </p>
 
                     <div className="max-w-xl mx-auto mt-8 relative group">
@@ -186,68 +161,7 @@ export default function SupportPage() {
                 ))}
             </div>
 
-            {/* FAQs Section */}
-            <div className="bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="p-2 bg-[#579BE8]/10 rounded-lg text-[#579BE8]">
-                        <FaQuestionCircle size={20} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-foreground">الاسئلة الشائعة</h3>
-                </div>
-
-                <div className="space-y-4">
-                    {faqs.map((faq, i) => (
-                        <div
-                            key={i}
-                            className={`border border-border/40 rounded-2xl transition-all ${openFaq === i ? "bg-secondary/10 border-primary/20 shadow-sm" : "hover:border-primary/30"}`}
-                        >
-                            <button
-                                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                                className="w-full flex items-center justify-between p-5 text-right transition-all"
-                            >
-                                <span className="font-bold text-sm sm:text-base text-foreground">{faq.q}</span>
-                                <motion.div
-                                    animate={{ rotate: openFaq === i ? 180 : 0 }}
-                                    transition={{ type: "spring", stiffness: 300 }}
-                                    className="text-muted-foreground"
-                                >
-                                    <IoIosArrowDown size={20} />
-                                </motion.div>
-                            </button>
-
-                            <AnimatePresence>
-                                {openFaq === i && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: "auto", opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border/10 mt-1 pt-4">
-                                            {faq.a}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Still Need Help? */}
-                <div className="mt-10 p-6 bg-secondary/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-border/10">
-                    <div className="text-center sm:text-right">
-                        <h5 className="font-bold text-lg mb-1">مازلت بحاجة للمساعدة؟</h5>
-                        <p className="text-sm text-muted-foreground">فريقنا متاح لمساعدتك على مدار الساعة عبر الدردشة المباشرة</p>
-                    </div>
-                    <Link href="/myProfile/help-center">
-                        <button className="bg-[#579BE8] text-white px-8 py-3.5 rounded-2xl font-black shadow-lg shadow-[#579BE8]/20 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-2">
-                            <FaHeadset />
-                            تواصل معنا الآن
-                        </button>
-                    </Link>
-                </div>
-            </div>
+            
         </div>
     );
 }

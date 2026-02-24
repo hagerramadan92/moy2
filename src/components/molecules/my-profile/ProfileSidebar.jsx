@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaRegUser, FaTrashAlt } from "react-icons/fa";
 import { FaHeadset } from "react-icons/fa6";
 import { MdLogout, MdBusinessCenter } from "react-icons/md";
@@ -15,6 +14,33 @@ import { HiMenuAlt3, HiX } from "react-icons/hi";
 
 export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, user = null }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [authChecked, setAuthChecked] = useState(false);
+
+    useEffect(() => {
+        // التحقق من حالة تسجيل الدخول عند تحميل المكون
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('accessToken');
+            setIsAuthenticated(!!token);
+        }
+        setAuthChecked(true);
+    }, []);
+
+    const handleSupportClick = (e) => {
+        e.preventDefault();
+        
+        // التحقق من وجود window أولاً ثم localStorage
+        if (typeof window !== 'undefined') {
+            const accessToken = localStorage.getItem('accessToken');
+            
+            if (accessToken) {
+                router.push('/myProfile/support');
+            } else {
+                router.push('/login?redirect=/myProfile/support');
+            }
+        }
+    };
 
     const isActive = (path) => pathname === path;
     const isWalletActive = pathname.startsWith('/myProfile/wallet');
@@ -45,7 +71,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
             icon: <FaHeadset className="w-5 h-5" />,
             links: [
                 { name: "مركز المساعدة", href: "/myProfile/help-center" },
-                { name: "الدعم الفني", href: "/myProfile/support" },
+                { name: "الدعم الفني", href: "/myProfile/support", onClick: handleSupportClick },
             ]
         }
     ];
@@ -74,6 +100,8 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
             if (result.isConfirmed) {
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
+                localStorage.removeItem('accessToken');
+                setIsAuthenticated(false);
                 window.location.href = "/";
             }
         });
@@ -181,6 +209,8 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                             // Clear tokens/session and redirect
                             localStorage.removeItem('user');
                             localStorage.removeItem('token');
+                            localStorage.removeItem('accessToken');
+                            setIsAuthenticated(false);
                             window.location.href = "/";
                         });
                     } else {
@@ -339,6 +369,16 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
         </>
     );
 
+    // إذا كان لا يزال يتم التحقق من حالة المصادقة، لا تعرض شيئاً
+    if (!authChecked) {
+        return null;
+    }
+
+    // إذا كان المستخدم غير مسجل دخول، لا تعرض السايدبار
+    if (!isAuthenticated) {
+        return null;
+    }
+
     if (loading) {
         return <SidebarSkeleton />;
     }
@@ -359,6 +399,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                                     <Link
                                         key={linkIdx}
                                         href={link.href}
+                                        onClick={link.onClick}
                                         className={`text-base py-2 px-4 rounded-lg transition-all duration-200 block
                                             ${isActive(link.href)
                                                 ? "text-primary font-bold translate-x-[-4px] bg-[#579BE8]/25 border-r-2 border-[#579BE8]"
@@ -445,17 +486,6 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                             <h2 className="text-lg">تسجيل خروج</h2>
                         </div>
                     </div>
-
-                    {/* Delete Account Button */}
-                    {/* <div className="flex flex-col gap-4">
-                        <div
-                            onClick={handleDeleteAccount}
-                            className="flex items-center gap-2 text-red-600 dark:text-red-400 rounded-lg hover:translate-x-[-2px] cursor-pointer transition-all duration-200 font-bold px-2 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-900/50"
-                        >
-                            <FaTrashAlt className="w-5 h-5" />
-                            <h2 className="text-lg">حذف الحساب</h2>
-                        </div>
-                    </div> */}
                 </div>
             </aside>
 
@@ -491,7 +521,10 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                                         <Link
                                             key={linkIdx}
                                             href={link.href}
-                                            onClick={() => setIsOpen(false)}
+                                            onClick={() => {
+                                                setIsOpen(false);
+                                                if (link.onClick) link.onClick();
+                                            }}
                                             className={`text-base py-2.5 px-4 rounded-lg transition-all duration-200 block
                                                 ${isActive(link.href)
                                                     ? "text-primary font-bold bg-[#579BE8]/25 border-r-2 border-[#579BE8] translate-x-[-4px]"
@@ -578,17 +611,6 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
                             >
                                 <FiLogOut className="w-5 h-5" />
                                 <h2 className="text-lg">تسجيل خروج</h2>
-                            </div>
-                        </div>
-
-                        {/* Delete Account Button - Mobile */}
-                        <div className="flex flex-col gap-4">
-                            <div
-                                onClick={() => { setIsOpen(false); handleDeleteAccount(); }}
-                                className="flex items-center gap-2 text-red-600 dark:text-red-400 rounded-lg font-bold px-2 py-3 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/50"
-                            >
-                                <FaTrashAlt className="w-5 h-5" />
-                                <h2 className="text-lg">حذف الحساب</h2>
                             </div>
                         </div>
                     </div>

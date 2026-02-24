@@ -554,6 +554,7 @@ export default function AvailableDriversContent({ onBack }) {
       
       if (!accessToken) {
         setError('يجب تسجيل الدخول للوصول إلى هذه الصفحة');
+        router.push('/login');
         setLoading(false);
         setRefreshing(false);
         return;

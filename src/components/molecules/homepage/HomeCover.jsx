@@ -60,7 +60,7 @@ export default function HomeCover({ data }) {
 
         // إذا كان هناك خطأ، عرض رسالة وتوقف
         if (hasError) {
-            toast.error("يرجى اختيار نوع المياه والكمية", {
+            toast.error("يرجى اختيار نوع المياه الحجم", {
                 duration: 3000,
                 position: "top-center",
                 style: {
@@ -162,7 +162,7 @@ export default function HomeCover({ data }) {
                        اطلب اللي بخاطرك
                     </h2>
                     <p className="text-sm text-gray-600">
-                       اختر نوع المياه و الكمية اللي تحتاجها
+                       اختر نوع المياه و الحجم اللي تحتاجه
                     </p>
                 </div>
 
@@ -191,11 +191,11 @@ export default function HomeCover({ data }) {
                 {/* Water Size Select */}
                 <div className={`relative ${validationErrors.waterSize ? 'animate-shake' : ''}`}>
                     <ServiceSelect
-                        label="الكمية (طن)"
+                        label="حجم الوايت (طن)"
                         value={waterSize}
                         onChange={handleWaterSizeChange}
                         status={validationErrors.waterSize ? "error" : "default"}
-                        placeholder="اختر الكمية"
+                        placeholder="اختر الحجم"
                         onTouched={() => {
                             if (validationErrors.waterSize) {
                                 setValidationErrors(prev => ({
@@ -237,7 +237,7 @@ export default function HomeCover({ data }) {
 							{title || "أول تطبيق وايت مياه في المملكة"}
 						</h1>
 						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8 text-center md:text-right">
-							{subtitle || " أطلب الكمية اللي تبيها و بتوصلك وين ما كنت "}
+							{subtitle || " أطلب الحجم اللي تبيها و بتوصلك وين ما كنت "}
 						</p>
 						{image && (
 							<div className="mb-6 sm:mb-8">

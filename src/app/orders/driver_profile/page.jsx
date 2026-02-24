@@ -68,6 +68,7 @@ function DriverProfileContent() {
       const accessToken = getAccessToken();
       if (!accessToken) {
         setError('يجب تسجيل الدخول للوصول إلى هذه الصفحة');
+        router.push('/login');
         setLoading(false);
         return;
       }

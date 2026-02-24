@@ -561,7 +561,7 @@ class MessageService {
     const payload = {
       message: messageData.message || messageData.text || messageData,
       message_type: messageData.message_type || "text",
-      metadata: messageData.metadata || ["text"]
+      file: messageData.metadata || ["text"]
     };
     
     try {
@@ -601,6 +601,61 @@ class MessageService {
       };
     }
   }
+// ==================== إرسال رسالة مع مرفقات ====================
+async sendMessageWithAttachments(chatId, formData) {
+  // التحقق من المصادقة أولاً
+  if (!checkAuthentication(true, 'messages')) {
+    return {
+      success: false,
+      error: 'يجب تسجيل الدخول لإرسال الرسائل',
+      requiresLogin: true,
+      source: 'auth-check'
+    };
+  }
+  
+  try {
+    console.log(`📤 Sending to API /chats/${chatId}/send`);
+    
+    const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('📥 Response:', response.data);
+    
+    if (response.data.status === "success") {
+      return {
+        success: true,
+        message: response.data.message,
+        data: response.data,
+        source: 'axios'
+      };
+    }
+    
+    return {
+      success: false,
+      error: response.data.message || 'فشل إرسال الرسالة',
+      message: response.data.message,
+      source: 'axios'
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error sending message:`, error);
+    
+    let errorMessage = 'فشل إرسال الرسالة';
+    if (error.response) {
+      errorMessage = error.response.data?.message || errorMessage;
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      message: errorMessage,
+      source: 'failed'
+    };
+  }
+}
 
   // ==================== إنشاء محادثة جديدة ====================
   async createChat(participantId, type = "user_user", participantName = '') {

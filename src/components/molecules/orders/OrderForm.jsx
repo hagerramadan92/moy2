@@ -1134,7 +1134,7 @@ function OrderFormContent() {
                     setQuantity(value);
                     setTouched(prev => ({ ...prev, quantity: true }));
                   }}
-                  label="الكمية (طن)"
+                  label="حجم الوايت (طن)"
                   placeholder="اختر حجم المويه"
                   status={getFieldStatus('quantity')}
                   hasError={showError('quantity')}

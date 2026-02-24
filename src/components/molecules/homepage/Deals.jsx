@@ -17,7 +17,7 @@ export default function Deals() {
     {
       id: 1,
       title: "توصيل سريع ",
-      subtitle: "للطلبات الكبيرة",
+      subtitle: "للطلبات ",
       description: "أي طلبية تصلك في الموعد المحدد",
       gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
       color: "#579BE8",
@@ -27,8 +27,8 @@ export default function Deals() {
     {
       id: 2,
       title: "دعم مخصص",
-      subtitle: "24/7 للتعاقدات",
-      description: "دعم فني متخصص على مدار الساعة للشركات والمؤسسات والافراد",
+      subtitle: "24/7 علي مدار الساعة",
+      description: "  متخصص على مدار الساعة للأفراد و الشركات",
       gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
       color: "#579BE8",
       icon: FaHeadset,
@@ -37,8 +37,8 @@ export default function Deals() {
     {
       id: 3,
       title: "خصم حصري",
-      subtitle: "للعقود السنوية",
-      description:"احصل على خصم حصري عند الاشتراك في عقد سنوي",
+      subtitle: "للتعاقدات",
+      description:"احصل على خصم حصري عند التعاقد معنا",
       gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
       color: "#579BE8",
       icon: MdOutlineLocalOffer,

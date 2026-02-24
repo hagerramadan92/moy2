@@ -4,12 +4,14 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { messageService } from "../../../Services/message.service";
 import Pusher from 'pusher-js';
+import EmojiPicker from 'emoji-picker-react';
 
 import { 
   X, Users, MessageCircle, Plus, Search, Clock, User, CheckCircle, 
   Phone, Video, Info, Send, Paperclip, Smile, ImageIcon, FileText, 
   Mic, ChevronLeft, Star, MoreVertical, Check, CheckCheck, Lock, 
-  HeadphonesIcon, ArrowLeft, Eye, EyeOff, CircleDot, LogIn
+  HeadphonesIcon, ArrowLeft, Eye, EyeOff, CircleDot, LogIn, XCircle,
+  Download, Trash2, File, Film, Music, Archive
 } from "lucide-react";
 
 const ChatModal = ({ 
@@ -45,6 +47,16 @@ const ChatModal = ({
     phone: ''
   });
   
+  // Emoji & File States
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+  
   // Refs
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -56,6 +68,7 @@ const ChatModal = ({
   const errorShownRef = useRef(null);
   const lastLoadedChatIdRef = useRef(null);
   const pusherInitializedRef = useRef(false);
+  const attachmentMenuRef = useRef(null);
 
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
@@ -75,11 +88,15 @@ const ChatModal = ({
       shadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
     }
   };
-  // بعد MESSAGE_COLORS مباشرة
+
+ // Format message time
 const formatMessageTime = (timestamp) => {
   if (!timestamp) return '';
   try {
     const date = new Date(timestamp);
+    // التأكد من أن التاريخ صالح
+    if (isNaN(date.getTime())) return '';
+    
     return date.toLocaleTimeString('ar-SA', {
       hour: '2-digit',
       minute: '2-digit',
@@ -89,24 +106,457 @@ const formatMessageTime = (timestamp) => {
     return '';
   }
 };
-  // ================ معالجة الرسائل الجديدة من Pusher ================
+
+ // Get file icon based on type
+const getFileIcon = (fileType) => {
+  if (!fileType) return <File size={20} />;
+  
+  const type = fileType.toLowerCase();
+  
+  if (type.startsWith('image/') || type.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    return <ImageIcon size={20} />;
+  }
+  if (type.startsWith('video/') || type.match(/\.(mp4|mov|avi|mkv)$/)) {
+    return <Film size={20} />;
+  }
+  if (type.startsWith('audio/') || type.match(/\.(mp3|wav|ogg)$/)) {
+    return <Music size={20} />;
+  }
+  if (type.includes('pdf') || type.match(/\.pdf$/)) {
+    return <FileText size={20} className="text-red-500" />;
+  }
+  if (type.includes('word') || type.includes('doc') || type.match(/\.(doc|docx)$/)) {
+    return <FileText size={20} className="text-blue-500" />;
+  }
+  if (type.includes('excel') || type.includes('xls') || type.match(/\.(xls|xlsx)$/)) {
+    return <FileText size={20} className="text-green-500" />;
+  }
+  if (type.includes('zip') || type.includes('rar') || type.match(/\.(zip|rar|7z)$/)) {
+    return <Archive size={20} className="text-yellow-600" />;
+  }
+  
+  return <File size={20} />;
+};
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(file => {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`الملف ${file.name} كبير جداً. الحد الأقصى 10 ميجابايت`);
+        return false;
+      }
+      return true;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+    setShowAttachmentMenu(false);
+  };
+
+  // Remove file from selection
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+// Upload files and send message
+
+const uploadFilesAndSendMessage = async () => {
+  if (!selectedChat || selectedFiles.length === 0 || !isLoggedIn) return;
+
+  try {
+    setUploadingFiles(true);
+    
+    // Create FormData
+    const formData = new FormData();
+    
+    // Add message text if exists
+    if (newMessage.trim()) {
+      formData.append('message', newMessage);
+    }
+    
+    // Add message_type - API بيقبل file, mixed, text
+    if (selectedFiles.length > 0) {
+      formData.append('message_type', 'file');
+    }
+
+    // Add files - المهم هنا: بنضيف كل ملف بنفس الاسم 'file'
+    // الـ API بيستقبل ملف واحد فقط في كل مرة؟ خلينا نجرب كده
+    selectedFiles.forEach((file, index) => {
+      // بعض APIs بتقبل مصفوفة files
+      formData.append('files[]', file);
+    });
+
+    // للتصحيح - نشوف إيه اللي بيترسل
+    console.log('📤 Sending files:');
+    selectedFiles.forEach(file => {
+      console.log('File:', file.name, 'Type:', file.type, 'Size:', file.size);
+    });
+
+    // إنشاء رسالة مؤقتة للمعاينة
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
+      message: newMessage.trim() || '',
+      sender_id: currentUser.id,
+      sender_type: "App\\Models\\User",
+      isCurrentUser: true,
+      is_temp: true,
+      is_outgoing: true,
+      message_type: 'file',
+      attachments: selectedFiles.map(file => ({
+        file_name: file.name,
+        size: file.size,
+        mime_type: file.type,
+        url: URL.createObjectURL(file), // إنشاء رابط مؤقت للمعاينة
+        pending: true,
+        file: file // حفظ الملف للاستخدام لاحقاً
+      })),
+      created_at: new Date().toISOString(),
+      formattedTime: formatMessageTime(new Date().toISOString())
+    };
+
+    // إضافة الرسالة المؤقتة
+    setMessages(prev => [...prev, tempMessage]);
+    setNewMessage("");
+    setSelectedFiles([]);
+    scrollToBottom();
+
+    // إرسال الرسالة
+    const result = await messageService.sendMessageWithAttachments(
+      selectedChat.id, 
+      formData
+    );
+
+    if (result.success) {
+      console.log('✅ Message sent successfully:', result);
+      
+      // تحديث الرسالة المؤقتة بالبيانات الحقيقية من API
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === tempMessage.id) {
+          return {
+            ...msg,
+            id: result.message?.id || msg.id,
+            is_temp: false,
+            pending: false,
+            // نحتفظ بالروابط المؤقتة لأن API مش راجع file_url
+            attachments: msg.attachments.map(att => ({
+              ...att,
+              pending: false,
+              // لو API رجع حاجة نستخدمها
+              ...(result.message?.attachments?.[0] || {})
+            }))
+          };
+        }
+        return msg;
+      }));
+      
+      // Refresh messages عشان نجيب أي بيانات جديدة من API
+      setTimeout(() => {
+        loadMessages(selectedChat.id);
+      }, 500);
+    } else {
+      console.error('❌ Failed to send message:', result);
+      
+      // إزالة الرسالة المؤقتة في حالة الفشل
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      
+      // إعادة الملفات للقائمة عشان المستخدم يحاول تاني
+      setSelectedFiles(prev => [...prev, ...(tempMessage.attachments?.map(a => a.file) || [])]);
+      
+      alert(result.message || 'فشل إرسال الرسالة');
+    }
+  } catch (error) {
+    console.error('❌ Error uploading files:', error);
+    alert('حدث خطأ: ' + error.message);
+  } finally {
+    setUploadingFiles(false);
+  }
+};
+  // Send message (updated to handle files)
+  const sendMessage = async () => {
+    if (!isLoggedIn) {
+      showLoginToast();
+      return;
+    }
+    
+    if ((!newMessage.trim() && selectedFiles.length === 0) || sending || uploadingFiles || !selectedChat) return;
+
+    // If there are files, use file upload
+    if (selectedFiles.length > 0) {
+      await uploadFilesAndSendMessage();
+      return;
+    }
+
+    // Regular text message
+    try {
+      setSending(true);
+      
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        message: newMessage,
+        sender_id: currentUser.id,
+        sender_type: "App\\Models\\User",
+        isCurrentUser: true,
+        is_temp: true,
+        is_outgoing: true,
+        message_type: "text",
+        metadata: ["text"],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_read: false,
+        read_at: null,
+        formattedTime: formatMessageTime(new Date().toISOString())
+      };
+
+      setMessages(prev => [...prev, tempMessage]);
+      setNewMessage("");
+      scrollToBottom();
+
+      const result = await messageService.sendMessage(selectedChat.id, newMessage);
+      
+      if (result.success && result.message) {
+        setMessages(prev => {
+          const newMessages = prev.map(msg => 
+            msg.id === tempMessage.id ? {
+              ...result.message,
+              isCurrentUser: true,
+              is_outgoing: true,
+              formattedTime: formatMessageTime(result.message.created_at)
+            } : msg
+          );
+          return newMessages;
+        });
+        
+        await loadChats();
+      } else {
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        console.error('Failed to send message:', result.error);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Handle emoji click
+  const onEmojiClick = (emojiData) => {
+    setNewMessage(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+      if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(event.target)) {
+        setShowAttachmentMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Render attachment preview
+const renderAttachmentPreview = () => {
+  if (selectedFiles.length === 0) return null;
+
+  return (
+    <div className="border-t border-gray-200 bg-gray-50 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-700">
+          المرفقات ({selectedFiles.length})
+        </span>
+        <button
+          onClick={() => {
+            // تنظيف الروابط المؤقتة
+            selectedFiles.forEach(file => {
+              if (file.preview) URL.revokeObjectURL(file.preview);
+            });
+            setSelectedFiles([]);
+          }}
+          className="text-red-500 hover:text-red-700 text-sm flex items-center gap-1"
+        >
+          <Trash2 size={16} />
+          <span>مسح الكل</span>
+        </button>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+        {selectedFiles.map((file, index) => {
+          // إنشاء رابط مؤقت للمعاينة
+          const previewUrl = URL.createObjectURL(file);
+          
+          return (
+            <div
+              key={index}
+              className="relative group bg-white rounded-lg border border-gray-200 p-2 pr-8"
+            >
+              <button
+                onClick={() => {
+                  URL.revokeObjectURL(previewUrl);
+                  removeFile(index);
+                }}
+                className="absolute left-1 top-1 text-gray-400 hover:text-red-500 z-10"
+              >
+                <XCircle size={16} />
+              </button>
+              
+              <div className="flex items-center gap-2">
+                {file.type.startsWith('image/') ? (
+                  <div className="w-12 h-12 rounded overflow-hidden">
+                    <img
+                      src={previewUrl}
+                      alt={file.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                    {getFileIcon(file.type)}
+                  </div>
+                )}
+                
+                <div className="flex-1 min-w-0 max-w-[150px]">
+                  <p className="text-xs font-medium text-gray-800 truncate">
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatFileSize(file.size)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+ 
+// Render file message
+// Render file message
+const renderFileMessage = (message) => {
+  const attachments = message.attachments || [];
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className="space-y-2 mt-2">
+      {attachments.map((attachment, index) => {
+        const fileName = attachment.file_name || attachment.name || 'ملف';
+        const fileSize = attachment.size || attachment.file_size;
+        const mimeType = attachment.mime_type || attachment.type;
+        
+        // التحقق إذا كانت الصورة
+        const isImage = mimeType?.startsWith('image/') || 
+                       fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+        
+        // استخدام الرابط المؤقت أو رابط API
+        const imageUrl = attachment.url || 
+                        (attachment.file ? URL.createObjectURL(attachment.file) : null);
+        
+        if (isImage && imageUrl) {
+          return (
+            <div key={index} className="relative group max-w-[300px]">
+              <img
+                src={imageUrl}
+                alt={fileName}
+                className={`rounded-lg max-h-64 w-auto object-cover cursor-pointer transition-all ${
+                  attachment.pending ? 'opacity-70' : 'hover:opacity-90'
+                }`}
+                onClick={() => !attachment.pending && window.open(imageUrl, '_blank')}
+              />
+              
+              {/* علامة التحميل */}
+              {attachment.pending && (
+                <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+                  <div className="bg-white rounded-full p-2 shadow-lg">
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                </div>
+              )}
+              
+              {/* زر التحميل عند التمرير */}
+              {!attachment.pending && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <button
+                    onClick={() => window.open(imageUrl, '_blank')}
+                    className="p-2 bg-white rounded-full shadow-lg transform hover:scale-110 transition-transform"
+                    title="فتح الصورة"
+                  >
+                    <Download size={18} />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        // للملفات الأخرى
+        return (
+          <a
+            key={index}
+            href={attachment.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-3 p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors max-w-xs ${
+              attachment.pending ? 'opacity-70 pointer-events-none' : ''
+            }`}
+          >
+            <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+              {getFileIcon(mimeType || fileName)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {fileName}
+              </p>
+              <p className="text-xs text-gray-500">
+                {fileSize ? formatFileSize(fileSize) : 'ملف'}
+                {!attachment.pending && fileName.split('.').pop() && ` • ${fileName.split('.').pop().toUpperCase()}`}
+              </p>
+            </div>
+            {attachment.pending ? (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <Download size={18} className="text-gray-500 flex-shrink-0" />
+            )}
+          </a>
+        );
+      })}
+    </div>
+  );
+};
+  
   const handleNewPusherMessage = useCallback((newMessage) => {
     console.log('📨 معالجة رسالة جديدة من Pusher:', newMessage);
     
-    // التأكد من أن الرسالة تخص الدردشة الحالية
     if (selectedChat && selectedChat.id === newMessage.chat_id) {
       console.log('✅ الرسالة تخص الدردشة الحالية، جاري إضافتها');
       
-      // إضافة الرسالة إلى قائمة الرسائل
       setMessages(prevMessages => {
-        // التحقق من عدم وجود الرسالة مسبقاً (لمنع التكرار)
         const messageExists = prevMessages.some(msg => msg.id === newMessage.id);
         if (messageExists) {
           console.log('⚠️ الرسالة موجودة مسبقاً، تخطي');
           return prevMessages;
         }
         
-        // تنسيق الرسالة الجديدة
         const formattedMessage = {
           ...newMessage,
           isCurrentUser: newMessage.sender_id === currentUser.id,
@@ -116,7 +566,6 @@ const formatMessageTime = (timestamp) => {
         
         console.log('➕ إضافة رسالة جديدة:', formattedMessage);
         
-        // إضافة الرسالة وترتيبها
         const updatedMessages = [...prevMessages, formattedMessage];
         const sortedMessages = updatedMessages.sort((a, b) => {
           const timeA = new Date(a.created_at || 0).getTime();
@@ -127,7 +576,6 @@ const formatMessageTime = (timestamp) => {
         return sortedMessages;
       });
       
-      // التمرير لأسفل
       setTimeout(() => {
         if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -136,7 +584,6 @@ const formatMessageTime = (timestamp) => {
     } else {
       console.log('⚠️ الرسالة لا تخص الدردشة الحالية');
       
-      // تحديث unread count للدردشات الأخرى
       setChats(prevChats => 
         prevChats.map(chat => {
           if (chat.id === newMessage.chat_id) {
@@ -154,72 +601,66 @@ const formatMessageTime = (timestamp) => {
     }
   }, [selectedChat, currentUser.id]);
 
-
-// ================ تهيئة Pusher ================
-const initializePusher = useCallback((chatId, chatUuid) => {
-  if (!chatUuid || !isLoggedIn || !chatId) return null;
-  
-  try {
-    if (pusherChannel) {
-      console.log('🔌 إلغاء الاشتراك من القناة السابقة');
-      pusherChannel.unbind_all();
-      pusherChannel.unsubscribe();
-    }
+  const initializePusher = useCallback((chatId, chatUuid) => {
+    if (!chatUuid || !isLoggedIn || !chatId) return null;
     
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-      authEndpoint: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1'}/broadcasting/auth`,
-      auth: {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Accept': 'application/json'
-        }
-      },
-      enabledTransports: ['ws', 'wss']
-    });
-    
-    const channelName = `chat.${chatUuid}`;
-    console.log('📡 الاشتراك في القناة:', channelName);
-    
-    const channel = pusher.subscribe(channelName);
-    
-    channel.bind('MessageSent', (data) => {
-      console.log('📨 [Pusher] رسالة جديدة:', data);
-      
-      if (data.message) {
-        if (!data.message.chat_id && data.chat) {
-          data.message.chat_id = data.chat.id;
-        }
-        handleNewPusherMessage(data.message);
+    try {
+      if (pusherChannel) {
+        console.log('🔌 إلغاء الاشتراك من القناة السابقة');
+        pusherChannel.unbind_all();
+        pusherChannel.unsubscribe();
       }
-    });
-    
-    channel.bind('pusher:subscription_succeeded', () => {
-      console.log(`✅ [Pusher] تم الاشتراك في القناة: ${channelName}`);
-    });
-    
-    channel.bind('pusher:subscription_error', (error) => {
-      console.error('❌ [Pusher] خطأ في الاشتراك:', error);
-    });
-    
-    setPusherChannel(channel);
-    
-    return channel;
-  } catch (error) {
-    console.error('❌ [Pusher] فشل التهيئة:', error);
-    return null;
-  }
-}, [isLoggedIn, handleNewPusherMessage]);
+      
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+        authEndpoint: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://dashboard.waytmiah.com/api/v1'}/broadcasting/auth`,
+        auth: {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Accept': 'application/json'
+          }
+        },
+        enabledTransports: ['ws', 'wss']
+      });
+      
+      const channelName = `chat.${chatUuid}`;
+      console.log('📡 الاشتراك في القناة:', channelName);
+      
+      const channel = pusher.subscribe(channelName);
+      
+      channel.bind('MessageSent', (data) => {
+        console.log('📨 [Pusher] رسالة جديدة:', data);
+        
+        if (data.message) {
+          if (!data.message.chat_id && data.chat) {
+            data.message.chat_id = data.chat.id;
+          }
+          handleNewPusherMessage(data.message);
+        }
+      });
+      
+      channel.bind('pusher:subscription_succeeded', () => {
+        console.log(`✅ [Pusher] تم الاشتراك في القناة: ${channelName}`);
+      });
+      
+      channel.bind('pusher:subscription_error', (error) => {
+        console.error('❌ [Pusher] خطأ في الاشتراك:', error);
+      });
+      
+      setPusherChannel(channel);
+      
+      return channel;
+    } catch (error) {
+      console.error('❌ [Pusher] فشل التهيئة:', error);
+      return null;
+    }
+  }, [isLoggedIn, handleNewPusherMessage]);
 
-
-  // ================ تحديث قائمة المحادثات بعد رسالة جديدة ================
   const updateChatListWithNewMessage = useCallback((updatedChat, newMessage) => {
     setChats(prevChats => {
-      // البحث عن المحادثة وتحديثها
       const chatExists = prevChats.some(chat => chat.id === updatedChat.id);
       
       if (chatExists) {
-        // تحديث المحادثة الموجودة
         return prevChats.map(chat => {
           if (chat.id === updatedChat.id) {
             const isCurrentChat = selectedChat?.id === chat.id;
@@ -234,13 +675,11 @@ const initializePusher = useCallback((chatId, chatUuid) => {
           }
           return chat;
         }).sort((a, b) => {
-          // ترتيب حسب آخر رسالة
           const timeA = new Date(a.last_message_at || a.updated_at || 0).getTime();
           const timeB = new Date(b.last_message_at || b.updated_at || 0).getTime();
           return timeB - timeA;
         });
       } else {
-        // إضافة محادثة جديدة
         return [{
           ...updatedChat,
           unreadCount: 1
@@ -248,7 +687,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       }
     });
     
-    // تحديث filteredChats أيضاً
     setFilteredChats(prev => {
       const chatExists = prev.some(chat => chat.id === updatedChat.id);
       
@@ -280,7 +718,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     });
   }, [selectedChat]);
 
-  // دالة للتحقق من حالة تسجيل الدخول وتحديثها
   const checkAuthStatus = useCallback(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -319,7 +756,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [currentUserId]);
 
-  // جلب بيانات المستخدم والتحقق من تسجيل الدخول
   useEffect(() => {
     checkAuthStatus();
     
@@ -353,21 +789,18 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     };
   }, [checkAuthStatus]);
   
-  // التحقق من حالة تسجيل الدخول عند فتح الـ modal
   useEffect(() => {
     if (isOpen) {
       checkAuthStatus();
     }
   }, [isOpen, checkAuthStatus]);
 
-  // عرض toast عند فتح المحادثة إذا لم يكن مسجل دخول
   useEffect(() => {
     if (isOpen && !isLoggedIn) {
       showLoginToast();
     }
   }, [isOpen, isLoggedIn]);
 
-  // دالة لعرض toast عند عدم تسجيل الدخول
   const showLoginToast = (customMessage = '') => {
     if (typeof window === 'undefined') return;
 
@@ -468,7 +901,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   };
 
-  // جلب المحادثات
   const loadChats = async () => {
     try {
       setLoading(true);
@@ -485,7 +917,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
           };
         });
         
-        // ترتيب المحادثات حسب آخر رسالة
         const sortedChats = chatsWithUnread.sort((a, b) => {
           const timeA = new Date(a.lastActive || 0).getTime();
           const timeB = new Date(b.lastActive || 0).getTime();
@@ -495,7 +926,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
         setChats(sortedChats);
         setFilteredChats(sortedChats);
         
-        // إذا كان هناك initialChatId، حدده تلقائياً
         if (initialChatId && !selectedChat) {
           const foundChat = sortedChats.find(chat => chat.id == initialChatId);
           if (foundChat) {
@@ -527,7 +957,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }).length;
   };
 
-  // تحميل الرسائل عند اختيار محادثة
   const loadMessages = useCallback(async (chatId) => {
     if (!isLoggedIn) {
       showLoginToast();
@@ -545,7 +974,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       const response = await messageService.getMessages(chatId);
       
       if (response.success && Array.isArray(response.data)) {
-        // ترتيب الرسائل من الأقدم للأحدث
         const sortedMessages = response.data.sort((a, b) => {
           const timeA = new Date(a.created_at || 0).getTime();
           const timeB = new Date(b.created_at || 0).getTime();
@@ -561,17 +989,14 @@ const initializePusher = useCallback((chatId, chatUuid) => {
         
         setMessages(formattedMsgs);
         
-        // تحديث حالة القراءة
         setTimeout(() => {
           markChatAsRead(chatId);
         }, 100);
         
         scrollToBottom();
         
-        // الحصول على chat_uuid للدردشة الحالية
         const currentChat = chats.find(chat => chat.id === chatId);
         if (currentChat && currentChat.chat_uuid) {
-          // تهيئة Pusher لهذه الدردشة
           initializePusher(chatId, currentChat.chat_uuid);
         }
       } else {
@@ -586,7 +1011,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [isLoggedIn, currentUser.id, chats, initializePusher]);
 
-  // إعادة تهيئة Pusher عند تغيير الدردشة المحددة
   useEffect(() => {
     if (selectedChat?.id && selectedChat?.chat_uuid && isLoggedIn) {
       console.log('🔄 تغيير الدردشة المحددة، إعادة تهيئة Pusher');
@@ -594,7 +1018,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [selectedChat?.id, selectedChat?.chat_uuid, isLoggedIn, initializePusher]);
 
-  // دالة مساعدة لإنشاء محادثة مع مشارك محدد
   const createNewChatWithParticipant = useCallback(async () => {
     if (!defaultParticipantId || creatingChat || !isLoggedIn) return;
     
@@ -669,7 +1092,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [defaultParticipantId, defaultParticipantName, creatingChat, isLoggedIn]);
 
-  // إنشاء محادثة جديدة
   const createNewChat = async () => {
     if (!isLoggedIn) {
       showLoginToast();
@@ -719,75 +1141,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       console.error('خطأ في إنشاء المحادثة:', error);
     } finally {
       setCreatingChat(false);
-    }
-  };
-
-  // إرسال رسالة
-  const sendMessage = async () => {
-    if (!isLoggedIn) {
-      showLoginToast();
-      return;
-    }
-    
-    if (!newMessage.trim() || sending || !selectedChat) return;
-
-    try {
-      setSending(true);
-      
-      // إنشاء رسالة مؤقتة
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        message: newMessage,
-        sender_id: currentUser.id,
-        sender_type: "App\\Models\\User",
-        isCurrentUser: true,
-        is_temp: true,
-        is_outgoing: true,
-        message_type: "text",
-        metadata: ["text"],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_read: false,
-        read_at: null,
-        formattedTime: formatMessageTime(new Date().toISOString())
-      };
-
-      // إضافة الرسالة المؤقتة
-      setMessages(prev => [...prev, tempMessage]);
-      setNewMessage("");
-      scrollToBottom();
-
-      // إرسال حقيقي إلى API
-      const result = await messageService.sendMessage(selectedChat.id, newMessage);
-      
-      if (result.success && result.message) {
-        // استبدال الرسالة المؤقتة بالرسالة الحقيقية
-        setMessages(prev => {
-          const newMessages = prev.map(msg => 
-            msg.id === tempMessage.id ? {
-              ...result.message,
-              isCurrentUser: true,
-              is_outgoing: true,
-              formattedTime: formatMessageTime(result.message.created_at)
-            } : msg
-          );
-          return newMessages;
-        });
-        
-        // إعادة تحميل قائمة المحادثات لتحديث آخر رسالة
-        await loadChats();
-        
-      } else {
-        // إزالة الرسالة المؤقتة في حالة الفشل
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-        console.error('فشل إرسال الرسالة:', result.error);
-      }
-
-    } catch (error) {
-      console.error('خطأ في إرسال الرسالة:', error);
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-    } finally {
-      setSending(false);
     }
   };
 
@@ -842,7 +1195,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   };
 
-  // تنسيق الوقت
   const formatChatTime = (timestamp) => {
     if (!timestamp) return 'الآن';
     
@@ -868,21 +1220,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   };
 
-  // const formatMessageTime = (timestamp) => {
-  //   if (!timestamp) return '';
-    
-  //   try {
-  //     const date = new Date(timestamp);
-  //     return date.toLocaleTimeString('ar-SA', {
-  //       hour: '2-digit',
-  //       minute: '2-digit',
-  //       hour12: true
-  //     });
-  //   } catch {
-  //     return '';
-  //   }
-  // };
-
   const formatMessageDate = (timestamp) => {
     if (!timestamp) return '';
     
@@ -906,7 +1243,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   };
 
-  // تجميع الرسائل حسب التاريخ
   const groupMessagesByDate = () => {
     const groups = {};
     const sortedMessages = [...messages].sort((a, b) => {
@@ -924,7 +1260,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     return groups;
   };
 
-  // الحصول على اسم الشات
   const getChatName = (chat) => {
     const otherParticipants = chat.participants?.filter(p => {
       return String(p) !== String(currentUser.id);
@@ -947,13 +1282,11 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     return `الدردشة ${chat.id}`;
   };
 
-  // الحصول على صورة الشات
   const getChatAvatar = (chat) => {
     const chatName = getChatName(chat);
     return chatName.charAt(0);
   };
 
-  // جلب المحادثات عند فتح الـ modal
   useEffect(() => {
     if (isOpen && isLoggedIn) {
       loadChats();
@@ -963,7 +1296,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       setFilteredChats([]);
     }
     
-    // تنظيف Pusher عند إغلاق المودال
     return () => {
       if (pusherChannel) {
         pusherChannel.unbind_all();
@@ -972,7 +1304,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     };
   }, [isOpen, isLoggedIn]);
 
-  // تصفية المحادثات عند البحث وعند عرض السائقين فقط
   useEffect(() => {
     let filtered = chats;
     
@@ -998,7 +1329,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     setFilteredChats(filtered);
   }, [searchQuery, chats, showDriversOnly]);
 
-  // تحديث participantId و participantName عند تغيير defaultParticipantId
   useEffect(() => {
     if (defaultParticipantId) {
       setParticipantId(defaultParticipantId);
@@ -1008,7 +1338,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [defaultParticipantId, defaultParticipantName]);
 
-  // تحديث عند اختيار محادثة
   useEffect(() => {
     if (selectedChat?.id && isLoggedIn) {
       const chatId = selectedChat.id;
@@ -1034,7 +1363,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       lastLoadedChatIdRef.current = null;
       setMessages([]);
       
-      // إلغاء الاشتراك من قناة Pusher
       if (pusherChannel) {
         pusherChannel.unbind_all();
         pusherChannel.unsubscribe();
@@ -1043,7 +1371,6 @@ const initializePusher = useCallback((chatId, chatUuid) => {
     }
   }, [selectedChat?.id, isLoggedIn, loadMessages]);
 
-  // فتح محادثة جديدة تلقائياً إذا كان هناك معرف مشارك
   useEffect(() => {
     if (!isOpen) {
       chatCreationAttemptedRef.current = null;
@@ -1090,13 +1417,7 @@ const initializePusher = useCallback((chatId, chatUuid) => {
       }
     }
   }, [isOpen, chats, loading, defaultParticipantId, defaultParticipantName, isLoggedIn, creatingChat, createNewChatWithParticipant]);
-// إعادة تهيئة Pusher عند تغيير الدردشة المحددة
-useEffect(() => {
-  if (selectedChat?.id && selectedChat?.chat_uuid && isLoggedIn) {
-    console.log('🔄 تغيير الدردشة المحددة، إعادة تهيئة Pusher');
-    initializePusher(selectedChat.id, selectedChat.chat_uuid);
-  }
-}, [selectedChat?.id, selectedChat?.chat_uuid, isLoggedIn, initializePusher]);
+
   if (!isOpen) return null;
 
   return (
@@ -1535,9 +1856,15 @@ useEffect(() => {
                                       : 'rounded-bl-none border border-gray-200'
                                   } ${message.is_temp ? 'opacity-90' : ''}`}
                                 >
-                                  <div className="whitespace-pre-wrap break-words">
-                                    {message.message}
-                                  </div>
+                                  {/* رسالة نصية */}
+                                  {message.message && (
+                                    <div className="whitespace-pre-wrap break-words">
+                                      {message.message}
+                                    </div>
+                                  )}
+                                  
+                                  {/* المرفقات (صور وملفات) */}
+                                  {renderFileMessage(message)}
                                   
                                   <div className="flex items-center justify-end gap-2 mt-2">
                                     <span 
@@ -1569,37 +1896,182 @@ useEffect(() => {
                 )}
               </div>
 
+              {/* Attachment Preview */}
+              {renderAttachmentPreview()}
+
               {/* Input Area */}
               {isLoggedIn && selectedChat && (
-                <div className="border-t border-gray-200 bg-white p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <textarea
-                        ref={inputRef}
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="اكتب رسالة..."
-                        className="w-full p-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                        rows="1"
-                        disabled={sending}
-                      />
+                <div className="border-t border-gray-200 bg-white">
+                  <div className="p-4">
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1 relative">
+                        {/* Emoji Picker */}
+                        <AnimatePresence>
+                          {showEmojiPicker && (
+                            <motion.div
+                              ref={emojiPickerRef}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 20 }}
+                              className="absolute bottom-full right-0 mb-2 z-50"
+                            >
+                              <EmojiPicker
+                                onEmojiClick={onEmojiClick}
+                                autoFocusSearch={false}
+                                theme="light"
+                                searchPlaceholder="بحث عن إيموجي..."
+                                previewConfig={{ showPreview: false }}
+                                width={320}
+                                height={400}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Attachment Menu */}
+                        <AnimatePresence>
+                          {showAttachmentMenu && (
+                            <motion.div
+                              ref={attachmentMenuRef}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 20 }}
+                              className="absolute bottom-full right-0 mb-2 z-50 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+                            >
+                              <div className="p-2 min-w-[200px]">
+                                <button
+                                  onClick={() => {
+                                    fileInputRef.current?.click();
+                                    setShowAttachmentMenu(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <FileText size={16} className="text-blue-600" />
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium text-gray-800">مستند</p>
+                                    <p className="text-xs text-gray-500">PDF, Word, Excel</p>
+                                  </div>
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    imageInputRef.current?.click();
+                                    setShowAttachmentMenu(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <ImageIcon size={16} className="text-green-600" />
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium text-gray-800">صورة</p>
+                                    <p className="text-xs text-gray-500">JPG, PNG, GIF</p>
+                                  </div>
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'video/*,audio/*';
+                                    input.multiple = true;
+                                    input.onchange = (e) => handleFileSelect(e);
+                                    input.click();
+                                    setShowAttachmentMenu(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <Film size={16} className="text-purple-600" />
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium text-gray-800">وسائط متعددة</p>
+                                    <p className="text-xs text-gray-500">فيديو, صوت</p>
+                                  </div>
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Hidden file inputs */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+
+                        {/* Text input */}
+                        <textarea
+                          ref={inputRef}
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          placeholder="اكتب رسالة..."
+                          className="w-full p-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none pr-12"
+                          rows="1"
+                          disabled={sending || uploadingFiles}
+                        />
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        {/* Emoji Button */}
+                        <button
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          className="p-3 text-gray-500 hover:text-yellow-500 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="إضافة إيموجي"
+                          disabled={sending || uploadingFiles}
+                        >
+                          <Smile size={20} />
+                        </button>
+
+                        {/* Attachment Button */}
+                        <button
+                          onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                          className="p-3 text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors relative"
+                          title="إرفاق ملف"
+                          disabled={sending || uploadingFiles}
+                        >
+                          <Paperclip size={20} />
+                          {selectedFiles.length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                              {selectedFiles.length}
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Send Button */}
+                        <button
+                          onClick={sendMessage}
+                          disabled={sending || uploadingFiles || (!newMessage.trim() && selectedFiles.length === 0)}
+                          className={`p-3 rounded-lg transition-all flex-shrink-0 ${
+                            sending || uploadingFiles || (!newMessage.trim() && selectedFiles.length === 0)
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                        >
+                          {sending || uploadingFiles ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Send size={20} />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={sendMessage}
-                      disabled={sending || !newMessage.trim()}
-                      className={`p-3 rounded-lg transition-all flex-shrink-0 ${
-                        sending || !newMessage.trim()
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      {sending ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <Send size={20} />
-                      )}
-                    </button>
                   </div>
                 </div>
               )}
