@@ -9,15 +9,23 @@ import { PiTruck } from "react-icons/pi";
 import { FaLocationDot } from "react-icons/fa6";
 import { MdCloudDone } from "react-icons/md";
 import { FaPlay } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const HowItWorks = () => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef(null);
+
+  const handlePlayVideo = () => {
+    setIsPlaying(true);
+    if (videoRef.current) {
+      videoRef.current.play();
+    }
+  };
 
   return (
     <section
       dir="rtl"
-      className="py-16 md:py-24 bg-[#EFF5FD] relative overflow-hidden"
+      className="py-16 bg-[#EFF5FD] relative overflow-hidden"
     >
       <div className="px-3 mx-auto max-w-7xl relative z-10">
         {/* Header Section */}
@@ -30,12 +38,12 @@ const HowItWorks = () => {
         >
           <div className="inline-block mb-2 md:mb-3">
             <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
-              خطوات العمل
+              كيف تعمل
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">كيف تعمل</span>
-            <span className="block text-gray-800 text-lg sm:text-xl md:text-2xl mt-2">شاهد الفيديو التعريفي</span>
+            {/* <span className="block text-[#579BE8]">كيف تعمل</span> */}
+            <span className="block text-[#579BE8] text-lg sm:text-xl md:text-2xl mt-2">شاهد الفيديو التعريفي</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
         </motion.div>
@@ -52,17 +60,20 @@ const HowItWorks = () => {
           <div className="relative aspect-video bg-gray-900">
             {!isPlaying ? (
               <>
-                {/* Video Thumbnail */}
-                <img
-                  src="https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg"
-                  alt="Video thumbnail"
+                {/* Video Thumbnail - أول إطار من الفيديو أو صورة ثابتة */}
+                <video
+                  ref={videoRef}
                   className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
+                  src="/howIt.mp4"
+                  muted
+                  playsInline
+                  preload="metadata"
                 />
                 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-all duration-300">
                   <button
-                    onClick={() => setIsPlaying(true)}
+                    onClick={handlePlayVideo}
                     className="w-20 h-20 md:w-24 md:h-24 bg-[#579BE8] rounded-full flex items-center justify-center shadow-xl transform hover:scale-110 transition-all duration-300 hover:shadow-2xl hover:bg-[#4a8ad0]"
                   >
                     <FaPlay className="text-white text-3xl md:text-4xl ml-1" />
@@ -71,14 +82,13 @@ const HowItWorks = () => {
               </>
             ) : (
               // Video Player
-              <iframe
+              <video
                 className="absolute top-0 left-0 w-full h-full"
-                src="https://www.youtube.com/watch?v=Kv-kv2jTq5w&list=RDKv-kv2jTq5w&start_radio=1?autoplay=1"
-                title="كيف تعمل المنصة"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+                src="/howIt.mp4"
+                controls
+                autoPlay
+                playsInline
+              />
             )}
           </div>
 

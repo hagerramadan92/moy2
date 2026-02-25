@@ -243,7 +243,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
     const SidebarSkeleton = () => (
         <>
             {/* Desktop Sidebar Skeleton */}
-            <aside className="hidden !mt-[25px] min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
+            <aside className="hidden !mt-[25px] min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24 ">
                 <div className="flex flex-col md:gap-6 gap-3">
                     {/* First Section Skeleton */}
                     <div className="flex flex-col md:gap-4 gap-2">
@@ -386,7 +386,7 @@ export default function ProfileSidebar({ isOpen, setIsOpen, loading = false, use
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden !mt-[25px] min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
+            <aside className="hidden !mt-[25px]  min-[1123px]:block w-64 bg-white dark:bg-card rounded-2xl p-6 shadow-sm h-fit fixed top-24">
                 <div className="flex flex-col md:gap-8 gap-3">
                     {navItems.map((section, idx) => (
                         <div key={idx} className="flex flex-col gap-4">
