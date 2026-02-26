@@ -131,99 +131,89 @@ export const usePusher = (options = {}) => {
     }
   }, []);
 
-  // دالة للاشتراك في قناتين (order + user) مع تحسينات
-  const subscribeToOrderAndUser = useCallback((orderId, userId, eventHandlers) => {
-    const channels = {
-      orderChannel: null,
-      userChannel: null
-    };
+  // دالة للاشتراك في قناة الطلب (order) فقط
+  const subscribeToOrder = useCallback((orderId, eventHandlers) => {
+    if (!orderId) {
+      console.log('⚠️ No orderId provided for subscription');
+      return null;
+    }
 
-    console.log(`🎯 Setting up subscriptions for:`, {
-      orderId,
-      userId,
-      orderChannel: orderId ? `order.${orderId}` : 'N/A',
-      userChannel: userId ? `user.${userId}` : 'N/A'
+    const channelName = `order.${orderId}`;
+    console.log(`🎯 Setting up subscription for order channel: ${channelName}`);
+
+    return subscribe(channelName, {
+      'offer.created': (data) => {
+        console.log('🎯 New offer received via Pusher:', data);
+        if (eventHandlers?.onOfferCreated) {
+          eventHandlers.onOfferCreated(data);
+        }
+        triggerEventListener('offer_created', data);
+      },
+      'order.status.updated': (data) => {
+        console.log('📊 Order status updated via Pusher:', data);
+        if (eventHandlers?.onOrderStatusUpdated) {
+          eventHandlers.onOrderStatusUpdated(data);
+        }
+        triggerEventListener('order_status_updated', data);
+      },
+      'order.expired': (data) => {
+        console.log('⏰ Order expired via Pusher:', data);
+        if (eventHandlers?.onOrderExpired) {
+          eventHandlers.onOrderExpired(data);
+        }
+        triggerEventListener('order_expired', data);
+      },
+      'order.cancelled': (data) => {
+        console.log('❌ Order cancelled via Pusher:', data);
+        if (eventHandlers?.onOrderCancelled) {
+          eventHandlers.onOrderCancelled(data);
+        }
+        triggerEventListener('order_cancelled', data);
+      },
+      // ✅ إضافة حدث قبول السائق مباشرة على قناة الطلب
+      'DriverAcceptedOrder': (data) => {
+        console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT ON ORDER CHANNEL =====');
+        console.log('📋 Full event data:', JSON.stringify(data, null, 2));
+        console.log('🎯 Channel:', channelName);
+        console.log('🎯 Event: DriverAcceptedOrder');
+        
+        // تشغيل المعالج المخصص إذا موجود
+        if (eventHandlers?.onDriverAcceptedOrder) {
+          eventHandlers.onDriverAcceptedOrder(data);
+        }
+        
+        // تشغيل جميع المستمعين المسجلين لهذا الحدث
+        triggerEventListener('driver_accepted_order', data);
+      },
+      'driver.assigned': (data) => {
+        console.log('👤 Driver assigned via Pusher:', data);
+        if (eventHandlers?.onDriverAssigned) {
+          eventHandlers.onDriverAssigned(data);
+        }
+        triggerEventListener('driver_assigned', data);
+      },
+      'order.updated': (data) => {
+        console.log('📝 Order updated via Pusher:', data);
+        if (eventHandlers?.onOrderUpdated) {
+          eventHandlers.onOrderUpdated(data);
+        }
+        triggerEventListener('order_updated', data);
+      },
+      'driver.location.updated': (data) => {
+        console.log('📍 Driver location updated via Pusher:', data);
+        if (eventHandlers?.onDriverLocationUpdated) {
+          eventHandlers.onDriverLocationUpdated(data);
+        }
+        triggerEventListener('driver_location_updated', data);
+      }
     });
-
-    if (orderId) {
-      channels.orderChannel = subscribe(`order.${orderId}`, {
-        'offer.created': (data) => {
-          console.log('🎯 New offer received via Pusher:', data);
-          if (eventHandlers?.onOfferCreated) {
-            eventHandlers.onOfferCreated(data);
-          }
-          triggerEventListener('offer_created', data);
-        },
-        'order.status.updated': (data) => {
-          console.log('📊 Order status updated via Pusher:', data);
-          if (eventHandlers?.onOrderStatusUpdated) {
-            eventHandlers.onOrderStatusUpdated(data);
-          }
-          triggerEventListener('order_status_updated', data);
-        },
-        'order.expired': (data) => {
-          console.log('⏰ Order expired via Pusher:', data);
-          if (eventHandlers?.onOrderExpired) {
-            eventHandlers.onOrderExpired(data);
-          }
-          triggerEventListener('order_expired', data);
-        },
-        'order.cancelled': (data) => {
-          console.log('❌ Order cancelled via Pusher:', data);
-          if (eventHandlers?.onOrderCancelled) {
-            eventHandlers.onOrderCancelled(data);
-          }
-          triggerEventListener('order_cancelled', data);
-        }
-      });
-    }
-
-    if (userId) {
-      channels.userChannel = subscribe(`user.${userId}`, {
-        // ✅ الحدث الصحيح كما يأتي من الخادم
-        'DriverAcceptedOrder': (data) => {
-          console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT =====');
-          console.log('📋 Full event data:', JSON.stringify(data, null, 2));
-          console.log('🎯 Channel: user.' + userId);
-          console.log('🎯 Event: DriverAcceptedOrder');
-          
-          // تشغيل المعالج المخصص إذا موجود
-          if (eventHandlers?.onDriverAcceptedOrder) {
-            eventHandlers.onDriverAcceptedOrder(data);
-          }
-          
-          // تشغيل جميع المستمعين المسجلين لهذا الحدث
-          triggerEventListener('driver_accepted_order', data);
-        },
-        
-        'driver.assigned': (data) => {
-          console.log('👤 Driver assigned via Pusher:', data);
-          if (eventHandlers?.onDriverAssigned) {
-            eventHandlers.onDriverAssigned(data);
-          }
-          triggerEventListener('driver_assigned', data);
-        },
-        
-        'order.updated': (data) => {
-          console.log('📝 Order updated via Pusher:', data);
-          if (eventHandlers?.onOrderUpdated) {
-            eventHandlers.onOrderUpdated(data);
-          }
-          triggerEventListener('order_updated', data);
-        },
-        
-        'driver.location.updated': (data) => {
-          console.log('📍 Driver location updated via Pusher:', data);
-          if (eventHandlers?.onDriverLocationUpdated) {
-            eventHandlers.onDriverLocationUpdated(data);
-          }
-          triggerEventListener('driver_location_updated', data);
-        }
-      });
-    }
-
-    return channels;
   }, [subscribe, triggerEventListener]);
+
+  // الاحتفاظ بالدالة القديمة للتوافق مع الكود الحالي
+  const subscribeToOrderAndUser = useCallback((orderId, userId, eventHandlers) => {
+    console.log('⚠️ subscribeToOrderAndUser is deprecated. Use subscribeToOrder instead.');
+    return subscribeToOrder(orderId, eventHandlers);
+  }, [subscribeToOrder]);
 
   // دالة لإلغاء الاشتراك من قناة
   const unsubscribe = useCallback((channelName) => {
@@ -308,7 +298,8 @@ export const usePusher = (options = {}) => {
     isConnected,
     connectionState,
     subscribe,
-    subscribeToOrderAndUser,
+    subscribeToOrder, // ✅ دالة جديدة للاشتراك في قناة الطلب فقط
+    subscribeToOrderAndUser, // ✅ محتفظ بها للتوافق
     unsubscribe,
     unsubscribeAll,
     disconnect,

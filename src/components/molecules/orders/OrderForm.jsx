@@ -414,7 +414,16 @@ function OrderFormContent() {
   const currentOrderIdRef = useRef(null);
   const isRequestInProgress = useRef(false);
   
-  const { subscribeToOrderAndUser, unsubscribeAll, addEventListener, removeEventListener } = usePusher({
+  // const { subscribeToOrderAndUser, unsubscribeAll, addEventListener, removeEventListener } = usePusher({
+  //   autoConnect: true,
+  //   onConnected: () => {
+  //     console.log('✅ Pusher connected');
+  //   },
+  //   onDisconnected: () => {
+  //     console.log('🔴 Pusher disconnected');
+  //   }
+  // });
+    const { subscribeToOrderAndUser, subscribeToOrder, unsubscribeAll, addEventListener, removeEventListener } = usePusher({
     autoConnect: true,
     onConnected: () => {
       console.log('✅ Pusher connected');
@@ -623,35 +632,73 @@ function OrderFormContent() {
   }, [router, unsubscribeAll, removeEventListener]);
 
   // إعداد مستمع Pusher
-  const setupPusherListener = useCallback(async (orderId, userId) => {
+  // const setupPusherListener = useCallback(async (orderId, userId) => {
+  //   try {
+  //     console.log(`🎯 Setting up Pusher listener for order ${orderId}, user ${userId}`);
+      
+  //     currentOrderIdRef.current = orderId;
+      
+  //     removeEventListener('DriverAcceptedOrder');
+      
+  //     addEventListener('DriverAcceptedOrder', (data) => {
+  //       console.log('🚗 DriverAcceptedOrder event triggered');
+  //       handleDriverAcceptedOrder(data);
+  //     });
+
+  //     const subscriptionCallbacks = {
+  //       onDriverAcceptedOrder: (data) => {
+  //         console.log('🚗 Driver accepted order via Pusher callback');
+  //         handleDriverAcceptedOrder(data);
+  //       }
+  //     };
+
+  //     subscribeToOrderAndUser(orderId, userId, subscriptionCallbacks);
+      
+  //     console.log('✅ Pusher setup completed');
+      
+  //   } catch (error) {
+  //     console.error('❌ Error setting up Pusher listener:', error);
+  //   }
+  // }, [addEventListener, removeEventListener, handleDriverAcceptedOrder, subscribeToOrderAndUser]);
+ const setupPusherListener = useCallback(async (orderId) => {
     try {
-      console.log(`🎯 Setting up Pusher listener for order ${orderId}, user ${userId}`);
+      console.log(`🎯 Setting up Pusher listener for order ${orderId}`);
       
       currentOrderIdRef.current = orderId;
       
+      // إزالة المستمع القديم إذا كان موجود
       removeEventListener('DriverAcceptedOrder');
       
+      // إضافة المستمع الجديد
       addEventListener('DriverAcceptedOrder', (data) => {
         console.log('🚗 DriverAcceptedOrder event triggered');
         handleDriverAcceptedOrder(data);
       });
 
+      // الاشتراك في قناة الطلب فقط (بدون userId)
       const subscriptionCallbacks = {
         onDriverAcceptedOrder: (data) => {
-          console.log('🚗 Driver accepted order via Pusher callback');
+          console.log('🚗 Driver accepted order via Pusher callback on order channel');
           handleDriverAcceptedOrder(data);
+        },
+        onOfferCreated: (data) => {
+          console.log('💰 New offer created:', data);
+          // يمكن إضافة معالجة للعروض هنا إذا لزم الأمر
+        },
+        onOrderStatusUpdated: (data) => {
+          console.log('📊 Order status updated:', data);
         }
       };
 
-      subscribeToOrderAndUser(orderId, userId, subscriptionCallbacks);
+      // استخدام الدالة الجديدة subscribeToOrder
+      subscribeToOrder(orderId, subscriptionCallbacks);
       
-      console.log('✅ Pusher setup completed');
+      console.log('✅ Pusher setup completed for order channel');
       
     } catch (error) {
       console.error('❌ Error setting up Pusher listener:', error);
     }
-  }, [addEventListener, removeEventListener, handleDriverAcceptedOrder, subscribeToOrderAndUser]);
-
+  }, [addEventListener, removeEventListener, handleDriverAcceptedOrder, subscribeToOrder]);
   const getUserId = async (accessToken) => {
     try {
       const userResponse = await fetch(`${API_BASE_URL}/auth/user`, {
@@ -702,11 +749,11 @@ function OrderFormContent() {
       }
 
       const userId = await getUserId(accessToken);
-      if (!userId) {
-        toast.error("لا يمكن الحصول على معلومات المستخدم");
-        isRequestInProgress.current = false;
-        return;
-      }
+      // if (!userId) {
+      //   toast.error("لا يمكن الحصول على معلومات المستخدم");
+      //   isRequestInProgress.current = false;
+      //   return;
+      // }
 
       const orderData = {
         service_id: parseInt(quantity),
@@ -804,7 +851,7 @@ function OrderFormContent() {
         setCurrentOrderId(orderId);
         currentOrderIdRef.current = orderId;
 
-        await setupPusherListener(orderId, userId);
+        await setupPusherListener(orderId);
         
       } else {
         toast.error(data.message || "فشل إنشاء الطلب");
