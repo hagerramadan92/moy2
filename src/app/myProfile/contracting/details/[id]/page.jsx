@@ -107,6 +107,7 @@ export default function ContractDetailsPage() {
                     canRenew: stats.can_renew || false
                 };
                 
+                
                 setContract(mappedContract);
             } else {
                 toast.error(data.message || "فشل تحميل تفاصيل العقد", {
@@ -621,140 +622,257 @@ export default function ContractDetailsPage() {
                     )}
                 </div>
 
-                {/* Right Column - Timeline */}
-                <div>
-                    {/* Enhanced Timeline */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                        className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group"
-                    >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/8 to-transparent rounded-full blur-3xl group-hover:opacity-80 transition-opacity"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/5 to-transparent rounded-full blur-2xl"></div>
-                        <div className="relative z-10">
-                            <h3 className="text-lg md:text-xl font-black mb-5 md:mb-6 flex items-center gap-2.5">
-                                <motion.div 
-                                    whileHover={{ scale: 1.1, rotate: 5 }}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 border-2 border-blue-400/20"
-                                >
-                                    <FaCalendarAlt className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                                </motion.div>
-                                <span>الجدول الزمني</span>
-                            </h3>
-                            
-                            <div className="space-y-5 md:space-y-6">
-                                <div className="relative">
-                                    <div className="absolute right-[19px] md:right-[23px] top-12 bottom-12 w-1 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-200 rounded-full shadow-sm"></div>
-                                    
-                                    <div className="space-y-5 md:space-y-6 relative">
-                                        <motion.div 
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.3 }}
-                                            whileHover={{ x: 3 }}
-                                            className="flex gap-3 md:gap-4"
-                                        >
-                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/40 z-10 border-3 border-white dark:border-card">
-                                                <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
-                                            </div>
-                                            <div className="flex-1 pt-1.5">
-                                                <p className="text-[10px] md:text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1.5">تاريخ البدء</p>
-                                                <p className="text-sm md:text-base font-black text-foreground">{contract.date}</p>
-                                            </div>
-                                        </motion.div>
-                                        
-                                        <motion.div 
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.4 }}
-                                            whileHover={{ x: 3 }}
-                                            className="flex gap-3 md:gap-4"
-                                        >
-                                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg z-10 border-3 border-white dark:border-card ${
-                                                contract.status === 'active' 
-                                                    ? 'bg-gradient-to-br from-blue-200 to-blue-300 text-blue-700 shadow-blue-300/30' 
-                                                    : contract.status === 'pending'
-                                                    ? 'bg-gradient-to-br from-yellow-200 to-yellow-300 text-yellow-700 shadow-yellow-300/30'
-                                                    : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-500/40'
-                                            }`}>
-                                                <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
-                                            </div>
-                                            <div className="flex-1 pt-1.5">
-                                                <p className="text-[10px] md:text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1.5">تاريخ الانتهاء</p>
-                                                <p className="text-sm md:text-base font-black text-foreground">{contract.endDate}</p>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-                                </div>
-                                
-                                <motion.div 
-                                    initial={{ scale: 0.95, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                    whileHover={{ scale: 1.02, y: -2 }}
-                                    className="bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-800/10 dark:to-blue-800/10 border-2 border-blue-200/60 dark:border-blue-500/30 p-4 md:p-5 rounded-xl text-center shadow-md hover:shadow-lg transition-all"
-                                >
-                                    <p className="text-[10px] md:text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1.5">المدة الإجمالية</p>
-                                    <p className="text-xl md:text-2xl font-black bg-gradient-to-r from-blue-600 to-blue-600 bg-clip-text text-transparent">{contract.duration}</p>
-                                </motion.div>
+                {/* Right Column - Timeline and Financial Info */}
+<div>
+    {/* Enhanced Timeline */}
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+        className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group mb-4 md:mb-5"
+    >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/8 to-transparent rounded-full blur-3xl group-hover:opacity-80 transition-opacity"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/5 to-transparent rounded-full blur-2xl"></div>
+        <div className="relative z-10">
+            <h3 className="text-lg md:text-xl font-black mb-5 md:mb-6 flex items-center gap-2.5">
+                <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 border-2 border-blue-400/20"
+                >
+                    <FaCalendarAlt className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </motion.div>
+                <span>الجدول الزمني</span>
+            </h3>
+            
+            <div className="space-y-5 md:space-y-6">
+                <div className="relative">
+                    <div className="absolute right-[19px] md:right-[23px] top-12 bottom-12 w-1 bg-gradient-to-b from-blue-500 via-blue-400 to-blue-200 rounded-full shadow-sm"></div>
+                    
+                    <div className="space-y-5 md:space-y-6 relative">
+                        <motion.div 
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 }}
+                            whileHover={{ x: 3 }}
+                            className="flex gap-3 md:gap-4"
+                        >
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/40 z-10 border-3 border-white dark:border-card">
+                                <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
+                            </div>
+                            <div className="flex-1 pt-1.5">
+                                <p className="text-[10px] md:text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1.5">تاريخ البدء</p>
+                                <p className="text-sm md:text-base font-black text-foreground">{contract.date}</p>
+                            </div>
+                        </motion.div>
+                        
+                        <motion.div 
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.4 }}
+                            whileHover={{ x: 3 }}
+                            className="flex gap-3 md:gap-4"
+                        >
+                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg z-10 border-3 border-white dark:border-card ${
+                                contract.status === 'active' 
+                                    ? 'bg-gradient-to-br from-blue-200 to-blue-300 text-blue-700 shadow-blue-300/30' 
+                                    : contract.status === 'pending'
+                                    ? 'bg-gradient-to-br from-yellow-200 to-yellow-300 text-yellow-700 shadow-yellow-300/30'
+                                    : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-500/40'
+                            }`}>
+                                <FaCheckCircle className="w-5 h-5 md:w-6 md:h-6" />
+                            </div>
+                            <div className="flex-1 pt-1.5">
+                                <p className="text-[10px] md:text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1.5">تاريخ الانتهاء</p>
+                                <p className="text-sm md:text-base font-black text-foreground">{contract.endDate}</p>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+                
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-800/10 dark:to-blue-800/10 border-2 border-blue-200/60 dark:border-blue-500/30 p-4 md:p-5 rounded-xl text-center shadow-md hover:shadow-lg transition-all"
+                >
+                    <p className="text-[10px] md:text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1.5">المدة الإجمالية</p>
+                    <p className="text-xl md:text-2xl font-black bg-gradient-to-r from-blue-600 to-blue-600 bg-clip-text text-transparent">{contract.duration}</p>
+                </motion.div>
+            </div>
+        </div>
+    </motion.div>
 
-                                {/* Consumption Link */}
-                                {/* <motion.div 
-                                    initial={{ scale: 0.95, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ delay: 0.6 }}
-                                    whileHover={{ scale: 1.02, y: -2 }}
-                                >
-                                    <button
-                                        onClick={() => router.push(`/myProfile/contracting/details/${contractId}/consumption`)}
-                                        className="w-full bg-gradient-to-r from-[#579BE8] via-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#4a8dd8] hover:to-[#0f3d6f] text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <FaChartLine className="w-4 h-4 md:w-5 md:h-5" />
-                                        <span>عرض الاستهلاك</span>
-                                        <FaArrowRight className="w-3 h-3 md:w-4 md:h-4 rotate-180" />
-                                    </button>
-                                </motion.div> */}
+    {/* New Section: الاستهلاك والمبالغ المالية */}
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+        className="bg-white dark:bg-card border-2 border-border/60 rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group"
+    >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/8 to-transparent rounded-full blur-3xl group-hover:opacity-80 transition-opacity"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-500/5 to-transparent rounded-full blur-2xl"></div>
+        <div className="relative z-10">
+            <h3 className="text-lg md:text-xl font-black mb-5 md:mb-6 flex items-center gap-2.5">
+                <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 border-2 border-emerald-400/20"
+                >
+                    <FaChartLine className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </motion.div>
+                <span>الاستهلاك والمدفوعات</span>
+            </h3>
+            
+            <div className="space-y-4 md:space-y-5">
+                {/* Orders Consumption */}
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-gradient-to-br from-emerald-50 to-emerald-50 dark:from-emerald-800/10 dark:to-emerald-800/10 border-2 border-emerald-200/60 dark:border-emerald-500/30 p-4 md:p-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs md:text-sm font-bold text-muted-foreground">الاستهلاك</p>
+                        <span className="text-xs bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded-lg font-bold">
+                            {contract.totalOrdersUsed} / {contract.totalOrdersLimit}
+                        </span>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
+                        <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(contract.totalOrdersUsed / contract.totalOrdersLimit) * 100}%` }}
+                            transition={{ delay: 0.6, duration: 0.8 }}
+                            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                        />
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                        <p className="text-xs text-muted-foreground">الطلبات المستخدمة</p>
+                        <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            {contract.totalOrdersUsed} طلب
+                        </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm mt-1">
+                        <p className="text-xs text-muted-foreground">الطلبات المتبقية</p>
+                        <p className="text-sm font-black text-blue-600 dark:text-blue-400">
+                            {contract.remainingOrders} طلب
+                        </p>
+                    </div>
+                </motion.div>
 
-                                {/* Action Buttons */}
-                                {(contract.status === 'active' || contract.status === 'pending') && (
-                                    <>
-                                        {/* <motion.div 
-                                            initial={{ scale: 0.95, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            transition={{ delay: 0.7 }}
-                                            whileHover={{ scale: 1.02, y: -2 }}
-                                        >
-                                            <button
-                                                onClick={handleRenew}
-                                                disabled={isRenewing || isCanceling}
-                                                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                                            >
-                                                <FaSync className={`w-4 h-4 md:w-5 md:h-5 ${isRenewing ? 'animate-spin' : ''}`} />
-                                                <span>{isRenewing ? 'جاري التجديد...' : 'تجديد العقد'}</span>
-                                            </button>
-                                        </motion.div> */}
-                                        {/* <motion.div 
-                                            initial={{ scale: 0.95, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            transition={{ delay: 0.8 }}
-                                            whileHover={{ scale: 1.02, y: -2 }}
-                                        >
-                                            <button
-                                                onClick={handleCancel}
-                                                disabled={isRenewing || isCanceling}
-                                                className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-red-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                                            >
-                                                <FaTimes className={`w-4 h-4 md:w-5 md:h-5 ${isCanceling ? 'animate-pulse' : ''}`} />
-                                                <span>{isCanceling ? 'جاري الإلغاء...' : 'إلغاء العقد'}</span>
-                                            </button>
-                                        </motion.div> */}
-                                    </>
-                                )}
+                {/* Financial Information */}
+                <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-800/10 dark:to-blue-800/10 border-2 border-blue-200/60 dark:border-blue-500/30 p-4 md:p-5 rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                    <div className="flex items-center gap-2 mb-3">
+                        <FaMoneyBillWave className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <p className="text-xs md:text-sm font-bold text-muted-foreground">المدفوعات</p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">المبلغ الإجمالي</p>
+                            <p className="text-sm font-black text-foreground">{contract.cost}</p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">المبلغ المدفوع</p>
+                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                {parseFloat(contract.paidAmount || 0).toLocaleString('ar-SA')} ريال
+                            </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">المبلغ المتبقي</p>
+                            <p className="text-sm font-black text-red-600 dark:text-red-400">
+                                {parseFloat(contract.remainingAmount || 0).toLocaleString('ar-SA')} ريال
+                            </p>
+                        </div>
+
+                        {/* Payment Progress */}
+                        <div className="mt-3 pt-3 border-t border-border/60">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-bold text-muted-foreground">نسبة الدفع</p>
+                                <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg font-bold">
+                                    {contract.paymentProgress}%
+                                </span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${contract.paymentProgress}%` }}
+                                    transition={{ delay: 0.7, duration: 0.8 }}
+                                    className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+                                />
                             </div>
                         </div>
-                    </motion.div>
-                </div>
+                    </div>
+                </motion.div>
+
+                {/* Consumption Link */}
+                {/* <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                >
+                    <button
+                        onClick={() => router.push(`/myProfile/contracting/details/${contractId}/consumption`)}
+                        className="w-full bg-gradient-to-r from-[#579BE8] via-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:via-[#4a8dd8] hover:to-[#0f3d6f] text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-[#579BE8]/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                    >
+                        <FaChartLine className="w-4 h-4 md:w-5 md:h-5" />
+                        <span>عرض تفاصيل الاستهلاك</span>
+                        <FaArrowRight className="w-3 h-3 md:w-4 md:h-4 rotate-180" />
+                    </button>
+                </motion.div> */}
+
+                {/* Action Buttons */}
+                {/* {(contract.status === 'active' || contract.status === 'pending') && (
+                    <>
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.7 }}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                        >
+                            <button
+                                onClick={handleRenew}
+                                disabled={isRenewing || isCanceling}
+                                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                            >
+                                <FaSync className={`w-4 h-4 md:w-5 md:h-5 ${isRenewing ? 'animate-spin' : ''}`} />
+                                <span>{isRenewing ? 'جاري التجديد...' : 'تجديد العقد'}</span>
+                            </button>
+                        </motion.div>
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.8 }}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                        >
+                            <button
+                                onClick={handleCancel}
+                                disabled={isRenewing || isCanceling}
+                                className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white py-3 md:py-4 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-red-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                            >
+                                <FaTimes className={`w-4 h-4 md:w-5 md:h-5 ${isCanceling ? 'animate-pulse' : ''}`} />
+                                <span>{isCanceling ? 'جاري الإلغاء...' : 'إلغاء العقد'}</span>
+                            </button>
+                        </motion.div>
+                    </>
+                )} */}
+            </div>
+        </div>
+    </motion.div>
+</div>
             </div>
         </div>
     );

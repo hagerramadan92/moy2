@@ -88,7 +88,7 @@ export default function Cover({ data }) {
           <p className="text-lg text-gray-700 mb-4 w-100 max-w-md">
             {description || "انضم الينا و أحصل علي دخل مضمون بخطوات بسيطة و مرونة كاملة في العمل ."}
           </p>
-          <AppDownloadButtons />
+          <AppDownloadButtons userType="driver" />
         </div>
       </div>
       </div>

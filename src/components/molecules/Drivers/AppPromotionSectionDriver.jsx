@@ -3,20 +3,20 @@
 import Image from "next/image";
 import React from "react";
 import { motion } from "framer-motion";
-import { FaMobileAlt, FaBolt, FaShieldAlt, FaClock, FaCheckCircle, FaStar, FaUsers } from "react-icons/fa";
+import { FaMobileAlt, FaMoneyBillWave, FaRoute, FaShieldAlt, FaClock, FaCheckCircle, FaStar, FaUsers, FaTruck, FaChartLine } from "react-icons/fa";
 import AppDownloadButtons from "../homepage/AppDownloadButtons";
 
-export default function AppPromotionSection() {
+export default function AppPromotionSectionDriver() {
   const features = [
-    { icon: FaBolt, title: "طلب فوري", desc: "احصل على المياه خلال دقائق", color: "text-yellow-500" },
-    { icon: FaShieldAlt, title: "دفع آمن", desc: "معاملات محمية ومشفرة", color: "text-green-500" },
-    { icon: FaClock, title: "تتبع مباشر", desc: "راقب طلبك في الوقت الفعلي", color: "text-blue-500" },
+    { icon: FaMoneyBillWave, title: "اكسب دخل إضافي", desc: "حقق أرباحاً ممتازة مع كل توصيلة", color: "text-green-500" },
+    { icon: FaRoute, title: "عروض قريبة منك", desc: "استقبل عروضاً قريبة من موقعك الحالي", color: "text-blue-500" },
+    { icon: FaShieldAlt, title: "دفع مضمون", desc: "تحويلات آمنة ومستحقاتك في موعدها", color: "text-purple-500" },
   ];
 
   const stats = [
-    { icon: FaUsers, value: "100K+", label: "مستخدم نشط" },
-    { icon: FaStar, value: "4.9", label: "تقييم المستخدمين" },
-    { icon: FaCheckCircle, value: "99%", label: "رضا العملاء" },
+    { icon: FaTruck, value: "5000+", label: "سائق نشط" },
+    { icon: FaChartLine, value: "₪8,000+", label: "متوسط الدخل الشهري" },
+    { icon: FaCheckCircle, value: "15K+", label: "طلبات يومياً" },
   ];
 
   return (
@@ -102,7 +102,7 @@ export default function AppPromotionSection() {
             </div>
           </motion.div>
 
-          {/* Right Side - Enhanced Content */}
+          {/* Right Side - Enhanced Content for Drivers */}
           <motion.div
             initial={{ opacity: 0, x: 60 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -119,8 +119,8 @@ export default function AppPromotionSection() {
               className="inline-flex items-center gap-2 justify-center lg:justify-start mb-3"
             >
               <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold text-[#579BE8] bg-white/80 backdrop-blur-sm border-2 border-[#579BE8]/30 px-3 py-1.5 rounded-full shadow-md hover:shadow-lg transition-all duration-300">
-                <FaMobileAlt className="text-[#579BE8] text-xs" />
-                <span>تطبيق موبايل احترافي</span>
+                <FaTruck className="text-[#579BE8] text-xs" />
+                <span>تطبيق السائقين الاحترافي</span>
               </span>
             </motion.div>
 
@@ -130,12 +130,14 @@ export default function AppPromotionSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight mb-3"
+              className="text-2xl sm:text-3xl md:text-4xl  font-black text-gray-900 leading-tight mb-3"
             >
-              <span className="block  bg-gradient-to-r from-[#579BE8] via-[#4788d5] to-[#315782] bg-clip-text text-transparent mb-2">
-                تطبيق وايت مياه <span className="hidden">دريفر</span>
+              <span className="block bg-gradient-to-r from-[#579BE8] via-[#4788d5] to-[#315782] bg-clip-text text-transparent mb-2">
+                تطبيق وايت مياه دريفر
               </span>
-         
+             
+                
+          
             </motion.h2>
 
             {/* Elegant Description */}
@@ -144,17 +146,14 @@ export default function AppPromotionSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-sm sm:text-base mb-3 md:text-lg text-gray-600 leading-relaxed mb-6 max-w-2xl mx-auto lg:mx-0"
+              className="text-sm sm:text-base mb-3  text-gray-600 leading-relaxed mb-6 max-w-2xl mx-auto lg:mx-0"
             >
-              اطلب المياه بسهولة من خلال تطبيقنا الذكي
+              انضم إلى عائلتنا من السائقين واستمتع بمرونة العمل
               <br className="hidden sm:block" />
-              <span className="hidden sm:inline">مع تتبع مباشر ودفع آمن وتوصيل سريع</span>
+              <span className="hidden sm:inline">استقبل العروض القريبة منك واكسب دخل إضافي مع كل توصيلة</span>
             </motion.p>
 
-            {/* Stats Cards */}
-          
-
-            {/* Enhanced Features */}
+            {/* Enhanced Features for Drivers */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -173,7 +172,7 @@ export default function AppPromotionSection() {
                     transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
                     className="flex items-start gap-4 justify-center lg:justify-end text-right group"
                   >
-                    <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#4788d5] flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#579BE8] to-[#4788d5] flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
                       <Icon className="text-white text-base sm:text-lg" />
                     </div>
                     <div className="text-right flex-1">
@@ -193,8 +192,7 @@ export default function AppPromotionSection() {
               transition={{ duration: 0.6, delay: 0.7 }}
             >
               <div className="w-60 md:w-full mx-auto">
-              <AppDownloadButtons  userType="user"/>
-
+                <AppDownloadButtons userType="driver"/>
               </div>
             </motion.div>
           </motion.div>

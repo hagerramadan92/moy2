@@ -3,7 +3,7 @@
 import Image from "next/image";
 import React from "react";
 import { useState } from "react";
-import AppDownloadButtons from "../homepage/AppDownloadButtons";
+import AppDownloadButtons from "./AppDownloadButtons";
 import ServiceSelect from "@/components/common/ServiceSelect";
 import WaterTypeSelect from "@/components/common/WaterTypeSelect";
 import toast from "react-hot-toast"; 
@@ -251,7 +251,7 @@ export default function HomeCover({ data }) {
 							</div>
 						)}
 					 <div className="w-60 md:w-full mx-auto">
-                                  <AppDownloadButtons  />
+                                  <AppDownloadButtons userType="user" />
                     
                                   </div>
 					</div>

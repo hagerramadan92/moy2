@@ -11,6 +11,7 @@ import HowToUseAppSection from "@/components/molecules/Drivers/HowToUseAppSectio
 import Footer from "@/components/molecules/common/Footer";
 import Cover from "@/components/molecules/Drivers/cover";
 import StartJourneySection from "@/components/molecules/Drivers/StartJourneySection";
+import AppPromotionSectionDriver from "@/components/molecules/Drivers/AppPromotionSectionDriver";
 
 export default function DriversPage() {
   const [pageData, setPageData] = useState(null);
@@ -261,7 +262,7 @@ export default function DriversPage() {
         <DriverServicesSection />
         {/* <StartJourneySection/> */}
         <HowToUseAppSection />
-        <AppPromotionSection/>
+        <AppPromotionSectionDriver />
         <CallToActionSection />
         <Footer/>
       </main>
