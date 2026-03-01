@@ -38,7 +38,7 @@ const ActionToast = () => {
           bg: 'bg-gradient-to-r from-blue-50 to-blue-100',
           border: 'border-blue-200',
           text: 'text-blue-900',
-          icon: <FaCheckCircle className="h-5 w-5 text-blue-600" />
+          icon: <FaCheckCircle className="h-5 w-5 text-[#579BE8] " />
         };
       case 'error':
         return {
@@ -59,14 +59,14 @@ const ActionToast = () => {
           bg: 'bg-gradient-to-r from-blue-50 to-blue-100',
           border: 'border-blue-300',
           text: 'text-blue-900',
-          icon: <FaInfoCircle className="h-5 w-5 text-blue-600" />
+          icon: <FaInfoCircle className="h-5 w-5 text-[#579BE8] " />
         };
       default:
         return {
           bg: 'bg-gradient-to-r from-blue-50 to-blue-100',
           border: 'border-blue-300',
           text: 'text-blue-900',
-          icon: <FaInfoCircle className="h-5 w-5 text-blue-600" />
+          icon: <FaInfoCircle className="h-5 w-5 text-[#579BE8] " />
         };
     }
   };
@@ -102,12 +102,12 @@ const ActionToast = () => {
                   </p>
                   <button
                     onClick={() => handleClose(toast.id)}
-                    className="text-blue-400 hover:text-blue-600 transition-colors duration-200"
+                    className="text-blue-400 hover:text-[#579BE8]  transition-colors duration-200"
                   >
                     <FaTimes className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-blue-600/70">
+                <p className="mt-1 text-xs text-[#579BE8] /70">
                   {new Date(toast.timestamp).toLocaleTimeString('ar-EG', {
                     hour: '2-digit',
                     minute: '2-digit'

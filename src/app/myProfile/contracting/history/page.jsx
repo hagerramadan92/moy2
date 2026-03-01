@@ -24,6 +24,8 @@ import { Arabic } from "flatpickr/dist/l10n/ar.js";
 import "flatpickr/dist/flatpickr.min.css";
 import { toast } from "react-hot-toast";
 import Swal from "sweetalert2";
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
 export default function ContractHistoryPage() {
     const router = useRouter();
@@ -104,7 +106,7 @@ export default function ContractHistoryPage() {
                     return {
                     id: contractId,
                     type: contract.contract_type === 'company' ? 'commercial' : 'personal',
-                    title: contract.company_name || 'عقد بدون اسم',
+                    title: contract.company_name || contract.applicant_name || 'عقد بدون اسم',
                     applicant: contract.applicant_name || '',
                         phone: contract.phone || '',
                     address: address,
@@ -112,7 +114,7 @@ export default function ContractHistoryPage() {
                     duration: mapDurationToArabic(contract.duration_type),
                     endDate: contract.end_date ? new Date(contract.end_date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
                     cost: contract.total_amount?.toString() || '0',
-                    status: contract.status || 'active',
+                    status: contract.status || '',
                     notes: contract.notes || '',
                     // Additional fields from API
                     contractId: contract.id,
@@ -152,7 +154,7 @@ export default function ContractHistoryPage() {
             'monthly': 'شهر واحد',
             'quarterly': '3 أشهر',
             'semi_annual': '6 أشهر',
-            'yearly': 'سنة كاملة'
+            'annual': 'سنة كاملة'
         };
         return durationMap[durationType] || durationType;
     };
@@ -160,9 +162,9 @@ export default function ContractHistoryPage() {
 
     const filteredContracts = contractHistory.filter(contract => {
         // Exclude completed contracts
-        if (contract.status === "completed") {
-            return false;
-        }
+        // if (contract.status === "completed") {
+        //     return false;
+        // }
         const matchesTab = activeTab === "all" || contract.type === activeTab;
         const matchesStatus = selectedStatus === "all" || contract.status === selectedStatus;
         const matchesSearch = contract.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -421,6 +423,91 @@ export default function ContractHistoryPage() {
         }
     };
 
+    const handleDeleteClick = async (contract, event) => {
+    event.stopPropagation(); // Prevent row click
+    
+    // Show confirmation dialog with SweetAlert2
+    const result = await Swal.fire({
+        title: "حذف العقد",
+        text: `هل أنت متأكد من حذف العقد ${contract.id}؟`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "نعم، حذف",
+        cancelButtonText: "إلغاء",
+        confirmButtonColor: "#ef4444",
+        cancelButtonColor: "#6b7280",
+        background: "var(--background)",
+        color: "var(--foreground)",
+        customClass: {
+            popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+            confirmButton: "rounded-2xl font-black px-10 py-3",
+            cancelButton: "rounded-2xl font-black px-10 py-3",
+        }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Show loading toast
+    const loadingToast = toast.loading("جاري حذف العقد...", {
+        duration: Infinity,
+    });
+
+    try {
+        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+        if (!accessToken) {
+            toast.dismiss(loadingToast);
+            toast.error("يجب تسجيل الدخول لحذف العقد", {
+                duration: 4000,
+                icon: "❌",
+            });
+            return;
+        }
+
+        // Extract contract ID - use the numeric contractId field if available
+        let contractId = contract.contractId || contract.id;
+        if (typeof contractId === 'string') {
+            // Remove CONT- or CONTRACT- prefix if present
+            contractId = contractId.replace(/^(CONT-|CONTRACT-)/, '');
+        }
+
+        const response = await fetch(`${Api_Url}/contracts/${contractId}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        toast.dismiss(loadingToast);
+
+        if (response.ok) {
+            toast.success(data.message || "تم حذف العقد بنجاح", {
+                duration: 4000,
+                icon: "✅",
+            });
+            
+            // Refresh contracts list
+            await fetchContracts();
+        } else {
+            const errorMessage = data.message || data.error || 'فشل حذف العقد. يرجى المحاولة مرة أخرى';
+            toast.error(errorMessage, {
+                duration: 5000,
+                icon: "❌",
+            });
+        }
+    } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error('Error deleting contract:', error);
+        toast.error("حدث خطأ أثناء حذف العقد. يرجى المحاولة مرة أخرى", {
+            duration: 5000,
+            icon: "❌",
+        });
+    }
+};
+
     const tabs = [
         { id: "all", label: "الكل" },
         { id: "commercial", label: "تجاري" },
@@ -431,10 +518,13 @@ export default function ContractHistoryPage() {
         { id: "all", label: "جميع الحالات" },
         { id: "active", label: "نشط" },
         { id: "pending", label: "قيد الانتظار" },
+        { id: "expired", label: "منتهي" },
+
+        { id: "cancelled", label: "ملغي" },
     ];
    const Api_Url =  'https://dashboard.waytmiah.com/api/v1'
     // Calculate statistics - include active and pending contracts
-    const totalActive = contractHistory.filter(c => c.status === "active" || c.status === "pending").length;
+    const totalActive = contractHistory.filter(c => c.status === "active" || c.status === "pending" || c.status === "expired" || c.status === "completed" || c.status === "cancelled" ).length;
     const totalValue = contractHistory.reduce((sum, c) => {
         const cost = typeof c.cost === 'string' ? c.cost.replace(/,/g, '') : c.cost;
         return sum + (Number(cost) || 0);
@@ -719,25 +809,47 @@ export default function ContractHistoryPage() {
                                                     <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-yellow-600"></span>
                                                     قيد الانتظار
                                                 </span>
-                                            ) : (
+                                            ) : contract.status === "expired" ? (
+                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-600"></span>
+                                                    منتهي
+                                                </span>
+                                            ): contract.status === "cancelled" ? (
+                                                <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                                                    <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-600"></span>
+                                                    ملغى
+                                                </span>
+                                            ): (
                                                 <span className="inline-flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400">
                                                     <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600"></span>
                                                     {contract.status || 'غير محدد'}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
-                                            {(contract.status === "active" || contract.status === "pending") && (
-                                                <button
-                                                    onClick={(e) => handleTerminateClick(contract, e)}
-                                                    className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
-                                                    title="إنهاء العقد"
-                                                >
-                                                    <FaBan className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                                                    <span>إنهاء</span>
-                                                </button>
-                                            )}
-                                        </td>
+                                       <td className="px-2 md:px-3 lg:px-4 xl:px-6 py-2 md:py-3 lg:py-4 xl:py-5 text-center">
+    <div className="flex items-center justify-center gap-2">
+        {(contract.status === "active" || contract.status === "pending") && (
+            <button
+                onClick={(e) => handleTerminateClick(contract, e)}
+                className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
+                title="إنهاء العقد"
+            >
+                <FaBan className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                <span>إنهاء</span>
+            </button>
+        )}
+        
+        {/* Delete button - show for all contracts or specific statuses */}
+        <button
+            onClick={(e) => handleDeleteClick(contract, e)}
+            className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold bg-gray-50 hover:bg-gray-100 dark:bg-gray-500/10 dark:hover:bg-gray-500/20 text-gray-600 dark:text-gray-400 transition-all hover:shadow-md hover:scale-105 active:scale-95 whitespace-nowrap"
+            title="حذف العقد"
+        >
+            <FaTimes className="w-3 h-3 md:w-3.5 md:h-3.5" />
+            <span>حذف</span>
+        </button>
+    </div>
+</td>
                                     </motion.tr>
                                 ))}
                             </AnimatePresence>

@@ -244,7 +244,7 @@ useEffect(() => {
                 <div className="p-3 min-w-[250px]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <FaTruck className="w-4 h-4 text-blue-600" />
+                      <FaTruck className="w-4 h-4 text-[#579BE8] " />
                     </div>
                     <div>
                       <h3 className="font-bold text-blue-700 text-lg">موقع السائق</h3>
@@ -284,7 +284,7 @@ useEffect(() => {
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg">
                       <div className="flex justify-between items-center">
                         <div>
-                          <div className="text-xs text-blue-600">المسافة المتبقية</div>
+                          <div className="text-xs text-[#579BE8] ">المسافة المتبقية</div>
                           <div className="font-bold text-blue-700">{formatDistance()}</div>
                         </div>
                         {estimatedTime && (

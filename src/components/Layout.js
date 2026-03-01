@@ -43,7 +43,7 @@ export default function Layout({ children }) {
               </button>
               
               <div className="flex-shrink-0 flex items-center ml-4">
-                <FaBell className="h-8 w-8 text-blue-600" />
+                <FaBell className="h-8 w-8 text-[#579BE8] " />
                 <span className="mr-2 text-xl font-bold text-gray-900">إشعاراتي</span>
               </div>
               
@@ -53,7 +53,7 @@ export default function Layout({ children }) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-[#579BE8]  hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <item.icon className="h-5 w-5 mr-1" />
                     {item.name}
@@ -95,7 +95,7 @@ export default function Layout({ children }) {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-[#579BE8]  hover:bg-blue-50 rounded-lg transition-colors"
               >
                 <item.icon className="h-6 w-6 mr-3" />
                 {item.name}

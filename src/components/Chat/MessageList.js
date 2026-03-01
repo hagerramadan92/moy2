@@ -202,7 +202,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
           <button
             onClick={loadMoreMessages}
             disabled={loading}
-            className="text-sm text-blue-600 hover:text-blue-800 px-4 py-2 bg-blue-50 rounded-lg"
+            className="text-sm text-[#579BE8]  hover:text-blue-800 px-4 py-2 bg-blue-50 rounded-lg"
           >
             {loading ? 'جاري التحميل...' : 'تحميل المزيد'}
           </button>
@@ -276,7 +276,7 @@ const MessageList = ({ chatId, currentUserId = 39, onNewMessage }) => {
                           href={message.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:text-blue-600 flex items-center gap-1"
+                          className="text-xs text-blue-400 hover:text-[#579BE8]  flex items-center gap-1"
                         >
                           📎 {message.file_name || 'ملف مرفق'}
                           {message.file_size && (

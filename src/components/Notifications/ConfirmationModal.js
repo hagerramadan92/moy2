@@ -57,7 +57,7 @@ const ConfirmationModal = ({
         };
       default:
         return {
-          icon: <FaExclamationTriangle className="h-12 w-12 text-blue-600" />,
+          icon: <FaExclamationTriangle className="h-12 w-12 text-[#579BE8] " />,
           button: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
           iconBg: 'bg-blue-100'
         };

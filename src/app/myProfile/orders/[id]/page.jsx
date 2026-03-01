@@ -1333,7 +1333,7 @@ export default function OrderDetailsPage() {
                 <div className="relative bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6  md:p-12">
                   <div className="flex flex-col items-center text-center">
                     <div className="w-16 h-16 sm:w-20 sm:h-20  rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center border-3 sm:border-4 border-blue-200 shadow-lg mb-4 sm:mb-6 ">
-                      <BiCheckCircle className="w-8 h-8 sm:w-12 sm:h-12  text-blue-600" />
+                      <BiCheckCircle className="w-8 h-8 sm:w-12 sm:h-12  text-[#579BE8] " />
                     </div>
                     <h3 className="text-lg sm:text-xl lg:text-xl  font-black mb-2 sm:mb-4 text-gray-900">
                       تم تأكيد طلبك
@@ -1375,7 +1375,7 @@ export default function OrderDetailsPage() {
                   </div>
                   <div className="flex items-center gap-3  ">
                     <div className="w-12 h-12 sm:w-14 sm:h-14  rounded-xl sm:rounded-2xl bg-white flex items-center justify-center shadow flex-shrink-0">
-                      <BiWater className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-600" />
+                      <BiWater className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-[#579BE8] " />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm text-gray-700 font-bold mb-1 sm:mb-2">
@@ -1388,7 +1388,7 @@ export default function OrderDetailsPage() {
                   </div>
                   <div className="flex items-center gap-3  ">
                     <div className="w-12 h-12 sm:w-14 sm:h-14  rounded-xl sm:rounded-2xl bg-white flex items-center justify-center shadow flex-shrink-0">
-                      <BiCalendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-600" />
+                      <BiCalendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-[#579BE8] " />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm text-gray-700 font-bold mb-1 sm:mb-2">
@@ -1473,7 +1473,7 @@ export default function OrderDetailsPage() {
                         <p className="text-xs sm:text-sm text-gray-700 mb-1 sm:mb-2">
                           حالة السائق
                         </p>
-                        <p className="text-sm sm:text-base  font-bold text-blue-600">
+                        <p className="text-sm sm:text-base  font-bold text-[#579BE8] ">
                           {currentStatus === "in-road"
                             ? "🚚 في الطريق"
                             : getStatusText(currentStatus)}
@@ -1502,7 +1502,7 @@ export default function OrderDetailsPage() {
                             </p>
                           </div>
                           <div className="bg-gradient-to-br from-blue-50 to-white p-3 sm:p-4 rounded-lg sm:rounded-xl lg:rounded-2xl text-center border border-blue-200">
-                            <p className="text-xs sm:text-sm text-blue-600 mb-1 sm:mb-2">
+                            <p className="text-xs sm:text-sm text-[#579BE8]  mb-1 sm:mb-2">
                               سرعة السائق
                             </p>
                             <p className="text-sm sm:text-base  font-bold text-blue-700">
@@ -1523,7 +1523,7 @@ export default function OrderDetailsPage() {
             {!isMapVisible && orderData.location && (
               <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl sm:rounded-3xl border border-blue-200 shadow-lg p-6 sm:p-8 lg:p-10 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mx-auto mb-4 sm:mb-6  border-3 sm:border-4 border-white shadow-lg">
-                  <BiMapPin className="w-8 h-8 sm:w-10 sm:h-10  text-blue-600" />
+                  <BiMapPin className="w-8 h-8 sm:w-10 sm:h-10  text-[#579BE8] " />
                 </div>
                 <h3 className="text-lg sm:text-xl lg:text-xl font-black mb-2 sm:mb-3 lg:mb-4 text-gray-900">
                   موقع التوصيل

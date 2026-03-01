@@ -171,7 +171,7 @@ export default function SettingsPage() {
             <div className="md:space-y-4 space-y-0">
               <div className="flex items-center justify-between rounded-xl p-4 transition hover:bg-slate-50 dark:hover:bg-slate-700">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-[#579BE8]  dark:text-blue-400">
                     <FaBell className="h-5 w-5" />
                   </div>
                   <div className="text-right">

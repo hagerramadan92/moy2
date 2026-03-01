@@ -60,7 +60,7 @@ const NotificationsPage = () => {
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-3">
-                <BellAlertIcon className="h-8 w-8 text-blue-600" />
+                <BellAlertIcon className="h-8 w-8 text-[#579BE8] " />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">الإشعارات</h1>
                   <p className="text-sm text-gray-600">
@@ -117,7 +117,7 @@ const NotificationsPage = () => {
                       type="checkbox"
                       checked={selectedNotifications.length === notifications.length}
                       onChange={handleSelectAll}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="h-4 w-4 text-[#579BE8]  border-gray-300 rounded focus:ring-blue-500"
                     />
                     <span className="mr-2 text-sm text-gray-700">تحديد الكل</span>
                   </div>
@@ -135,7 +135,7 @@ const NotificationsPage = () => {
                         type="checkbox"
                         checked={selectedNotifications.includes(notification.id)}
                         onChange={() => handleSelectNotification(notification.id)}
-                        className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="mt-1 h-4 w-4 text-[#579BE8]  border-gray-300 rounded focus:ring-blue-500"
                       />
                       <div className="mr-3 flex-1">
                         <div className="flex justify-between items-start">

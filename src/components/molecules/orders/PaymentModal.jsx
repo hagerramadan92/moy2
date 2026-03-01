@@ -717,7 +717,7 @@ export default function PaymentModal({
                       <div
                         className={`p-3 rounded-lg ${
                           isProcessing
-                            ? "bg-blue-100 text-blue-600"
+                            ? "bg-blue-100 text-[#579BE8] "
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
@@ -732,7 +732,7 @@ export default function PaymentModal({
                         <div className="flex justify-between mb-1">
                           <span className="font-medium">{method.name}</span>
                           {isProcessing && (
-                            <span className="text-xs text-blue-600">جاري التحضير...</span>
+                            <span className="text-xs text-[#579BE8] ">جاري التحضير...</span>
                           )}
                         </div>
 

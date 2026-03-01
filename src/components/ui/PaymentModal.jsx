@@ -122,7 +122,7 @@ export default function PaymentModal({
                   >
                     <div className={`p-3 rounded-lg flex-shrink-0 ${
                       isSelected
-                        ? 'bg-blue-100 text-blue-600'
+                        ? 'bg-blue-100 text-[#579BE8] '
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       <Icon size={20} />

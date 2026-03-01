@@ -107,7 +107,7 @@ const SkeletonPagination = () => (
 const EmptyState = ({ filter }) => (
   <div className="p-6 sm:p-8 md:p-12 text-center">
     <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-blue-100 rounded-full mb-3 sm:mb-4 md:mb-6">
-      <FaBell className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-blue-600" />
+      <FaBell className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-[#579BE8] " />
     </div>
     <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
       {filter === 'all' ? 'لا توجد إشعارات' : 
@@ -303,7 +303,7 @@ export default function NotificationsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 md:gap-4">
             <div className="flex items-center space-x-2 sm:space-x-3 mt-2">
               <div className="bg-blue-100 p-1.5 sm:p-2 md:p-3 rounded-lg">
-                <FaBell className="h-4 w-4 sm:h-5 sm:w-5 md:h-8 md:w-8 text-blue-600" />
+                <FaBell className="h-4 w-4 sm:h-5 sm:w-5 md:h-8 md:w-8 text-[#579BE8] " />
               </div>
               <div>
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">الإشعارات</h1>
@@ -343,7 +343,7 @@ export default function NotificationsPage() {
                     checked={selectedNotifications.length === filteredNotifications.length && filteredNotifications.length > 0}
                     onChange={handleSelectAll}
                     disabled={filteredNotifications.length === 0 || loading}
-                    className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 border-gray-300 rounded ml-1.5 sm:ml-2"
+                    className="h-3 w-3 sm:h-4 sm:w-4 text-[#579BE8]  border-gray-300 rounded ml-1.5 sm:ml-2"
                   />
                   <span className="hidden sm:inline">تحديد الكل</span>
                   <span className="sm:hidden">الكل</span>
@@ -438,7 +438,7 @@ export default function NotificationsPage() {
                       checked={selectedNotifications.includes(notification.id)}
                       onChange={() => handleSelectNotification(notification.id)}
                       disabled={loading || deleting}
-                      className="mt-0.5 sm:mt-1 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                      className="mt-0.5 sm:mt-1 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-[#579BE8]  border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                     />
                     
                     <div className="mr-0 sm:mr-2 md:mr-4 flex-1 min-w-0">

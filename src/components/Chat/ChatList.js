@@ -254,12 +254,12 @@ const ChatList = ({ onSelectChat, selectedChatId, currentUserId = 39 }) => {
             </span>
             <div className="flex gap-2">
               {pagination.current_page > 1 && (
-                <button className="px-3 py-1 text-blue-600 hover:text-blue-800">
+                <button className="px-3 py-1 text-[#579BE8]  hover:text-blue-800">
                   السابق
                 </button>
               )}
               {pagination.current_page < pagination.last_page && (
-                <button className="px-3 py-1 text-blue-600 hover:text-blue-800">
+                <button className="px-3 py-1 text-[#579BE8]  hover:text-blue-800">
                   التالي
                 </button>
               )}

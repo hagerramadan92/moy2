@@ -34,7 +34,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/app/myProfile/contracting/details/[id]/consumption/page.jsx"  ],
   "exclude": [
     "node_modules"
   ]

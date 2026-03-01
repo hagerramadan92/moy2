@@ -31,9 +31,7 @@ const LocationPickerModal = dynamic(
     { ssr: false, loading: () => <div className="h-0 w-0" /> }
 );
 
-const API_BASE_URL = (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE_URL) 
-    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^http:\/\//, 'https://') 
-    : 'https://dashboard.waytmiah.com/api/v1';
+const API_BASE_URL = 'https://dashboard.waytmiah.com/api/v1';
 
 export default function ContractingPage() {
     const router = useRouter();
@@ -219,38 +217,9 @@ export default function ContractingPage() {
         { id: "personal", label: "تعاقد شخصي", icon: <FaUser className="w-4 h-4" /> },
     ];
 
-    const contracts = [
-        {
-            id: "CONT-882",
-            type: "commercial",
-            title: "مؤسسة وايت مياه التجارية",
-            applicant: "فهد السليمان",
-            phone: "0501234567",
-            address: "الرياض، حي الملقا، شارع الأمير محمد بن سعد",
-            date: "15 نوفمبر 2024",
-            duration: "6 أشهر",
-            endDate: "15 مايو 2025",
-            cost: "4,500 ريال",
-            status: "active",
-            notes: "توصيل دوري كل يوم سبت واثنين"
-        },
-        {
-            id: "CONT-721",
-            type: "personal",
-            title: "منزل حي الملقا",
-            applicant: "عبدالله محمد الفهد",
-            phone: "0559876543",
-            address: "الرياض، حي النرجس، فيلا 12",
-            date: "02 نوفمبر 2024",
-            duration: "شهر واحد",
-            endDate: "02 ديسمبر 2024",
-            cost: "800 ريال",
-            status: "completed",
-            notes: "الاتصال قبل الوصول بـ 15 دقيقة"
-        },
-    ];
+   
 
-    const filteredContracts = contracts.filter(c => c.type === activeTab);
+   
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -267,20 +236,33 @@ export default function ContractingPage() {
             'شهر واحد': 'monthly',
             '3 أشهر ': 'quarterly',
             '6 أشهر': 'semi_annual',
-            'سنة كاملة': 'yearly'
+            'سنة كاملة': 'annual'
         };
         return durationMap[arabicDuration] || 'monthly';
     };
 
-    // تحقق من صحة رقم الهاتف
     const validatePhone = (phone) => {
-        // تنسيق سعودي: يبدأ بـ 05 أو 5 متبوعًا بـ 8 أرقام
-        const saudiPhoneRegex = /^(05|5)\d{8}$/;
-        // تنسيق عام: 9-15 رقم
-        const generalPhoneRegex = /^\d{9,15}$/;
-        
-        return saudiPhoneRegex.test(phone) || generalPhoneRegex.test(phone);
-    };
+    // إزالة المسافات والشرطات
+    let cleanPhone = phone.replace(/[\s\-]/g, '');
+    
+    // تحويل +966 إلى 0
+    if (cleanPhone.startsWith('+966')) {
+        cleanPhone = '0' + cleanPhone.slice(4);
+    }
+    
+    // تحويل 966 إلى 0
+    if (cleanPhone.startsWith('966')) {
+        cleanPhone = '0' + cleanPhone.slice(3);
+    }
+    
+    // التحقق من الصيغ المقبولة
+    const patterns = [
+        /^05[0-9]{8}$/,     // 05XXXXXXXX
+        /^5[0-9]{8}$/,      // 5XXXXXXXX
+    ];
+    
+    return patterns.some(pattern => pattern.test(cleanPhone));
+};
 
     const validateForm = () => {
         let newErrors = {};
@@ -288,16 +270,16 @@ export default function ContractingPage() {
         if (!formData.applicantName) newErrors.applicantName = "اسم مقدم الطلب مطلوب";
         
         // التحقق من حقل الهاتف
-        if (!formData.phone) {
-            newErrors.phone = "رقم الجوال مطلوب";
-        } else if (!validatePhone(formData.phone)) {
-            newErrors.phone = "رقم الجوال غير صحيح. يرجى إدخال رقم صحيح (مثال: 05XXXXXXXX)";
-        }
+       if (!formData.phone) {
+    newErrors.phone = "رقم الجوال مطلوب";
+} else if (!validatePhone(formData.phone)) {
+    newErrors.phone = "رقم الجوال غير صحيح. يرجى إدخال رقم سعودي صحيح (مثال: 0512345678)";
+}
 
         // التحقق من اسم الشركة للتعاقد التجاري
-        if (activeTab === 'commercial' && !formData.name) {
-            newErrors.name = "اسم المؤسسة مطلوب للتعاقد التجاري";
-        }
+        // if (activeTab === 'commercial' && !formData.name) {
+        //     newErrors.name = "اسم المؤسسة مطلوب للتعاقد التجاري";
+        // }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -724,7 +706,7 @@ export default function ContractingPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                                 {activeTab === 'commercial' && (
                                     <div className="space-y-1.5 md:space-y-2 relative">
-                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة <span className="text-red-600">*</span></label>
+                                        <label className={`${labelClasses} text-xs md:text-sm`}>اسم المؤسسة </label>
                                         <div className="relative">
                                             <FaBuilding className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-[#579BE8] w-4 h-4 md:w-5 md:h-5 z-10`} />
                                             <input

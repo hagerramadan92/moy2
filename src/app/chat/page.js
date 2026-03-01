@@ -89,7 +89,7 @@ export default function ChatPage() {
               className="w-10 h-10 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
               title="محادثة جديدة"
             >
-              <Plus size={20} className="text-blue-600" />
+              <Plus size={20} className="text-[#579BE8] " />
             </button>
           </div>
           
@@ -123,7 +123,7 @@ export default function ChatPage() {
             <div className="bg-white border-b border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-lg">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-[#579BE8]  font-semibold text-lg">
                     {(() => {
                       const otherParticipants = selectedChat.participants?.filter(p => 
                         p !== 39 && p !== "39"
@@ -226,7 +226,7 @@ export default function ChatPage() {
                   onClick={() => setShowNewChatModal(true)}
                   className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition-shadow flex flex-col items-center"
                 >
-                  <Plus size={24} className="text-blue-600 mb-2" />
+                  <Plus size={24} className="text-[#579BE8]  mb-2" />
                   <h4 className="font-bold text-gray-800 text-sm">محادثة جديدة</h4>
                   <p className="text-xs text-gray-600">ابدأ محادثة</p>
                 </button>

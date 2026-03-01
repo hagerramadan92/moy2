@@ -195,7 +195,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                 >
                   <div className="relative">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-100 transition-all duration-200 shadow-sm">
-                      <Users size={16} className="text-blue-600 group-hover:scale-110 transition-transform sm:size-5" />
+                      <Users size={16} className="text-[#579BE8]  group-hover:scale-110 transition-transform sm:size-5" />
                     </div>
                     {/* {hasUnreadMessages && messageCount > 0 && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -207,7 +207,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                     <h4 className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors text-sm sm:text-base">محادثاتي</h4>
                     <p className="text-xs text-gray-700">عرض جميع المحادثات</p>
                     {/* <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      <span className="text-xs text-[#579BE8]  bg-blue-50 px-2 py-0.5 rounded-full">
                         مباشر
                       </span>
                       <span className="text-xs text-gray-400 hidden sm:inline">
@@ -215,7 +215,7 @@ const FloatingChatIcon = ({ onOpenChat, onOpenSupport, currentUserId = 39 }) => 
                       </span>
                     </div> */}
                   </div>
-                  {/* <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-[#579BE8]  transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg> */}
                 </button>

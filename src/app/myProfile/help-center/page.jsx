@@ -27,9 +27,9 @@ export default function SupportPage() {
         { id: "orders", title: "الطلبات", icon: <IoIosWater />, description: " ادارة الطلبات - التتبع - الألغاء - تعديل", link: "/myProfile/orders" },
         { id: "account", title: " الحساب", icon: <FaRegUser />, description: "اعدادات الحسا ب والملف الشخصي", link: "/myProfile" },
         { id: "wallet", title: " الدفع والمحفظة", icon: <CgCreditCard />, description: "طرق الدفع - الرصيد - الاسترجاع ", link: "/myProfile" },
-        { id: "deals", title: "التعاقدات", icon: <FaRegHandshake />, description: "العقود - الاشتراكات - التجديد", link: "/deals" },
-        { id: "help", title: "الدعم الفني", icon: <FaHeadset />, description: "مساعدة فورية وحلول سريعة", link: "/myProfile/help-center" },
-        { id: "gift", title: "العروض والخصومات", icon: <BsGift />, description: "كوبونات - عروض خاصة  ", link: "/myProfile/help-center" },
+        { id: "deals", title: "التعاقدات", icon: <FaRegHandshake />, description: "العقود - الاشتراكات - التجديد", link: "/myProfile/contracting" },
+        { id: "help", title: "الدعم الفني", icon: <FaHeadset />, description: "مساعدة فورية وحلول سريعة", link: "/myProfile/support" },
+        // { id: "gift", title: "العروض والخصومات", icon: <BsGift />, description: "كوبونات - عروض خاصة  ", link: "/myProfile/help-center" },
     ];
 
   
@@ -70,30 +70,7 @@ export default function SupportPage() {
                 </div>
             </div>
 
-            {/* FAQs Skeleton */}
-            <div className="bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-                    <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                </div>
-                <div className="space-y-4">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="border border-border/40 rounded-2xl p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-10 p-6 bg-secondary/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <div className="space-y-2">
-                        <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                        <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                    </div>
-                    <div className="h-12 w-40 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
-                </div>
-            </div>
+         
         </div>
     );
 

@@ -132,12 +132,12 @@ export default function DriverLocationMap({ lat, lng, driverName, speed, heading
                 <strong className="block text-sm mb-1">{driverName || 'سائق'}</strong>
                 <span className="text-xs text-gray-700 block mb-1">الموقع الحالي</span>
                 {speed && (
-                  <span className="text-xs text-blue-600 block mb-1">
+                  <span className="text-xs text-[#579BE8]  block mb-1">
                     السرعة: {speed} كم/ساعة
                   </span>
                 )}
                 {heading && (
-                  <span className="text-xs text-blue-600 block mb-1">
+                  <span className="text-xs text-[#579BE8]  block mb-1">
                     الاتجاه: {heading}°
                   </span>
                 )}

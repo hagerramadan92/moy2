@@ -157,7 +157,7 @@ function SearchBox({ onPick }) {
                       onClick={() => pickItem(item)}
                       className="w-full text-right px-4 py-3 hover:bg-gray-50 transition flex items-start gap-2"
                     >
-                      <MapPin size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                      <MapPin size={16} className="text-[#579BE8]  mt-0.5 flex-shrink-0" />
                       <span className="text-sm text-gray-800 leading-5">{title}</span>
                     </button>
                   </li>
@@ -172,7 +172,7 @@ function SearchBox({ onPick }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-xs font-semibold text-blue-600 hover:underline"
+                className="text-xs font-semibold text-[#579BE8]  hover:underline"
               >
                 إغلاق
               </button>
@@ -389,7 +389,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
             <button
               onClick={handleLocateMe}
               disabled={loading}
-              className="flex  items-center md:gap-2 bg-white text-blue-600 md:px-6 md:py-3 py-1 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
+              className="flex  items-center md:gap-2 bg-white text-[#579BE8]  md:px-6 md:py-3 py-1 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
             >
               <Navigation size={20} className={loading ? "animate-spin" : ""} />
               <span>{loading ? "جاري التحديد..." : "موقعي الحالي"}</span>

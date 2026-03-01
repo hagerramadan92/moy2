@@ -389,183 +389,130 @@ export default function MyProfilePage() {
         fetchAddresses();
     }, []);
 
-    // Fetch address details by ID
-    const fetchAddressDetails = async (addressId) => {
+   const handleDeleteAddress = async (addressId, addressName, event) => {
+    event.stopPropagation(); // Prevent card click
+    
+    // Show confirmation dialog
+    const result = await Swal.fire({
+        title: "حذف العنوان",
+        text: `هل أنت متأكد من حذف العنوان "${addressName}"؟`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "نعم، حذف",
+        cancelButtonText: "إلغاء",
+        confirmButtonColor: "#ef4444",
+        cancelButtonColor: "#6b7280",
+        background: "var(--background)",
+        color: "var(--foreground)",
+        width: window.innerWidth < 640 ? '90%' : '32rem',
+        customClass: {
+            popup: "rounded-2xl border border-border shadow-xl mx-4",
+            confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 ml-2 text-sm sm:text-base",
+            cancelButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+            title: "text-sm text-right",
+            htmlContainer: "text-sm sm:text-base text-right"
+        }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Show loading toast
+    const loadingToast = toast.loading("جاري حذف العنوان...", {
+        style: {
+            background: "var(--background)",
+            border: "1px solid var(--border)",
+            borderRadius: "12px",
+            padding: "16px",
+        },
+    });
+
+    try {
         const accessToken = localStorage.getItem("accessToken");
+        
         if (!accessToken) {
-            toast.error("يرجى تسجيل الدخول أولاً");
-            return;
-        }
-
-        try {
-            setLoadingAddressDetails(true);
-            setShowAddressPopup(true);
-            setSelectedAddress(null);
-
-            const response = await fetch(`/api/addresses/${addressId}`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${accessToken}`,
-                },
-            });
-
-            const data = await response.json();
-            if (response.ok && data.status && data.data) {
-                const addressData = data.data;
-                setSelectedAddress(addressData);
-                // Initialize edit form with address data
-                setEditAddressForm({
-                    name: addressData.name || '',
-                    address: addressData.address || '',
-                    city: addressData.city || '',
-                    area: addressData.area || '',
-                    latitude: addressData.latitude || '',
-                    longitude: addressData.longitude || '',
-                    type: addressData.type || 'home',
-                    additional_info: addressData.additional_info || '',
-                    is_favorite: addressData.is_favorite || false
-                });
-            } else {
-                toast.error(data.message || "فشل جلب تفاصيل العنوان");
-                setShowAddressPopup(false);
-            }
-        } catch (error) {
-            toast.error("حدث خطأ أثناء جلب تفاصيل العنوان");
-            setShowAddressPopup(false);
-        } finally {
-            setLoadingAddressDetails(false);
-        }
-    };
-
-    // Update address
-    const handleUpdateAddress = async () => {
-        if (!selectedAddress?.id) return;
-
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-            toast.error("يرجى تسجيل الدخول أولاً");
-            return;
-        }
-
-        try {
-            setIsUpdatingAddress(true);
-            const response = await fetch(`/api/addresses/${selectedAddress.id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(editAddressForm),
-            });
-
-            const data = await response.json();
-            if (response.ok && data.status) {
-                toast.success(data.message || "تم تحديث العنوان بنجاح");
-                setIsEditingAddress(false);
-                // Refresh address details
-                await fetchAddressDetails(selectedAddress.id);
-                // Refresh addresses list
-                const addressesResponse = await fetch("/api/addresses", {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "Authorization": `Bearer ${accessToken}`,
-                    },
-                });
-                const addressesData = await addressesResponse.json();
-                if (addressesData.status && addressesData.data) {
-                    setAddresses(addressesData.data);
-                    setPlaces(addressesData.data);
-                    setFavorites(addressesData.data.filter(addr => addr.is_favorite === true));
-                }
-            } else {
-                toast.error(data.message || "فشل تحديث العنوان");
-            }
-        } catch (error) {
-            toast.error("حدث خطأ أثناء تحديث العنوان");
-        } finally {
-            setIsUpdatingAddress(false);
-        }
-    };
-
-    const handleAdd = () => {
-        if (newName.trim()) {
-            setPlaces([newName, ...places]);
-            setNewName("");
-            setIsAdding(false);
-            setShowSavedPlaces(true);
-        }
-    };
-
-    const handleUpdate = (index) => {
-        if (editValue.trim()) {
-            const updated = [...places];
-            updated[index] = editValue;
-            setPlaces(updated);
-            setEditingIndex(null);
-        }
-    };
-
-    const handleDelete = (index) => {
-        const placeName = places[index];
-        const toastId = toast(
-            (t) => (
-                <div className="flex flex-col gap-3 p-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                            <FaRegTrashCan className="w-5 h-5 text-destructive" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-foreground">حذف المكان المحفوظ</p>
-                            <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف "{placeName}"؟</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-secondary hover:bg-secondary/80 text-foreground transition-all"
-                        >
-                            إلغاء
-                        </button>
-                        <button
-                            onClick={() => {
-                                setPlaces(places.filter((_, i) => i !== index));
-                                toast.dismiss(t.id);
-                                toast.success("تم حذف المكان المحفوظ بنجاح", {
-                                    icon: "✓",
-                                    style: {
-                                        background: "#579BE8",
-                                        color: "#fff",
-                                        borderRadius: "12px",
-                                        padding: "16px",
-                                    },
-                                });
-                            }}
-                            className="px-4 py-2 rounded-xl font-bold text-sm bg-destructive hover:bg-destructive/90 text-white transition-all"
-                        >
-                            تأكيد الحذف
-                        </button>
-                    </div>
-                </div>
-            ),
-            {
-                duration: 5000,
+            toast.dismiss(loadingToast);
+            toast.error("يرجى تسجيل الدخول أولاً", {
+                icon: <FaExclamationTriangle className="w-5 h-5" />,
                 style: {
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "16px",
+                    background: "#F75A65",
+                    color: "#fff",
+                    borderRadius: "12px",
                     padding: "16px",
-                    maxWidth: "400px",
                 },
+            });
+            return;
+        }
+
+        const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${addressId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        toast.dismiss(loadingToast);
+
+        if (response.ok) {
+            // Remove the address from local state
+            setAddresses(prevAddresses => prevAddresses.filter(addr => addr.id !== addressId));
+            setPlaces(prevPlaces => prevPlaces.filter(place => {
+                if (typeof place === 'object' && place.id) {
+                    return place.id !== addressId;
+                }
+                return true;
+            }));
+            setFavorites(prevFavorites => prevFavorites.filter(fav => {
+                if (typeof fav === 'object' && fav.id) {
+                    return fav.id !== addressId;
+                }
+                return true;
+            }));
+
+            // Close popup if the deleted address was selected
+            if (selectedAddress?.id === addressId) {
+                setShowAddressPopup(false);
+                setSelectedAddress(null);
             }
-        );
-    };
+
+            toast.success(data.message || "تم حذف العنوان بنجاح", {
+                icon: <FaCheckCircle className="w-5 h-5" />,
+                style: {
+                    background: "#579BE8",
+                    color: "#fff",
+                    borderRadius: "12px",
+                    padding: "16px",
+                },
+            });
+        } else {
+            const errorMessage = data.message || data.error || 'فشل حذف العنوان. يرجى المحاولة مرة أخرى';
+            toast.error(errorMessage, {
+                icon: <FaExclamationTriangle className="w-5 h-5" />,
+                style: {
+                    background: "#F75A65",
+                    color: "#fff",
+                    borderRadius: "12px",
+                    padding: "16px",
+                },
+            });
+        }
+    } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error('Error deleting address:', error);
+        toast.error("حدث خطأ أثناء حذف العنوان. يرجى المحاولة مرة أخرى", {
+            icon: <FaExclamationTriangle className="w-5 h-5" />,
+            style: {
+                background: "#F75A65",
+                color: "#fff",
+                borderRadius: "12px",
+                padding: "16px",
+            },
+        });
+    }
+};
 
     const handleToggleLocationSharing = () => {
         const newState = !locationSharingActive;
@@ -1522,85 +1469,92 @@ export default function MyProfilePage() {
                                 <FaChevronLeft className={`text-muted-foreground group-hover:text-primary transition-transform duration-300 text-lg sm:text-xl ${showSavedPlaces ? "rotate-[-90deg]" : ""}`} />
                             </div>
                         </div>
-                        {showSavedPlaces && (
-                            <div id="savedPlacesItem" className="flex flex-col gap-2 sm:gap-3 mt-2">
-                                {/* View All Addresses Link */}
-                                <Link
-                                    href="/myProfile/addresses"
-                                    className="w-full p-3 sm:p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl sm:rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-                                >
-                                    <FaMapMarkerAlt className="w-4 h-4" />
-                                    عرض جميع العناوين
-                                </Link>
+                       {showSavedPlaces && (
+    <div id="savedPlacesItem" className="flex flex-col gap-2 sm:gap-3 mt-2">
+        {/* View All Addresses Link */}
+        <Link
+            href="/myProfile/addresses"
+            className="w-full p-3 sm:p-4 bg-gradient-to-r from-[#579BE8] to-[#124987] text-white rounded-xl sm:rounded-xl hover:from-[#4a8dd8] hover:to-[#0f3d6f] transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+        >
+            <FaMapMarkerAlt className="w-4 h-4" />
+            عرض جميع العناوين
+        </Link>
 
-                                {loadingAddresses ? (
-                                    <div className="flex items-center justify-center p-4">
-                                        <Spinner />
+        {loadingAddresses ? (
+            <div className="flex items-center justify-center p-4">
+                <Spinner />
+            </div>
+        ) : places.length === 0 ? (
+            <div className="text-center p-4 text-muted-foreground text-sm">
+                لا توجد أماكن محفوظة
+            </div>
+        ) : (
+            <>
+                {places
+                    .filter((_, i) => i < 3 || showAllPlaces)
+                    .map((place, i) => {
+                        const uniqueKey = typeof place === 'object' && place.id 
+                            ? `place-${place.id}` 
+                            : `place-${i}-${typeof place === 'string' ? place : place.name || 'unknown'}`;
+                        
+                        return typeof place === 'object' && place.id ? (
+                            <div 
+                                key={uniqueKey} 
+                                className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer group"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                            {place.name || place}
+                                        </h4>
+                                        {place.is_favorite && (
+                                            <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                        )}
                                     </div>
-                                ) : places.length === 0 ? (
-                                    <div className="text-center p-4 text-muted-foreground text-sm">
-                                        لا توجد أماكن محفوظة
-                                    </div>
-                                ) : (
-                                    places
-                                        .filter((_, i) => i < 5 || showAllPlaces)
-                                        .map((place, i) => {
-                                            const uniqueKey = typeof place === 'object' && place.id 
-                                                ? `place-${place.id}` 
-                                                : `place-${i}-${typeof place === 'string' ? place : place.name || 'unknown'}`;
-                                            
-                                            return typeof place === 'object' && place.id ? (
-                                                <div 
-                                                    key={uniqueKey} 
-                                                    onClick={() => {
-                                                        if (typeof fetchAddressDetails === 'function') {
-                                                            fetchAddressDetails(place.id);
-                                                        }
-                                                    }}
-                                                    className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
-                                                >
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
-                                                                {place.name || place}
-                                                            </h4>
-                                                            {place.is_favorite && (
-                                                                <FaStar className="text-[#579BE8] w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                                            )}
-                                                        </div>
-                                                        {place.address && (
-                                                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                                                                {place.address}
-                                                            </p>
-                                                        )}
-                                                        {place.additional_info && (
-                                                            <p className="text-xs text-muted-foreground/70 mt-1">
-                                                                {place.additional_info}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
-                                                            {typeof place === 'string' ? place : place.name}
-                                                        </h4>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                )}
-                                {places.length > 5 && (
-                                    <button
-                                        onClick={() => setShowAllPlaces(!showAllPlaces)}
-                                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-xl sm:rounded-xl transition-all"
-                                    >
-                                        {showAllPlaces ? "عرض أقل" : "عرض المزيد"}
-                                    </button>
-                                )}
+                                    {place.address && (
+                                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                            {place.address}
+                                        </p>
+                                    )}
+                                    {place.additional_info && (
+                                        <p className="text-xs text-muted-foreground/70 mt-1">
+                                            {place.additional_info}
+                                        </p>
+                                    )}
+                                </div>
+                                {/* Delete button */}
+                                <button
+                                    onClick={(e) => handleDeleteAddress(place.id, place.name || 'العنوان', e)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400"
+                                    title="حذف العنوان"
+                                >
+                                    <FaTrashAlt className="w-4 h-4" />
+                                </button>
                             </div>
-                        )}
+                        ) : (
+                            <div key={uniqueKey} className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all">
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-xs sm:text-sm md:text-base text-foreground truncate">
+                                        {typeof place === 'string' ? place : place.name}
+                                    </h4>
+                                </div>
+                                {/* No delete button for non-object places */}
+                            </div>
+                        );
+                    })}
+                
+                {places.length > 3 && (
+                    <button
+                        onClick={() => setShowAllPlaces(!showAllPlaces)}
+                        className="text-[#579BE8] font-bold text-xs sm:text-sm mt-2 hover:underline cursor-pointer w-fit mx-auto px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#579BE8]/10 rounded-xl sm:rounded-xl transition-all"
+                    >
+                        {showAllPlaces ? "عرض أقل" : "عرض المزيد"}
+                    </button>
+                )}
+            </>
+        )}
+    </div>
+)}
 
                         {/* Favorite Places */}
                         <div
@@ -1643,11 +1597,7 @@ export default function MyProfilePage() {
                                             return typeof fav === 'object' && fav.id ? (
                                                 <div 
                                                     key={uniqueKey} 
-                                                    onClick={() => {
-                                                        if (typeof fetchAddressDetails === 'function') {
-                                                            fetchAddressDetails(fav.id);
-                                                        }
-                                                    }}
+                                                   
                                                     className="flex items-start justify-between gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-secondary/30 border border-border/50 rounded-xl sm:rounded-xl fade-in-up hover:bg-secondary/40 hover:border-primary/30 transition-all cursor-pointer"
                                                 >
                                                     <div className="flex-1 min-w-0">
@@ -1909,29 +1859,7 @@ export default function MyProfilePage() {
                                         </div>
 
                                         {/* Coordinates Grid */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
-                                                <label className="text-sm font-bold text-foreground mb-3 block">خط العرض</label>
-                                                <Input
-                                                    type="text"
-                                                    value={editAddressForm.latitude}
-                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, latitude: e.target.value }))}
-                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl font-mono"
-                                                    placeholder="24.7136"
-                                                />
-                                            </div>
-
-                                            <div className="bg-secondary/30 rounded-xl p-5 border border-border/50">
-                                                <label className="text-sm font-bold text-foreground mb-3 block">خط الطول</label>
-                                                <Input
-                                                    type="text"
-                                                    value={editAddressForm.longitude}
-                                                    onChange={(e) => setEditAddressForm(prev => ({ ...prev, longitude: e.target.value }))}
-                                                    className="w-full bg-white dark:bg-card border-2 border-border/50 focus:border-[#579BE8] rounded-xl font-mono"
-                                                    placeholder="46.6753"
-                                                />
-                                            </div>
-                                        </div>
+                                   
 
                                         {/* Type and Favorite */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2097,23 +2025,7 @@ export default function MyProfilePage() {
                                         )}
 
                                         {/* Coordinates Card */}
-                                        {(selectedAddress.latitude && selectedAddress.longitude) && (
-                                            <div className="bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-xl p-5 border border-border/50">
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <div className="w-8 h-8 rounded-xl bg-[#579BE8]/10 flex items-center justify-center">
-                                                        <FaMapMarkerAlt className="text-[#579BE8] w-4 h-4" />
-                                                    </div>
-                                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">الإحداثيات الجغرافية</p>
-                                                </div>
-                                                <div className="bg-white dark:bg-card rounded-xl p-3 border border-border/40">
-                                                    <p className="text-sm font-mono text-foreground text-center">
-                                                        <span className="text-muted-foreground">Lat:</span> {selectedAddress.latitude} 
-                                                        <span className="mx-2 text-muted-foreground">|</span>
-                                                        <span className="text-muted-foreground">Lng:</span> {selectedAddress.longitude}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
+                                     
 
                                         {/* Additional Info Card */}
                                         {selectedAddress.additional_info && (

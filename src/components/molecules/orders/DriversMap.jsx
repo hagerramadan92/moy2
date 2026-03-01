@@ -587,7 +587,7 @@ export default function DriversMap({
                             <div className="text-right">
                                 <strong className="block text-sm mb-1">📍 موقعك الحالي</strong>
                                 <span className="text-xs text-gray-700 block mb-1">موقع التوصيل</span>
-                                <span className="text-xs text-blue-600 block mb-1">
+                                <span className="text-xs text-[#579BE8]  block mb-1">
                                     {validCenter.lat.toFixed(8)}, {validCenter.lng.toFixed(8)}
                                 </span>
                                 <span className="text-xs text-gray-400">
@@ -669,7 +669,7 @@ export default function DriversMap({
                                     </span>
                                     <button
                                         onClick={handleMarkerClick}
-                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium underline mt-1"
+                                        className="text-xs text-[#579BE8]  hover:text-blue-800 font-medium underline mt-1"
                                     >
                                         عرض الملف الشخصي
                                     </button>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt, FaEye } from "react-icons/fa";
+import { FaMapMarkerAlt, FaStar, FaChevronLeft, FaBuilding, FaCheckCircle, FaInfoCircle, FaPlus, FaCrosshairs, FaSearchLocation, FaHome, FaBriefcase, FaMapMarkedAlt, FaEye, FaTrashAlt, FaExclamationTriangle } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import { BiCurrentLocation } from "react-icons/bi";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 import Spinner from "@/components/ui/spinner";
 import { motion } from "framer-motion";
 import dynamic from 'next/dynamic';
+import Swal from "sweetalert2";
 
 // Dynamic import for Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -357,6 +358,8 @@ export default function AddressesPage() {
     const [loadingAddressDetails, setLoadingAddressDetails] = useState(false);
     const [isEditingAddress, setIsEditingAddress] = useState(false);
     const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+    const [showAllAddresses, setShowAllAddresses] = useState(false);
+    const [deletingAddressId, setDeletingAddressId] = useState(null);
     const [editAddressForm, setEditAddressForm] = useState({
         name: 'البيت',
         address: 'الرياض - حي النرجس',
@@ -459,6 +462,120 @@ export default function AddressesPage() {
             toast.error("حدث خطأ أثناء جلب تفاصيل العنوان");
         } finally {
             setLoadingAddressDetails(false);
+        }
+    };
+
+       const handleDeleteAddress = async (addressId, addressName, event) => {
+      
+        
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: "حذف العنوان",
+            text: `هل أنت متأكد من حذف العنوان `,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "نعم، حذف",
+            cancelButtonText: "إلغاء",
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#6b7280",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            width: window.innerWidth < 640 ? '90%' : '32rem',
+            customClass: {
+                popup: "rounded-2xl border border-border shadow-xl mx-4",
+                confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 ml-2 text-sm sm:text-base",
+                cancelButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+                title: "text-sm text-right",
+                htmlContainer: "text-sm sm:text-base text-right"
+            }
+        });
+    
+        if (!result.isConfirmed) return;
+    
+        // Show loading toast
+        const loadingToast = toast.loading("جاري حذف العنوان...", {
+            style: {
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "16px",
+            },
+        });
+    
+        try {
+            const accessToken = localStorage.getItem("accessToken");
+            
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يرجى تسجيل الدخول أولاً", {
+                    icon: <FaExclamationTriangle className="w-5 h-5" />,
+                    style: {
+                        background: "#F75A65",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+                return;
+            }
+    
+            const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${addressId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+    
+            const data = await response.json().catch(() => ({}));
+    
+            toast.dismiss(loadingToast);
+    
+            if (response.ok) {
+                // Remove the address from local state
+                setAddresses(prevAddresses => prevAddresses.filter(addr => addr.id !== addressId));
+             
+    
+                // Close popup if the deleted address was selected
+                if (selectedAddress?.id === addressId) {
+                    setShowAddressPopup(false);
+                    setSelectedAddress(null);
+                }
+    
+                toast.success(data.message || "تم حذف العنوان بنجاح", {
+                    icon: <FaCheckCircle className="w-5 h-5" />,
+                    style: {
+                        background: "#579BE8",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+            } else {
+                const errorMessage = data.message || data.error || 'فشل حذف العنوان. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    icon: <FaExclamationTriangle className="w-5 h-5" />,
+                    style: {
+                        background: "#F75A65",
+                        color: "#fff",
+                        borderRadius: "12px",
+                        padding: "16px",
+                    },
+                });
+            }
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            console.error('Error deleting address:', error);
+            toast.error("حدث خطأ أثناء حذف العنوان. يرجى المحاولة مرة أخرى", {
+                icon: <FaExclamationTriangle className="w-5 h-5" />,
+                style: {
+                    background: "#F75A65",
+                    color: "#fff",
+                    borderRadius: "12px",
+                    padding: "16px",
+                },
+            });
         }
     };
 
@@ -758,6 +875,9 @@ export default function AddressesPage() {
         toast.success(`تم تعيين الاسم: ${name}`);
     };
 
+    // Get displayed addresses based on showAllAddresses
+    const displayedAddresses = showAllAddresses ? addresses : addresses.slice(0, 3);
+
     // Render display mode (read-only) similar to edit form
     const renderDisplayMode = () => (
         <div className="space-y-5">
@@ -937,13 +1057,23 @@ export default function AddressesPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Addresses List */}
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 ">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 p-4 sm:p-6 h-full min-h-[600px] flex flex-col"
+                        className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 p-4 sm:p-6 h-fit min-h-[600px] flex flex-col"
                     >
-                        <h2 className="text-lg font-bold text-foreground mb-4">قائمة العناوين</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-foreground">قائمة العناوين</h2>
+                            {addresses.length > 3 && (
+                                <button
+                                    onClick={() => setShowAllAddresses(!showAllAddresses)}
+                                    className="text-sm px-3 py-1 bg-[#579BE8]/10 text-[#579BE8] rounded-lg hover:bg-[#579BE8]/20 transition-colors font-bold"
+                                >
+                                    {showAllAddresses ? 'عرض أقل' : `عرض المزيد (${addresses.length - 3})`}
+                                </button>
+                            )}
+                        </div>
                         
                         {loadingAddresses ? (
                             <div className="flex items-center justify-center py-12 flex-1">
@@ -963,18 +1093,20 @@ export default function AddressesPage() {
                             </div>
                         ) : (
                             <div className="space-y-3 flex-1 overflow-y-auto">
-                                {addresses.map((address) => (
+                                {displayedAddresses.map((address) => (
                                     <div
                                         key={address.id}
-                                        onClick={() => fetchAddressDetails(address.id)}
-                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                        className={`p-4 rounded-xl border-2 transition-all ${
                                             selectedAddress?.id === address.id
                                                 ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8] shadow-lg'
                                                 : 'bg-secondary/30 border-border/50 hover:border-[#579BE8]/50 hover:shadow-md'
                                         }`}
                                     >
                                         <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1 min-w-0">
+                                            <div 
+                                                className="flex-1 min-w-0 cursor-pointer"
+                                                onClick={() => fetchAddressDetails(address.id)}
+                                            >
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <h4 className="font-bold text-sm text-foreground truncate">
                                                         {address.name}
@@ -996,9 +1128,31 @@ export default function AddressesPage() {
                                                     </span>
                                                 )}
                                             </div>
+                                            <button
+                                                onClick={() => handleDeleteAddress(address.id)}
+                                                disabled={deletingAddressId === address.id}
+                                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                                                title="حذف العنوان"
+                                            >
+                                                {deletingAddressId === address.id ? (
+                                                    <Spinner size="sm" />
+                                                ) : (
+                                                    <FaTrashAlt className="w-4 h-4" />
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
+                                
+                                {!showAllAddresses && addresses.length > 3 && (
+                                    <button
+                                        onClick={() => setShowAllAddresses(true)}
+                                        className="w-full p-3 bg-[#579BE8]/5 border-2 border-dashed border-[#579BE8]/30 rounded-xl text-[#579BE8] hover:bg-[#579BE8]/10 transition-all font-bold flex items-center justify-center gap-2"
+                                    >
+                                        <FaEye className="w-4 h-4" />
+                                        عرض {addresses.length - 3} عنوان إضافي
+                                    </button>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -1009,7 +1163,7 @@ export default function AddressesPage() {
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 overflow-hidden h-full min-h-[600px] flex flex-col"
+                        className="bg-white dark:bg-card rounded-2xl shadow-xl border border-border/60 overflow-hidden h-fit min-h-[600px] flex flex-col"
                     >
                         {!selectedAddress && !isAddingNewAddress ? (
                             <div className="p-12 text-center flex-1 flex flex-col items-center justify-center">

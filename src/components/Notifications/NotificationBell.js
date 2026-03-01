@@ -312,7 +312,7 @@ const NotificationBell = () => {
             <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg sticky top-0">
               <div className="flex justify-between items-center">
                 <h3 className="text-[16px] md:text-lg font-semibold text-gray-800 flex items-center">
-                  <FaBell className="h-4 w-4 ml-2 text-blue-600" />
+                  <FaBell className="h-4 w-4 ml-2 text-[#579BE8] " />
                   الإشعارات
                   {unreadCount > 0 && (
                     <span className="mr-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
@@ -359,7 +359,7 @@ const NotificationBell = () => {
                     setIsOpen(false);
                     window.location.href = '/settings/notifications';
                   }}
-                  className="flex items-center text-xs text-blue-600 hover:text-blue-800"
+                  className="flex items-center text-xs text-[#579BE8]  hover:text-blue-800"
                 >
                   <FaCog className="h-3 w-3 ml-1" />
                   إعدادات الإشعارات
@@ -442,7 +442,7 @@ const NotificationBell = () => {
                           <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-2">
                               {notification.data?.sender && (
-                                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                                <span className="text-xs text-[#579BE8]  bg-blue-50 px-2 py-0.5 rounded">
                                   {notification.data.sender}
                                 </span>
                               )}
@@ -476,7 +476,7 @@ const NotificationBell = () => {
                     setIsOpen(false);
                     window.location.href = '/notifications';
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-800 w-full text-center font-medium flex items-center justify-center group"
+                  className="text-sm text-[#579BE8]  hover:text-blue-800 w-full text-center font-medium flex items-center justify-center group"
                 >
                   <span>عرض جميع الإشعارات</span>
                   <FaBell className="h-4 w-4 mr-2 transition-transform group-hover:translate-x-1" />
@@ -492,7 +492,7 @@ const NotificationBell = () => {
                           setIsOpen(false);
                           window.location.href = '/settings/notifications';
                         }}
-                        className="text-blue-600 hover:text-blue-800 underline"
+                        className="text-[#579BE8]  hover:text-blue-800 underline"
                       >
                         إعدادات الإشعارات
                       </button>

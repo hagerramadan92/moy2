@@ -867,11 +867,11 @@ export default function AvailableDriversContent({ onBack }) {
               
               <div className="space-y-4">
                 <button
-                  onClick={onBack}
+                     onClick={() => router.push('/')}
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:from-blue-700 hover:to-indigo-700 transition"
                 >
                   <ChevronLeft className="w-5 h-5 rotate-180" />
-                  العودة
+                  العودة للرئيسية
                 </button>
                 
                 <button
@@ -1021,11 +1021,11 @@ export default function AvailableDriversContent({ onBack }) {
             className="flex items-center justify-between mb-4 sm:mb-6 gap-2"
           >
             <button 
-              onClick={onBack}
+                 onClick={() => router.push('/')}
               className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-[#579BE8] transition-all font-medium px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-[#579BE8]/5 text-sm sm:text-base"
             >
               <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 rotate-180" />
-              <span className="hidden sm:inline">العودة</span>
+              <span className="hidden sm:inline">العودة للرئيسية</span>
             </button>
 
             <div className="flex items-center gap-2 sm:gap-4">

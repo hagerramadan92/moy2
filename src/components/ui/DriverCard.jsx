@@ -100,7 +100,7 @@ export default function DriverCard({
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-[#579BE8] " />
               <span className="text-xs text-gray-700">الوقت المتوقع</span>
             </div>
             <p className="font-bold text-gray-900">{deliveryTime}</p>
