@@ -255,7 +255,7 @@ export default function StatsSection({ data }) {
         </motion.div>
 
         {/* Stats Grid - One Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 lg:gap-6">
           {stats.map((stat, index) => (
             <StatCard key={index} stat={stat} index={index} delay={index * 0.1} icon={stat.icon} />
           ))}

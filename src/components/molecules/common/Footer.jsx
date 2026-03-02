@@ -199,7 +199,7 @@ export default function Footer() {
             <div className="flex flex-col items-center text-center gap-6 max-w-4xl">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-200">
-                  جميع الحقوق محفوظة. © 2024 WhiteMyah.
+                  جميع الحقوق محفوظة. © 2026 WhiteMyah.
                 </p>
                 <p className="text-xs text-gray-400 leading-relaxed underline-offset-4 decoration-gray-500/50">
                   علامة تجارية مسجلة. لا يجوز استخدام أي جزء من هذا الموقع أو التطبيق
@@ -208,13 +208,13 @@ export default function Footer() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-gray-400">
+              {/* <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-gray-400">
                 <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
                 <div className="w-1 h-1 rounded-full bg-gray-600 hidden sm:block" />
                 <Link href="/terms" className="hover:text-white transition-colors">Terms and Conditions</Link>
                 <div className="w-1 h-1 rounded-full bg-gray-600 hidden sm:block" />
                 <Link href="/privacy" className="hover:text-white transition-colors">Cookie Policy</Link>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

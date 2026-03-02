@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -72,19 +72,29 @@ export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = params.id;
+  
+  // استخدام useRef لتتبع ما إذا كان التتبع قد بدأ بالفعل
+  const trackingStartedRef = useRef(false);
+  
   const [driverData, setDriverData] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
   const [otherReason, setOtherReason] = useState("");
+  
+  // Pusher related states
+  const [pusherClient, setPusherClient] = useState(null);
+  const [pusherChannel, setPusherChannel] = useState(null);
+  const [lastPusherUpdate, setLastPusherUpdate] = useState(null);
+  const [pusherError, setPusherError] = useState(null);
+  const [isPusherConnected, setIsPusherConnected] = useState(false);
+
   const cancelReasons = [
-    // { id: 'change_mind', label: 'غيرت رأيي' },
-    // { id: 'wrong_order', label: 'طلبت بالخطأ' },
-    // { id: 'found_another', label: 'وجدت خدمة أفضل' },
     { id: "delivery_time", label: "وقت التوصيل طويل" },
     { id: "price_issue", label: "مشكلة في السعر" },
     { id: "other", label: "سبب آخر" },
   ];
+  
   // States
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +124,296 @@ export default function OrderDetailsPage() {
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [driverTrackingInterval, setDriverTrackingInterval] = useState(null);
 
+  // Determine order status
+  const isProcessing = orderData?.status?.name === "in-road" ||
+    orderData?.status?.name === "in_progress" ||
+    orderData?.status?.name === "assigned";
+  const isPending = orderData?.status?.name === "pendding";
+  const isCancelled = orderData?.status?.name === "cancelled";
+  const isScheduled = orderData?.status?.name === "scheduled";
+  const isConfirmed = orderData?.status?.name === "confirmed";
+  const isCompleted = orderData?.status?.name === "completed" ||
+    orderData?.status?.name === "delivered";
+
+  // دالة للحصول على التوكن
+  const getToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("accessToken");
+    }
+    return null;
+  };
+
+  // دالة للاستماع إلى تحديثات موقع السائق عبر Pusher
+  const setupPusherListener = useCallback(async (driverId) => {
+    if (!driverId) return;
+    
+    // إذا كان هناك اتصال سابق، نقوم بفصله
+    if (pusherChannel) {
+      pusherChannel.unbind_all();
+      pusherChannel.unsubscribe();
+    }
+    if (pusherClient) {
+      pusherClient.disconnect();
+    }
+
+    try {
+      // استيراد Pusher ديناميكياً
+      const PusherModule = await import('pusher-js');
+      const Pusher = PusherModule.default;
+
+      // إنشاء اتصال Pusher
+      const client = new Pusher('262509ce3ae27d53f4cd', {
+        cluster: 'eu',
+        authEndpoint: `${API_BASE_URL}/broadcasting/auth`,
+        auth: {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            Accept: 'application/json',
+          },
+        },
+        enabledTransports: ['ws', 'wss'],
+        forceTLS: true,
+      });
+
+      // مراقبة حالة الاتصال
+      client.connection.bind('connected', () => {
+        console.log('✅ Pusher connected successfully');
+        setIsPusherConnected(true);
+        setPusherError(null);
+        // toast.success('تم الاتصال بخدمة التتبع المباشر', {
+        //   duration: 2000,
+        //   icon: '🔌',
+        // });
+      });
+
+      client.connection.bind('disconnected', () => {
+        console.log('🔌 Pusher disconnected');
+        setIsPusherConnected(false);
+      });
+
+      client.connection.bind('error', (error) => {
+        console.error('❌ Pusher connection error:', error);
+        setIsPusherConnected(false);
+        setPusherError('فشل الاتصال بخدمة التتبع المباشر');
+      });
+
+      // الاشتراك في القناة الخاصة بالسائق
+      const channelName = `driver.${driverId}.location`;
+      console.log(`🎯 Subscribing to channel: ${channelName}`);
+      
+      const channel = client.subscribe(channelName);
+
+      // الاستماع إلى حدث تحديث الموقع
+      channel.bind('location.updated', (data) => {
+        console.log('📍 Driver location updated via Pusher:', data);
+        
+        if (data.location) {
+          const newLocation = [
+            parseFloat(data.location.lat),
+            parseFloat(data.location.lng)
+          ];
+          
+          // تحديث موقع السائق
+          setDriverLocation(newLocation);
+          
+          // تحديث معلومات إضافية في orderData
+          setOrderData(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              driver: {
+                ...prev.driver,
+                currect_location: {
+                  lat: data.location.lat,
+                  lng: data.location.lng,
+                  speed: data.location.speed,
+                  heading: data.location.heading,
+                  last_updated_at: data.timestamp
+                }
+              }
+            };
+          });
+          
+          // تحديث وقت آخر تحديث
+          setLastPusherUpdate(new Date());
+          
+          // إظهار toast عند أول تحديث (اختياري)
+          if (!lastPusherUpdate) {
+            // toast.success('تم استلام أول تحديث لموقع السائق', {
+            //   duration: 2000,
+            //   icon: '📍',
+            // });
+          }
+        }
+      });
+
+      // الاستماع إلى أخطاء الاشتراك
+      channel.bind('pusher:subscription_error', (error) => {
+        // console.error('❌ Pusher subscription error:', error);
+        setPusherError('فشل في الاشتراك في قناة تتبع السائق');
+        // toast.error('فشل في الاتصال بخدمة التتبع المباشر', {
+        //   duration: 3000,
+        // });
+      });
+
+      channel.bind('pusher:subscription_succeeded', () => {
+        // console.log(`✅ Successfully subscribed to ${channelName}`);
+        // toast.success('تم الاشتراك في تتبع السائق المباشر', {
+        //   duration: 2000,
+        //   icon: '📍',
+        // });
+      });
+
+      // تخزين المراجع
+      setPusherClient(client);
+      setPusherChannel(channel);
+
+    } catch (error) {
+      console.error('❌ Error setting up Pusher:', error);
+      setPusherError('حدث خطأ في إعداد خدمة التتبع المباشر');
+      // toast.error('فشل في إعداد خدمة التتبع المباشر', {
+      //   duration: 3000,
+      // });
+    }
+  }, [pusherClient, pusherChannel, lastPusherUpdate]);
+
+  // تحويل موقع السائق من البيانات الحقيقية
+  const parseDriverLocation = (driverData) => {
+    if (!driverData?.currect_location) return null;
+
+    try {
+      const location = driverData.currect_location;
+
+      if (location.lat && location.lng) {
+        return [parseFloat(location.lat), parseFloat(location.lng)];
+      }
+      else if (location.latitude && location.longitude) {
+        return [parseFloat(location.latitude), parseFloat(location.longitude)];
+      }
+    } catch (error) {
+      console.error("Error parsing driver location:", error);
+    }
+
+    return null;
+  };
+
+  // Initialize locations from real API data
+  const initializeLocations = (order) => {
+    if (order?.location?.latitude && order?.location?.longitude) {
+      setUserLocation([
+        parseFloat(order.location.latitude),
+        parseFloat(order.location.longitude),
+      ]);
+      console.log("User location found:", [
+        parseFloat(order.location.latitude),
+        parseFloat(order.location.longitude),
+      ]);
+    } else {
+      setUserLocation([24.7136, 46.6753]);
+      console.log("User location not available, using default location (Riyadh)");
+    }
+
+    if (order?.driver?.currect_location) {
+      const driverLoc = parseDriverLocation(order.driver);
+      if (driverLoc) {
+        console.log("Driver location found:", driverLoc);
+        setDriverLocation(driverLoc);
+      } else {
+        console.log("Failed to parse driver location");
+        setDriverLocation(null);
+      }
+    } else {
+      console.log("No driver location in order data");
+      setDriverLocation(null);
+    }
+  };
+
+  // Fetch driver's current location from API
+  const fetchDriverCurrentLocation = useCallback(async () => {
+    if (!orderData?.driver?.id) return;
+
+    const token = getToken();
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === true && data.data?.driver?.currect_location) {
+          const newLocation = parseDriverLocation(data.data.driver);
+          if (newLocation) {
+            setDriverLocation(newLocation);
+            setOrderData(data.data);
+            return true;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching driver location:", error);
+    }
+    return false;
+  }, [orderData?.driver?.id, orderId]);
+
+  // Start real-time tracking for active orders
+  const startRealTimeTracking = useCallback(() => {
+    // منع البدء المتكرر
+    if (trackingStartedRef.current) return;
+    
+    // إيقاف أي interval موجود
+    if (driverTrackingInterval) {
+      clearInterval(driverTrackingInterval);
+      setDriverTrackingInterval(null);
+    }
+
+    // إذا كان التتبع نشط والسائق موجود والطلب قيد التنفيذ
+    if (trackingActive && orderData?.driver && isProcessing) {
+      console.log('Starting real-time tracking...');
+      trackingStartedRef.current = true;
+      
+      // جلب الموقع الحالي مرة واحدة
+      fetchDriverCurrentLocation();
+      
+      // استخدام Pusher للتحديثات المباشرة
+      if (orderData.driver.id) {
+        setupPusherListener(orderData.driver.id);
+      }
+      
+      // استخدام interval كخطة احتياطية
+      // const interval = setInterval(() => {
+      //   if (!isPusherConnected) {
+      //     console.log('Using interval fallback for location tracking');
+      //     fetchDriverCurrentLocation();
+      //   }
+      // }, 30000);
+
+      // setDriverTrackingInterval(interval);
+    }
+  }, [trackingActive, orderData, isProcessing, isPusherConnected, setupPusherListener, fetchDriverCurrentLocation, driverTrackingInterval]);
+
+  // Stop real-time tracking
+  const stopRealTimeTracking = useCallback(() => {
+    console.log('Stopping real-time tracking...');
+    trackingStartedRef.current = false;
+    
+    if (driverTrackingInterval) {
+      clearInterval(driverTrackingInterval);
+      setDriverTrackingInterval(null);
+    }
+    
+    if (pusherChannel) {
+      pusherChannel.unbind_all();
+      pusherChannel.unsubscribe();
+    }
+    if (pusherClient) {
+      pusherClient.disconnect();
+    }
+  }, [driverTrackingInterval, pusherChannel, pusherClient]);
+
   const handleCancelOrder = async () => {
     if (!cancelReason) {
       toast.error("الرجاء اختيار سبب الإلغاء", {
@@ -141,7 +441,6 @@ export default function OrderDetailsPage() {
 
     setIsSubmittingCancel(true);
 
-    // Show loading toast
     const loadingToast = toast.loading("جاري إلغاء الطلب...", {
       style: {
         background: "#3b82f6",
@@ -175,10 +474,8 @@ export default function OrderDetailsPage() {
       }
 
       if (data.status === true) {
-        // Dismiss loading toast
         toast.dismiss(loadingToast);
 
-        // Success toast
         toast.success("تم إلغاء الطلب بنجاح", {
           icon: "✅",
           duration: 5000,
@@ -188,12 +485,10 @@ export default function OrderDetailsPage() {
           },
         });
 
-        // Close modal and refresh order data
         setShowCancelModal(false);
         setCancelReason("");
         setOtherReason("");
 
-        // Refresh order data to show cancelled status
         handleRefresh();
       } else {
         throw new Error(data.message || "حدث خطأ في إلغاء الطلب");
@@ -201,10 +496,8 @@ export default function OrderDetailsPage() {
     } catch (err) {
       console.error("Error cancelling order:", err);
 
-      // Dismiss loading toast
       toast.dismiss(loadingToast);
 
-      // Error toast
       toast.error(
         err.message || "حدث خطأ في إلغاء الطلب. يرجى المحاولة مرة أخرى.",
         {
@@ -223,121 +516,10 @@ export default function OrderDetailsPage() {
 
   // تحقق مما إذا كان يمكن إلغاء الطلب
   const canCancelOrder = () => {
-    // يمكن إلغاء الطلب فقط إذا كان في حالة pending أو confirmed
     return (
       orderData?.status?.name === "pendding" ||
       orderData?.status?.name === "confirmed"
     );
-  };
-  // دالة للحصول على التوكن
-  const getToken = () => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("accessToken");
-    }
-    return null;
-  };
-
-  // في ملف OrderDetailsPage.jsx - تعديل دالة parseDriverLocation
-
-  // تحويل موقع السائق من البيانات الحقيقية
-  const parseDriverLocation = (driverData) => {
-    if (!driverData?.currect_location) return null;
-
-    try {
-      const location = driverData.currect_location;
-
-      // البيانات تأتي مباشرة كـ object من الـ API
-      if (location.lat && location.lng) {
-        return [parseFloat(location.lat), parseFloat(location.lng)];
-      }
-      // إذا كانت القيم تحت أسماء مختلفة
-      else if (location.latitude && location.longitude) {
-        return [parseFloat(location.latitude), parseFloat(location.longitude)];
-      }
-    } catch (error) {
-      console.error("Error parsing driver location:", error);
-    }
-
-    return null;
-  };
-
-  // Initialize locations from real API data
-  // Initialize locations from real API data
-  const initializeLocations = (order) => {
-    // Set user location from order data (delivery location)
-    if (order?.location?.latitude && order?.location?.longitude) {
-      setUserLocation([
-        parseFloat(order.location.latitude),
-        parseFloat(order.location.longitude),
-      ]);
-    } else {
-      // Default to Riyadh if no location in order data
-      setUserLocation([24.7136, 46.6753]);
-    }
-
-    // Set driver location from real data if exists
-    if (order?.driver?.currect_location) {
-      const driverLoc = parseDriverLocation(order.driver);
-      if (driverLoc) {
-        console.log("Driver location found:", driverLoc); // للتأكد من وجود الموقع
-        setDriverLocation(driverLoc);
-      }
-    } else {
-      console.log("No driver location in order data");
-      setDriverLocation(null);
-    }
-  };
-
-  // Fetch driver's current location from API
-  const fetchDriverCurrentLocation = async () => {
-    if (!orderData?.driver?.id) return;
-
-    const token = getToken();
-    try {
-      // استخدام endpoint جلب تفاصيل الطلب الذي يحتوي على موقع السائق المحدث
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === true && data.data?.driver?.currect_location) {
-          const newLocation = parseDriverLocation(data.data.driver);
-          if (newLocation) {
-            setDriverLocation(newLocation);
-            setOrderData(data.data); // تحديث بيانات الطلب كاملة
-            return true;
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching driver location:", error);
-    }
-    return false;
-  };
-
-  // Start real-time tracking for active orders
-  // Start real-time tracking for active orders
-  const startRealTimeTracking = () => {
-    if (driverTrackingInterval) {
-      clearInterval(driverTrackingInterval);
-    }
-
-    if (trackingActive && orderData?.driver && isProcessing) {
-      // Fetch immediately
-      fetchDriverCurrentLocation();
-
-      // ثم كل 15 ثانية بدلاً من 30 ثانية لتحديث أسرع
-      const interval = setInterval(() => {
-        fetchDriverCurrentLocation();
-      }, 15000); // 15 ثانية
-
-      setDriverTrackingInterval(interval);
-    }
   };
 
   // Fetch order details from API
@@ -383,15 +565,12 @@ export default function OrderDetailsPage() {
         if (data.status === true) {
           setOrderData(data.data);
 
-          // Check if order has existing rating
           if (data.data.rating) {
             setExistingRating(data.data.rating);
           }
 
-          // Initialize locations from real order data
           initializeLocations(data.data);
 
-          // Show map for orders with driver or in progress
           if (
             data.data.driver ||
             data.data.status?.name === "in-road" ||
@@ -399,13 +578,6 @@ export default function OrderDetailsPage() {
             data.data.status?.name === "assigned"
           ) {
             setIsMapVisible(true);
-
-            // Start real-time tracking if driver exists
-            if (data.data.driver) {
-              setTimeout(() => {
-                startRealTimeTracking();
-              }, 1000);
-            }
           }
         } else {
           throw new Error(data.message || "حدث خطأ في جلب البيانات");
@@ -422,34 +594,27 @@ export default function OrderDetailsPage() {
       fetchOrderDetails();
     }
 
-    // Cleanup interval on unmount
+    // Cleanup on unmount
     return () => {
-      if (driverTrackingInterval) {
-        clearInterval(driverTrackingInterval);
-      }
+      stopRealTimeTracking();
     };
   }, [orderId]);
 
-  // Restart tracking when trackingActive changes
+  // Effect for starting/stopping tracking based on conditions
   useEffect(() => {
-    if (orderData?.driver) {
+    if (orderData?.driver && isProcessing && trackingActive) {
       startRealTimeTracking();
+    } else {
+      stopRealTimeTracking();
     }
-  }, [trackingActive]);
-
-  // Determine order status
-  const isProcessing =
-    orderData?.status?.name === "in-road" ||
-    orderData?.status?.name === "in_progress" ||
-    orderData?.status?.name === "assigned";
-  const isPending = orderData?.status?.name === "pendding";
-  const isCancelled = orderData?.status?.name === "cancelled";
-  const isScheduled = orderData?.status?.name === "scheduled";
-
-  const isConfirmed = orderData?.status?.name === "confirmed";
-  const isCompleted =
-    orderData?.status?.name === "completed" ||
-    orderData?.status?.name === "delivered"; // تعديل هنا
+    
+    // تنظيف عند تغير dependencies
+    return () => {
+      if (!trackingActive || !isProcessing) {
+        stopRealTimeTracking();
+      }
+    };
+  }, [trackingActive, orderData?.driver, isProcessing]); // إزالة الدوال من الـ dependencies
 
   // Reset rating form when modal closes
   useEffect(() => {
@@ -486,16 +651,7 @@ export default function OrderDetailsPage() {
       if (data.status === true) {
         setOrderData(data.data);
         setError(null);
-        // Re-initialize locations
         initializeLocations(data.data);
-
-        // Restart tracking if needed
-        if (
-          data.data.driver &&
-          (isProcessing || data.data.status?.name === "in-road")
-        ) {
-          startRealTimeTracking();
-        }
       } else {
         throw new Error(data.message);
       }
@@ -536,7 +692,7 @@ export default function OrderDetailsPage() {
   const getStatusStyle = (statusName) => {
     switch (statusName) {
       case "completed":
-      case "delivered": // إضافة delivered هنا
+      case "delivered":
         return "bg-gradient-to-r from-green-100 to-green-50 text-green-700 border border-green-200";
       case "in-road":
       case "in_progress":
@@ -549,25 +705,9 @@ export default function OrderDetailsPage() {
         return "bg-gradient-to-r from-sky-100 to-sky-50 text-sky-700 border border-sky-200";
       case "assigned":
         return "bg-gradient-to-r from-purple-100 to-purple-50 text-purple-700 border border-purple-200";
-
       default:
         return "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200";
     }
-  };
-
-  // Get status label
-  const getStatusLabel = (statusName) => {
-    const statusMap = {
-      pendding: "معلق",
-      confirmed: "مؤكد",
-      assigned: "معين للسائق",
-      in_progress: "قيد التنفيذ",
-      "in-road": "في الطريق",
-      completed: "مكتمل",
-      scheduled: "مجدول",
-      cancelled: "ملغي",
-    };
-    return statusMap[statusName] || statusName;
   };
 
   // Get status text
@@ -602,7 +742,6 @@ export default function OrderDetailsPage() {
 
     setIsSubmittingRating(true);
 
-    // Show loading toast
     const loadingToast = toast.loading("جاري إرسال التقييم...", {
       style: {
         background: "#3b82f6",
@@ -639,10 +778,8 @@ export default function OrderDetailsPage() {
       }
 
       if (data.status === true) {
-        // Dismiss loading toast
         toast.dismiss(loadingToast);
 
-        // Success toast
         toast.success("تم إرسال تقييمك بنجاح! شكراً لك", {
           icon: "🎉",
           duration: 5000,
@@ -652,11 +789,9 @@ export default function OrderDetailsPage() {
           },
         });
 
-        // Close modal and update
         setShowRatingModal(false);
         setShowSuccessToast(true);
 
-        // Update existing rating with new data
         setExistingRating({
           rating: userRating,
           comment: ratingComment,
@@ -670,10 +805,8 @@ export default function OrderDetailsPage() {
     } catch (err) {
       console.error("Error submitting rating:", err);
 
-      // Dismiss loading toast
       toast.dismiss(loadingToast);
 
-      // Error toast
       toast.error(
         err.message || "حدث خطأ في إرسال التقييم. يرجى المحاولة مرة أخرى.",
         {
@@ -870,7 +1003,7 @@ export default function OrderDetailsPage() {
 
   return (
     <>
-      {/* Success Toast - Mobile Responsive */}
+      {/* Success Toast */}
       {showSuccessToast && (
         <div className="fixed top-4 right-4 left-4 sm:right-6 sm:left-auto z-[200] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-in max-w-sm mx-auto sm:mx-0">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -891,7 +1024,7 @@ export default function OrderDetailsPage() {
         </div>
       )}
 
-      {/* View Rating Modal - Mobile Responsive */}
+      {/* View Rating Modal */}
       {showViewRatingModal && existingRating && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
           <div
@@ -998,7 +1131,7 @@ export default function OrderDetailsPage() {
         </div>
       )}
 
-      {/* Rating Modal - Mobile Responsive */}
+      {/* Rating Modal */}
       {showRatingModal && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">
           <div
@@ -1123,7 +1256,7 @@ export default function OrderDetailsPage() {
       )}
 
       <div className="space-y-4 sm:space-y-8 pb-6 sm:pb-12 px-3 sm:px-0">
-        {/* Header Section - Mobile Responsive */}
+        {/* Header Section */}
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg p-4 sm:p-6 ">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-8">
             <div className="flex items-start gap-4 sm:gap-6">
@@ -1200,11 +1333,11 @@ export default function OrderDetailsPage() {
           </div>
         </div>
 
-        {/* Main Content Grid - Mobile Responsive */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-8 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Status Card - Mobile Responsive */}
+            {/* Status Card */}
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
               {currentStatus === "in-road" && (
                 <div className="relative bg-gradient-to-br from-blue-50 to-white p-4 sm:p-6 ">
@@ -1271,16 +1404,6 @@ export default function OrderDetailsPage() {
                       <p className="text-sm sm:text-base  font-bold leading-relaxed text-gray-800">
                         {statusLabel} - {orderData.status?.name || "cancelled"}
                       </p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 lg:gap-4 w-full sm:w-auto">
-                      <button className="px-4 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base  shadow-lg hover:scale-105 transition-all w-full sm:w-auto">
-                        <BiRefresh className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 inline ml-1 sm:ml-2" />
-                        إعادة الطلب
-                      </button>
-                      <button className="px-4 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 bg-white border border-gray-200 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base  hover:bg-gray-50 transition-all shadow w-full sm:w-auto">
-                        <BiSupport className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 inline ml-1 sm:ml-2" />
-                        الدعم الفني
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -1351,7 +1474,7 @@ export default function OrderDetailsPage() {
                 </div>
               )}
 
-              {/* Order Details Footer - Mobile Responsive */}
+              {/* Order Details Footer */}
               <div className="p-4 sm:p-6  border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 ">
                   <div className="flex items-center gap-3  ">
@@ -1403,7 +1526,7 @@ export default function OrderDetailsPage() {
               </div>
             </div>
 
-            {/* Tracking Map Section - Mobile Responsive */}
+            {/* Tracking Map Section */}
             {isMapVisible && userLocation && (
               <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg p-4 sm:p-6 ">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6  gap-3 ">
@@ -1418,9 +1541,20 @@ export default function OrderDetailsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 self-end sm:self-auto">
+                  <div className="flex items-center gap-2 sm:gap-3  self-end sm:self-auto">
                     {orderData.driver && (
                       <>
+                        {/* مؤشر حالة اتصال Pusher */}
+                        {/* <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-purple-200">
+                          <span className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${isPusherConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                          {isPusherConnected ? 'متصل مباشر' : 'غير متصل'}
+                          {lastPusherUpdate && (
+                            <span className="text-[10px] text-purple-500 mr-1">
+                              {lastPusherUpdate.toLocaleTimeString('ar-SA')}
+                            </span>
+                          )}
+                        </div> */}
+                        
                         <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-blue-200">
                           <span
                             className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${trackingActive ? "bg-green-500 animate-pulse" : "bg-amber-500"}`}
@@ -1466,7 +1600,7 @@ export default function OrderDetailsPage() {
                   driverInfo={orderData.driver}
                 />
 
-                {orderData.driver && (
+                {/* {orderData.driver && (
                   <div className="mt-4 sm:mt-6 lg:mt-8 pt-4 sm:pt-6 lg:pt-8 border-t border-gray-200">
                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
                       <div className="bg-gradient-to-br from-gray-50 to-white p-3 sm:p-4 rounded-lg sm:rounded-xl lg:rounded-2xl text-center border border-gray-200">
@@ -1507,7 +1641,9 @@ export default function OrderDetailsPage() {
                             </p>
                             <p className="text-sm sm:text-base  font-bold text-blue-700">
                               {trackingActive && currentStatus === "in-road"
-                                ? "45 كم/س"
+                                ? orderData.driver?.currect_location?.speed 
+                                  ? `${Math.round(parseFloat(orderData.driver.currect_location.speed) * 3.6)} كم/س`
+                                  : "45 كم/س"
                                 : "--"}
                             </p>
                           </div>
@@ -1515,11 +1651,11 @@ export default function OrderDetailsPage() {
                       )}
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
             )}
 
-            {/* Show Map Button for orders without map visible - Mobile Responsive */}
+            {/* Show Map Button for orders without map visible */}
             {!isMapVisible && orderData.location && (
               <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl sm:rounded-3xl border border-blue-200 shadow-lg p-6 sm:p-8 lg:p-10 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mx-auto mb-4 sm:mb-6  border-3 sm:border-4 border-white shadow-lg">
@@ -1545,9 +1681,9 @@ export default function OrderDetailsPage() {
             )}
           </div>
 
-          {/* Right Column - Sidebar - Mobile Responsive */}
+          {/* Right Column - Sidebar */}
           <div className="xl:col-span-4 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Driver Card - Mobile Responsive */}
+            {/* Driver Card */}
             {orderData.driver ? (
               <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg p-4 sm:p-6  overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 bg-blue-500/10 rounded-full blur-2xl sm:blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -1692,7 +1828,7 @@ export default function OrderDetailsPage() {
                           )}
            
 
-            {/* Invoice Card - Mobile Responsive */}
+            {/* Invoice Card */}
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg p-4 sm:p-6  overflow-hidden relative">
               <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-blue-500/10 rounded-full blur-xl sm:blur-2xl -translate-y-1/2 translate-x-1/2"></div>
 
@@ -1722,11 +1858,9 @@ export default function OrderDetailsPage() {
                 )}
               </div>
             </div>
-
-
-            
           </div>
         </div>
+        
         {/* Cancel Order Modal */}
         {showCancelModal && (
           <div className="fixed inset-0 z-[210] flex items-center justify-center p-2 sm:p-4">

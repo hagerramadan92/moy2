@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaPhoneAlt, FaWater, FaChevronLeft, FaWhatsapp, FaSms } from "react-icons/fa";
+import { FaPhoneAlt, FaWater, FaChevronLeft, FaWhatsapp, FaSms, FaHome } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { IoWaterOutline } from "react-icons/io5";
 import { IoIosWater } from "react-icons/io";
@@ -124,6 +124,27 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-hidden">
+      {/* زر الرجوع للرئيسية */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+        className="absolute top-4 start-4 sm:top-6 sm:start-6 z-20"
+      >
+        <Link href="/">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-[#579BE8]/20 hover:bg-white transition-all duration-300 group"
+          >
+            <FaHome className="w-4 h-4 sm:w-5 sm:h-5 text-[#579BE8] group-hover:text-[#124987] transition-colors" />
+            <span className="text-sm sm:text-base font-medium text-[#579BE8] group-hover:text-[#124987] transition-colors">
+              الرئيسية
+            </span>
+          </motion.button>
+        </Link>
+      </motion.div>
+
       {/* Animated Water Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
         <motion.div
@@ -215,19 +236,11 @@ export default function Login() {
             <div className="space-y-3">
               {/* Country Display - Fixed Saudi Arabia */}
               <div className="flex gap-1">
-                <div className="">
-                  <div className="flex items-center justify-center sm:justify-start bg-gradient-to-br from-gray-50 to-white border-2 border-[#579BE8]/30 rounded-xl px-4 py-3 h-[55px] shadow-md">
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <p className="text-sm sm:text-base font-bold text-[#579BE8]">{SAUDI_ARABIA.dialCode}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                
 
                 {/* Phone input */}
                 <div className="relative flex-1">
-                  <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-400 z-10">
+                  <div className="absolute end-3 sm:end-4 top-1/2 -translate-y-1/2 text-gray-400 z-10">
                     <FaPhoneAlt className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
 
@@ -237,7 +250,7 @@ export default function Login() {
                     value={phoneNumber}
                     onChange={handlePhoneChange}
                     disabled={loading}
-                    className={`w-full h-[55px] pr-10 sm:pr-12 pl-4 text-right bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl font-bold text-[#579BE8] tracking-wider sm:tracking-widest shadow-md hover:shadow-lg transition-all duration-300 text-sm sm:text-base ${
+                    className={`w-full h-[55px] pl-10 sm:pl-12 pr-4 text-start bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl font-bold text-[#579BE8] tracking-wider sm:tracking-widest shadow-md hover:shadow-lg transition-all duration-300 text-sm sm:text-base ${
                       error
                         ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
                         : isValidPhone
@@ -248,6 +261,16 @@ export default function Login() {
                     }`}
                     inputMode="numeric"
                   />
+                </div>
+
+                <div className="">
+                  <div className="flex items-center justify-center sm:justify-start bg-gradient-to-br from-gray-50 to-white border-2 border-[#579BE8]/30 rounded-xl px-4 py-3 h-[55px] shadow-md">
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm sm:text-base font-bold text-[#579BE8]">{SAUDI_ARABIA.dialCode}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

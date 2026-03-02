@@ -49,39 +49,39 @@ export default function PaymentHistoryPage() {
     const payments = [
         {
             id: "PAY-001",
-            date: "15 نوفمبر 2024",
+            date: "15 نوفمبر 2026",
             amount: "750 ريال",
             status: "paid",
             method: "تحويل بنكي",
             invoiceNumber: "INV-2024-001",
-            description: "دفعة شهرية - نوفمبر 2024"
+            description: "دفعة شهرية - نوفمبر 2026"
         },
         {
             id: "PAY-002",
-            date: "15 أكتوبر 2024",
+            date: "15 أكتوبر 2026",
             amount: "750 ريال",
             status: "paid",
             method: "بطاقة ائتمانية",
             invoiceNumber: "INV-2024-002",
-            description: "دفعة شهرية - أكتوبر 2024"
+            description: "دفعة شهرية - أكتوبر 2026"
         },
         {
             id: "PAY-003",
-            date: "15 سبتمبر 2024",
+            date: "15 سبتمبر 2026",
             amount: "750 ريال",
             status: "paid",
             method: "محفظة إلكترونية",
             invoiceNumber: "INV-2024-003",
-            description: "دفعة شهرية - سبتمبر 2024"
+            description: "دفعة شهرية - سبتمبر 2026"
         },
         {
             id: "PAY-004",
-            date: "15 ديسمبر 2024",
+            date: "15 ديسمبر 2026",
             amount: "750 ريال",
             status: "pending",
             method: "تحويل بنكي",
             invoiceNumber: "INV-2024-004",
-            description: "دفعة شهرية - ديسمبر 2024"
+            description: "دفعة شهرية - ديسمبر 2026"
         },
     ];
 

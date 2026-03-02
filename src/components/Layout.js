@@ -121,7 +121,7 @@ export default function Layout({ children }) {
       <footer className="mt-12 border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-gray-700 text-sm">
-            <p>© 2024 نظام الإشعارات. جميع الحقوق محفوظة.</p>
+            <p>© 2026 نظام الإشعارات. جميع الحقوق محفوظة.</p>
             <p className="mt-2">تم التطوير باستخدام Next.js و Firebase</p>
           </div>
         </div>

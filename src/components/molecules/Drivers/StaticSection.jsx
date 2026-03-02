@@ -87,16 +87,16 @@ export default function StaticSection({ data }) {
 
             <div className="space-y-4 lg:space-y-6">
               {features.map((feature, index) => (
-                <div key={index} className="flex flex-row items-center gap-3 lg:gap-4 group">
+                <div key={index} className="flex flex-row items-center gap-2 group">
                   <div 
-                    className="flex-shrink-0 w-10 h-10 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl shadow-lg flex items-center justify-center bg-gradient-to-br from-[#579BE8] to-[#315782] group-hover:scale-110 transition-transform duration-300"
+                    className="flex-shrink-0 w-10 h-10 lg:w-12 lg:h-12 rounded-xl  shadow-lg flex items-center justify-center bg-gradient-to-br from-[#579BE8] to-[#315782] group-hover:scale-110 transition-transform duration-300"
                     style={{
                       boxShadow: '0px 4px 12px rgba(87, 155, 232, 0.3), 0px 2px 4px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     {feature.icon === "/Vector (14).png" ? (
                       <div 
-                        className="relative w-5 h-5 lg:w-7 lg:h-7 flex items-center justify-center"
+                        className="relative w-5 h-5 flex items-center justify-center"
                         style={{
                           border: '1.45px solid #FFFFFF',
                           borderRadius: '4px'
@@ -111,7 +111,7 @@ export default function StaticSection({ data }) {
                         />
                       </div>
                     ) : (
-                      <div className="relative w-5 h-5 lg:w-7 lg:h-7">
+                      <div className="relative w-5 h-5 ">
                         <Image
                           src={feature.icon}
                           alt={feature.title}
@@ -124,7 +124,7 @@ export default function StaticSection({ data }) {
                   </div>
 
                   <div className="flex-1 text-right">
-                    <h3 className="font-cairo font-semibold text-lg lg:text-2xl text-[#579BE8] mb-1 lg:mb-2">
+                    <h3 className="font-cairo font-semibold text-lg  text-[#579BE8] mb-1">
                       {feature.title}
                     </h3>
                     <p className="font-cairo font-normal text-lg lg:text-base text-gray-600">
@@ -153,7 +153,7 @@ export default function StaticSection({ data }) {
               {stats.map((stat, index) => (
                 <div 
                   key={index}
-                  className="rounded-xl lg:rounded-2xl p-3 lg:p-4 flex flex-col justify-between"
+                  className="rounded-xl p-3 flex flex-col justify-between"
                   style={{
                     background: 'rgba(255, 255, 255, 0.2)',
                     boxShadow: '0px 1px 4px 0px rgba(87, 155, 232, 0.25)',
@@ -163,7 +163,7 @@ export default function StaticSection({ data }) {
                     <span className="font-cairo font-normal text-xs lg:text-sm text-black text-right">
                       {stat.label}
                     </span>
-                    <span className="font-cairo font-normal text-base lg:text-xl text-black">
+                    <span className="font-cairo font-normal text-base text-black">
                       {stat.value}
                     </span>
                   </div>

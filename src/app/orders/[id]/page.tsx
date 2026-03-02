@@ -45,7 +45,7 @@ export default function OrderDetailsPage() {
             <div>
               <h3 className="text-lg font-semibold mb-2">التوقيت</h3>
               <div className="space-y-2">
-                <p><span className="font-medium">تاريخ الطلب:</span> 28 يناير 2024</p>
+                <p><span className="font-medium">تاريخ الطلب:</span> 28 يناير 2026</p>
                 <p><span className="font-medium">الوقت المتوقع:</span> 30 دقيقة</p>
               </div>
             </div>

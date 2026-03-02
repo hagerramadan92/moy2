@@ -13,15 +13,71 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useRouter } from 'next/navigation';
 import LoginFlowDialog from '@/components/molecules/order-now/LoginFlowDialog';
-import { waterApi } from "@/utils/api";
 
+// بيانات افتراضية للخدمات (مطابقة لشكل الداتا الحقيقية)
+const defaultServices = [
+  {
+    id: 1,
+    name: "٦ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 30",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: false
+  },
+  {
+    id: 2,
+    name: "١٢ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 30",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: false
+  },
+  {
+    id: 3,
+    name: "١٨ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 30",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: true // الأكثر طلبًا
+  },
+  {
+    id: 4,
+    name: "١٩ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 30",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: false
+  },
+  {
+    id: 5,
+    name: "٢٠ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 32",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: false
+  },
+  {
+    id: 6,
+    name: "٣٢ طن",
+    title: "افضل سعر",
+    start_price: "يبدأ من 30",
+    image_url: "/images/car.png",
+    is_active: 1,
+    is_popular: false
+  }
+];
 
 export default function AvailableSize() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // مش هنستخدم error في الـ UI
   const [swiper, setSwiper] = useState(null);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
@@ -57,7 +113,6 @@ export default function AvailableSize() {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // استخدام الرابط مباشرة هنا
         const response = await fetch('https://dashboard.waytmiah.com/api/v1/services');
@@ -70,16 +125,28 @@ export default function AvailableSize() {
 
         if (!mounted) return;
 
-        if (data?.status && Array.isArray(data.data)) {
-          setServices(data.data);
+        // معالجة البيانات الجاية من API
+        if (data?.status && Array.isArray(data.data) && data.data.length > 0) {
+          // تأكد من أن كل خدمة فيها البيانات المطلوبة
+          const validServices = data.data.filter(service => service.id && service.name);
+          
+          if (validServices.length > 0) {
+            setServices(validServices);
+          } else {
+            // لو البيانات مش صالحة، استخدم default
+            setServices(defaultServices);
+          }
         } else {
-          setServices([]);
-          setError(data?.message || "فشل تحميل السعات");
+          // لو مفيش بيانات، استخدم default
+          setServices(defaultServices);
         }
       } catch (err) {
+        // فقط سجل الخطأ في الكونسول للمطورين
         console.error("Error fetching services:", err);
-        setError("فشل تحميل السعات");
-        setServices([]);
+        // استخدم البيانات الافتراضية في حالة الخطأ
+        if (mounted) {
+          setServices(defaultServices);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -90,12 +157,11 @@ export default function AvailableSize() {
     return () => {
       mounted = false;
     };
-  }, []); // لا توجد dependencies لأننا نريد جلب البيانات مرة واحدة فقط
-
+  }, []);
 
   return (
     <section dir="rtl" className="py-8 sm:py-12 container mx-auto md:py-16 lg:py-20 bg-white">
-      <div className=" px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -104,12 +170,7 @@ export default function AvailableSize() {
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-8 md:mb-10"
         >
-          {/* <div className="inline-block mb-2 md:mb-3">
-            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
-              السعات المتاحة
-            </span>
-          </div> */}
-          <h2 className="text-xl sm:text-2xl md:text-3xl  font-black text-gray-900 mb-2 md:mb-3 leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 mb-2 md:mb-3 leading-tight">
             <span className="block text-[#579BE8]">اختر الوايت اللي تحتاجها</span>
           </h2>
           <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
@@ -120,15 +181,6 @@ export default function AvailableSize() {
             {loading ? (
               <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] gap-4">
                 <Spinner size="lg" />
-                {/* <p className="text-gray-700 text-sm sm:text-base">جاري التحميل...</p> */}
-              </div>
-            ) : error ? (
-              <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px] px-4">
-                <p className="text-red-600 text-sm sm:text-base text-center">خطأ في تحميل البيانات: {error}</p>
-              </div>
-            ) : services.length === 0 ? (
-              <div className="flex items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px] lg:min-h-[481px]">
-                <p className="text-gray-700 text-sm sm:text-base">لا توجد خدمات متاحة</p>
               </div>
             ) : (
               <Swiper
@@ -166,13 +218,25 @@ export default function AvailableSize() {
                 dir="rtl"
               >
                 {services.map((service, index) => {
-                  // Extract service data from API
-                  const serviceId = service.id || service._id || index;
+                  // استخراج بيانات الخدمة مع fallbacks
+                  const serviceId = service.id || index;
                   const capacity = service.name || `${index + 1} طن`;
-                  const description = service.description || service.title || "مناسب للاستخدامات المختلفة";
-                  const price = service.start_price || service.starting_price || service.price || service.cost || 120;
-                  const image = service.image || service.image_url || "/images/car.png";
-                  const isPopular = service.is_popular || service.most_requested || index === 2;
+                  const description = service.title || service.description || "مناسب للاستخدامات المختلفة";
+                  
+                  // معالجة السعر - التأكد من عرضه بشكل صحيح
+                  let priceDisplay = "يبدأ من 30 ريال";
+                  if (service.start_price) {
+                    // إذا كان السعر يبدأ بـ "يبدا من" نستخدمه كما هو
+                    if (typeof service.start_price === 'string' && service.start_price.includes('يبدا')) {
+                      priceDisplay = service.start_price;
+                    } else {
+                      priceDisplay = `يبدأ من ${service.start_price} ريال`;
+                    }
+                  }
+                  
+                  const image = service.image_url || "/images/car.png";
+                  // جعل الخدمة رقم 3 (الأكثر طلبًا) أو أي خدمة تحقق الشرط
+                  const isPopular = index === 2 || service.is_popular || service.most_requested;
                   
                   return (
                     <SwiperSlide key={serviceId}>
@@ -221,32 +285,26 @@ export default function AvailableSize() {
 
                           <h3
                             className={`
-                            text-base sm:text-xl md:text-2xl  font-bold mb-2 sm:mb-3 transition-all duration-300
-                            ${
-                              isCenterCard(index)
-                                ? "text-black"
-                                : "opacity-70"
-                            }
+                            text-base sm:text-xl md:text-2xl font-bold mb-2 sm:mb-3 transition-all duration-300
+                            ${isCenterCard(index) ? "text-black" : "opacity-70"}
                           `}
                           >
                             {capacity}
                           </h3>
 
-                          {/* <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
-                            {description}
-                          </p> */}
+                          {/* {description && (
+                            <p className="text-[#000000A6] text-sm sm:text-base md:text-[16.03px] mb-2 sm:mb-3">
+                              {description}
+                            </p>
+                          )} */}
 
                           <p
                             className={`
                             font-semibold text-sm sm:text-base md:text-lg lg:text-[20.58px] mb-0 transition-all duration-300
-                            ${
-                              isCenterCard(index)
-                                ? "text-[#5A9CF0]"
-                                : "text-[#5A9CF0]/70"
-                            }
+                            ${isCenterCard(index) ? "text-[#5A9CF0]" : "text-[#5A9CF0]/70"}
                           `}
                           >
-                            {typeof price === 'number' ? `يبدأ من ${price} ريال` : (`${price} ريال` || `يبدأ من 120 ريال`)}
+                            {priceDisplay}
                           </p>
                         </div>
 
@@ -255,30 +313,26 @@ export default function AvailableSize() {
                             w-full rounded-lg sm:rounded-xl py-3 sm:py-4 md:py-5 lg:py-6 
                             transition-all duration-300
                             font-semibold text-sm sm:text-base
-                            ${
-                              isCenterCard(index)
-                                ? "bg-[#5A9CF0] text-white hover:bg-[#4278be]"
-                                : "bg-[#579BE8] text-white hover:bg-[#4278be]"
+                            ${isCenterCard(index)
+                              ? "bg-[#5A9CF0] text-white hover:bg-[#4278be]"
+                              : "bg-[#579BE8] text-white hover:bg-[#4278be]"
                             }
                             mt-auto
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // استخدام serviceId كمعرف للخدمة المختارة
                             const selectedServiceId = serviceId;
                             
                             // Check if user is logged in
                             const accessToken = localStorage.getItem("accessToken");
                             if (accessToken) {
-                              // User is logged in, navigate to orders page with service ID
                               router.push(`/orders?waterSize=${encodeURIComponent(selectedServiceId)}`);
                             } else {
-                              // User is not logged in, open login dialog
-                              setIsLoginDialogOpen(true);
+                              router.push(`/login?redirect=/orders?waterSize=${encodeURIComponent(selectedServiceId)}`);
                             }
                           }}
                         >
-                          {"اطلب الآن"}
+                          اطلب الآن
                         </Button>
                       </div>
                     </SwiperSlide>
@@ -287,7 +341,7 @@ export default function AvailableSize() {
               </Swiper>
             )}
 
-            {!loading && !error && services.length > 0 && (
+            {!loading && services.length > 0 && (
               <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none z-20">
                 <button
                   className="swiper-button-next-custom pointer-events-auto absolute right-2 sm:right-3 md:right-4 transform translate-x-1/2 sm:translate-x-0
@@ -338,7 +392,7 @@ export default function AvailableSize() {
             )}
           </div>
 
-          {!loading && !error && services.length > 0 && (
+          {!loading && services.length > 0 && (
             <div className="flex justify-center items-center mt-6 sm:mt-8 gap-2">
               {services.map((_, index) => (
                 <button
