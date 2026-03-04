@@ -320,7 +320,7 @@ export default function CallToActionSection() {
           </motion.button>
 
           <motion.button
-            onClick={() => router.push("/myProfile/help-center")}
+            onClick={() => router.push("/myProfile/support")}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="group relative w-full sm:w-auto sm:min-w-[220px] md:min-w-[240px] h-12 sm:h-14 rounded-xl border border-[#94c5f8] bg-gradient-to-r from-[#579BE8] to-[#124987] text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"

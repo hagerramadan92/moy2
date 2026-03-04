@@ -236,7 +236,7 @@ export default function HomeCover({ data }) {
 						<h1 className="text-2xl sm:text-3xl md:text-4xl  font-bold mb-4 sm:mb-6">
 							{title || "أول تطبيق وايت مياه في المملكة"}
 						</h1>
-						<p className=" text-gray-700 sm:text-lg text-sm mb-6 sm:mb-8 text-center md:text-right">
+						<p className=" text-white sm:text-lg text-sm mb-6 sm:mb-8 text-center md:text-right">
 							{subtitle || " أطلب الحجم اللي تبيها و بتوصلك وين ما كنت "}
 						</p>
 						{image && (

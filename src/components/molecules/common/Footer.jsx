@@ -199,7 +199,7 @@ export default function Footer() {
             <div className="flex flex-col items-center text-center gap-6 max-w-4xl">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-200">
-                  جميع الحقوق محفوظة. © 2026 WhiteMyah.
+                  جميع الحقوق محفوظة. © 2026 وايت مياه.
                 </p>
                 <p className="text-xs text-gray-400 leading-relaxed underline-offset-4 decoration-gray-500/50">
                   علامة تجارية مسجلة. لا يجوز استخدام أي جزء من هذا الموقع أو التطبيق

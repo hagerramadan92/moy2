@@ -263,7 +263,7 @@ export default function DriversPage() {
         {/* <StartJourneySection/> */}
         <HowToUseAppSection />
         <AppPromotionSectionDriver />
-        <CallToActionSection />
+        {/* <CallToActionSection /> */}
         <Footer/>
       </main>
     );
@@ -280,7 +280,7 @@ export default function DriversPage() {
       {/* <StartJourneySection/> */}
       <HowToUseAppSection />
       <AppPromotionSection/>
-      <CallToActionSection />
+      {/* <CallToActionSection /> */}
       <Footer/>
     </main>
   );

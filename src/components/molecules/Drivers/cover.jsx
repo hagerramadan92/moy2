@@ -82,10 +82,10 @@ export default function Cover({ data }) {
                 انضم لاكثر من 500 سائق نشط
               </span>
             </div>
-          <h2 className="text-lg md:text-2xl text-white font-bold mb-3">
+          <h2 className="text-lg md:text-[1.8rem] text-white font-bold mb-3">
             {title || "احصل علي دخل اضافي من توصيل المياه"}
           </h2>
-          <p className="text-lg text-gray-700 mb-4 w-100 max-w-md">
+          <p className="text-lg text-white mb-4 w-100 max-w-md">
             {description || "انضم الينا و أحصل علي دخل مضمون بخطوات بسيطة و مرونة كاملة في العمل ."}
           </p>
           <AppDownloadButtons userType="driver" />

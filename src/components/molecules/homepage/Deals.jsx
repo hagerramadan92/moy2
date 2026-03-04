@@ -27,8 +27,8 @@ export default function Deals() {
     {
       id: 2,
       title: "دعم مخصص",
-      subtitle: "24/7 علي مدار الساعة",
-      description: "  متخصص على مدار الساعة للأفراد و الشركات",
+      subtitle: " علي مدار الساعة",
+      description: "  فريق دعم متكامل جاهز لمساعدتك ",
       gradient: "from-[#579BE8] via-[#6BA8F0] to-[#579BE8]",
       color: "#579BE8",
       icon: FaHeadset,

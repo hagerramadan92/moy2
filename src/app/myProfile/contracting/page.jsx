@@ -31,6 +31,67 @@ const LocationPickerModal = dynamic(
     { ssr: false, loading: () => <div className="h-0 w-0" /> }
 );
 
+// مكون Popup النجاح
+// في ملف contracting/page.tsx - تعديل مكون SuccessPopup
+const SuccessPopup = ({ isOpen, onClose, onViewContracts }) => {
+    if (!isOpen) return null;
+
+    return (
+       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="bg-white dark:bg-card rounded-2xl md:rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-2 border-[#579BE8]/20"
+    >
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-l from-[#579BE8] to-[#124987] p-6 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-16 -translate-x-16 blur-2xl"></div>
+            
+            <div className="relative z-10">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl mx-auto mb-4 flex items-center justify-center border-2 border-white/30">
+                    <FaCheckCircle className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-black text-white mb-2">تم استلام طلبك! 🎉</h3>
+                <p className="text-white/90 text-sm">شكراً لتواصلك معنا</p>
+            </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+            <div className="text-center space-y-3">
+                <p className="text-foreground/80 text-base font-medium">
+                    سيتم التواصل معك في أقرب وقت ممكن
+                </p>
+                
+                <div className="bg-[#579BE8]/5 border-2 border-[#579BE8]/20 rounded-xl p-4">
+                    <p className="text-sm text-foreground/70 mb-2">
+                        يمكنك متابعة حالة طلب التعاقد الخاص بك من خلال:
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-[#579BE8] font-bold">
+                        <IoDocumentText className="w-5 h-5" />
+                        <span>سجل التعاقدات</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Button
+                    onClick={onViewContracts}
+                    className="flex-1 py-3 bg-gradient-to-r from-[#579BE8] to-[#124987] hover:from-[#4a8dd8] hover:to-[#0f3d6f] text-white font-bold rounded-xl text-sm"
+                >
+                    عرض سجل التعاقدات
+                </Button>
+               
+            </div>
+        </div>
+    </motion.div>
+</div>
+    );
+};
+
 const API_BASE_URL = 'https://dashboard.waytmiah.com/api/v1';
 
 export default function ContractingPage() {
@@ -60,6 +121,7 @@ export default function ContractingPage() {
         totalAmount: 0
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false); // حالة ظهور الـ popup
     const dateInputRef = useRef(null);
     const [commercialErrors, setCommercialErrors] = useState({});
     const [individualErrors, setIndividualErrors] = useState({});
@@ -81,6 +143,16 @@ export default function ContractingPage() {
     const handleSelectContract = (id) => {
         setSelectedContractId(id);
     };
+
+   const handleViewContracts = () => {
+    setShowSuccessPopup(false);
+    // استخدام activeView من الصفحة الرئيسية بدلاً من router.push
+    // يمكنك استخدام props أو context أو event
+    if (typeof window !== 'undefined') { // إرسال حدث لتغيير التبويب في الصفحة الرئيسية
+        window.dispatchEvent(new CustomEvent('changeContractView', { detail: 'history' }));
+    }
+    router.push('/myProfile/contracting/history'); // الانتقال إلى الصفحة الرئيسية حيث يوجد سجل التعاقدات
+};
 
     // Fetch addresses on component mount
     useEffect(() => {
@@ -217,10 +289,6 @@ export default function ContractingPage() {
         { id: "personal", label: "تعاقد شخصي", icon: <FaUser className="w-4 h-4" /> },
     ];
 
-   
-
-   
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -242,27 +310,27 @@ export default function ContractingPage() {
     };
 
     const validatePhone = (phone) => {
-    // إزالة المسافات والشرطات
-    let cleanPhone = phone.replace(/[\s\-]/g, '');
-    
-    // تحويل +966 إلى 0
-    if (cleanPhone.startsWith('+966')) {
-        cleanPhone = '0' + cleanPhone.slice(4);
-    }
-    
-    // تحويل 966 إلى 0
-    if (cleanPhone.startsWith('966')) {
-        cleanPhone = '0' + cleanPhone.slice(3);
-    }
-    
-    // التحقق من الصيغ المقبولة
-    const patterns = [
-        /^05[0-9]{8}$/,     // 05XXXXXXXX
-        /^5[0-9]{8}$/,      // 5XXXXXXXX
-    ];
-    
-    return patterns.some(pattern => pattern.test(cleanPhone));
-};
+        // إزالة المسافات والشرطات
+        let cleanPhone = phone.replace(/[\s\-]/g, '');
+        
+        // تحويل +966 إلى 0
+        if (cleanPhone.startsWith('+966')) {
+            cleanPhone = '0' + cleanPhone.slice(4);
+        }
+        
+        // تحويل 966 إلى 0
+        if (cleanPhone.startsWith('966')) {
+            cleanPhone = '0' + cleanPhone.slice(3);
+        }
+        
+        // التحقق من الصيغ المقبولة
+        const patterns = [
+            /^05[0-9]{8}$/,     // 05XXXXXXXX
+            /^5[0-9]{8}$/,      // 5XXXXXXXX
+        ];
+        
+        return patterns.some(pattern => pattern.test(cleanPhone));
+    };
 
     const validateForm = () => {
         let newErrors = {};
@@ -270,16 +338,11 @@ export default function ContractingPage() {
         if (!formData.applicantName) newErrors.applicantName = "اسم مقدم الطلب مطلوب";
         
         // التحقق من حقل الهاتف
-       if (!formData.phone) {
-    newErrors.phone = "رقم الجوال مطلوب";
-} else if (!validatePhone(formData.phone)) {
-    newErrors.phone = "رقم الجوال غير صحيح. يرجى إدخال رقم سعودي صحيح (مثال: 0512345678)";
-}
-
-        // التحقق من اسم الشركة للتعاقد التجاري
-        // if (activeTab === 'commercial' && !formData.name) {
-        //     newErrors.name = "اسم المؤسسة مطلوب للتعاقد التجاري";
-        // }
+        if (!formData.phone) {
+            newErrors.phone = "رقم الجوال مطلوب";
+        } else if (!validatePhone(formData.phone)) {
+            newErrors.phone = "رقم الجوال غير صحيح. يرجى إدخال رقم سعودي صحيح (مثال: 0512345678)";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -389,10 +452,13 @@ export default function ContractingPage() {
             toast.dismiss(loadingToast);
 
             if (response.ok) {
-                toast.success(data.message || "تم إضافة طلب التعاقد بنجاح، وسيتواصل معك فريقنا قريباً.", {
-                    duration: 4000,
+                toast.success(data.message || "تم إضافة طلب التعاقد بنجاح", {
+                    duration: 2000,
                     icon: "✅",
                 });
+                
+                // إظهار popup النجاح
+                setShowSuccessPopup(true);
                 
                 // Reset form based on active tab
                 if (activeTab === 'commercial') {
@@ -557,6 +623,17 @@ export default function ContractingPage() {
 
     return (
         <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
+            {/* Success Popup */}
+            <AnimatePresence>
+                 {showSuccessPopup && (
+                <SuccessPopup
+                    isOpen={showSuccessPopup}
+                    onClose={() => setShowSuccessPopup(false)}
+                    onViewContracts={handleViewContracts}
+                />
+            )}
+            </AnimatePresence>
+
             {/* Enhanced Hero Card */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -671,7 +748,7 @@ export default function ContractingPage() {
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#579BE8]/20 to-[#124987]/20 rounded-3xl blur-2xl transform scale-110"></div>
                                     <Image
-                                        src={activeTab === 'commercial' ? "/images/ecommerce.png" : "/images/personal.jpeg"}
+                                        src={activeTab === 'commercial' ? "/images/personal.jpeg" :"/images/ecommerce.png" }
                                         alt={activeTab}
                                         width={400}
                                         height={400}

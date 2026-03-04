@@ -423,7 +423,7 @@ export default function PaymentHistoryClient() {
         if (!method) return 'غير محدد';
         
         const methodsMap = {
-            'paymob': 'Paymob',
+            'paymob': 'بطاقة بنكية',
             'tabby': 'تابي',
             'tamara': 'تمارا',
             'credit_card': 'بطاقة ائتمان',

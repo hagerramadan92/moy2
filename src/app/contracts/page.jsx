@@ -14,7 +14,15 @@ export default function ContractsPage() {
     const [activeView, setActiveView] = useState('contracting');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
+// داخل ContractsPage component
+useEffect(() => {
+    const handleViewChange = (event) => {
+        setActiveView(event.detail);
+    };
 
+    window.addEventListener('changeContractView', handleViewChange);
+    return () => window.removeEventListener('changeContractView', handleViewChange);
+}, []);
     useEffect(() => {
         const checkDesktop = () => {
             setIsDesktop(window.innerWidth >= 1024);

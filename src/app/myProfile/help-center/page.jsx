@@ -26,7 +26,7 @@ export default function SupportPage() {
     const categories = [
         { id: "orders", title: "الطلبات", icon: <IoIosWater />, description: " ادارة الطلبات - التتبع - الألغاء - تعديل", link: "/myProfile/orders" },
         { id: "account", title: " الحساب", icon: <FaRegUser />, description: "اعدادات الحسا ب والملف الشخصي", link: "/myProfile" },
-        { id: "wallet", title: " الدفع والمحفظة", icon: <CgCreditCard />, description: "طرق الدفع - الرصيد - الاسترجاع ", link: "/myProfile" },
+        { id: "wallet", title: " الدفع والمحفظة", icon: <CgCreditCard />, description: "طرق الدفع - الرصيد - الاسترجاع ", link: "/myProfile/wallet" },
         { id: "deals", title: "التعاقدات", icon: <FaRegHandshake />, description: "العقود - الاشتراكات - التجديد", link: "/myProfile/contracting" },
         { id: "help", title: "الدعم الفني", icon: <FaHeadset />, description: "مساعدة فورية وحلول سريعة", link: "/myProfile/support" },
         // { id: "gift", title: "العروض والخصومات", icon: <BsGift />, description: "كوبونات - عروض خاصة  ", link: "/myProfile/help-center" },
