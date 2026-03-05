@@ -14,8 +14,8 @@ import {
   Download, Trash2, File, Film, Music, Archive, Headset, HelpCircle
 } from "lucide-react";
 
-// ثابت معرف الدعم الفني
-const SUPPORT_ID = 72;
+// ثابت معرف الدعم الفني القديم كـ fallback
+const SUPPORT_ID = 316;
 
 const ChatModal = ({ 
   isOpen, 
@@ -51,6 +51,10 @@ const ChatModal = ({
     phone: ''
   });
   
+  // Support ID States
+  const [supportParticipantId, setSupportParticipantId] = useState(null);
+  const [loadingSupportId, setLoadingSupportId] = useState(false);
+  
   // Emoji & File States
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -77,10 +81,10 @@ const ChatModal = ({
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
     outgoing: {
-      bg: '#0084ff',
+      bg: '#579BE8',
       text: '#FFFFFF',
       time: 'rgba(255, 255, 255, 0.9)',
-      gradient: 'linear-gradient(135deg, #0084ff 0%, #0066cc 100%)',
+      gradient: 'linear-gradient(135deg, #579BE8 0%, #3a7bc8 100%)',
       shadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
     },
     incoming: {
@@ -138,7 +142,7 @@ const ChatModal = ({
       return <FileText size={20} className="text-red-500" />;
     }
     if (type.includes('word') || type.includes('doc') || type.match(/\.(doc|docx)$/)) {
-      return <FileText size={20} className="text-blue-500" />;
+      return <FileText size={20} className="text-[#579BE8]" />;
     }
     if (type.includes('excel') || type.includes('xls') || type.match(/\.(xls|xlsx)$/)) {
       return <FileText size={20} className="text-green-500" />;
@@ -170,16 +174,55 @@ const ChatModal = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // جلب support ID من الـ API
+  const fetchSupportId = useCallback(async () => {
+    if (!isLoggedIn) return null;
+    
+    try {
+      setLoadingSupportId(true);
+      const result = await messageService.getFirstSupportId();
+      
+      if (result.success && result.id) {
+        setSupportParticipantId(result.id);
+        
+        // تخزينه في localStorage للاستخدام المستقبلي
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('support_participant_id', result.id.toString());
+        }
+        
+        return result.id;
+      } else {
+        // محاولة استخدام الـ ID المحفوظ
+        if (typeof window !== 'undefined') {
+          const storedId = localStorage.getItem('support_participant_id');
+          if (storedId) {
+            setSupportParticipantId(parseInt(storedId));
+            return parseInt(storedId);
+          }
+        }
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching support ID:', error);
+      return null;
+    } finally {
+      setLoadingSupportId(false);
+    }
+  }, [isLoggedIn]);
+
   // Check if chat is support chat
   const isSupportChat = useCallback((chat) => {
     if (!chat || !chat.participants) return false;
     
-    // Check if SUPPORT_ID exists in participants
+    // استخدام supportParticipantId إذا كان موجوداً، وإلا استخدام SUPPORT_ID القديم
+    const currentSupportId = supportParticipantId || SUPPORT_ID;
+    
+    // Check if support ID exists in participants
     return chat.participants.some(p => 
-      String(p) === String(SUPPORT_ID) || 
-      Number(p) === SUPPORT_ID
+      String(p) === String(currentSupportId) || 
+      Number(p) === Number(currentSupportId)
     );
-  }, []);
+  }, [supportParticipantId]);
 
   // Get chat name
   const getChatName = useCallback((chat) => {
@@ -189,7 +232,8 @@ const ChatModal = ({
     }
 
     const otherParticipants = chat.participants?.filter(p => {
-      return String(p) !== String(currentUser.id) && String(p) !== String(SUPPORT_ID);
+      const currentSupportId = supportParticipantId || SUPPORT_ID;
+      return String(p) !== String(currentUser.id) && String(p) !== String(currentSupportId);
     }) || [];
     
     if (otherParticipants.length > 0) {
@@ -207,7 +251,7 @@ const ChatModal = ({
     }
     
     return `الدردشة ${chat.id}`;
-  }, [currentUser.id, isSupportChat]);
+  }, [currentUser.id, isSupportChat, supportParticipantId]);
 
   // Get chat avatar
   const getChatAvatar = useCallback((chat) => {
@@ -222,9 +266,9 @@ const ChatModal = ({
   // Get chat avatar color
   const getChatAvatarColor = useCallback((chat) => {
     if (isSupportChat(chat)) {
-      return 'bg-purple-500';
+      return 'bg-[#579BE8]';
     }
-    return chat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500';
+    return chat.type === "user_driver" ? 'bg-green-500' : 'bg-[#579BE8]';
   }, [isSupportChat]);
 
   // Upload files and send message
@@ -511,7 +555,7 @@ const ChatModal = ({
                 {attachment.pending && (
                   <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
                     <div className="bg-white rounded-full p-2 shadow-lg">
-                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-5 h-5 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   </div>
                 )}
@@ -554,7 +598,7 @@ const ChatModal = ({
                 </p>
               </div>
               {attachment.pending ? (
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <Download size={18} className="text-gray-500 flex-shrink-0" />
               )}
@@ -759,12 +803,12 @@ const ChatModal = ({
         }
         @keyframes slideOutToast {
           from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
             transform: translateX(100%);
             opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
           }
         }
         #chat-login-toast button:hover {
@@ -809,6 +853,16 @@ const ChatModal = ({
       return;
     }
 
+    // جلب support ID إذا لم يكن موجوداً
+    let currentSupportId = supportParticipantId;
+    if (!currentSupportId) {
+      currentSupportId = await fetchSupportId();
+      if (!currentSupportId) {
+        showLoginToast("لا يوجد دعم فني متاح حالياً");
+        return;
+      }
+    }
+
     // Check if support chat already exists in chats
     if (supportChat) {
       setSelectedChat(supportChat);
@@ -816,12 +870,12 @@ const ChatModal = ({
     }
 
     // Check if we already attempted to create support chat
-    if (chatCreationAttemptedRef.current === SUPPORT_ID) {
+    if (chatCreationAttemptedRef.current === currentSupportId) {
       return;
     }
 
     try {
-      chatCreationAttemptedRef.current = SUPPORT_ID;
+      chatCreationAttemptedRef.current = currentSupportId;
       setCreatingChat(true);
 
       // التحقق من تسجيل الدخول أولاً
@@ -831,9 +885,9 @@ const ChatModal = ({
         return;
       }
 
-      // Try to create support chat
+      // Try to create support chat with dynamic ID
       const result = await messageService.createChat(
-        SUPPORT_ID, 
+        currentSupportId, 
         "user_user",
         "الدعم الفني"
       );
@@ -887,7 +941,7 @@ const ChatModal = ({
     } finally {
       setCreatingChat(false);
     }
-  }, [isLoggedIn, supportChat, isSupportChat]);
+  }, [isLoggedIn, supportChat, supportParticipantId, fetchSupportId, isSupportChat]);
 
   const loadChats = async () => {
     try {
@@ -1101,8 +1155,14 @@ const ChatModal = ({
       return;
     }
 
+    // جلب support ID إذا لم يكن موجوداً للمقارنة
+    let currentSupportId = supportParticipantId;
+    if (!currentSupportId) {
+      currentSupportId = await fetchSupportId();
+    }
+
     // Prevent creating duplicate support chat
-    if (String(participantId) === String(SUPPORT_ID)) {
+    if (currentSupportId && String(participantId) === String(currentSupportId)) {
       openSupportChat();
       setShowNewChatForm(false);
       setParticipantId("");
@@ -1266,6 +1326,13 @@ const ChatModal = ({
     
     return groups;
   };
+
+  // جلب support ID عند فتح المودال
+  useEffect(() => {
+    if (isOpen && isLoggedIn) {
+      fetchSupportId();
+    }
+  }, [isOpen, isLoggedIn, fetchSupportId]);
 
   useEffect(() => {
     if (isOpen && isLoggedIn) {
@@ -1456,14 +1523,14 @@ const ChatModal = ({
 
             {/* Support Chat Button - زر الدعم الفني */}
             {isLoggedIn && (
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
                 <button
                   onClick={openSupportChat}
-                  disabled={creatingChat}
-                  className="w-full bg-white border-2 border-purple-200 rounded-xl p-3 hover:border-purple-300 hover:shadow-md transition-all flex items-center gap-3 group"
+                  disabled={creatingChat || loadingSupportId}
+                  className="w-full bg-white border-2 border-blue-200 rounded-xl p-3 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3 group"
                 >
-                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Headset size={24} className="text-purple-600" />
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Headset size={24} className="text-[#579BE8]" />
                   </div>
                   <div className="flex-1 text-right">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -1472,8 +1539,8 @@ const ChatModal = ({
                     </h3>
                     <p className="text-sm text-gray-600">جاهزون لمساعدتك - تواصل معنا</p>
                   </div>
-                  {creatingChat && (
-                    <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                  {(creatingChat || loadingSupportId) && (
+                    <div className="w-5 h-5 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
                   )}
                 </button>
               </div>
@@ -1488,7 +1555,7 @@ const ChatModal = ({
                   placeholder="بحث في المحادثات..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pr-10 pl-4 py-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#579BE8]"
                 />
               </div>
             </div>
@@ -1525,7 +1592,7 @@ const ChatModal = ({
                             value={participantId}
                             onChange={(e) => setParticipantId(e.target.value)}
                             placeholder="أدخل معرف المستخدم"
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
                           />
                         </div>
                         <div>
@@ -1535,7 +1602,7 @@ const ChatModal = ({
                             value={participantName}
                             onChange={(e) => setParticipantName(e.target.value)}
                             placeholder="أدخل اسم المستخدم"
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#579BE8] focus:ring-2 focus:ring-[#579BE8]/20"
                           />
                         </div>
                         <div className="flex gap-2 pt-2">
@@ -1545,7 +1612,7 @@ const ChatModal = ({
                             className={`flex-1 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all ${
                               creatingChat || !participantId.trim()
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-[#579BE8] text-white hover:bg-[#579BE8]'
                             }`}
                           >
                             {creatingChat ? (
@@ -1563,8 +1630,8 @@ const ChatModal = ({
                         </div>
                         <p className="text-sm text-gray-700 mt-2">
                           أدخل معرف السائق أو الشخص الذي تريد التواصل معه
-                          {String(participantId) === String(SUPPORT_ID) && (
-                            <span className="block mt-1 text-purple-600">
+                          {supportParticipantId && String(participantId) === String(supportParticipantId) && (
+                            <span className="block mt-1 text-[#579BE8]">
                               ✅ سيتم فتح محادثة الدعم الفني
                             </span>
                           )}
@@ -1590,7 +1657,7 @@ const ChatModal = ({
                   <p className="text-gray-700 text-center mb-6">سجل الدخول لعرض المحادثات والرسائل</p>
                   <button
                     onClick={() => window.location.href = '/login'}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2"
                   >
                     <LogIn size={18} />
                     <span>تسجيل الدخول</span>
@@ -1598,7 +1665,7 @@ const ChatModal = ({
                 </div>
               ) : loading ? (
                 <div className="flex flex-col items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#579BE8] border-t-transparent"></div>
                   <p className="text-gray-700 mt-3">جاري تحميل المحادثات...</p>
                 </div>
               ) : filteredChats.length === 0 ? (
@@ -1610,7 +1677,7 @@ const ChatModal = ({
                   <p className="text-gray-700 text-center mb-6">ابدأ محادثتك الأولى</p>
                   <button
                     onClick={() => setShowNewChatForm(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2"
                   >
                     <Plus size={18} />
                     <span>بدء محادثة جديدة</span>
@@ -1631,12 +1698,12 @@ const ChatModal = ({
                         onClick={() => setSelectedChat(chat)}
                         className={`flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 ${
                           isActive 
-                            ? `${isSupport ? 'bg-purple-50 border-r-4 border-purple-500' : 'bg-blue-50 border-r-4 border-blue-500'}` 
+                            ? `${isSupport ? 'bg-blue-50 border-r-4 border-[#579BE8]' : 'bg-blue-50 border-r-4 border-[#579BE8]'}` 
                             : 'hover:bg-gray-50'
                         }`}
                       >
                         <div className="relative flex-shrink-0">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${avatarColor} ${isActive ? 'ring-2 ring-offset-2 ' + (isSupport ? 'ring-purple-300' : 'ring-blue-300') : ''}`}>
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm ${avatarColor} ${isActive ? 'ring-2 ring-offset-2 ' + (isSupport ? 'ring-blue-300' : 'ring-blue-300') : ''}`}>
                             {typeof chatAvatar === 'string' ? chatAvatar : chatAvatar}
                           </div>
                           {(chat.unreadCount || 0) > 0 && !isActive && (
@@ -1650,33 +1717,33 @@ const ChatModal = ({
                           <div className="flex items-center justify-between gap-1">
                             <h3 className={`font-bold truncate flex items-center gap-2 ${
                               isActive 
-                                ? isSupport ? 'text-purple-700' : 'text-blue-700' 
+                                ? isSupport ? 'text-[#579BE8]' : 'text-[#579BE8]' 
                                 : 'text-gray-800'
                             }`}>
                               {chatName}
                               {isSupport && (
-                                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">الدعم</span>
+                                <span className="text-xs bg-blue-100 text-[#579BE8] px-2 py-0.5 rounded-full">الدعم</span>
                               )}
                             </h3>
                             <span className="text-xs whitespace-nowrap flex-shrink-0">
-                              <span className={isActive ? (isSupport ? 'text-purple-500' : 'text-[#579BE8]') : 'text-gray-700'}>
+                              <span className={isActive ? (isSupport ? 'text-[#579BE8]' : 'text-[#579BE8]') : 'text-gray-700'}>
                                 {formatChatTime(chat.lastActive)}
                               </span>
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-1 gap-1">
-                            <p className={`text-sm truncate flex-1 ${isActive ? (isSupport ? 'text-purple-500' : 'text-[#579BE8]') : 'text-gray-600'}`}>
+                            <p className={`text-sm truncate flex-1 ${isActive ? (isSupport ? 'text-[#579BE8]' : 'text-[#579BE8]') : 'text-gray-600'}`}>
                               {chat.last_message || 'ابدأ المحادثة الآن'}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs ${isActive ? (isSupport ? 'text-purple-500' : 'text-blue-500') : 'text-gray-400'}`}>
+                            <span className={`text-xs ${isActive ? (isSupport ? 'text-[#579BE8]' : 'text-[#579BE8]') : 'text-gray-400'}`}>
                               {chat.participants?.length || 2} مشارك
                             </span>
                             {chat.type && !isSupport && (
                               <span className={`text-xs px-2 py-0.5 rounded-full ${
                                 isActive 
-                                  ? 'bg-blue-100 text-blue-700' 
+                                  ? 'bg-blue-100 text-[#579BE8]' 
                                   : 'bg-gray-100 text-gray-600'
                               }`}>
                                 {chat.type === "user_driver" ? "سائق" : "مستخدم"}
@@ -1704,7 +1771,7 @@ const ChatModal = ({
           {defaultParticipantId && !selectedChat && creatingChat ? (
             <div className="h-full flex flex-col items-center justify-center bg-gray-50">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#579BE8] mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">جاري إنشاء المحادثة مع السائق...</p>
               </div>
             </div>
@@ -1736,7 +1803,7 @@ const ChatModal = ({
                   <button
                     onClick={createNewChatWithParticipant}
                     disabled={creatingChat}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {creatingChat ? (
                       <>
@@ -1769,7 +1836,7 @@ const ChatModal = ({
                   
                   <div className="relative flex-shrink-0">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${
-                      isSupportChat(selectedChat) ? 'bg-purple-500' : (selectedChat.type === "user_driver" ? 'bg-green-500' : 'bg-blue-500')
+                      isSupportChat(selectedChat) ? 'bg-[#579BE8]' : (selectedChat.type === "user_driver" ? 'bg-green-500' : 'bg-[#579BE8]')
                     }`}>
                       {isSupportChat(selectedChat) ? <Headset size={18} /> : getChatAvatar(selectedChat)}
                     </div>
@@ -1781,7 +1848,7 @@ const ChatModal = ({
                       {getChatName(selectedChat)}
                       {isSupportChat(selectedChat) && (
                         <>
-                          <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full whitespace-nowrap">الدعم الفني</span>
+                          <span className="text-xs bg-blue-100 text-[#579BE8] px-2 py-1 rounded-full whitespace-nowrap">الدعم الفني</span>
                           <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">متصل الآن</span>
                         </>
                       )}
@@ -1827,7 +1894,7 @@ const ChatModal = ({
                     <p className="text-gray-700 text-center mb-6">سجل الدخول لعرض وإرسال الرسائل</p>
                     <button
                       onClick={() => window.location.href = '/login'}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2"
                     >
                       <LogIn size={18} />
                       <span>تسجيل الدخول</span>
@@ -1836,15 +1903,15 @@ const ChatModal = ({
                 ) : messagesLoading ? (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                      <p className="text-blue-500">جاري تحميل الرسائل...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#579BE8] mx-auto mb-2"></div>
+                      <p className="text-[#579BE8]">جاري تحميل الرسائل...</p>
                     </div>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8">
                     <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-4 border border-gray-200">
                       {isSupportChat(selectedChat) ? (
-                        <Headset size={32} className="text-purple-400" />
+                        <Headset size={32} className="text-blue-400" />
                       ) : (
                         <MessageCircle size={32} className="text-gray-400" />
                       )}
@@ -2017,8 +2084,8 @@ const ChatModal = ({
                                   }}
                                   className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
                                 >
-                                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                                    <Film size={16} className="text-purple-600" />
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <Film size={16} className="text-[#579BE8]" />
                                   </div>
                                   <div className="text-right">
                                     <p className="font-medium text-gray-800">وسائط متعددة</p>
@@ -2055,7 +2122,7 @@ const ChatModal = ({
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyPress={handleKeyPress}
                           placeholder={isSupportChat(selectedChat) ? "اكتب رسالتك لفريق الدعم الفني..." : "اكتب رسالة..."}
-                          className="w-full p-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none pr-12"
+                          className="w-full p-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#579BE8] resize-none pr-12"
                           rows="1"
                           disabled={sending || uploadingFiles}
                         />
@@ -2076,13 +2143,13 @@ const ChatModal = ({
                         {/* Attachment Button */}
                         <button
                           onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                          className="p-3 text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors relative"
+                          className="p-3 text-gray-500 hover:text-[#579BE8] hover:bg-gray-100 rounded-lg transition-colors relative"
                           title="إرفاق ملف"
                           disabled={sending || uploadingFiles}
                         >
                           <Paperclip size={20} />
                           {selectedFiles.length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#579BE8] text-white text-xs rounded-full flex items-center justify-center">
                               {selectedFiles.length}
                             </span>
                           )}
@@ -2096,8 +2163,8 @@ const ChatModal = ({
                             sending || uploadingFiles || (!newMessage.trim() && selectedFiles.length === 0)
                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                               : isSupportChat(selectedChat)
-                                ? 'bg-purple-600 text-white hover:bg-purple-700'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                ? 'bg-[#579BE8] text-white hover:bg-[#579BE8]'
+                                : 'bg-[#579BE8] text-white hover:bg-[#579BE8]'
                           }`}
                         >
                           {sending || uploadingFiles ? (
@@ -2145,13 +2212,13 @@ const ChatModal = ({
                   </button>
                   <button
                     onClick={openSupportChat}
-                    disabled={creatingChat}
+                    disabled={creatingChat || loadingSupportId}
                     className="p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow flex flex-col items-center disabled:opacity-50"
                   >
-                    {creatingChat ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mb-2"></div>
+                    {(creatingChat || loadingSupportId) ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#579BE8] mb-2"></div>
                     ) : (
-                      <Headset size={24} className="text-purple-600 mb-2" />
+                      <Headset size={24} className="text-[#579BE8] mb-2" />
                     )}
                     <h4 className="font-bold text-gray-800">الدعم الفني</h4>
                     <p className="text-sm text-gray-600">تواصل معنا</p>

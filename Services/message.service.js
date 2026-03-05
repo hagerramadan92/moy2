@@ -344,6 +344,84 @@ class MessageService {
     return this._axiosInstance;
   }
 
+  // ==================== الحصول على الدعم المتاح ====================
+  async getAvailableSupport() {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'support')) {
+      return {
+        success: false,
+        data: [],
+        error: 'يجب تسجيل الدخول للحصول على قائمة الدعم',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
+    const cacheKey = 'available_support';
+    
+    // محاولة الحصول من التخزين المؤقت (5 دقائق)
+    const cached = cacheManager.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
+    try {
+      const response = await this.axiosInstance.get('/available-support');
+      
+      if (response.data.status === true) {
+        const result = {
+          success: true,
+          data: response.data.data || [],
+          message: response.data.message,
+          source: 'axios'
+        };
+        
+        // تخزين في الذاكرة المؤقتة
+        cacheManager.set(cacheKey, result, 300000); // 5 دقائق
+        
+        return result;
+      } else {
+        return {
+          success: false,
+          data: [],
+          error: response.data.message || 'فشل تحميل قائمة الدعم',
+          source: 'axios'
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ Error getting available support:', error.message);
+      
+      return {
+        success: false,
+        data: [],
+        error: 'فشل تحميل قائمة الدعم',
+        source: 'failed',
+        details: error.message
+      };
+    }
+  }
+
+  // ==================== الحصول على أول ID دعم متاح ====================
+  async getFirstSupportId() {
+    const result = await this.getAvailableSupport();
+    
+    if (result.success && result.data && result.data.length > 0) {
+      return {
+        success: true,
+        id: result.data[0].id,
+        support: result.data[0],
+        all: result.data
+      };
+    }
+    
+    return {
+      success: false,
+      id: null,
+      error: result.error || 'لا يوجد دعم متاح حالياً'
+    };
+  }
+
   // ==================== الحصول على المحادثات ====================
   async getChats(params = {}) {
     // التحقق من المصادقة أولاً
@@ -489,63 +567,6 @@ class MessageService {
     }
   }
 
-  // ==================== الحصول على الإشعارات ====================
-  // async getNotifications(params = {}) {
-  //   // التحقق من المصادقة أولاً
-  //   if (!checkAuthentication(true, 'notifications')) {
-  //     return {
-  //       success: false,
-  //       data: [],
-  //       error: 'يجب تسجيل الدخول لعرض الإشعارات',
-  //       requiresLogin: true,
-  //       source: 'auth-check'
-  //     };
-  //   }
-    
-  //   // ⛔️ ⛔️ ⛔️ تعطيل جلب الإشعارات في Production نهائياً ⛔️ ⛔️ ⛔️
-  //   // لأن الإشعارات لها خدمة منفصلة (NotificationContext)
-  //   if (isProduction) {
-  //     return {
-  //       success: true,
-  //       data: [],
-  //       message: 'الإشعارات معطلة في الإنتاج - استخدم NotificationContext بدلاً من ذلك',
-  //       source: 'disabled-production'
-  //     };
-  //   }
-    
-  //   // في Development فقط، حاول جلب الإشعارات
-  //   try {
-  //     const response = await this.axiosInstance.get('/notifications', { params });
-      
-  //     if (response.data.status === "success") {
-  //       return {
-  //         success: true,
-  //         data: response.data.notifications?.data || [],
-  //         pagination: response.data.notifications?.meta || {},
-  //         source: 'axios-development'
-  //       };
-  //     }
-      
-  //     return {
-  //       success: false,
-  //       data: [],
-  //       error: 'تنسيق البيانات غير صحيح',
-  //       source: 'axios-development'
-  //     };
-      
-  //   } catch (error) {
-  //     console.error('❌ Error getting notifications:', error.message);
-      
-  //     // في Development، نعود بمصفوفة فارغة بدلاً من خطأ
-  //     return {
-  //       success: true,
-  //       data: [],
-  //       error: 'لا يمكن تحميل الإشعارات حالياً',
-  //       source: 'empty-fallback-development'
-  //     };
-  //   }
-  // }
-
   // ==================== إرسال الرسائل ====================
   async sendMessage(chatId, messageData) {
     // التحقق من المصادقة أولاً
@@ -570,11 +591,6 @@ class MessageService {
       if (response.data.status === "success" && response.data.message) {
         // مسح التخزين المؤقت للرسائل
         cacheManager.clearPattern(`messages_${chatId}`);
-        
-        // عرض رسالة نجاح
-        // showLoginToast('تم إرسال الرسالة بنجاح', 'success', {
-        //   duration: 3000
-        // });
         
         return {
           success: true,
@@ -601,61 +617,62 @@ class MessageService {
       };
     }
   }
-// ==================== إرسال رسالة مع مرفقات ====================
-async sendMessageWithAttachments(chatId, formData) {
-  // التحقق من المصادقة أولاً
-  if (!checkAuthentication(true, 'messages')) {
-    return {
-      success: false,
-      error: 'يجب تسجيل الدخول لإرسال الرسائل',
-      requiresLogin: true,
-      source: 'auth-check'
-    };
-  }
   
-  try {
-    console.log(`📤 Sending to API /chats/${chatId}/send`);
-    
-    const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    console.log('📥 Response:', response.data);
-    
-    if (response.data.status === "success") {
+  // ==================== إرسال رسالة مع مرفقات ====================
+  async sendMessageWithAttachments(chatId, formData) {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'messages')) {
       return {
-        success: true,
-        message: response.data.message,
-        data: response.data,
-        source: 'axios'
+        success: false,
+        error: 'يجب تسجيل الدخول لإرسال الرسائل',
+        requiresLogin: true,
+        source: 'auth-check'
       };
     }
     
-    return {
-      success: false,
-      error: response.data.message || 'فشل إرسال الرسالة',
-      message: response.data.message,
-      source: 'axios'
-    };
-    
-  } catch (error) {
-    console.error(`❌ Error sending message:`, error);
-    
-    let errorMessage = 'فشل إرسال الرسالة';
-    if (error.response) {
-      errorMessage = error.response.data?.message || errorMessage;
+    try {
+      console.log(`📤 Sending to API /chats/${chatId}/send`);
+      
+      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('📥 Response:', response.data);
+      
+      if (response.data.status === "success") {
+        return {
+          success: true,
+          message: response.data.message,
+          data: response.data,
+          source: 'axios'
+        };
+      }
+      
+      return {
+        success: false,
+        error: response.data.message || 'فشل إرسال الرسالة',
+        message: response.data.message,
+        source: 'axios'
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error sending message:`, error);
+      
+      let errorMessage = 'فشل إرسال الرسالة';
+      if (error.response) {
+        errorMessage = error.response.data?.message || errorMessage;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+        message: errorMessage,
+        source: 'failed'
+      };
     }
-    
-    return {
-      success: false,
-      error: errorMessage,
-      message: errorMessage,
-      source: 'failed'
-    };
   }
-}
 
   // ==================== إنشاء محادثة جديدة ====================
   async createChat(participantId, type = "user_user", participantName = '') {
@@ -680,13 +697,13 @@ async sendMessageWithAttachments(chatId, formData) {
         cacheManager.clearPattern('chats_');
         
         // عرض رسالة نجاح مع اسم المشارك
-        const successMessage = participantName 
-          ? `تم إنشاء محادثة مع ${participantName} بنجاح`
-          : 'تم إنشاء المحادثة بنجاح';
+        // const successMessage = participantName 
+        //   ? `تم إنشاء محادثة مع ${participantName} بنجاح`
+        //   : 'تم إنشاء المحادثة بنجاح';
         
-        showLoginToast(successMessage, 'success', {
-          duration: 4000
-        });
+        // showLoginToast(successMessage, 'success', {
+        //   duration: 4000
+        // });
         
         return {
           success: true,
@@ -837,7 +854,7 @@ async sendMessageWithAttachments(chatId, formData) {
     }
     
     try {
-      const response = await this.axiosInstance.get(`/chats/${chatId}`);
+      const response = await this.axiosInstance.get(`/chats/${chatId}/messages`);
       
       if (response.data.status === "success") {
         const result = {
