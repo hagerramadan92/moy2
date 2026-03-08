@@ -11,31 +11,44 @@ import Footer from '@/components/molecules/common/Footer';
 import HowItWorks from '@/components/molecules/homepage/HowItWorks';
 import HomeCover from '@/components/molecules/homepage/HomeCover';
 
+const CACHE_KEY = 'waytmiah_homepage_data';
+const CACHE_DURATION = 10 * 60 * 1000; 
+
 const Page = () => {
 	const [pageData, setPageData] = useState(null);
 	const [loading, setLoading] = useState(true);
-	// مش هنستخدم error في الـ UI خالص
 
 	useEffect(() => {
 		const fetchPageData = async () => {
 			try {
 				setLoading(true);
 				
-				// Fetch page data for 'home' key
-				const response = await fetch('https://dashboard.waytmiah.com/api/v1/pages/home');
-				const data = await response.json();
 				
-				// لو البيانات موجودة ونجحت، استخدمها
-				if (response.ok && (data.success || data.status) && data.data) {
-					setPageData(data.data);
+				const cachedData = getCachedData();
+				
+				if (cachedData) {
+					
+					
+					setPageData(cachedData);
+					setLoading(false);
+					
+					
+					fetchFreshDataInBackground();
+					return;
 				}
-				// لو فشلت، سيبه null وهيروح للـ fallback
-				// مش هنظهر أي رسالة خطأ للمستخدم
+				
+				
+				
+				await fetchFreshData();
 				
 			} catch (err) {
-				// فقط سجل الخطأ في الكونسول للتطوير
-				console.error('Error fetching page data:', err);
-				// متحطش حاجة للمستخدم
+				console.error('Error in fetch flow:', err);
+				
+				const fallbackCache = getCachedData(true);
+				if (fallbackCache) {
+					
+					setPageData(fallbackCache);
+				}
 			} finally {
 				setLoading(false);
 			}
@@ -44,9 +57,109 @@ const Page = () => {
 		fetchPageData();
 	}, []);
 
-	// Render sections based on pageData
+	// دالة جلب البيانات من الكاش
+	const getCachedData = (ignoreExpiry = false) => {
+		try {
+			const cached = localStorage.getItem(CACHE_KEY);
+			if (!cached) return null;
+			
+			const { data, timestamp } = JSON.parse(cached);
+			
+			// لو عاوز تتجاهل مدة الصلاحية (في حالة الخطأ)
+			if (ignoreExpiry) return data;
+			
+			// لو البيانات لسه صالحة
+			if (Date.now() - timestamp < CACHE_DURATION) {
+				return data;
+			}
+			
+			return null;
+		} catch (e) {
+			console.error('Error reading cache:', e);
+			return null;
+		}
+	};
+
+	// دالة تخزين البيانات في الكاش
+	const setCachedData = (data) => {
+		try {
+			localStorage.setItem(CACHE_KEY, JSON.stringify({
+				data,
+				timestamp: Date.now()
+			}));
+			
+		} catch (e) {
+			console.error('Error setting cache:', e);
+		}
+	};
+
+	// دالة جلب بيانات جديدة (الأساسية)
+	const fetchFreshData = async () => {
+		try {
+			const response = await fetch('https://dashboard.waytmiah.com/api/v1/pages/home', {
+				headers: {
+					'Accept': 'application/json',
+					'Cache-Control': 'no-cache'
+				}
+			});
+			
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			
+			const data = await response.json();
+			
+			// التحقق من صحة البيانات
+			if (data && (data.success || data.status) && data.data) {
+				setPageData(data.data);
+				setCachedData(data.data); 
+				console.log('✅ Fresh data fetched and cached');
+			} else {
+				console.warn('Invalid data structure:', data);
+			}
+			
+		} catch (err) {
+			console.error('Error fetching fresh data:', err);
+			throw err; 
+		}
+	};
+
+	
+	const fetchFreshDataInBackground = async () => {
+		try {
+			console.log('🔄 Background refresh started');
+			const response = await fetch('https://dashboard.waytmiah.com/api/v1/pages/home', {
+				headers: {
+					'Accept': 'application/json',
+					'Cache-Control': 'no-cache'
+				}
+			});
+			
+			if (!response.ok) return;
+			
+			const data = await response.json();
+			
+			if (data && (data.success || data.status) && data.data) {
+				// قارن هل البيانات اختلفت؟
+				const currentData = getCachedData(true);
+				if (JSON.stringify(currentData) !== JSON.stringify(data.data)) {
+					console.log('🔄 Data changed, updating...');
+					setPageData(data.data);
+					setCachedData(data.data);
+				} else {
+					console.log('🔄 Data unchanged, cache is fresh');
+					
+					setCachedData(currentData);
+				}
+			}
+		} catch (err) {
+			console.error('Background refresh failed:', err);
+			// silent fail - مش هنظهر حاجة للمستخدم
+		}
+	};
+
+	// دالة عرض الأقسام
 	const renderSection = (section) => {
-		// لو الـ section مش موجود أو معطل، متعرضش حاجة
 		if (!section || section.is_active === false) return null;
 		
 		switch (section.type) {
@@ -65,7 +178,78 @@ const Page = () => {
 		}
 	};
 
-	// Skeleton Components (نفس الكود بتاعك)
+	
+	const getMergedSections = () => {
+		const staticSections = [
+			{ type: 'deals', component: Deals, isStatic: true, order: 999 },
+			{ type: 'appPromotion', component: AppPromotionSection, isStatic: true, order: 1000 },
+			{ type: 'callToAction', component: CallToActionSection, isStatic: true, order: 1001 },
+		];
+
+	
+		if (!pageData?.sections?.length) {
+			return [
+				{ type: 'hero', component: HomeCover, isStatic: true },
+				{ type: 'features', component: ChooseUs, isStatic: true },
+				{ type: 'packages', component: AvailableSize, isStatic: true },
+				{ type: 'steps', component: HowItWorks, isStatic: true },
+				{ type: 'deals', component: Deals, isStatic: true },
+				{ type: 'testimonials', component: CustomerReviews, isStatic: true },
+				{ type: 'appPromotion', component: AppPromotionSection, isStatic: true },
+				{ type: 'callToAction', component: CallToActionSection, isStatic: true },
+				{ type: 'footer', component: Footer, isStatic: true }
+			];
+		}
+
+		const dynamicSections = pageData.sections
+			.filter(section => section.is_active !== false)
+			.sort((a, b) => (a.order || 0) - (b.order || 0))
+			.map(section => ({
+				...section,
+				component: (() => {
+					switch (section.type) {
+						case 'hero': return HomeCover;
+						case 'features': return ChooseUs;
+						case 'packages': return AvailableSize;
+						case 'steps': return HowItWorks;
+						case 'testimonials': return CustomerReviews;
+						case 'deals': return Deals;
+						case 'appPromotion': return AppPromotionSection;
+						case 'callToAction': return CallToActionSection;
+						default: return null;
+					}
+				})(),
+				props: section.data ? { data: section } : {}
+			}))
+			.filter(section => section.component !== null);
+
+		const allSections = [...dynamicSections];
+		const existingTypes = new Set(dynamicSections.map(s => s.type));
+		
+		staticSections.forEach(staticSection => {
+			if (!existingTypes.has(staticSection.type)) {
+				allSections.push({
+					...staticSection,
+					component: staticSection.component,
+					props: {}
+				});
+			}
+		});
+
+		
+		allSections.sort((a, b) => (a.order || 0) - (b.order || 0));
+			// أضف الفوتر في النهاية
+		allSections.push({ 
+			type: 'footer', 
+			component: Footer, 
+			isStatic: true,
+			order: 9999
+		});
+
+		return allSections;
+	};
+
+	// Skeleton Components
 	const HomeCoverSkeleton = () => (
 		<div className="cover relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
 			<div className="container mx-auto">
@@ -241,7 +425,7 @@ const Page = () => {
 		</div>
 	);
 
-	// أثناء التحميل - عرض الـ Skeletons
+	
 	if (loading) {
 		return (
 			<div className="space-y-0">
@@ -258,38 +442,25 @@ const Page = () => {
 		);
 	}
 
-	// بعد التحميل - لو فيه بيانات ديناميكية، استخدمها
-	if (pageData?.sections?.length > 0) {
-		// رتب الأقسام حسب الترتيب
-		const sortedSections = [...pageData.sections]
-			.filter(section => section.is_active !== false) // بس الأقسام النشطة
-			.sort((a, b) => (a.order || 0) - (b.order || 0));
-		
-		return (
-			<> 
-				{sortedSections.map(section => renderSection(section))}
-				
-				{/* الأقسام الثابتة اللي دايماً موجودة */}
-				<Deals/>
-				<AppPromotionSection />
-				<CallToActionSection />
-				<Footer/>
-			</>
-		);
-	}
+	
+	const mergedSections = getMergedSections();
 
-	// لو مفيش بيانات ديناميكية، استخدم النسخة الافتراضية
 	return (
-		<> 
-			<HomeCover/>
-			<ChooseUs/>	
-			<AvailableSize/>
-			<HowItWorks/>
-			<Deals/>
-			<CustomerReviews/>
-			<AppPromotionSection />
-			<CallToActionSection />
-			<Footer/>
+		<>
+			{mergedSections.map((section, index) => {
+				const Component = section.component;
+				
+				
+				if (section.isStatic) {
+					return <Component key={`static-${section.type}-${index}`} />;
+				}
+				
+			
+				return <Component 
+					key={section.id || `dynamic-${section.type}-${index}`} 
+					data={section} 
+				/>;
+			})}
 		</>
 	);
 };

@@ -47,18 +47,18 @@ const VisionMissionSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8 md:mb-10"
+          className="text-center mb-4 md:mb-10"
         >
-          <div className="inline-block mb-3 md:mb-4">
+          <div className="inline-block mb-2 md:mb-4">
             <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-4 py-2 rounded-full">
               من نحن
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl  font-bold text-gray-900 mb-3 md:mb-4 leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl  font-bold text-gray-900 mb-2 md:mb-4 leading-tight">
             <span className="block text-[#579BE8]">عن وايت مياه</span>
           </h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] rounded-full mx-auto mb-5"></div>
-          <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto">
+          <div className="w-20 h-1 bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] rounded-full mx-auto mb-2 md:mb-5"></div>
+          <p className="md:text-base text-sm text-gray-600 leading-relaxed max-w-3xl mx-auto">
             نحن شركة رائدة في مجال توصيل المياه النقية في المملكة العربية السعودية، نسعى لتوفير مياه نظيفة وصحية لكل منزل ومؤسسة
           </p>
         </motion.div>
@@ -75,24 +75,24 @@ const VisionMissionSection = () => {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group relative"
               >
-                <div className="relative h-full bg-white rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-transparent overflow-hidden">
+                <div className="relative h-full bg-white rounded-lg md:rounded-2xl p-2 md:p-5 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-transparent overflow-hidden">
                   {/* Gradient Top Border */}
                   <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${gradient}`}></div>
                   
                   <div className="relative z-10 flex items-center gap-3 md:gap-4">
                     {/* Icon Container */}
                     <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+                      <div className={`w-10 h-10 md:w-14 md:h-14 rounded-sm md:rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                         <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                       </div>
                     </div>
                     
                     {/* Content */}
-                    <div className="flex-1 flex flex-col gap-2 md:gap-3 border-r-2 border-gray-200 pr-3 md:pr-4">
-                      <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900">
+                    <div className="flex-1 flex flex-col gap-0.5 md:gap-3 border-r-2 border-gray-200 pr-3 md:pr-4">
+                      <h3 className="text-md md:text-xl lg:text-2xl font-bold text-gray-900">
                         {item.title}
                       </h3>
-                      <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                      <p className="text-[12px] md:text-base text-gray-600 leading-relaxed">
                         {item.description}
                       </p>
                     </div>
