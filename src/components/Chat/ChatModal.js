@@ -729,7 +729,19 @@ const ChatModal = ({
       }
     }
   }, [currentUserId]);
-
+useEffect(() => {
+  checkAuthStatus();
+  
+  // التحقق كل ثانية
+  const interval = setInterval(() => {
+    const token = localStorage.getItem('accessToken');
+    if ((token && !isLoggedIn) || (!token && isLoggedIn)) {
+      checkAuthStatus();
+    }
+  }, 1000);
+  
+  return () => clearInterval(interval);
+}, [isLoggedIn, checkAuthStatus]);
   useEffect(() => {
     checkAuthStatus();
     
@@ -1499,7 +1511,7 @@ const ChatModal = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                {/* <button 
                   onClick={() => {
                     if (!isLoggedIn) {
                       showLoginToast();
@@ -1511,7 +1523,7 @@ const ChatModal = ({
                   title="محادثة جديدة"
                 >
                   <Plus size={20} />
-                </button>
+                </button> */}
                 <button
                   onClick={onClose}
                   className="p-2 hover:bg-gray-100 rounded-full"
@@ -1674,14 +1686,14 @@ const ChatModal = ({
                     <MessageCircle size={32} className="text-gray-400" />
                   </div>
                   <h3 className="font-bold text-gray-700 mb-2">لا توجد محادثات</h3>
-                  <p className="text-gray-700 text-center mb-6">ابدأ محادثتك الأولى</p>
-                  <button
+                  {/* <p className="text-gray-700 text-center mb-6">ابدأ محادثتك الأولى</p> */}
+                  {/* <button
                     onClick={() => setShowNewChatForm(true)}
                     className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2"
                   >
                     <Plus size={18} />
                     <span>بدء محادثة جديدة</span>
-                  </button>
+                  </button> */}
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
@@ -1800,7 +1812,7 @@ const ChatModal = ({
                   <p className="text-gray-600 mb-6">
                     سيتم إنشاء المحادثة تلقائياً عند إرسال أول رسالة
                   </p>
-                  <button
+                  {/* <button
                     onClick={createNewChatWithParticipant}
                     disabled={creatingChat}
                     className="px-6 py-3 bg-[#579BE8] text-white rounded-lg hover:bg-[#579BE8] transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1816,7 +1828,7 @@ const ChatModal = ({
                         <span>إنشاء المحادثة</span>
                       </>
                     )}
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </div>
@@ -1846,12 +1858,12 @@ const ChatModal = ({
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <h3 className="font-bold text-gray-800 truncate flex items-center gap-2">
                       {getChatName(selectedChat)}
-                      {isSupportChat(selectedChat) && (
+                      {/* {isSupportChat(selectedChat) && (
                         <>
                           <span className="text-xs bg-blue-100 text-[#579BE8] px-2 py-1 rounded-full whitespace-nowrap">الدعم الفني</span>
                           <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">متصل الآن</span>
                         </>
-                      )}
+                      )} */}
                       {selectedChat.type === "user_driver" && !isSupportChat(selectedChat) && (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full whitespace-nowrap">سائق</span>
                       )}
@@ -2195,7 +2207,7 @@ const ChatModal = ({
                 <p className="text-gray-600 mb-8 px-2">
                   اختر محادثة من القائمة على اليمين أو تواصل مع فريق الدعم الفني
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <button 
                     onClick={() => {
                       if (!isLoggedIn) {
@@ -2223,7 +2235,7 @@ const ChatModal = ({
                     <h4 className="font-bold text-gray-800">الدعم الفني</h4>
                     <p className="text-sm text-gray-600">تواصل معنا</p>
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           )}

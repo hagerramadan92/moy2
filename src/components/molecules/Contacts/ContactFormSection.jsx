@@ -247,8 +247,6 @@ const ContactFormSection = () => {
         requestBody._token = csrfToken;
       }
 
-      // Log request details for debugging
-
       // Send POST request to Next.js API route (proxy to avoid CORS issues)
       let response;
       try {
@@ -393,9 +391,36 @@ const ContactFormSection = () => {
   };
 
   return (
-    <section className="relative w-full py-12 md:py-16 bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
+    <section className="relative w-full bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
+      {/* ارتفاعات مختلفة لكل شاشة */}
+      {/* موبايل صغير (أقل من 640px) */}
+      <div className="absolute inset-0 sm:hidden">
+        <div className="w-full h-[650px]"></div>
+      </div>
+      
+      {/* موبايل كبير (640px - 768px) */}
+      <div className="absolute inset-0 hidden sm:block md:hidden">
+        <div className="w-full h-[600px]"></div>
+      </div>
+      
+      {/* تابلت (768px - 1024px) */}
+      <div className="absolute inset-0 hidden md:block lg:hidden">
+        <div className="w-full h-[550px]"></div>
+      </div>
+      
+      {/* لابتوب صغير (1024px - 1280px) */}
+      <div className="absolute inset-0 hidden lg:block xl:hidden">
+        <div className="w-full h-[500px]"></div>
+      </div>
+      
+      {/* شاشات كبيرة (أكبر من 1280px) */}
+      <div className="absolute inset-0 hidden xl:block">
+        <div className="w-full h-[480px]"></div>
+      </div>
+
       {/* Simple Background Elements */}
       <div className="absolute inset-0">
+        {/* عناصر متحركة - موبايل */}
         <motion.div
           animate={{
             y: [0, -20, 0],
@@ -406,8 +431,9 @@ const ContactFormSection = () => {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute top-20 right-20 w-32 h-32 bg-[#579BE8]/10 rounded-full blur-2xl"
+          className="absolute top-10 right-10 sm:top-20 sm:right-20 w-20 h-20 sm:w-32 sm:h-32 bg-[#579BE8]/10 rounded-full blur-2xl"
         ></motion.div>
+        
         <motion.div
           animate={{
             y: [0, 30, 0],
@@ -419,227 +445,234 @@ const ContactFormSection = () => {
             ease: "easeInOut",
             delay: 1,
           }}
-          className="absolute bottom-40 left-32 w-48 h-48 bg-[#579BE8]/8 rounded-full blur-3xl"
+          className="absolute bottom-20 left-16 sm:bottom-40 sm:left-32 w-32 h-32 sm:w-48 sm:h-48 bg-[#579BE8]/8 rounded-full blur-3xl"
         ></motion.div>
         
         {/* Water Ripple Effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-1/4 sm:h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent"></div>
       </div>
 
-      {/* Decorative Water Icons */}
-      <div className="absolute top-10 right-10 text-[#579BE8]/15 z-0">
-        <IoWaterOutline size={120} className="rotate-12" />
+      {/* Decorative Water Icons - Responsive */}
+      <div className="absolute top-5 right-5 sm:top-10 sm:right-10 text-[#579BE8]/15 z-0">
+        <IoWaterOutline className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
       </div>
-      <div className="absolute bottom-10 left-10 text-[#579BE8]/15 z-0">
-        <FaWater size={100} className="-rotate-12" />
+      
+      <div className="absolute bottom-5 left-5 sm:bottom-10 sm:left-10 text-[#579BE8]/15 z-0">
+        <FaWater className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 -rotate-12" />
       </div>
-      <div className="absolute top-1/2 right-1/4 text-[#579BE8]/10 z-0">
-        <IoWaterOutline size={200} className="rotate-45" />
+      
+      <div className="absolute top-1/3 right-1/4 text-[#579BE8]/10 z-0 hidden sm:block">
+        <IoWaterOutline className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 xl:w-64 xl:h-64 rotate-45" />
       </div>
-      <div className="absolute top-1/3 left-1/4 text-[#579BE8]/12 z-0">
-        <FaWater size={80} className="rotate-12" />
+      
+      <div className="absolute bottom-1/3 left-1/4 text-[#579BE8]/12 z-0 hidden md:block">
+        <FaWater className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
       </div>
 
-      <div className="px-4 mx-auto max-w-2xl relative z-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-6 sm:mb-8 md:mb-10"
-        >
-          <div className="inline-block mb-2 md:mb-3">
-            <span className="text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-3 py-1.5 rounded-full">
-              تواصل معنا
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl  font-black text-gray-900 mb-2 md:mb-3 leading-tight">
-            <span className="block text-[#579BE8]">فريق دعم متكامل علي مدار الساعة</span>
-          </h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
-        </motion.div>
-
-        {/* Form Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-xl border border-white/20 p-6 md:p-8"
-        >
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name Field */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-                <FaUser className="w-4 h-4 text-[#579BE8]" />
-                <span>الاسم</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                onBlur={() => handleBlur('name')}
-                className={`w-full h-12 rounded-xl bg-gray-50 border-2 text-right text-gray-900 font-medium text-sm px-4 transition-all outline-none ${
-                  errors.name
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
-                    : touched.name && !errors.name
-                    ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                    : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
-                }`}
-                placeholder="الاسم "
-              />
-              {errors.name && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-600 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>⚠</span>
-                  {errors.name}
-                </motion.p>
-              )}
+      {/* محتوى رئيسي مع Padding متجاوب */}
+      <div className="relative z-10 flex items-center justify-center min-h-full w-full px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12 lg:py-14 xl:py-16">
+        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
+          {/* Header - Responsive */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10"
+          >
+            <div className="inline-block mb-1 sm:mb-2 md:mb-3">
+              <span className="text-[10px] sm:text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                تواصل معنا
+              </span>
             </div>
+            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-black text-gray-900 mb-1 sm:mb-2 md:mb-3 leading-tight px-2">
+              <span className="block text-[#579BE8] text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">فريق دعم متكامل</span>
+              <span className="block text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-700">علي مدار الساعة</span>
+            </h2>
+            <div className="w-12 sm:w-14 md:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+          </motion.div>
 
-            {/* Phone Field */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-                <FaPhone className="w-4 h-4 text-[#579BE8]" />
-                <span>الجوال</span>
-              </label>
-              <input
-                type="tel"
-                maxLength={10}
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                onBlur={() => handleBlur('phone')}
-                className={`w-full h-12 rounded-xl bg-gray-50 border-2 text-right text-gray-900 font-medium text-sm px-4 transition-all outline-none ${
-                  errors.phone
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
-                    : touched.phone && !errors.phone
-                    ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                    : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
-                }`}
-                placeholder="05xxxxxxxx"
-              />
-              {errors.phone && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-600 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>⚠</span>
-                  {errors.phone}
-                </motion.p>
-              )}
-              {touched.phone && !errors.phone && formData.phone && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-green-600 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>✓</span>
-                  رقم الجوال صحيح
-                </motion.p>
-              )}
-            </div>
-
-            {/* Subject Field */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-                <FaEnvelope className="w-4 h-4 text-[#579BE8]" />
-                <span>الموضوع</span>
-              </label>
-              <input
-                type="text"
-                value={formData.subject}
-                onChange={(e) => handleChange('subject', e.target.value)}
-                onBlur={() => handleBlur('subject')}
-                className={`w-full h-12 rounded-xl bg-gray-50 border-2 text-right text-gray-900 font-medium text-sm px-4 transition-all outline-none ${
-                  errors.subject
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
-                    : touched.subject && !errors.subject
-                    ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                    : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
-                }`}
-                placeholder="موضوع الرسالة"
-              />
-              {errors.subject && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-600 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>⚠</span>
-                  {errors.subject}
-                </motion.p>
-              )}
-            </div>
-
-            {/* Message Field */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-                <FaEnvelope className="w-4 h-4 text-[#579BE8]" />
-                <span>رسالتك</span>
-                {formData.message && (
-                  <span className="text-xs text-gray-700 font-normal">
-                    ({formData.message.trim().length}/500)
-                  </span>
+          {/* Form Card - Responsive */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white/95 backdrop-blur-2xl rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8"
+          >
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-5">
+              {/* Name Field */}
+              <div className="space-y-1 sm:space-y-2">
+                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+                  <FaUser className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
+                  <span>الاسم</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  onBlur={() => handleBlur('name')}
+                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                    errors.name
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      : touched.name && !errors.name
+                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
+                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                  }`}
+                  placeholder="الاسم"
+                />
+                {errors.name && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
+                  >
+                    <span>⚠</span>
+                    {errors.name}
+                  </motion.p>
                 )}
-              </label>
-              <textarea
-                rows={5}
-                maxLength={500}
-                value={formData.message}
-                onChange={(e) => handleChange('message', e.target.value)}
-                onBlur={() => handleBlur('message')}
-                className={`w-full rounded-xl bg-gray-50 border-2 text-right text-gray-900 font-medium text-sm px-4 py-3 resize-none transition-all outline-none ${
-                  errors.message
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
-                    : touched.message && !errors.message
-                    ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                    : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
-                }`}
-                placeholder="اكتب رسالتك هنا..."
-              />
-              {errors.message && (
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-600 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>⚠</span>
-                  {errors.message}
-                </motion.p>
-              )}
-            </div>
+              </div>
 
-            {/* Submit Button */}
-            <motion.button
-              type="submit"
-              disabled={isSubmitting || !isFormValid()}
-              whileHover={{ scale: !isSubmitting ? 1.02 : 1 }}
-              whileTap={{ scale: !isSubmitting ? 0.98 : 1 }}
-              className={`w-full h-12 rounded-xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
-                isSubmitting
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] hover:shadow-lg'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>جاري الإرسال...</span>
-                </>
-              ) : (
-                <>
-                  <FaPaperPlane className="w-4 h-4" />
-                  <span>إرسال الرسالة</span>
-                </>
-              )}
-            </motion.button>
-          </form>
-        </motion.div>
+              {/* Phone Field */}
+              <div className="space-y-1 sm:space-y-2">
+                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+                  <FaPhone className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
+                  <span>الجوال</span>
+                </label>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={formData.phone}
+                  onChange={(e) => handleChange('phone', e.target.value)}
+                  onBlur={() => handleBlur('phone')}
+                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                    errors.phone
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      : touched.phone && !errors.phone
+                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
+                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                  }`}
+                  placeholder="05xxxxxxxx"
+                />
+                {errors.phone && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
+                  >
+                    <span>⚠</span>
+                    {errors.phone}
+                  </motion.p>
+                )}
+                {touched.phone && !errors.phone && formData.phone && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-green-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
+                  >
+                    <span>✓</span>
+                    رقم الجوال صحيح
+                  </motion.p>
+                )}
+              </div>
+
+              {/* Subject Field */}
+              <div className="space-y-1 sm:space-y-2">
+                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+                  <FaEnvelope className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
+                  <span>الموضوع</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.subject}
+                  onChange={(e) => handleChange('subject', e.target.value)}
+                  onBlur={() => handleBlur('subject')}
+                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                    errors.subject
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      : touched.subject && !errors.subject
+                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
+                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                  }`}
+                  placeholder="موضوع الرسالة"
+                />
+                {errors.subject && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
+                  >
+                    <span>⚠</span>
+                    {errors.subject}
+                  </motion.p>
+                )}
+              </div>
+
+              {/* Message Field */}
+              <div className="space-y-1 sm:space-y-2">
+                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+                  <FaEnvelope className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
+                  <span>رسالتك</span>
+                  {formData.message && (
+                    <span className="text-[8px] sm:text-xs text-gray-700 font-normal">
+                      ({formData.message.trim().length}/500)
+                    </span>
+                  )}
+                </label>
+                <textarea
+                  rows={4}
+                  maxLength={500}
+                  value={formData.message}
+                  onChange={(e) => handleChange('message', e.target.value)}
+                  onBlur={() => handleBlur('message')}
+                  className={`w-full rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-3 resize-none transition-all outline-none ${
+                    errors.message
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      : touched.message && !errors.message
+                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
+                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                  }`}
+                  placeholder="اكتب رسالتك هنا..."
+                />
+                {errors.message && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
+                  >
+                    <span>⚠</span>
+                    {errors.message}
+                  </motion.p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={isSubmitting || !isFormValid()}
+                whileHover={{ scale: !isSubmitting ? 1.02 : 1 }}
+                whileTap={{ scale: !isSubmitting ? 0.98 : 1 }}
+                className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 ${
+                  isSubmitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] hover:shadow-lg'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>جاري الإرسال...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaPaperPlane className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span>إرسال الرسالة</span>
+                  </>
+                )}
+              </motion.button>
+            </form>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

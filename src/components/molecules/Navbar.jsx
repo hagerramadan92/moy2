@@ -111,6 +111,7 @@ export default function Navbar() {
       
       // Navigate to home page after logout
       router.push("/");
+      window.location.reload();
     }
   }
 
