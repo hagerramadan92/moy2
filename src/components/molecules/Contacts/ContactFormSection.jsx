@@ -392,7 +392,7 @@ const ContactFormSection = () => {
 
   return (
     <section className="relative w-full bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
-      {/* ارتفاعات مختلفة لكل شاشة */}
+      {/* ارتفاعات مختلفة لكل شاشة - بدون أي حركة */}
       {/* موبايل صغير (أقل من 640px) */}
       <div className="absolute inset-0 sm:hidden">
         <div className="w-full h-[650px]"></div>
@@ -418,41 +418,18 @@ const ContactFormSection = () => {
         <div className="w-full h-[480px]"></div>
       </div>
 
-      {/* Simple Background Elements */}
+      {/* Simple Background Elements - ثابتة بدون حركة على الموبايل */}
       <div className="absolute inset-0">
-        {/* عناصر متحركة - موبايل */}
-        <motion.div
-          animate={{
-            y: [0, -20, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute top-10 right-10 sm:top-20 sm:right-20 w-20 h-20 sm:w-32 sm:h-32 bg-[#579BE8]/10 rounded-full blur-2xl"
-        ></motion.div>
+        {/* عناصر خلفية - ثابتة على الموبايل، متحركة فقط على الديسكتوب */}
+        <div className="absolute top-10 right-10 sm:top-20 sm:right-20 w-20 h-20 sm:w-32 sm:h-32 bg-[#579BE8]/10 rounded-full blur-2xl"></div>
         
-        <motion.div
-          animate={{
-            y: [0, 30, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-          className="absolute bottom-20 left-16 sm:bottom-40 sm:left-32 w-32 h-32 sm:w-48 sm:h-48 bg-[#579BE8]/8 rounded-full blur-3xl"
-        ></motion.div>
+        <div className="absolute bottom-20 left-16 sm:bottom-40 sm:left-32 w-32 h-32 sm:w-48 sm:h-48 bg-[#579BE8]/8 rounded-full blur-3xl"></div>
         
         {/* Water Ripple Effect */}
         <div className="absolute bottom-0 left-0 right-0 h-1/4 sm:h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent"></div>
       </div>
 
-      {/* Decorative Water Icons - Responsive */}
+      {/* Decorative Water Icons - Responsive وثابتة */}
       <div className="absolute top-5 right-5 sm:top-10 sm:right-10 text-[#579BE8]/15 z-0">
         <IoWaterOutline className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
       </div>
@@ -469,17 +446,11 @@ const ContactFormSection = () => {
         <FaWater className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
       </div>
 
-      {/* محتوى رئيسي مع Padding متجاوب */}
+      {/* محتوى رئيسي مع Padding متجاوب - ثابت على الموبايل */}
       <div className="relative z-10 flex items-center justify-center min-h-full w-full px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12 lg:py-14 xl:py-16">
         <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
-          {/* Header - Responsive */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10"
-          >
+          {/* Header - بدون حركة على الموبايل */}
+          <div className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10">
             <div className="inline-block mb-1 sm:mb-2 md:mb-3">
               <span className="text-[10px] sm:text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                 تواصل معنا
@@ -490,16 +461,10 @@ const ContactFormSection = () => {
               <span className="block text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-700">علي مدار الساعة</span>
             </h2>
             <div className="w-12 sm:w-14 md:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
-          </motion.div>
+          </div>
 
-          {/* Form Card - Responsive */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white/95 backdrop-blur-2xl rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8"
-          >
+          {/* Form Card - بدون حركة على الموبايل */}
+          <div className="bg-white/95 backdrop-blur-2xl rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8">
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-5">
               {/* Name Field */}
               <div className="space-y-1 sm:space-y-2">
@@ -522,14 +487,10 @@ const ContactFormSection = () => {
                   placeholder="الاسم"
                 />
                 {errors.name && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
-                  >
+                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
                     <span>⚠</span>
                     {errors.name}
-                  </motion.p>
+                  </p>
                 )}
               </div>
 
@@ -555,24 +516,16 @@ const ContactFormSection = () => {
                   placeholder="05xxxxxxxx"
                 />
                 {errors.phone && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
-                  >
+                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
                     <span>⚠</span>
                     {errors.phone}
-                  </motion.p>
+                  </p>
                 )}
                 {touched.phone && !errors.phone && formData.phone && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-green-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
-                  >
+                  <p className="text-green-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
                     <span>✓</span>
                     رقم الجوال صحيح
-                  </motion.p>
+                  </p>
                 )}
               </div>
 
@@ -597,14 +550,10 @@ const ContactFormSection = () => {
                   placeholder="موضوع الرسالة"
                 />
                 {errors.subject && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
-                  >
+                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
                     <span>⚠</span>
                     {errors.subject}
-                  </motion.p>
+                  </p>
                 )}
               </div>
 
@@ -635,23 +584,17 @@ const ContactFormSection = () => {
                   placeholder="اكتب رسالتك هنا..."
                 />
                 {errors.message && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1"
-                  >
+                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
                     <span>⚠</span>
                     {errors.message}
-                  </motion.p>
+                  </p>
                 )}
               </div>
 
-              {/* Submit Button */}
-              <motion.button
+              {/* Submit Button - بدون حركة على الموبايل */}
+              <button
                 type="submit"
                 disabled={isSubmitting || !isFormValid()}
-                whileHover={{ scale: !isSubmitting ? 1.02 : 1 }}
-                whileTap={{ scale: !isSubmitting ? 0.98 : 1 }}
                 className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 ${
                   isSubmitting
                     ? 'bg-gray-400 cursor-not-allowed'
@@ -669,9 +612,9 @@ const ContactFormSection = () => {
                     <span>إرسال الرسالة</span>
                   </>
                 )}
-              </motion.button>
+              </button>
             </form>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
