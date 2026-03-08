@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { FaPaperPlane, FaUser, FaPhone, FaEnvelope, FaCheckCircle, FaWater } from 'react-icons/fa';
-import { IoWaterOutline } from 'react-icons/io5';
+import { FaPaperPlane, FaUser, FaPhone, FaEnvelope, FaCheckCircle } from 'react-icons/fa';
 
 const ContactFormSection = () => {
   const [formData, setFormData] = useState({
@@ -27,25 +25,16 @@ const ContactFormSection = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validation functions
+  // Validation functions (same as before)
   const validateName = (name) => {
-    if (!name.trim()) {
-      return 'الاسم مطلوب';
-    }
-    if (name.trim().length < 2) {
-      return 'الاسم يجب أن يكون على الأقل حرفين';
-    }
-    if (!/^[\u0600-\u06FFa-zA-Z\s]+$/.test(name.trim())) {
-      return 'الاسم يجب أن يحتوي على أحرف فقط';
-    }
+    if (!name.trim()) return 'الاسم مطلوب';
+    if (name.trim().length < 2) return 'الاسم يجب أن يكون على الأقل حرفين';
+    if (!/^[\u0600-\u06FFa-zA-Z\s]+$/.test(name.trim())) return 'الاسم يجب أن يحتوي على أحرف فقط';
     return '';
   };
 
   const validatePhone = (phone) => {
-    if (!phone.trim()) {
-      return 'رقم الجوال مطلوب';
-    }
-    // Accept phone numbers starting with 0 or without 0
+    if (!phone.trim()) return 'رقم الجوال مطلوب';
     const phoneRegex = /^(0)?5\d{8}$/;
     const digitsOnly = phone.replace(/\D/g, '');
     if (!phoneRegex.test(digitsOnly) || (digitsOnly.length !== 9 && digitsOnly.length !== 10)) {
@@ -55,32 +44,21 @@ const ContactFormSection = () => {
   };
 
   const validateSubject = (subject) => {
-    if (!subject.trim()) {
-      return 'الموضوع مطلوب';
-    }
-    if (subject.trim().length < 3) {
-      return 'الموضوع يجب أن يكون على الأقل 3 أحرف';
-    }
+    if (!subject.trim()) return 'الموضوع مطلوب';
+    if (subject.trim().length < 3) return 'الموضوع يجب أن يكون على الأقل 3 أحرف';
     return '';
   };
 
   const validateMessage = (message) => {
-    if (!message.trim()) {
-      return 'الرسالة مطلوبة';
-    }
-    if (message.trim().length < 10) {
-      return 'الرسالة يجب أن تكون على الأقل 10 أحرف';
-    }
-    if (message.trim().length > 500) {
-      return 'الرسالة يجب أن تكون أقل من 500 حرف';
-    }
+    if (!message.trim()) return 'الرسالة مطلوبة';
+    if (message.trim().length < 10) return 'الرسالة يجب أن تكون على الأقل 10 أحرف';
+    if (message.trim().length > 500) return 'الرسالة يجب أن تكون أقل من 500 حرف';
     return '';
   };
 
   // Handle input changes with validation
   const handleChange = (field, value) => {
     if (field === 'phone') {
-      // Remove non-digits for phone
       const digitsOnly = value.replace(/\D/g, '');
       setFormData({ ...formData, phone: digitsOnly });
       if (touched[field]) {
@@ -88,17 +66,11 @@ const ContactFormSection = () => {
       }
     } else {
       setFormData({ ...formData, [field]: value });
-      
-      // Validate on change if field has been touched
       if (touched[field]) {
         let error = '';
-        if (field === 'name') {
-          error = validateName(value);
-        } else if (field === 'subject') {
-          error = validateSubject(value);
-        } else if (field === 'message') {
-          error = validateMessage(value);
-        }
+        if (field === 'name') error = validateName(value);
+        else if (field === 'subject') error = validateSubject(value);
+        else if (field === 'message') error = validateMessage(value);
         setErrors({ ...errors, [field]: error });
       }
     }
@@ -109,15 +81,10 @@ const ContactFormSection = () => {
     setTouched({ ...touched, [field]: true });
     
     let error = '';
-    if (field === 'name') {
-      error = validateName(formData.name);
-    } else if (field === 'phone') {
-      error = validatePhone(formData.phone);
-    } else if (field === 'subject') {
-      error = validateSubject(formData.subject);
-    } else if (field === 'message') {
-      error = validateMessage(formData.message);
-    }
+    if (field === 'name') error = validateName(formData.name);
+    else if (field === 'phone') error = validatePhone(formData.phone);
+    else if (field === 'subject') error = validateSubject(formData.subject);
+    else if (field === 'message') error = validateMessage(formData.message);
     setErrors({ ...errors, [field]: error });
   };
 
@@ -157,318 +124,85 @@ const ContactFormSection = () => {
     
     // If form is invalid, don't submit
     if (nameError || phoneError || subjectError || messageError) {
-      toast.error('يرجى تصحيح الأخطاء في النموذج', {
-        duration: 3000,
-      });
+      toast.error('يرجى تصحيح الأخطاء في النموذج', { duration: 3000 });
       return;
     }
     
     setIsSubmitting(true);
     
     // Show loading toast
-    const loadingToast = toast.loading('جاري إرسال الرسالة...', {
-      duration: Infinity,
-    });
+    const loadingToast = toast.loading('جاري إرسال الرسالة...');
     
     try {
-      // Prepare phone number - ensure it starts with 0
+      // Prepare phone number
       let phoneNumber = formData.phone.replace(/\D/g, '');
       if (!phoneNumber.startsWith('0')) {
         phoneNumber = '0' + phoneNumber;
       }
 
-      // Prepare headers
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+      // Send POST request
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          phone: phoneNumber,
+          subject: formData.subject.trim(),
+          message: formData.message.trim()
+        }),
+      });
 
-      // Try to get CSRF token from various sources
-      let csrfToken = null;
-      
-      // 1. Try to get from meta tag
-      if (typeof document !== 'undefined') {
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        if (metaToken) {
-          csrfToken = metaToken.getAttribute('content');
-        }
-      }
-
-      // 2. Try to get from cookie
-      if (!csrfToken && typeof document !== 'undefined') {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-          const [name, value] = cookie.trim().split('=');
-          if (name === 'XSRF-TOKEN' || name === 'csrf-token' || name === '_token') {
-            csrfToken = decodeURIComponent(value);
-            break;
-          }
-        }
-      }
-
-      // 3. Try to fetch from API endpoint
-      if (!csrfToken) {
-        try {
-          const csrfResponse = await fetch('https://dashboard.waytmiah.com/sanctum/csrf-cookie', {
-            method: 'GET',
-            credentials: 'include',
-          });
-          // After setting cookie, try to get token from cookie again
-          if (typeof document !== 'undefined') {
-            const cookies = document.cookie.split(';');
-            for (let cookie of cookies) {
-              const [name, value] = cookie.trim().split('=');
-              if (name === 'XSRF-TOKEN' || name === 'csrf-token' || name === '_token') {
-                csrfToken = decodeURIComponent(value);
-                break;
-              }
-            }
-          }
-        } catch (csrfError) {
-        }
-      }
-
-      // Add CSRF token to headers if found
-      if (csrfToken) {
-        headers['X-CSRF-TOKEN'] = csrfToken;
-        headers['X-XSRF-TOKEN'] = csrfToken;
-      }
-
-      // Prepare request body
-      const requestBody = {
-        name: formData.name.trim(),
-        phone: phoneNumber,
-        subject: formData.subject.trim(),
-        message: formData.message.trim()
-      };
-
-      // Add CSRF token to body if API requires it in body
-      if (csrfToken) {
-        requestBody._token = csrfToken;
-      }
-
-      // Send POST request to Next.js API route (proxy to avoid CORS issues)
-      let response;
-      try {
-        response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            ...(csrfToken && {
-              'X-CSRF-TOKEN': csrfToken,
-              'X-XSRF-TOKEN': csrfToken,
-            }),
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-      } catch (fetchError) {
-        // Dismiss loading toast
-        toast.dismiss(loadingToast);
-        
-        console.error('Fetch error details:', {
-          error: fetchError,
-          message: fetchError.message,
-          stack: fetchError.stack,
-          name: fetchError.name
-        });
-        
-        // Check if it's a network error
-        if (fetchError instanceof TypeError && fetchError.message === 'Failed to fetch') {
-          toast.error('فشل الاتصال بالخادم. قد تكون هناك مشكلة في CORS أو الخادم غير متاح. يرجى التحقق من اتصالك بالإنترنت أو المحاولة لاحقاً', {
-            duration: 6000,
-          });
-        } else {
-          toast.error(`حدث خطأ أثناء إرسال الرسالة: ${fetchError.message}`, {
-            duration: 5000,
-          });
-        }
-        
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Dismiss loading toast
       toast.dismiss(loadingToast);
 
       if (response.ok) {
-        let data;
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          // If response is not JSON, still consider it success
-        }
-        
-        // Show success toast
         toast.success('تم إرسال رسالتك بنجاح! سنتواصل معك قريباً', {
           icon: <FaCheckCircle className="w-5 h-5" />,
           duration: 4000,
-          style: {
-            background: '#579BE8',
-            color: '#fff',
-            borderRadius: '12px',
-            padding: '16px',
-            fontSize: '14px',
-            fontWeight: '500',
-          },
         });
         
         // Reset form
-        setFormData({ 
-          name: '', 
-          phone: '', 
-          subject: '', 
-          message: '' 
-        });
-        setErrors({ 
-          name: '', 
-          phone: '', 
-          subject: '', 
-          message: '' 
-        });
-        setTouched({ 
-          name: false, 
-          phone: false, 
-          subject: false, 
-          message: false 
-        });
+        setFormData({ name: '', phone: '', subject: '', message: '' });
+        setErrors({ name: '', phone: '', subject: '', message: '' });
+        setTouched({ name: false, phone: false, subject: false, message: false });
       } else {
-        // Handle API error
-        let errorData = {};
-        let errorMessage = 'فشل إرسال الرسالة. يرجى المحاولة مرة أخرى';
-        
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorData.errors || errorMessage;
-          } else {
-            const text = await response.text();
-            errorMessage = text || errorMessage;
-          }
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-          errorMessage = `خطأ ${response.status}: ${response.statusText}`;
-        }
-        
-        // Handle specific error codes
-        if (response.status === 419) {
-          errorMessage = 'انتهت صلاحية الجلسة. يرجى تحديث الصفحة والمحاولة مرة أخرى';
-        } else if (response.status === 422) {
-          errorMessage = errorMessage || 'البيانات المدخلة غير صحيحة. يرجى التحقق من جميع الحقول';
-        } else if (response.status === 500) {
-          errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً';
-        }
-        
-        toast.error(errorMessage, {
-          duration: 5000,
-        });
+        toast.error('فشل إرسال الرسالة. يرجى المحاولة مرة أخرى', { duration: 5000 });
       }
     } catch (error) {
-      // Dismiss loading toast
       toast.dismiss(loadingToast);
-      
-      // Handle network or other errors
-      console.error('Error submitting form:', error);
-      
-      let errorMessage = 'حدث خطأ أثناء إرسال الرسالة. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى';
-      
-      if (error instanceof TypeError) {
-        if (error.message.includes('Failed to fetch')) {
-          errorMessage = 'فشل الاتصال بالخادم. قد تكون هناك مشكلة في الشبكة أو الخادم غير متاح';
-        } else if (error.message.includes('NetworkError')) {
-          errorMessage = 'خطأ في الشبكة. يرجى التحقق من اتصالك بالإنترنت';
-        }
-      }
-      
-      toast.error(errorMessage, {
-        duration: 5000,
-      });
+      toast.error('حدث خطأ أثناء إرسال الرسالة', { duration: 5000 });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <section className="relative w-full bg-gradient-to-br from-[#D0E8FF] via-[#E0F2FF] to-[#C8E5FF] overflow-hidden">
-      {/* ارتفاعات مختلفة لكل شاشة - بدون أي حركة */}
-      {/* موبايل صغير (أقل من 640px) */}
-      <div className="absolute inset-0 sm:hidden">
-        <div className="w-full h-[650px]"></div>
-      </div>
-      
-      {/* موبايل كبير (640px - 768px) */}
-      <div className="absolute inset-0 hidden sm:block md:hidden">
-        <div className="w-full h-[600px]"></div>
-      </div>
-      
-      {/* تابلت (768px - 1024px) */}
-      <div className="absolute inset-0 hidden md:block lg:hidden">
-        <div className="w-full h-[550px]"></div>
-      </div>
-      
-      {/* لابتوب صغير (1024px - 1280px) */}
-      <div className="absolute inset-0 hidden lg:block xl:hidden">
-        <div className="w-full h-[500px]"></div>
-      </div>
-      
-      {/* شاشات كبيرة (أكبر من 1280px) */}
-      <div className="absolute inset-0 hidden xl:block">
-        <div className="w-full h-[480px]"></div>
-      </div>
-
-      {/* Simple Background Elements - ثابتة بدون حركة على الموبايل */}
-      <div className="absolute inset-0">
-        {/* عناصر خلفية - ثابتة على الموبايل، متحركة فقط على الديسكتوب */}
-        <div className="absolute top-10 right-10 sm:top-20 sm:right-20 w-20 h-20 sm:w-32 sm:h-32 bg-[#579BE8]/10 rounded-full blur-2xl"></div>
-        
-        <div className="absolute bottom-20 left-16 sm:bottom-40 sm:left-32 w-32 h-32 sm:w-48 sm:h-48 bg-[#579BE8]/8 rounded-full blur-3xl"></div>
-        
-        {/* Water Ripple Effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/4 sm:h-1/3 bg-gradient-to-t from-[#D0E8FF]/8 via-transparent to-transparent"></div>
-      </div>
-
-      {/* Decorative Water Icons - Responsive وثابتة */}
-      <div className="absolute top-5 right-5 sm:top-10 sm:right-10 text-[#579BE8]/15 z-0">
-        <IoWaterOutline className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
-      </div>
-      
-      <div className="absolute bottom-5 left-5 sm:bottom-10 sm:left-10 text-[#579BE8]/15 z-0">
-        <FaWater className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 -rotate-12" />
-      </div>
-      
-      <div className="absolute top-1/3 right-1/4 text-[#579BE8]/10 z-0 hidden sm:block">
-        <IoWaterOutline className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 xl:w-64 xl:h-64 rotate-45" />
-      </div>
-      
-      <div className="absolute bottom-1/3 left-1/4 text-[#579BE8]/12 z-0 hidden md:block">
-        <FaWater className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rotate-12" />
-      </div>
-
-      {/* محتوى رئيسي مع Padding متجاوب - ثابت على الموبايل */}
-      <div className="relative z-10 flex items-center justify-center min-h-full w-full px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12 lg:py-14 xl:py-16">
-        <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
-          {/* Header - بدون حركة على الموبايل */}
-          <div className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10">
-            <div className="inline-block mb-1 sm:mb-2 md:mb-3">
-              <span className="text-[10px] sm:text-xs md:text-sm font-bold text-[#579BE8] bg-[#579BE8]/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+    <section className="w-full bg-blue-50 py-8 sm:py-10 md:py-12 lg:py-14 xl:py-16">
+      <div className="container mx-auto px-3 sm:px-4 py-2">
+        <div className="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-block mb-2">
+              <span className="text-xs sm:text-sm font-bold text-[#579BE8] bg-blue-100 px-3 py-1.5 rounded-full">
                 تواصل معنا
               </span>
             </div>
-            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-black text-gray-900 mb-1 sm:mb-2 md:mb-3 leading-tight px-2">
-              <span className="block text-[#579BE8] text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">فريق دعم متكامل</span>
-              <span className="block text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-700">علي مدار الساعة</span>
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+              <span className="block text-[#579BE8] text-sm sm:text-base md:text-lg lg:text-xl mb-1">
+                فريق دعم متكامل
+              </span>
+              <span className="block text-sm sm:text-base md:text-lg lg:text-xl text-gray-700">
+                على مدار الساعة
+              </span>
             </h2>
-            <div className="w-12 sm:w-14 md:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-[#579BE8] to-[#315782] rounded-full mx-auto"></div>
+            <div className="w-12 sm:w-16 h-0.5 bg-[#579BE8] rounded-full mx-auto"></div>
           </div>
 
-          {/* Form Card - بدون حركة على الموبايل */}
-          <div className="bg-white/95 backdrop-blur-2xl rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8">
-            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-5">
+          {/* Form Card - بدون أي مؤثرات */}
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-5 md:p-6 lg:p-7">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Name Field */}
-              <div className="space-y-1 sm:space-y-2">
-                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold text-xs sm:text-sm mb-1.5">
                   <FaUser className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
                   <span>الاسم</span>
                 </label>
@@ -477,26 +211,23 @@ const ContactFormSection = () => {
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   onBlur={() => handleBlur('name')}
-                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                  className={`w-full h-10 sm:h-11 md:h-12 rounded-lg bg-gray-50 border text-right text-gray-900 text-sm px-3 outline-none ${
                     errors.name
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      ? 'border-red-400'
                       : touched.name && !errors.name
-                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                      ? 'border-green-400'
+                      : 'border-gray-200 focus:border-blue-600'
                   }`}
                   placeholder="الاسم"
                 />
                 {errors.name && (
-                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
-                    <span>⚠</span>
-                    {errors.name}
-                  </p>
+                  <p className="text-red-600 text-xs mt-1">{errors.name}</p>
                 )}
               </div>
 
               {/* Phone Field */}
-              <div className="space-y-1 sm:space-y-2">
-                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold text-xs sm:text-sm mb-1.5">
                   <FaPhone className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
                   <span>الجوال</span>
                 </label>
@@ -506,32 +237,23 @@ const ContactFormSection = () => {
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
                   onBlur={() => handleBlur('phone')}
-                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                  className={`w-full h-10 sm:h-11 md:h-12 rounded-lg bg-gray-50 border text-right text-gray-900 text-sm px-3 outline-none ${
                     errors.phone
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      ? 'border-red-400'
                       : touched.phone && !errors.phone
-                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                      ? 'border-green-400'
+                      : 'border-gray-200 focus:border-blue-600'
                   }`}
                   placeholder="05xxxxxxxx"
                 />
                 {errors.phone && (
-                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
-                    <span>⚠</span>
-                    {errors.phone}
-                  </p>
-                )}
-                {touched.phone && !errors.phone && formData.phone && (
-                  <p className="text-green-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
-                    <span>✓</span>
-                    رقم الجوال صحيح
-                  </p>
+                  <p className="text-red-600 text-xs mt-1">{errors.phone}</p>
                 )}
               </div>
 
               {/* Subject Field */}
-              <div className="space-y-1 sm:space-y-2">
-                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold text-xs sm:text-sm mb-1.5">
                   <FaEnvelope className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
                   <span>الموضوع</span>
                 </label>
@@ -540,30 +262,27 @@ const ContactFormSection = () => {
                   value={formData.subject}
                   onChange={(e) => handleChange('subject', e.target.value)}
                   onBlur={() => handleBlur('subject')}
-                  className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 transition-all outline-none ${
+                  className={`w-full h-10 sm:h-11 md:h-12 rounded-lg bg-gray-50 border text-right text-gray-900 text-sm px-3 outline-none ${
                     errors.subject
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      ? 'border-red-400'
                       : touched.subject && !errors.subject
-                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                      ? 'border-green-400'
+                      : 'border-gray-200 focus:border-blue-600'
                   }`}
                   placeholder="موضوع الرسالة"
                 />
                 {errors.subject && (
-                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
-                    <span>⚠</span>
-                    {errors.subject}
-                  </p>
+                  <p className="text-red-600 text-xs mt-1">{errors.subject}</p>
                 )}
               </div>
 
               {/* Message Field */}
-              <div className="space-y-1 sm:space-y-2">
-                <label className="flex items-center gap-1 sm:gap-2 text-gray-700 font-semibold text-[10px] sm:text-xs md:text-sm">
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 font-semibold text-xs sm:text-sm mb-1.5">
                   <FaEnvelope className="w-3 h-3 sm:w-4 sm:h-4 text-[#579BE8]" />
                   <span>رسالتك</span>
                   {formData.message && (
-                    <span className="text-[8px] sm:text-xs text-gray-700 font-normal">
+                    <span className="text-xs text-gray-500">
                       ({formData.message.trim().length}/500)
                     </span>
                   )}
@@ -574,41 +293,38 @@ const ContactFormSection = () => {
                   value={formData.message}
                   onChange={(e) => handleChange('message', e.target.value)}
                   onBlur={() => handleBlur('message')}
-                  className={`w-full rounded-lg sm:rounded-xl bg-gray-50 border text-right text-gray-900 font-medium text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-3 resize-none transition-all outline-none ${
+                  className={`w-full rounded-lg bg-gray-50 border text-right text-gray-900 text-sm px-3 py-2 resize-none outline-none ${
                     errors.message
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      ? 'border-red-400'
                       : touched.message && !errors.message
-                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20'
-                      : 'border-gray-200 focus:border-[#579BE8] focus:ring-[#579BE8]/20'
+                      ? 'border-green-400'
+                      : 'border-gray-200 focus:border-blue-600'
                   }`}
                   placeholder="اكتب رسالتك هنا..."
                 />
                 {errors.message && (
-                  <p className="text-red-600 text-[8px] sm:text-xs font-medium flex items-center gap-1">
-                    <span>⚠</span>
-                    {errors.message}
-                  </p>
+                  <p className="text-red-600 text-xs mt-1">{errors.message}</p>
                 )}
               </div>
 
-              {/* Submit Button - بدون حركة على الموبايل */}
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isSubmitting || !isFormValid()}
-                className={`w-full h-9 sm:h-10 md:h-11 lg:h-12 rounded-lg sm:rounded-xl text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 ${
-                  isSubmitting
+                className={`w-full h-10 sm:h-11 md:h-12 rounded-lg text-white font-medium text-sm shadow-sm flex items-center justify-center gap-2 ${
+                  isSubmitting || !isFormValid()
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-[#579BE8] to-[#6BA8F0] hover:shadow-lg'
+                    : 'bg-[#579BE8] hover:bg-blue-700'
                 }`}
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>جاري الإرسال...</span>
                   </>
                 ) : (
                   <>
-                    <FaPaperPlane className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <FaPaperPlane className="w-4 h-4" />
                     <span>إرسال الرسالة</span>
                   </>
                 )}
