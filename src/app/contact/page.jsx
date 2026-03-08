@@ -333,7 +333,7 @@ const ContactPage = () => {
       {/* Content */}
       <div className="relative z-10">
         <VisionMissionSection/>
-        <ContactFormSection />
+        {/* <ContactFormSection /> */}
         <Footer />
       </div>
     </main>
