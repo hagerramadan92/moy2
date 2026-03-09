@@ -666,7 +666,9 @@ export default function OrderDetailsPage() {
   const handleLoginRedirect = () => {
     router.push("/login");
   };
-
+ const handleOrderRedirect = () => {
+    router.push("/orders");
+  };
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return "غير محدد";
@@ -1324,7 +1326,7 @@ export default function OrderDetailsPage() {
               )}
 
               {isCompleted && (
-                <button className="flex items-center justify-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all bg-gradient-to-r from-green-500 to-emerald-600 flex-1 sm:flex-none">
+                <button onClick={handleOrderRedirect} className="flex items-center justify-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all bg-gradient-to-r from-green-500 to-emerald-600 flex-1 sm:flex-none">
                   <BiRefresh className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>طلب مرة أخرى</span>
                 </button>
@@ -1378,12 +1380,12 @@ export default function OrderDetailsPage() {
                     <p className="text-gray-600 max-w-md mb-4 sm:mb-6 text-sm sm:text-base ">
                       نحن نقوم الآن بالبحث عن أفضل ناقل قريب من موقعك
                     </p>
-                    <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 bg-gradient-to-r from-amber-100 to-amber-50 rounded-xl sm:rounded-2xl border border-amber-200 text-xs sm:text-sm">
+                    {/* <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 bg-gradient-to-r from-amber-100 to-amber-50 rounded-xl sm:rounded-2xl border border-amber-200 text-xs sm:text-sm">
                       <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-600 animate-pulse"></span>
                       <span className="font-bold text-amber-800">
                         متوسط وقت التأكيد: 5 دقائق
                       </span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               )}
@@ -1555,13 +1557,13 @@ export default function OrderDetailsPage() {
                           )}
                         </div> */}
                         
-                        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-blue-200">
+                        {/* <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-blue-200">
                           <span
                             className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${trackingActive ? "bg-green-500 animate-pulse" : "bg-amber-500"}`}
                           ></span>
                           {trackingActive ? "التتبع نشط" : "التتبع متوقف"}
-                        </div>
-                        <button
+                        </div> */}
+                        {/* <button
                           onClick={() => setTrackingActive(!trackingActive)}
                           className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 transition-all shadow"
                           title={
@@ -1569,7 +1571,7 @@ export default function OrderDetailsPage() {
                           }
                         >
                           {trackingActive ? "⏸️" : "▶️"}
-                        </button>
+                        </button> */}
                       </>
                     )}
                     <button

@@ -28,7 +28,7 @@ export default function Cover({ data }) {
                 ارباحك المتوقعه
               </h2>
           {/* Daily Profit Button */}
-          <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5  mb-4 sm:mb-5">
+          <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4  mb-4 sm:mb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4"> {/* Increased gap */}
                     <span className="font-cairo font-normal text-[15px] text-gray-700 text-center sm:text-left whitespace-nowrap">
                       متوسط الربح اليومي
@@ -40,7 +40,7 @@ export default function Cover({ data }) {
                 </div>
 
                 {/* Weekly Profit Button */}
-                <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4 sm:p-5  mb-3 sm:mb-4 md:mb-5">
+                <div className="w-full rounded-xl sm:rounded-2xl bg-[rgba(87,155,232,0.15)] p-4   mb-3 sm:mb-4 md:mb-5">
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-1"> {/* Increased gap */}
                     <span className="font-cairo font-normal text-[15px] text-gray-700 text-center sm:text-left whitespace-nowrap">
                       متوسط الربح الاسبوعي

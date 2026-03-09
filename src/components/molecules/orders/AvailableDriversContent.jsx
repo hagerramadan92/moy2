@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, useReducer } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDriverData } from './DriverCard';
@@ -39,6 +39,60 @@ const DriversMap = dynamic(
   }
 );
 
+// Action Types for offers reducer
+const OFFER_ACTIONS = {
+  SET_OFFERS: 'SET_OFFERS',
+  ADD_OFFER: 'ADD_OFFER',
+  UPDATE_OFFER: 'UPDATE_OFFER',
+  REMOVE_OFFER: 'REMOVE_OFFER',
+};
+
+// Offers Reducer with deep merge
+const offersReducer = (state, action) => {
+  console.log('🔄 Reducer action:', action.type, action.payload?.id);
+  
+  switch (action.type) {
+    case OFFER_ACTIONS.SET_OFFERS:
+      console.log('📦 Setting offers:', action.payload?.length || 0);
+      return action.payload || [];
+
+    case OFFER_ACTIONS.ADD_OFFER:
+      if (state.some(offer => offer.id === action.payload.id)) {
+        console.log(`⚠️ Offer ${action.payload.id} already exists, skipping add.`);
+        return state;
+      }
+      console.log(`✅ Adding new offer ${action.payload.id}`);
+      return [action.payload, ...state];
+
+    case OFFER_ACTIONS.UPDATE_OFFER:
+      console.log(`🔄 Updating offer ${action.payload.id}`);
+      return state.map(offer => {
+        if (offer.id === action.payload.id) {
+          // Deep merge
+          const updatedOffer = { ...offer, ...action.payload };
+          
+          if (action.payload.order) {
+            updatedOffer.order = { ...offer.order, ...action.payload.order };
+          }
+          
+          if (action.payload.driver) {
+            updatedOffer.driver = { ...offer.driver, ...action.payload.driver };
+          }
+          
+          return updatedOffer;
+        }
+        return offer;
+      });
+
+    case OFFER_ACTIONS.REMOVE_OFFER:
+      console.log(`🗑️ Removing offer ${action.payload}`);
+      return state.filter(offer => offer.id !== action.payload);
+
+    default:
+      return state;
+  }
+};
+
 export default function AvailableDriversContent({ onBack }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,7 +105,7 @@ export default function AvailableDriversContent({ onBack }) {
   const [pendingPaymentOfferId, setPendingPaymentOfferId] = useState(null);
   const [expiredOfferIds, setExpiredOfferIds] = useState([]);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [paidOfferIds, setPaidOfferIds] = useState(new Set()); // ✅ حالة لتتبع العروض المدفوعة
+  const [paidOfferIds, setPaidOfferIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,30 +114,37 @@ export default function AvailableDriversContent({ onBack }) {
   const [isOrderExpired, setIsOrderExpired] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
   
-  // ✅ إضافة حالة لتحديد الموقع
+  // Use reducer for offers list
+  const [offers, dispatchOffers] = useReducer(offersReducer, []);
+  
+  // Refs
+  const mapInitializedRef = useRef(false);
+  const isLocationInitializedRef = useRef(false);
+  const paymentProcessedRef = useRef(false);
+  const initialFetchDoneRef = useRef(false);
+  const expiryCheckIntervalRef = useRef(null);
+  const offersRef = useRef(offers);
+  
+  // Update ref when offers change
+  useEffect(() => {
+    offersRef.current = offers;
+  }, [offers]);
+  
+  // Location state
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
   
-  const [stats, setStats] = useState({
-    totalOffers: 0,
-    averagePrice: 0,
-    fastestDelivery: 0,
-    lowestPrice: 0
-  });
-  
+  // Notification states
   const [newOfferNotification, setNewOfferNotification] = useState(null);
   const [driverAcceptedNotification, setDriverAcceptedNotification] = useState(null);
+  const [offerExpiredNotification, setOfferExpiredNotification] = useState(null);
   
-  const mapInitializedRef = useRef(false);
-  const isLocationInitializedRef = useRef(false); // ✅ إضافة ref لمنع التكرار
-  const paymentProcessedRef = useRef(false); // ✅ إضافة ref لمنع معالجة الدفع أكثر من مرة
-  
-  // ✅ حالات جديدة للتمييز بين اختيار الدفع والقبول الفعلي
-  const [selectedForPaymentOfferId, setSelectedForPaymentOfferId] = useState(null); // ✅ عرض تم اختياره للدفع
-  const [processingPaymentOfferId, setProcessingPaymentOfferId] = useState(null); // ✅ عرض جاري معالجة الدفع
+  // States for payment flow
+  const [selectedForPaymentOfferId, setSelectedForPaymentOfferId] = useState(null);
+  const [processingPaymentOfferId, setProcessingPaymentOfferId] = useState(null);
 
   const {
     isConnected: pusherConnected,
@@ -108,17 +169,38 @@ export default function AvailableDriversContent({ onBack }) {
   const paymentCancelParam = searchParams.get('cancel');
   const isExpiredParam = searchParams.get('expired');
 
+  // Calculate stats from offers
+  const stats = useMemo(() => {
+    if (!offers || offers.length === 0) {
+      return {
+        totalOffers: 0,
+        averagePrice: 0,
+        fastestDelivery: 0,
+        lowestPrice: 0
+      };
+    }
+
+    const prices = offers.map(o => parseFloat(o.price)).filter(p => !isNaN(p));
+    const times = offers.map(o => o.delivery_duration_minutes || 0).filter(t => t > 0);
+
+    return {
+      totalOffers: offers.length,
+      averagePrice: prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2) : 0,
+      fastestDelivery: times.length > 0 ? Math.min(...times) : 0,
+      lowestPrice: prices.length > 0 ? Math.min(...prices).toFixed(2) : 0
+    };
+  }, [offers]);
+
   // Memoize drivers data for map
   const memoizedDrivers = useMemo(() => {
-    if (!offersData?.offers) return [];
-    return offersData.offers.map(formatDriverData);
-  }, [offersData?.offers]);
+    return offers.map(formatDriverData);
+  }, [offers]);
 
-  // ✅ دالة طلب إذن الموقع
+  // دالة طلب إذن الموقع
   const requestLocationPermission = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('المتصفح لا يدعم تحديد الموقع');
-      setCurrentLocation({ lat: 24.7136, lng: 46.6753 }); // موقع افتراضي (الرياض)
+      setCurrentLocation({ lat: 24.7136, lng: 46.6753 });
       localStorage.setItem('userLocation', JSON.stringify({ lat: 24.7136, lng: 46.6753 }));
       return;
     }
@@ -137,7 +219,6 @@ export default function AvailableDriversContent({ onBack }) {
         setLocationPermissionGranted(true);
         setShowLocationPrompt(false);
         
-        // ✅ حفظ في localStorage
         localStorage.setItem('userLocation', JSON.stringify(location));
         localStorage.setItem('locationPermissionGranted', 'true');
         
@@ -174,9 +255,8 @@ export default function AvailableDriversContent({ onBack }) {
     );
   }, []);
 
-  // ✅ التحقق من إذن الموقع عند التحميل - بدون dependency على currentLocation
+  // التحقق من إذن الموقع عند التحميل
   useEffect(() => {
-    // ✅ استخدام ref لمنع التكرار
     if (isLocationInitializedRef.current) return;
     
     const savedPermission = localStorage.getItem('locationPermissionGranted');
@@ -189,7 +269,6 @@ export default function AvailableDriversContent({ onBack }) {
         setLocationPermissionGranted(true);
       } catch (error) {
         console.warn('Error parsing saved location:', error);
-        // تأجيل عرض البرومبت باستخدام setTimeout مباشرة
         const timer = setTimeout(() => {
           setShowLocationPrompt(true);
         }, 2000);
@@ -197,7 +276,6 @@ export default function AvailableDriversContent({ onBack }) {
         return () => clearTimeout(timer);
       }
     } else {
-      // تأجيل عرض البرومبت
       const timer = setTimeout(() => {
         setShowLocationPrompt(true);
       }, 2000);
@@ -206,99 +284,326 @@ export default function AvailableDriversContent({ onBack }) {
     }
     
     isLocationInitializedRef.current = true;
-  }, []); // ✅ إزالة currentLocation من الـ dependencies
+  }, []);
 
-  // Handle driver accepted order
+  // دالة لتخطي تحديد الموقع
+  const skipLocation = useCallback(() => {
+    const defaultLocation = { lat: 24.7136, lng: 46.6753 };
+    setCurrentLocation(defaultLocation);
+    localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
+    setShowLocationPrompt(false);
+  }, []);
+
+  // دالة لإنشاء عرض جديد يدوياً (للاستخدام في حالة عدم توفر البيانات الكاملة)
+  const createMockOfferFromEvent = useCallback((data, acceptedOfferId, paymentStatus) => {
+    return {
+      id: acceptedOfferId,
+      driver_id: data.driver_id || data.driver?.id || `driver-${Date.now()}`,
+      driver: data.driver || {
+        id: data.driver_id || `driver-${Date.now()}`,
+        name: data.driver_name || data.driver?.name || 'سائق',
+        rating: 4.5,
+        vehicle: {
+          model: 'مركبة',
+          plate_number: 'XXX'
+        }
+      },
+      price: data.price || data.order?.price || 0,
+      status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
+      order: {
+        payment_status: paymentStatus || 'pending'
+      },
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 5 * 60000).toISOString(), // 5 دقائق
+      delivery_duration_minutes: 30
+    };
+  }, []);
+
+  // دالة معالجة حدث إنشاء عرض جديد
+  const handleOfferCreated = useCallback((data) => {
+    console.log('💰 ===== NEW OFFER CREATED EVENT =====', data);
+    
+    const newOffer = data.offer || data.data?.offer || data.data || data;
+    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    
+    if (offerOrderId && offerOrderId.toString() === orderId?.toString() && newOffer?.id) {
+      console.log(`✅ New offer ${newOffer.id} belongs to our order ${orderId}`);
+      
+      if (newOffer.expires_at) {
+        const expiresAt = new Date(newOffer.expires_at);
+        const now = new Date();
+        
+        if (expiresAt <= now) {
+          console.log('⏰ New offer is already expired, not adding.');
+          return;
+        }
+      }
+      
+      dispatchOffers({ type: OFFER_ACTIONS.ADD_OFFER, payload: newOffer });
+      
+      setNewOfferNotification({
+        id: Date.now(),
+        message: 'تم إضافة عرض جديد',
+        driverName: newOffer.driver?.name || data.driver?.name || 'سائق جديد',
+        price: newOffer.price,
+        expiresIn: 5
+      });
+    }
+  }, [orderId]);
+
+  // دالة معالجة حدث تحديث عرض
+  const handleOfferUpdated = useCallback((data) => {
+    console.log('🔄 ===== OFFER UPDATED EVENT =====', data);
+    
+    const updatedOffer = data.offer || data.data?.offer || data.data || data;
+    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    
+    if (offerOrderId && offerOrderId.toString() === orderId?.toString() && updatedOffer?.id) {
+      console.log(`🔄 Updating offer ${updatedOffer.id}`);
+      
+      dispatchOffers({ type: OFFER_ACTIONS.UPDATE_OFFER, payload: updatedOffer });
+      
+      if (updatedOffer.status === 'expired' || updatedOffer.status === 'rejected') {
+        setExpiredOfferIds(prev => [...prev, updatedOffer.id]);
+        
+        setOfferExpiredNotification({
+          id: Date.now(),
+          message: 'انتهت صلاحية عرض',
+          driverName: updatedOffer.driver?.name || 'سائق',
+          expiresIn: 3
+        });
+      }
+    }
+  }, [orderId]);
+
+  // دالة معالجة حدث انتهاء صلاحية عرض
+  const handleOfferExpired = useCallback((data) => {
+    console.log('⏰ ===== OFFER EXPIRED EVENT =====', data);
+    
+    const expiredOfferId = data.offer_id || data.offer?.id || data.id;
+    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    
+    if (offerOrderId && offerOrderId.toString() === orderId?.toString() && expiredOfferId) {
+      console.log(`⏰ Offer ${expiredOfferId} expired`);
+      
+      dispatchOffers({ type: OFFER_ACTIONS.REMOVE_OFFER, payload: expiredOfferId });
+      setExpiredOfferIds(prev => [...prev, expiredOfferId]);
+      
+      setOfferExpiredNotification({
+        id: Date.now(),
+        message: 'انتهت صلاحية عرض',
+        driverName: data.driver?.name || 'سائق',
+        expiresIn: 3
+      });
+      
+      if (pendingPaymentOfferId === expiredOfferId || selectedForPaymentOfferId === expiredOfferId) {
+        setPendingPaymentOfferId(null);
+        setSelectedForPaymentOfferId(null);
+        paymentProcessedRef.current = false;
+      }
+    }
+  }, [orderId, pendingPaymentOfferId, selectedForPaymentOfferId]);
+
+  // دالة معالجة حدث قبول السائق للطلب - معدلة بشكل نهائي
   const handleDriverAcceptedOrder = useCallback((data) => {
-    console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT RECEIVED =====', data);
+    console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT =====', data);
+    console.log('📋 Full event data:', JSON.stringify(data, null, 2));
     
     const acceptedOrderId = data.order_id || data.order?.id;
     const currentOrderId = orderId;
-    const paymentStatus = data.order?.payment_status || data.payment_status;
+    const paymentStatus = data.order?.payment_status || data.payment_status || 'pending';
     
     if (acceptedOrderId && acceptedOrderId.toString() === currentOrderId?.toString()) {
       console.log(`✅ Driver accepted our order ${currentOrderId}, payment_status: ${paymentStatus}`);
       
-      // ✅ فقط إذا كان الدفع مكتملاً (paid) نضبط acceptedOfferId
+      // محاولة الحصول على بيانات العرض الكاملة
+      let fullOfferData = data.offer || data.order?.accepted_offer || data.data?.offer || data.data;
+      const acceptedOfferId = fullOfferData?.id || data.offer?.id || data.order?.accepted_offer_id;
+      
+      if (!acceptedOfferId) {
+        console.error('❌ No offer ID found in event data');
+        return;
+      }
+      
+      console.log(`🎯 Processing accepted offer ID: ${acceptedOfferId}`);
+      
+      // البحث عن العرض الحالي في القائمة
+      const currentOffers = offersRef.current;
+      const existingOffer = currentOffers.find(o => o.id === acceptedOfferId);
+      
+      let offerToUpdate;
+      
+      if (fullOfferData && fullOfferData.id) {
+        // لدينا بيانات كاملة من الحدث
+        console.log('📦 Using full offer data from event');
+        offerToUpdate = {
+          ...fullOfferData,
+          status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
+          order: {
+            ...(fullOfferData.order || {}),
+            payment_status: paymentStatus
+          }
+        };
+      } else if (existingOffer) {
+        // لدينا العرض في القائمة، نحدثه مع الحفاظ على البيانات
+        console.log('📦 Using existing offer data from state');
+        offerToUpdate = {
+          ...existingOffer,
+          status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
+          order: {
+            ...(existingOffer.order || {}),
+            payment_status: paymentStatus
+          }
+        };
+        
+        // إضافة بيانات إضافية من الحدث إذا وجدت
+        if (data.driver) {
+          offerToUpdate.driver = { ...(existingOffer.driver || {}), ...data.driver };
+        }
+        if (data.price) {
+          offerToUpdate.price = data.price;
+        }
+      } else {
+        // لا يوجد عرض في القائمة ولا بيانات كاملة، ننشئ عرضاً وهمياً
+        console.log('📦 Creating mock offer from event data');
+        offerToUpdate = {
+          id: acceptedOfferId,
+          driver_id: data.driver_id || data.driver?.id || `driver-${Date.now()}`,
+          driver: data.driver || {
+            id: data.driver_id || `driver-${Date.now()}`,
+            name: data.driver_name || data.driver?.name || 'سائق',
+            rating: 4.5,
+            vehicle: {
+              model: 'مركبة',
+              plate_number: 'XXX'
+            }
+          },
+          price: data.price || data.order?.price || 150,
+          status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
+          order: {
+            payment_status: paymentStatus
+          },
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 5 * 60000).toISOString(),
+          delivery_duration_minutes: 30
+        };
+      }
+      
+      // تحديث العرض في القائمة
+      console.log('🔄 Updating offer with data:', offerToUpdate);
+      dispatchOffers({
+        type: OFFER_ACTIONS.UPDATE_OFFER,
+        payload: offerToUpdate
+      });
+      
+      // تحديث الحالات المختلفة
       if (paymentStatus === 'paid') {
+        setAcceptedOfferId(acceptedOfferId);
+        setPaidOfferIds(prev => new Set([...prev, acceptedOfferId]));
+        setPendingPaymentOfferId(null);
+        setSelectedForPaymentOfferId(null);
+        setPaymentSuccess(true);
+        
         setDriverAcceptedNotification({
           id: Date.now(),
           message: 'تم قبول طلبك من قبل سائق!',
-          driverName: data.driver?.name || data.order?.driver?.name || 'سائق',
-          price: data.price || data.order?.price || selectedOffer?.price,
-          offerId: data.offer?.id || data.order?.accepted_offer_id,
+          driverName: offerToUpdate.driver?.name || 'سائق',
+          price: offerToUpdate.price,
+          offerId: acceptedOfferId,
           expiresIn: 10
         });
-        
-        if (data.offer?.id || data.order?.accepted_offer_id) {
-          const offerId = data.offer?.id || data.order?.accepted_offer_id;
-          setAcceptedOfferId(offerId);
-          setPaidOfferIds(prev => new Set([...prev, offerId]));
-          setPendingPaymentOfferId(null);
-          setSelectedForPaymentOfferId(null);
-          setPaymentSuccess(true);
-          rejectOtherOffers(offerId);
-        }
-        
-        setTimeout(() => {
-          fetchOffers();
-        }, 2000);
       } else {
-        // ✅ إذا كان الدفع لم يكتمل بعد (processing/pending)
-        console.log(`⚠️ Driver accepted order but payment not completed yet. Status: ${paymentStatus}`);
-        // لا نضبط acceptedOfferId - نتركه null حتى يكتمل الدفع
-        // يمكن إظهار إشعار بأن الدفع قيد المعالجة
+        console.log(`⚠️ Driver accepted order but payment not completed. Status: ${paymentStatus}`);
+        setPendingPaymentOfferId(acceptedOfferId);
+        
         setDriverAcceptedNotification({
           id: Date.now(),
           message: 'تم قبول العرض - في انتظار إتمام الدفع',
-          driverName: data.driver?.name || data.order?.driver?.name || 'سائق',
-          price: data.price || data.order?.price || selectedOffer?.price,
-          offerId: data.offer?.id || data.order?.accepted_offer_id,
+          driverName: offerToUpdate.driver?.name || 'سائق',
+          price: offerToUpdate.price,
+          offerId: acceptedOfferId,
+          expiresIn: 10
+        });
+      }
+      
+      // تأكيد التحديث بعد فترة قصيرة
+      setTimeout(() => {
+        console.log('⏱️ After update, offers count:', offersRef.current.length);
+        console.log('⏱️ Updated offer:', offersRef.current.find(o => o.id === acceptedOfferId));
+      }, 500);
+    }
+  }, [orderId]); // ملاحظة: لم نعد نعتمد على offers هنا، نستخدم offersRef.current بدلاً من ذلك
+
+  // معالج حدث TripStartedForUser
+  const handleTripStartedForUser = useCallback((data) => {
+    console.log('🚀 ===== TRIP STARTED FOR USER EVENT =====', data);
+    
+    const eventOrderId = data.order?.id || data.order_id;
+    
+    if (eventOrderId && eventOrderId.toString() === orderId?.toString()) {
+      console.log(`✅ Trip started for order ${orderId}`);
+      
+      if (data.order?.accepted_offer_id) {
+        const acceptedOfferId = data.order.accepted_offer_id;
+        const fullOfferData = data.offer || data.order?.accepted_offer;
+        
+        if (fullOfferData) {
+          dispatchOffers({
+            type: OFFER_ACTIONS.UPDATE_OFFER,
+            payload: {
+              ...fullOfferData,
+              status: 'accepted',
+              order: { ...fullOfferData.order, payment_status: 'paid' }
+            }
+          });
+        } else {
+          dispatchOffers({
+            type: OFFER_ACTIONS.UPDATE_OFFER,
+            payload: {
+              id: acceptedOfferId,
+              status: 'accepted',
+              order: { payment_status: 'paid' }
+            }
+          });
+        }
+        
+        setPaidOfferIds(prev => new Set([...prev, acceptedOfferId]));
+        setAcceptedOfferId(acceptedOfferId);
+        setPendingPaymentOfferId(null);
+        setSelectedForPaymentOfferId(null);
+        setPaymentSuccess(true);
+        
+        setDriverAcceptedNotification({
+          id: Date.now(),
+          message: data.message || 'تم الدفع والرحلة بدأت الآن',
+          driverName: data.order?.driver?.name || data.driver?.name || 'سائق',
+          price: data.order?.price || data.price,
+          offerId: acceptedOfferId,
           expiresIn: 10
         });
       }
     }
-  }, [orderId, selectedOffer, router]);
+  }, [orderId]);
 
-  // ✅ معالج حدث TripStartedForUser (تم الدفع وبدأت الرحلة)
-  const handleTripStartedForUser = useCallback((data) => {
-    console.log('🚀 ===== TRIP STARTED FOR USER EVENT RECEIVED =====', data);
+  // معالج حدث انتهاء صلاحية الطلب
+  const handleOrderExpired = useCallback((data) => {
+    console.log('⏱️ ===== ORDER EXPIRED EVENT =====', data);
     
-    const eventOrderId = data.order?.id || data.order_id;
-    const currentOrderId = orderId;
+    const expiredOrderId = data.order_id || data.order?.id || data.id;
     
-    if (eventOrderId && eventOrderId.toString() === currentOrderId?.toString()) {
-      console.log(`✅ Trip started for order ${currentOrderId}, payment_status: ${data.order?.payment_status}`);
+    if (expiredOrderId && expiredOrderId.toString() === orderId?.toString()) {
+      setIsOrderExpired(true);
+      dispatchOffers({ type: OFFER_ACTIONS.SET_OFFERS, payload: [] });
       
-      // إذا كان الدفع تم (paid)
-      if (data.order?.payment_status === 'paid' || data.payment_status === 'paid') {
-        // تحديث حالة الدفع للعرض المقبول
-        if (data.order?.accepted_offer_id) {
-          const paidOfferId = data.order.accepted_offer_id;
-          setPaidOfferIds(prev => new Set([...prev, paidOfferId]));
-          setAcceptedOfferId(paidOfferId);
-          setPendingPaymentOfferId(null);
-          setSelectedForPaymentOfferId(null);
-          setPaymentSuccess(true);
-          
-          console.log(`💰 Payment confirmed for offer ${paidOfferId}`);
-          
-          // إظهار إشعار
-          setDriverAcceptedNotification({
-            id: Date.now(),
-            message: data.message || 'تم الدفع والرحلة بدأت الآن',
-            driverName: data.order?.driver?.name || 'سائق',
-            price: data.order?.price,
-            offerId: paidOfferId,
-            expiresIn: 10
-          });
-          
-          // تحديث العروض بعد ثانيتين
-          setTimeout(() => {
-            fetchOffers();
-          }, 2000);
-        }
-      }
+      setOfferExpiredNotification({
+        id: Date.now(),
+        message: 'انتهت صلاحية الطلب بالكامل',
+        expiresIn: 5
+      });
+      
+      setPendingPaymentOfferId(null);
+      setSelectedForPaymentOfferId(null);
+      paymentProcessedRef.current = false;
     }
   }, [orderId]);
 
@@ -306,104 +611,86 @@ export default function AvailableDriversContent({ onBack }) {
   const handlePaymentSuccess = useCallback((data) => {
     console.log('💰 Payment success callback received:', data);
     
-    // تحديث حالة الطلب بعد الدفع الناجح
+    if (data.offer?.id) {
+      dispatchOffers({
+        type: OFFER_ACTIONS.UPDATE_OFFER,
+        payload: {
+          ...data.offer,
+          status: 'accepted',
+          order: { ...data.offer.order, payment_status: 'paid' }
+        }
+      });
+    }
+    
     if (data.order?.id === orderId) {
       setAcceptedOfferId(data.order?.accepted_offer_id || selectedOfferId);
       setPendingPaymentOfferId(null);
-      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+      setSelectedForPaymentOfferId(null);
       setPaymentSuccess(true);
       
-      // تنظيف البيانات
       localStorage.removeItem('pendingOfferData');
       sessionStorage.removeItem('paymentCallbackData');
       
-      // إظهار إشعار النجاح
       setDriverAcceptedNotification({
         id: Date.now(),
         message: 'تم الدفع بنجاح! جاري تجهيز الرحلة...',
-        driverName: data.driver?.name || 'السائق',
+        driverName: data.driver?.name || data.order?.driver?.name || 'السائق',
         expiresIn: 5
       });
-      
-      // إعادة تحميل العروض بعد ثانية
-      setTimeout(() => {
-        fetchOffers();
-      }, 1000);
     }
   }, [orderId, selectedOfferId]);
 
-
-  
   // Handle payment failure
   const handlePaymentFailure = useCallback((data) => {
     console.log('❌ Payment failure callback received:', data);
     
-    // إظهار إشعار الفشل
+    if (data.offer?.id) {
+      dispatchOffers({
+        type: OFFER_ACTIONS.UPDATE_OFFER,
+        payload: {
+          id: data.offer.id,
+          status: 'pending',
+          order: { payment_status: 'failed' }
+        }
+      });
+    }
+    
     setError('فشلت عملية الدفع. يرجى المحاولة مرة أخرى.');
-    
-    // إعادة تعيين حالة الدفع
     setPendingPaymentOfferId(null);
-    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+    setSelectedForPaymentOfferId(null);
     paymentProcessedRef.current = false;
-  }, []);
-
-  // Handle offer expired
-  const handleOfferExpired = useCallback((offerId) => {
-    console.log('⏰ Offer expired:', offerId);
-    
-    setExpiredOfferIds(prev => [...prev, offerId]);
-    setPendingPaymentOfferId(null);
-    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
-    paymentProcessedRef.current = false;
-    
-    // إظهار إشعار انتهاء العرض
-    setError('انتهت صلاحية هذا العرض. يرجى اختيار عرض آخر.');
   }, []);
 
   // Setup Pusher listeners
   useEffect(() => {
-    if (!orderId || !pusherConnected) return;
+    if (!orderId || !pusherConnected) {
+      console.log(`⏳ Waiting for Pusher connection: orderId=${orderId}, connected=${pusherConnected}`);
+      return;
+    }
     
     console.log(`🎯 Setting up Pusher listeners for order ${orderId}`);
     
-    removeEventListener('DriverAcceptedOrder');
     removeEventListener('offer.created');
+    removeEventListener('offer.updated');
+    removeEventListener('offer.expired');
+    removeEventListener('order.expired');
+    removeEventListener('DriverAcceptedOrder');
     removeEventListener('TripStartedForUser');
     
-    addEventListener('DriverAcceptedOrder', (data) => {
-      handleDriverAcceptedOrder(data);
-    });
+    addEventListener('offer.created', handleOfferCreated);
+    addEventListener('offer.updated', handleOfferUpdated);
+    addEventListener('offer.expired', handleOfferExpired);
+    addEventListener('order.expired', handleOrderExpired);
+    addEventListener('DriverAcceptedOrder', handleDriverAcceptedOrder);
+    addEventListener('TripStartedForUser', handleTripStartedForUser);
     
-    addEventListener('TripStartedForUser', (data) => {
-      handleTripStartedForUser(data);
-    });
-    
-    const channel = subscribe(`order.${orderId}`, {
-      'offer.created': (data) => {
-        const offerOrderId = data.order_id || data.order?.id || data.orderId;
-        if (offerOrderId && offerOrderId.toString() === orderId.toString()) {
-          setNewOfferNotification({
-            id: Date.now(),
-            message: 'تم إضافة عرض جديد',
-            driverName: data.driver?.name || 'سائق جديد',
-            price: data.price,
-            expiresIn: 5
-          });
-          
-          setTimeout(() => {
-            fetchOffers();
-          }, 2000);
-        }
-      },
-      
-      'DriverAcceptedOrder': (data) => {
-        handleDriverAcceptedOrder(data);
-      },
-      
-      // ✅ استماع على حدث TripStartedForUser لتحديث حالة الدفع
-      'TripStartedForUser': (data) => {
-        handleTripStartedForUser(data);
-      }
+    subscribe(`order.${orderId}`, {
+      'offer.created': handleOfferCreated,
+      'offer.updated': handleOfferUpdated,
+      'offer.expired': handleOfferExpired,
+      'order.expired': handleOrderExpired,
+      'DriverAcceptedOrder': handleDriverAcceptedOrder,
+      'TripStartedForUser': handleTripStartedForUser
     });
     
     const userData = localStorage.getItem('userData');
@@ -412,23 +699,69 @@ export default function AvailableDriversContent({ onBack }) {
         const user = JSON.parse(userData);
         if (user.id) {
           subscribe(`user.${user.id}`, {
-            'DriverAcceptedOrder': (data) => {
-              handleDriverAcceptedOrder(data);
-            }
+            'DriverAcceptedOrder': handleDriverAcceptedOrder,
+            'TripStartedForUser': handleTripStartedForUser,
+            'offer.created': handleOfferCreated
           });
         }
       } catch (error) {
-        console.warn('Could not parse user data:', error);
+        console.warn('Error parsing user data:', error);
       }
     }
     
     return () => {
-      removeEventListener('DriverAcceptedOrder');
+      console.log('🧹 Cleaning up Pusher listeners');
       removeEventListener('offer.created');
+      removeEventListener('offer.updated');
+      removeEventListener('offer.expired');
+      removeEventListener('order.expired');
+      removeEventListener('DriverAcceptedOrder');
       removeEventListener('TripStartedForUser');
       unsubscribeAll();
     };
-  }, [orderId, pusherConnected, subscribe, unsubscribeAll, addEventListener, removeEventListener, handleDriverAcceptedOrder, handleTripStartedForUser]);
+  }, [orderId, pusherConnected, subscribe, unsubscribeAll, addEventListener, removeEventListener,
+      handleOfferCreated, handleOfferUpdated, handleOfferExpired, handleOrderExpired,
+      handleDriverAcceptedOrder, handleTripStartedForUser]);
+
+  // Monitor offers changes
+  useEffect(() => {
+    console.log('📊 Offers updated, current count:', offers.length);
+  }, [offers]);
+
+  // Check for expired offers periodically
+  useEffect(() => {
+    if (expiryCheckIntervalRef.current) {
+      clearInterval(expiryCheckIntervalRef.current);
+    }
+    
+    if (isOrderExpired) {
+      return;
+    }
+    
+    expiryCheckIntervalRef.current = setInterval(() => {
+      const currentOffers = offersRef.current;
+      if (currentOffers && currentOffers.length > 0) {
+        const now = new Date();
+        
+        currentOffers.forEach(offer => {
+          if (offer.expires_at && !expiredOfferIds.includes(offer.id)) {
+            const expiresAt = new Date(offer.expires_at);
+            
+            if (expiresAt <= now) {
+              console.log(`⏰ Offer ${offer.id} expired (periodic check)`);
+              handleOfferExpired({ offer_id: offer.id, order_id: orderId });
+            }
+          }
+        });
+      }
+    }, 30000);
+    
+    return () => {
+      if (expiryCheckIntervalRef.current) {
+        clearInterval(expiryCheckIntervalRef.current);
+      }
+    };
+  }, [expiredOfferIds, isOrderExpired, orderId, handleOfferExpired]);
 
   // Calculate time remaining
   useEffect(() => {
@@ -442,13 +775,7 @@ export default function AvailableDriversContent({ onBack }) {
       if (diff <= 0) {
         setIsOrderExpired(true);
         setTimeRemaining(null);
-        
-        if (offersData?.offers && offersData.offers.length > 0) {
-          const allOfferIds = offersData.offers.map(offer => offer.id);
-          setExpiredOfferIds(prev => {
-            return [...new Set([...prev, ...allOfferIds])];
-          });
-        }
+        handleOrderExpired({ order_id: orderId });
         return;
       }
 
@@ -459,23 +786,17 @@ export default function AvailableDriversContent({ onBack }) {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-      setTimeRemaining({
-        days,
-        hours,
-        minutes,
-        seconds,
-        total: diff
-      });
+      setTimeRemaining({ days, hours, minutes, seconds, total: diff });
     };
 
     calculateTimeRemaining();
     const interval = setInterval(calculateTimeRemaining, 1000);
     return () => clearInterval(interval);
-  }, [orderStatus, offersData]);
+  }, [orderStatus, orderId, handleOrderExpired]);
 
   // Initial data fetch
   useEffect(() => {
-    if (orderId) {
+    if (orderId && !initialFetchDoneRef.current) {
       const expiredFlag = localStorage.getItem(`order_${orderId}_expired`);
       if (expiredFlag === 'true' || isExpiredParam === 'true') {
         setIsOrderExpired(true);
@@ -484,22 +805,23 @@ export default function AvailableDriversContent({ onBack }) {
       
       fetchOffers();
       fetchOrderStatus();
-    } else {
+      initialFetchDoneRef.current = true;
+    } else if (!orderId) {
       router.back();
     }
   }, [orderId, isExpiredParam]);
 
-  // Payment status check
+  // Payment status check - مع dependencies ثابتة
   useEffect(() => {
-    // منع المعالجة المتكررة
     if (paymentProcessedRef.current) return;
     
     if (paymentStatus === 'cancel' || paymentCancelParam === 'true') {
       setPendingPaymentOfferId(null);
-      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+      setSelectedForPaymentOfferId(null);
       setPaymentSuccess(false);
       localStorage.removeItem('pendingOfferData');
       paymentProcessedRef.current = true;
+      return;
     }
     
     if (paymentStatus === 'success' || paymentSuccessParam === 'true') {
@@ -509,11 +831,21 @@ export default function AvailableDriversContent({ onBack }) {
         const acceptedId = callbackData.offerId;
         setAcceptedOfferId(acceptedId);
         setPendingPaymentOfferId(null);
-        setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+        setSelectedForPaymentOfferId(null);
         localStorage.removeItem('pendingOfferData');
-        rejectOtherOffers(acceptedId);
         paymentProcessedRef.current = true;
+        setPaidOfferIds(prev => new Set([...prev, acceptedId]));
+        
+        dispatchOffers({
+          type: OFFER_ACTIONS.UPDATE_OFFER,
+          payload: {
+            id: acceptedId,
+            status: 'accepted',
+            order: { payment_status: 'paid' }
+          }
+        });
       }
+      return;
     }
     
     const callbackData = getPaymentCallbackData();
@@ -521,28 +853,33 @@ export default function AvailableDriversContent({ onBack }) {
       const acceptedId = callbackData.offerId;
       setAcceptedOfferId(acceptedId);
       setPendingPaymentOfferId(null);
-      setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+      setSelectedForPaymentOfferId(null);
       setPaymentSuccess(true);
-      rejectOtherOffers(acceptedId);
+      setPaidOfferIds(prev => new Set([...prev, acceptedId]));
       paymentProcessedRef.current = true;
+      
+      dispatchOffers({
+        type: OFFER_ACTIONS.UPDATE_OFFER,
+        payload: {
+          id: acceptedId,
+          status: 'accepted',
+          order: { payment_status: 'paid' }
+        }
+      });
+      return;
     }
     
     if (!paymentCancelParam && paymentStatus !== 'cancel' && !paymentProcessedRef.current) {
       const pendingOfferData = getPendingOfferData();
       if (pendingOfferData && pendingOfferData.orderId === orderId) {
         setPendingPaymentOfferId(pendingOfferData.offerId);
-        setSelectedForPaymentOfferId(pendingOfferData.offerId); // ✅ تعيين كـ "محدد للدفع"
+        setSelectedForPaymentOfferId(pendingOfferData.offerId);
         setSelectedDriverId(pendingOfferData.driverId);
         setSelectedOfferId(pendingOfferData.offerId);
       }
     }
 
-    // إعادة تعيين ref بعد 5 ثواني للسماح بمحاولة جديدة
-    return () => {
-      setTimeout(() => {
-        paymentProcessedRef.current = false;
-      }, 5000);
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, paymentStatus, paymentSuccessParam, paymentCancelParam]);
 
   const fetchOffers = async () => {
@@ -581,77 +918,34 @@ export default function AvailableDriversContent({ onBack }) {
       if (response.ok && data.status) {
         setIsNotFound(false);
         
-        const offersDataToSet = {
-          ...data.data,
-          offers: data.data.offers || [],
-          total_offers: data.data.total_offers || (data.data.offers?.length || 0),
-          active_offers: data.data.active_offers || (data.data.offers?.length || 0)
-        };
+        const offersFromApi = data.data.offers || [];
+        console.log('📥 Fetched offers from API:', offersFromApi.length);
         
-        setOffersData(offersDataToSet);
+        dispatchOffers({ type: OFFER_ACTIONS.SET_OFFERS, payload: offersFromApi });
+        
+        setOffersData(data.data);
         setError(null);
-        
-        // ✅ إعادة تعيين acceptedOfferId في البداية (سيتم ضبطه فقط إذا كان الدفع مكتملاً)
         setAcceptedOfferId(null);
         
-        // ✅ التحقق من حالة الدفع من API - فقط إذا كان accepted_offer موجود و payment_status === 'paid'
         if (data.data.accepted_offer) {
           const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
           const orderPaymentStatus = data.data.order?.payment_status;
-          const offerPaymentStatus = data.data.accepted_offer?.payment_status;
           
-          // ✅ فقط إذا كان الدفع مكتملاً (paid) نضبط acceptedOfferId
-          if (orderPaymentStatus === 'paid' || offerPaymentStatus === 'paid') {
+          if (orderPaymentStatus === 'paid') {
             setAcceptedOfferId(acceptedId);
             setPendingPaymentOfferId(null);
             setSelectedForPaymentOfferId(null);
             setPaidOfferIds(prev => new Set([...prev, acceptedId]));
             setPaymentSuccess(true);
             localStorage.removeItem('pendingOfferData');
-            console.log(`💰 Payment confirmed from API for offer ${acceptedId}`);
-            
-            setTimeout(() => {
-              rejectOtherOffers(acceptedId);
-            }, 500);
-          } else {
-            // ✅ إذا كان accepted_offer موجود لكن الدفع لم يكتمل بعد (processing/pending)
-            console.log(`⚠️ Accepted offer ${acceptedId} exists but payment not completed yet. Status: ${orderPaymentStatus || offerPaymentStatus}`);
-            // لا نضبط acceptedOfferId - نتركه null حتى يكتمل الدفع
-            setAcceptedOfferId(null);
-          }
-        } else {
-          // ✅ لا يوجد accepted_offer - إعادة تعيين الحالة
-          setAcceptedOfferId(null);
-        }
-        
-        // ✅ التحقق من حالة الدفع في كل عرض من العروض
-        if (data.data.offers && Array.isArray(data.data.offers)) {
-          const paidIds = new Set();
-          data.data.offers.forEach(offer => {
-            // ✅ فقط إذا كان العرض مقبولاً ومدفوعاً بالكامل
-            const offerOrderPaymentStatus = offer.order?.payment_status;
-            const offerStatus = offer.status;
-            
-            // التحقق من أن الدفع مكتمل (paid) وليس في انتظار (payment_pending/processing)
-            if (offerOrderPaymentStatus === 'paid' && offerStatus !== 'payment_pending') {
-              paidIds.add(offer.id);
-            }
-          });
-          if (paidIds.size > 0) {
-            setPaidOfferIds(prev => new Set([...prev, ...paidIds]));
-            setPaymentSuccess(true);
           }
         }
         
         setLoading(false);
         setRefreshing(false);
         
-        if (data.data.offers && data.data.offers.length > 0) {
-          calculateStats(data.data.offers);
-        }
-        
       } else {
-        if (data.error_code === 'UNAUTHENTICATED' || data.message?.includes('تسجيل الدخول')) {
+        if (data.error_code === 'UNAUTHENTICATED') {
           setError('انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى.');
           localStorage.removeItem('accessToken');
         }
@@ -669,24 +963,11 @@ export default function AvailableDriversContent({ onBack }) {
       
       setError(`حدث خطأ في جلب البيانات: ${err.message}`);
       setLoading(false);
+      setRefreshing(false);
       setOffersData(null);
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const calculateStats = (offers) => {
-    if (!offers || offers.length === 0) return;
-
-    const prices = offers.map(o => parseFloat(o.price));
-    const times = offers.map(o => o.delivery_duration_minutes);
-
-    setStats({
-      totalOffers: offers.length,
-      averagePrice: (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2),
-      fastestDelivery: Math.min(...times),
-      lowestPrice: Math.min(...prices).toFixed(2)
-    });
   };
 
   const fetchOrderStatus = async () => {
@@ -709,63 +990,27 @@ export default function AvailableDriversContent({ onBack }) {
 
       if (response.ok && data.status && data.data) {
         setOrderStatus(data.data);
-
-        if (data.data.remaining_offers === 0 && data.data.expires_in?.minutes < 0) {
-          setExpiredOfferIds(prev => {
-            const currentOffers = offersData?.offers || [];
-            if (currentOffers.length > 0) {
-              const allOfferIds = currentOffers.map(offer => offer.id);
-              return [...new Set([...prev, ...allOfferIds])];
-            }
-            return prev;
-          });
-        }
       }
     } catch (err) {
       console.warn('Error fetching order status:', err.message);
     }
   };
 
-  const rejectOtherOffers = useCallback(async (acceptedOfferId) => {
-    if (!orderId || !acceptedOfferId) return;
-
-    try {
-      const currentOffers = offersData?.offers || [];
-      if (currentOffers.length === 0) return;
-
-      const otherOfferIds = currentOffers
-        .filter(offer => offer.id !== acceptedOfferId)
-        .map(offer => offer.id);
-
-      if (otherOfferIds.length === 0) return;
-
-      setExpiredOfferIds(prev => [...new Set([...prev, ...otherOfferIds])]);
-
-      setTimeout(() => {
-        fetchOffers();
-      }, 1000);
-    } catch (err) {
-      console.warn('Error rejecting other offers:', err.message);
-    }
-  }, [orderId, offersData?.offers]);
-
   const handleDriverSelect = (driverId, offerId, driverData, offer) => {
     setSelectedDriverId(driverId);
     setSelectedOfferId(offerId);
     setSelectedOffer(offer);
-    setSelectedForPaymentOfferId(offerId); // ✅ تعيين كـ "محدد للدفع"
+    setSelectedForPaymentOfferId(offerId);
     setIsModalOpen(true);
     sessionStorage.setItem('selectedDriver', JSON.stringify(driverData));
-    // إعادة تعيين ref عند اختيار سائق جديد
     paymentProcessedRef.current = false;
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setPendingPaymentOfferId(null);
-    setSelectedForPaymentOfferId(null); // ✅ إعادة تعيين حالة اختيار الدفع
+    setSelectedForPaymentOfferId(null);
     localStorage.removeItem('pendingOfferData');
-    // إعادة تعيين ref عند إغلاق المودال
     paymentProcessedRef.current = false;
   };
 
@@ -804,14 +1049,7 @@ export default function AvailableDriversContent({ onBack }) {
     }
   };
 
-  // ✅ دالة لتخطي تحديد الموقع
-  const skipLocation = useCallback(() => {
-    const defaultLocation = { lat: 24.7136, lng: 46.6753 };
-    setCurrentLocation(defaultLocation);
-    localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
-    setShowLocationPrompt(false);
-  }, []);
-
+  // Error and loading states
   if (error && error.includes('تسجيل الدخول')) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -821,20 +1059,16 @@ export default function AvailableDriversContent({ onBack }) {
               <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-10 h-10" />
               </div>
-              
               <h2 className="text-2xl font-bold text-gray-900 mb-4">يجب تسجيل الدخول</h2>
-              
               <p className="text-gray-600 mb-6">{error}</p>
-              
               <div className="space-y-4">
                 <button
                   onClick={() => router.push(`/login?return=/available-drivers?orderId=${orderId}`)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:from-blue-700 hover:to-indigo-700 transition"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition flex items-center justify-center gap-2"
                 >
                   <LogIn className="w-5 h-5" />
                   تسجيل الدخول
                 </button>
-                
                 <button
                   onClick={() => router.push('/')}
                   className="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
@@ -858,29 +1092,14 @@ export default function AvailableDriversContent({ onBack }) {
               <div className="w-20 h-20 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-10 h-10" />
               </div>
-              
               <h2 className="text-2xl font-bold text-gray-900 mb-4">الطلب غير موجود</h2>
-              
-              <p className="text-gray-600 mb-6">
-                عذراً، لم يتم العثور على الطلب المطلوب.
-              </p>
-              
-              <div className="space-y-4">
-                <button
-                     onClick={() => router.push('/')}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:from-blue-700 hover:to-indigo-700 transition"
-                >
-                  <ChevronLeft className="w-5 h-5 rotate-180" />
-                  العودة للرئيسية
-                </button>
-                
-                <button
-                  onClick={() => router.push('/')}
-                  className="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
-                >
-                  العودة للرئيسية
-                </button>
-              </div>
+              <p className="text-gray-600 mb-6">عذراً، لم يتم العثور على الطلب المطلوب.</p>
+              <button
+                onClick={() => router.push('/')}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition"
+              >
+                العودة للرئيسية
+              </button>
             </div>
           </div>
         </div>
@@ -900,9 +1119,7 @@ export default function AvailableDriversContent({ onBack }) {
             <p className="mt-6 text-gray-600 font-medium text-lg">جاري البحث عن سائقين...</p>
             <p className="text-sm text-gray-400 mt-2">رقم الطلب: #{orderId}</p>
             {timeRemaining && (
-              <p className="text-sm text-[#579BE8] mt-2">
-                ⏳ الوقت المتبقي: {formatTimeRemaining()}
-              </p>
+              <p className="text-sm text-[#579BE8] mt-2">⏳ الوقت المتبقي: {formatTimeRemaining()}</p>
             )}
           </div>
         </div>
@@ -914,7 +1131,7 @@ export default function AvailableDriversContent({ onBack }) {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8">
 
-        {/* ✅ برومبت تحديد الموقع */}
+        {/* Location Prompt Modal */}
         <AnimatePresence>
           {showLocationPrompt && !currentLocation && (
             <motion.div
@@ -933,15 +1150,10 @@ export default function AvailableDriversContent({ onBack }) {
                   <div className="w-20 h-20 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
                     <MapPin className="w-10 h-10 text-[#579BE8]" />
                   </div>
-                  
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">
-                    تحديد موقعك الحالي
-                  </h3>
-                  
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">تحديد موقعك الحالي</h3>
                   <p className="text-gray-600 mb-6">
                     هل تريد تحديد موقعك الحالي على الخريطة لعرض مواقع السائقين بدقة؟
                   </p>
-                  
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={requestLocationPermission}
@@ -960,7 +1172,6 @@ export default function AvailableDriversContent({ onBack }) {
                         </>
                       )}
                     </button>
-                    
                     <button
                       onClick={skipLocation}
                       className="border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
@@ -968,7 +1179,6 @@ export default function AvailableDriversContent({ onBack }) {
                       تخطي الآن
                     </button>
                   </div>
-                  
                   <p className="text-xs text-gray-700 mt-4">
                     يمكنك تغيير هذا الإعداد لاحقاً من إعدادات التطبيق
                   </p>
@@ -978,28 +1188,32 @@ export default function AvailableDriversContent({ onBack }) {
           )}
         </AnimatePresence>
 
-        {/* إشعار قبول السائق */}
+        {/* Driver Accepted Notification */}
         <AnimatePresence>
           {driverAcceptedNotification && (
             <motion.div
               initial={{ opacity: 0, y: -50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -50 }}
-              className="fixed top-4 left-4 right-4 z-40 md:left-auto md:right-4 md:w-96"
+              className="fixed top-40 left-4 right-4 z-40 md:left-auto md:right-4 md:w-96"
             >
               <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-2xl p-4 border border-green-300">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                       <Truck className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm">
                         {driverAcceptedNotification.message.includes('تم الدفع') ? '✅ تم الدفع' : 'تم قبول طلبك!'}
                       </h4>
-                      <p className="text-xs opacity-90 mt-1">
-                        {driverAcceptedNotification.message}
-                      </p>
+                      <p className="text-xs opacity-90 mt-1">{driverAcceptedNotification.message}</p>
+                      {driverAcceptedNotification.driverName && (
+                        <p className="text-xs font-bold mt-1">السائق: {driverAcceptedNotification.driverName}</p>
+                      )}
+                      {driverAcceptedNotification.price && (
+                        <p className="text-xs font-bold mt-1">السعر: {driverAcceptedNotification.price} ريال</p>
+                      )}
                     </div>
                   </div>
                   <button
@@ -1014,33 +1228,100 @@ export default function AvailableDriversContent({ onBack }) {
           )}
         </AnimatePresence>
 
+        {/* New Offer Notification */}
+        <AnimatePresence>
+          {newOfferNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              className="fixed top-4 left-4 right-4 z-40 md:left-auto md:right-4 md:w-96"
+            >
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-2xl p-4 border border-blue-300">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <span className="text-lg">💰</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">عرض جديد!</h4>
+                      <p className="text-xs opacity-90 mt-1">
+                        {newOfferNotification.message} بقيمة {newOfferNotification.price} ريال
+                      </p>
+                      <p className="text-xs font-bold mt-1">السائق: {newOfferNotification.driverName}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setNewOfferNotification(null)}
+                    className="text-white/80 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Offer Expired Notification */}
+        <AnimatePresence>
+          {offerExpiredNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              className="fixed top-4 left-4 right-4 z-40 md:left-auto md:right-4 md:w-96"
+            >
+              <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl shadow-2xl p-4 border border-orange-300">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">انتهاء صلاحية</h4>
+                      <p className="text-xs opacity-90 mt-1">{offerExpiredNotification.message}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setOfferExpiredNotification(null)}
+                    className="text-white/80 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Header */}
         <div className="pt-4 sm:pt-6 md:pt-8 pb-4 sm:pb-6">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between mb-4 sm:mb-6 gap-2"
+            className="flex items-center justify-between mb-4 sm:mb-6"
           >
             <button 
-                 onClick={() => router.push('/')}
+              onClick={() => router.push('/')}
               className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-[#579BE8] transition-all font-medium px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-[#579BE8]/5 text-sm sm:text-base"
             >
               <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 rotate-180" />
               <span className="hidden sm:inline">العودة للرئيسية</span>
             </button>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={fetchOffers}
-                disabled={refreshing}
-                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-sm"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">تحديث العروض</span>
-                <span className="sm:hidden">تحديث</span>
-              </button>
-            </div>
+            <button
+              onClick={fetchOffers}
+              disabled={refreshing}
+              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-sm"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">تحديث العروض</span>
+              <span className="sm:hidden">تحديث</span>
+            </button>
           </motion.div>
 
+          {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1050,30 +1331,30 @@ export default function AvailableDriversContent({ onBack }) {
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
                 <div className="flex-1">
                   <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-xl flex-shrink-0">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-xl">
                       <Truck className="w-6 h-6 sm:w-8 sm:h-8" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm opacity-90 font-medium mb-1 sm:mb-2">اختيار السائق</p>
-                      <h1 className="text-lg sm:text-2xl md:text-3xl font-black mb-2 sm:mb-4">السائقين المتاحين</h1>
+                    <div className="flex-1">
+                      <p className="text-xs sm:text-sm opacity-90 font-medium mb-1">اختيار السائق</p>
+                      <h1 className="text-lg sm:text-2xl md:text-3xl font-black mb-2">السائقين المتاحين</h1>
                       
-                      <div className="flex flex-wrap gap-2 sm:gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex items-center gap-1.5">
                             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse" />
-                            <span className="font-medium text-xs sm:text-sm">طلب #<span className="font-bold">{orderId}</span></span>
+                            <span className="font-medium text-xs sm:text-sm">طلب #{orderId}</span>
                           </div>
                         </div>
                         
                         <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex items-center gap-1.5">
                             <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="font-medium text-xs sm:text-sm">{offersData?.total_offers || 0} عرض</span>
+                            <span className="font-medium text-xs sm:text-sm">{stats.totalOffers} عرض</span>
                           </div>
                         </div>
                         
                         <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex items-center gap-1.5">
                             <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span className="font-medium text-xs sm:text-sm">
                               {isOrderExpired ? 'انتهت الصلاحية' : timeRemaining ? `متبقي: ${formatTimeRemaining()}` : 'جاري الحساب...'}
@@ -1085,12 +1366,13 @@ export default function AvailableDriversContent({ onBack }) {
                   </div>
                 </div>
 
+                {/* Stats */}
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className="bg-white/15 backdrop-blur-lg rounded-lg sm:rounded-xl p-3 sm:p-5 border border-white/20 mt-4 lg:mt-0"
                 >
-                  <p className="text-xs sm:text-sm opacity-90 font-medium mb-3 sm:mb-4 text-center">إحصائيات العروض</p>
+                  <p className="text-xs sm:text-sm opacity-90 font-medium mb-3 text-center">إحصائيات العروض</p>
                   <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div className="text-center">
                       <div className="text-lg sm:text-2xl font-bold">{stats.totalOffers}</div>
@@ -1106,21 +1388,20 @@ export default function AvailableDriversContent({ onBack }) {
             </div>
           </motion.div>
 
+          {/* Order Expired Warning */}
           {isOrderExpired && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 sm:mt-6 bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg"
             >
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
                   <X className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-red-800 font-bold text-base sm:text-lg mb-1 sm:mb-2">
-                    انتهت صلاحية الطلب
-                  </h3>
-                  <p className="text-red-600 text-xs sm:text-sm mb-2 sm:mb-3">
+                <div>
+                  <h3 className="text-red-800 font-bold text-base sm:text-lg mb-1">انتهت صلاحية الطلب</h3>
+                  <p className="text-red-600 text-xs sm:text-sm">
                     عذراً، انتهت صلاحية هذا الطلب ولم يعد من الممكن قبول العروض.
                   </p>
                 </div>
@@ -1129,30 +1410,96 @@ export default function AvailableDriversContent({ onBack }) {
           )}
         </div>
 
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 pb-12 sm:pb-20">
+          
+          {/* Offers List */}
           <motion.div
             initial="hidden"
             animate="visible"
             className="lg:col-span-8 order-2 lg:order-1"
           >
-            <div className="mb-4 sm:mb-6">
+            {/* Debug Info - يظهر فقط في التطوير */}
+            {/* {process.env.NODE_ENV === 'development' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-xs">
+                <p><strong>🔍 معلومات التصحيح:</strong></p>
+                <p>عدد العروض في المتغير: {offers.length}</p>
+                <p>حالة الاتصال بـ Pusher: {pusherConnected ? '✅ متصل' : '❌ غير متصل'}</p>
+                <p>آخر تحديث: {new Date().toLocaleTimeString()}</p>
+                <p>العروض المقبولة: {offers.filter(o => o.status === 'accepted' || acceptedOfferId === o.id).length}</p>
+                <button 
+                  onClick={() => console.log('Current offers:', offers)}
+                  className="bg-blue-500 text-white px-2 py-1 rounded mt-1 text-xs ml-2"
+                >
+                  عرض العروض في الكونسول
+                </button>
+                <button 
+                  onClick={() => {
+                    // إضافة عرض اختبار
+                    console.log('Testing with mock accepted offer');
+                    handleDriverAcceptedOrder({
+                      order_id: orderId,
+                      offer: {
+                        id: 'test-offer-123',
+                        driver_id: 'test-driver-456',
+                        driver: {
+                          id: 'test-driver-456',
+                          name: 'سائق تجريبي',
+                          rating: 4.5,
+                          vehicle: {
+                            model: 'تويوتا كامري',
+                            plate_number: 'ABC 123'
+                          }
+                        },
+                        price: 150,
+                        status: 'accepted',
+                        order: { payment_status: 'paid' }
+                      }
+                    });
+                  }}
+                  className="bg-green-500 text-white px-2 py-1 rounded mt-1 text-xs"
+                >
+                  اختبار قبول عرض
+                </button>
+              </div>
+            )} */}
+
+            <div className="mb-4 sm:mb-6 flex items-center justify-between">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                العروض المتاحة ({offersData?.total_offers || 0})
+                العروض المتاحة 
+                <span className="mr-2 bg-[#579BE8] text-white px-2 py-0.5 rounded-full text-sm">
+                  {offers.length}
+                </span>
               </h2>
+              
+              {/* {offers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-500">تحديث مباشر</span>
+                </div>
+              )} */}
             </div>
 
+            {/* {offers.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-sm text-green-800">
+                🎉 تم العثور على {offers.length} عرض متاح!
+              </div>
+            )} */}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-              {offersData?.offers?.map((offer, index) => {
-                // ✅ التحقق من حالة العرض - إذا كان status === 'payment_pending' فلا نعتبره مقبولاً حتى يكتمل الدفع
+              {offers.map((offer, index) => {
                 const offerStatus = offer.status;
                 const orderPaymentStatus = offer.order?.payment_status;
-                const isPaymentPending = offerStatus === 'payment_pending' || orderPaymentStatus === 'processing' || orderPaymentStatus === 'pending';
+                const isPaymentPending = offerStatus === 'payment_pending' || 
+                                        orderPaymentStatus === 'processing' || 
+                                        orderPaymentStatus === 'pending';
                 
-                const isAccepted = acceptedOfferId === offer.id && !isPaymentPending; // ✅ فقط إذا كان مقبولاً ومدفوعاً
+                const isAccepted = acceptedOfferId === offer.id && !isPaymentPending;
                 const isPendingPayment = pendingPaymentOfferId === offer.id;
-                const isExpired = expiredOfferIds.includes(offer.id);
-                const isSelectedForPayment = selectedForPaymentOfferId === offer.id && !isAccepted && !isPendingPayment && !isExpired; // ✅ حالة جديدة
-                const isPaid = paidOfferIds.has(offer.id); // ✅ حالة الدفع من Pusher أو API
+                const isExpired = expiredOfferIds.includes(offer.id) || offerStatus === 'expired';
+                const isSelectedForPayment = selectedForPaymentOfferId === offer.id && 
+                                           !isAccepted && !isPendingPayment && !isExpired;
+                const isPaid = paidOfferIds.has(offer.id);
                 
                 return (
                   <motion.div
@@ -1160,7 +1507,16 @@ export default function AvailableDriversContent({ onBack }) {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
+                    className="relative"
                   >
+                    {/* {index === 0 && offers.length > 0 && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
+                          جديد
+                        </div>
+                      </div>
+                    )} */}
+                    
                     <DriverCard
                       {...formatDriverData(offer)}
                       onAcceptOrder={() => handleDriverSelect(
@@ -1169,16 +1525,13 @@ export default function AvailableDriversContent({ onBack }) {
                         formatDriverData(offer),
                         offer
                       )}
-                      onViewProfile={() => {
-                        const driverData = formatDriverData(offer);
-                        router.push(`/orders/driver_profile?driverId=${offer.driver_id}`);
-                      }}
+                      onViewProfile={() => router.push(`/orders/driver_profile?driverId=${offer.driver_id}`)}
                       isPending={!isAccepted && !isPendingPayment && !isExpired && !isSelectedForPayment && !isPaid} 
                       isSelectedForPayment={isSelectedForPayment} 
                       isAccepted={isAccepted}
                       isPendingPayment={isPendingPayment}
                       isExpired={isExpired}
-                      isPaid={isPaid} // ✅ تمرير حالة الدفع للبطاقة
+                      isPaid={isPaid}
                       index={index}
                     />
                   </motion.div>
@@ -1186,7 +1539,13 @@ export default function AvailableDriversContent({ onBack }) {
               })}
             </div>
 
-            {(!offersData || offersData.offers.length === 0) && !loading && (
+            {/* {offers.length > 0 && (
+              <div className="mt-6 text-center text-sm text-gray-500">
+                🚚 يتم تحديث العروض تلقائياً...
+              </div>
+            )} */}
+
+            {offers.length === 0 && !loading && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1197,26 +1556,27 @@ export default function AvailableDriversContent({ onBack }) {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد عروض حالياً</h3>
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                  لم يتقدم أي سائق لعرض سعر على طلبك بعد.
+                  لم يتقدم أي سائق لعرض سعر على طلبك بعد. 
+                  سيتم إشعارك فور وصول أي عرض جديد.
                 </p>
                 <button
                   onClick={fetchOffers}
                   className="bg-[#579BE8] text-white px-8 py-3 rounded-lg font-medium hover:bg-[#4a8dd8] transition inline-flex items-center gap-2"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  تحديث العروض
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'جاري التحديث...' : 'تحديث العروض'}
                 </button>
               </motion.div>
             )}
           </motion.div>
 
+          {/* Map Section */}
           <div className="lg:col-span-4 order-1 lg:order-2">
             <div className="sticky top-4 sm:top-8">
               <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden h-[400px] sm:h-[500px] lg:h-[600px]">
                 <div className="p-3 sm:p-4 border-b flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 text-sm sm:text-base">خريطة السائقين</h3>
                   
-                  {/* زر تحديث الموقع */}
                   {currentLocation && (
                     <button
                       onClick={requestLocationPermission}
@@ -1241,9 +1601,7 @@ export default function AvailableDriversContent({ onBack }) {
                     <div className="h-full flex items-center justify-center bg-gray-100 p-4">
                       <div className="text-center">
                         <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-600 mb-4">
-                          جاري تحميل الخريطة...
-                        </p>
+                        <p className="text-sm text-gray-600 mb-4">جاري تحميل الخريطة...</p>
                         <button
                           onClick={requestLocationPermission}
                           className="px-4 py-2 bg-[#579BE8] text-white text-sm rounded-lg hover:bg-[#4a8dd8] transition"
@@ -1260,6 +1618,7 @@ export default function AvailableDriversContent({ onBack }) {
         </div>
       </div>
 
+      {/* Payment Modal */}
       <PaymentModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
