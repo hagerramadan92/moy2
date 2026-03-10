@@ -964,7 +964,7 @@ export default function OrdersPage() {
                                                     <td colSpan="6" className="px-6 py-10 text-center text-muted-foreground">
                                                         {searchOrderNumber 
                                                             ? "لا توجد طلبات تطابق رقم البحث" 
-                                                            : "لا توجد طلبات تطابق الفلتر المختار"}
+                                                            : "لا توجد طلبات"}
                                                     </td>
                                                 </tr>
                                             )}

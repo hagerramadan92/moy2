@@ -40,9 +40,22 @@ export default function HomeCover({ data }) {
             waterType: false,
             waterSize: false
         };
-
+       let token = null;
+        if (typeof window !== "undefined") {
+            token = localStorage.getItem("accessToken");
+        }
         let hasError = false;
+        if(!token){
+            toast.error("يرجى تسجيل الدخول لطلب المياه", {
+                duration: 3000,
+                position: "top-center",
+            });
+            
+            setIsSubmitting(false);
+            //  window.location.href = '/login';
+            return;
 
+        }
         // التحقق من نوع المياه
         if (!waterType) {
             newErrors.waterType = true;

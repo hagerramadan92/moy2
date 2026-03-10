@@ -532,7 +532,7 @@ export default function ContractHistoryPage() {
 
     // Skeleton Components
     const StatisticsCardSkeleton = () => (
-        <div className="bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden">
+        <div className="max-w-4xl mx-auto bg-gradient-to-br from-[#579BE8] via-[#579BE8] to-[#315782] text-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-5 lg:p-6 shadow-lg md:shadow-xl relative overflow-hidden">
             <div className="absolute -right-6 -top-6 opacity-10">
                 <FaCheckCircle size={100} className="rotate-12" />
             </div>
@@ -556,7 +556,7 @@ export default function ContractHistoryPage() {
     );
 
     const FiltersSkeleton = () => (
-        <div className="flex flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
+        <div className="max-w-4xl mx-auto flex flex-row gap-3 md:gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
                 <div className="relative flex-1 max-w-md w-full">
                     <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
@@ -570,7 +570,7 @@ export default function ContractHistoryPage() {
     );
 
     const TableSkeleton = () => (
-        <div className="bg-white dark:bg-card border border-border/60 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-card border border-border/60 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
             {/* Tabs Header Skeleton */}
             <div className="p-3 md:p-4 lg:p-6 border-b border-border/50 flex items-center justify-between flex-wrap gap-3">
                 <div className="h-6 md:h-7 lg:h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
@@ -638,7 +638,7 @@ export default function ContractHistoryPage() {
     }
 
     return (
-        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
+        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up max-w-5xl mx-auto">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1  gap-3 md:gap-4 lg:gap-5">
                 {/* Active Contracts */}

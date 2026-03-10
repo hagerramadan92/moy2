@@ -391,11 +391,11 @@ const EnhancedOrderTrackingMap = ({
         )}
       </div>
 
-      {lastUpdateTime && (
+      {/* {lastUpdateTime && (
         <div className="absolute top-4 left-4 z-[1000] bg-black/75 text-white px-3 py-1.5 rounded-lg text-xs">
           آخر تحديث: {lastUpdateTime.toLocaleTimeString('ar-SA')}
         </div>
-      )}
+      )} */}
 
       <MapContainer
         key={mapKey}

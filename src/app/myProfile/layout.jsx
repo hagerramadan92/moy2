@@ -62,7 +62,7 @@ export default function ProfileLayout({ children }) {
     }, []);
 
     return (
-        <div className="bg-[#f8f8f9] min-h-screen relative">
+        <div className="bg-[#f8f8f9] min-h-screen relative max-w-7xl mx-auto">
             {/* Fixed Mobile Menu Trigger */}
             <button
                 onClick={() => setIsSidebarOpen(true)}
@@ -85,7 +85,7 @@ export default function ProfileLayout({ children }) {
                     </div>
 
                     {/* Main Content */}
-                    <div className="flex-1 w-full min-h-[600px] rounded-xl">
+                    <div className="flex-1 w-full min-h-[600px] rounded-xl ">
                         {children}
                     </div>
                 </div>

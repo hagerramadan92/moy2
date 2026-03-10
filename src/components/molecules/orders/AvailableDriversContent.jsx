@@ -16,12 +16,15 @@ import {
   X,
   MapPin,
   Navigation,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import DriverCard from './DriverCard';
 import PaymentModal from './PaymentModal';
 import { API_BASE_URL, getAccessToken } from './utils/api';
 import { getPaymentCallbackData, getPendingOfferData } from './utils/paymentHelpers';
 import usePusher from '@/hooks/usePusher';
+import toast from 'react-hot-toast';
 
 // Dynamically import map to avoid SSR
 const DriversMap = dynamic(
@@ -113,6 +116,8 @@ export default function AvailableDriversContent({ onBack }) {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [isOrderExpired, setIsOrderExpired] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [lastOfferCount, setLastOfferCount] = useState(0);
+  const [showConnectionStatus, setShowConnectionStatus] = useState(false);
   
   // Use reducer for offers list
   const [offers, dispatchOffers] = useReducer(offersReducer, []);
@@ -124,10 +129,27 @@ export default function AvailableDriversContent({ onBack }) {
   const initialFetchDoneRef = useRef(false);
   const expiryCheckIntervalRef = useRef(null);
   const offersRef = useRef(offers);
+  const lastOfferCountRef = useRef(0);
   
   // Update ref when offers change
   useEffect(() => {
     offersRef.current = offers;
+    
+    // Detect new offers for toast notifications
+    if (offers.length > lastOfferCountRef.current && lastOfferCountRef.current > 0) {
+      const newOffersCount = offers.length - lastOfferCountRef.current;
+      const latestOffers = offers.slice(0, newOffersCount);
+      
+      latestOffers.forEach(offer => {
+        toast.success(`💰 عرض جديد بقيمة ${offer.price} ريال`, {
+          duration: 4000,
+          icon: '💰',
+          position: 'top-left',
+        });
+      });
+    }
+    
+    lastOfferCountRef.current = offers.length;
   }, [offers]);
   
   // Location state
@@ -157,9 +179,21 @@ export default function AvailableDriversContent({ onBack }) {
     autoConnect: true,
     onConnected: () => {
       console.log('✅ Pusher connected in AvailableDrivers');
+      setShowConnectionStatus(true);
+      // toast.success('✅ متصل بالخادم - في انتظار العروض', {
+      //   duration: 2000,
+      //   icon: '📡',
+      // });
+      setTimeout(() => setShowConnectionStatus(false), 3000);
     },
     onDisconnected: () => {
       console.log('🔴 Pusher disconnected in AvailableDrivers');
+      setShowConnectionStatus(true);
+      // toast.error('🔴 انقطع الاتصال - جاري إعادة الاتصال...', {
+      //   duration: 3000,
+      //   icon: '⚠️',
+      // });
+      setTimeout(() => setShowConnectionStatus(false), 3000);
     }
   });
 
@@ -169,194 +203,109 @@ export default function AvailableDriversContent({ onBack }) {
   const paymentCancelParam = searchParams.get('cancel');
   const isExpiredParam = searchParams.get('expired');
 
-  // Calculate stats from offers
-  const stats = useMemo(() => {
-    if (!offers || offers.length === 0) {
-      return {
-        totalOffers: 0,
-        averagePrice: 0,
-        fastestDelivery: 0,
-        lowestPrice: 0
-      };
-    }
-
-    const prices = offers.map(o => parseFloat(o.price)).filter(p => !isNaN(p));
-    const times = offers.map(o => o.delivery_duration_minutes || 0).filter(t => t > 0);
-
-    return {
-      totalOffers: offers.length,
-      averagePrice: prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2) : 0,
-      fastestDelivery: times.length > 0 ? Math.min(...times) : 0,
-      lowestPrice: prices.length > 0 ? Math.min(...prices).toFixed(2) : 0
-    };
-  }, [offers]);
-
-  // Memoize drivers data for map
-  const memoizedDrivers = useMemo(() => {
-    return offers.map(formatDriverData);
-  }, [offers]);
-
-  // دالة طلب إذن الموقع
-  const requestLocationPermission = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationError('المتصفح لا يدعم تحديد الموقع');
-      setCurrentLocation({ lat: 24.7136, lng: 46.6753 });
-      localStorage.setItem('userLocation', JSON.stringify({ lat: 24.7136, lng: 46.6753 }));
-      return;
-    }
-
-    setLocationLoading(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        setCurrentLocation(location);
-        setLocationLoading(false);
-        setLocationPermissionGranted(true);
-        setShowLocationPrompt(false);
-        
-        localStorage.setItem('userLocation', JSON.stringify(location));
-        localStorage.setItem('locationPermissionGranted', 'true');
-        
-        console.log('✅ Location obtained:', location);
-      },
-      (error) => {
-        console.warn('Error getting location:', error);
-        setLocationLoading(false);
-        
-        let errorMessage = 'فشل الحصول على الموقع';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'تم رفض الوصول إلى الموقع';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'معلومات الموقع غير متاحة';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'انتهت مهلة طلب الموقع';
-            break;
-        }
-        
-        setLocationError(errorMessage);
-        const defaultLocation = { lat: 24.7136, lng: 46.6753 };
-        setCurrentLocation(defaultLocation);
-        localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
-        setShowLocationPrompt(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  }, []);
-
-  // التحقق من إذن الموقع عند التحميل
+  // ============= إعادة تحميل الصفحة عند الدخول =============
   useEffect(() => {
-    if (isLocationInitializedRef.current) return;
+    // التأكد من وجود orderId
+    if (!orderId) return;
     
-    const savedPermission = localStorage.getItem('locationPermissionGranted');
-    const savedLocation = localStorage.getItem('userLocation');
+    const hasReloaded = sessionStorage.getItem(`pageReloaded_${orderId}`);
     
-    if (savedPermission === 'true' && savedLocation) {
-      try {
-        const location = JSON.parse(savedLocation);
-        setCurrentLocation(location);
-        setLocationPermissionGranted(true);
-      } catch (error) {
-        console.warn('Error parsing saved location:', error);
-        const timer = setTimeout(() => {
-          setShowLocationPrompt(true);
-        }, 2000);
-        
-        return () => clearTimeout(timer);
-      }
-    } else {
-      const timer = setTimeout(() => {
-        setShowLocationPrompt(true);
-      }, 2000);
+    if (!hasReloaded) {
+      // تعيين علامة في sessionStorage لمنع إعادة التحميل المتكررة
+      sessionStorage.setItem(`pageReloaded_${orderId}`, 'true');
       
-      return () => clearTimeout(timer);
+      // إعادة تحميل الصفحة بعد 1.5 ثانية
+      setTimeout(() => {
+        console.log('🔄 إعادة تحميل الصفحة عند الدخول للطلب:', orderId);
+        window.location.reload();
+      }, 1500);
     }
+  }, [orderId]);
+
+  // ============= إعادة تحميل الصفحة عند ظهور driverAcceptedNotification =============
+  useEffect(() => {
+    if (driverAcceptedNotification) {
+      console.log('📢 Driver accepted notification detected, reloading page in 2 seconds...');
+      
+      // إعادة تحميل الصفحة بعد ثانيتين
+      setTimeout(() => {
+        console.log('🔄 جاري إعادة تحميل الصفحة بعد قبول السائق...');
+        window.location.reload();
+      }, 2000);
+    }
+  }, [driverAcceptedNotification]);
+
+  // ============= دوال مساعدة =============
+  const formatDriverDataFromEvent = useCallback((driverData) => {
+    if (!driverData) return null;
     
-    isLocationInitializedRef.current = true;
-  }, []);
-
-  // دالة لتخطي تحديد الموقع
-  const skipLocation = useCallback(() => {
-    const defaultLocation = { lat: 24.7136, lng: 46.6753 };
-    setCurrentLocation(defaultLocation);
-    localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
-    setShowLocationPrompt(false);
-  }, []);
-
-  // دالة لإنشاء عرض جديد يدوياً (للاستخدام في حالة عدم توفر البيانات الكاملة)
-  const createMockOfferFromEvent = useCallback((data, acceptedOfferId, paymentStatus) => {
     return {
-      id: acceptedOfferId,
-      driver_id: data.driver_id || data.driver?.id || `driver-${Date.now()}`,
-      driver: data.driver || {
-        id: data.driver_id || `driver-${Date.now()}`,
-        name: data.driver_name || data.driver?.name || 'سائق',
-        rating: 4.5,
-        vehicle: {
-          model: 'مركبة',
-          plate_number: 'XXX'
-        }
+      id: driverData.id,
+      name: driverData.user?.name || driverData.name || 'سائق',
+      rating: 4.5, // القيمة الافتراضية
+      ratingCount: 0,
+      vehicle: {
+        type: driverData.vehicle_size || 'مركبة',
+        model: driverData.vehicle_size || 'مركبة',
+        plate_number: driverData.vehicle_plate_number || 'XXX'
       },
-      price: data.price || data.order?.price || 0,
-      status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
-      order: {
-        payment_status: paymentStatus || 'pending'
-      },
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 5 * 60000).toISOString(), // 5 دقائق
-      delivery_duration_minutes: 30
+      image: driverData.user?.avatar || driverData.personal_photo || null,
+      location: driverData.currect_location ? {
+        lat: parseFloat(driverData.currect_location.lat),
+        lng: parseFloat(driverData.currect_location.lng)
+      } : null
     };
   }, []);
 
-  // دالة معالجة حدث إنشاء عرض جديد
+  // ============= دوال معالجة الأحداث =============
   const handleOfferCreated = useCallback((data) => {
     console.log('💰 ===== NEW OFFER CREATED EVENT =====', data);
     
-    const newOffer = data.offer || data.data?.offer || data.data || data;
-    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    const newOffer = data.offer || data;
+    const offerOrderId = data.order_id || data.order?.id;
     
     if (offerOrderId && offerOrderId.toString() === orderId?.toString() && newOffer?.id) {
       console.log(`✅ New offer ${newOffer.id} belongs to our order ${orderId}`);
       
-      if (newOffer.expires_at) {
-        const expiresAt = new Date(newOffer.expires_at);
-        const now = new Date();
-        
-        if (expiresAt <= now) {
-          console.log('⏰ New offer is already expired, not adding.');
-          return;
-        }
-      }
+      // تنسيق بيانات العرض
+      const formattedOffer = {
+        id: newOffer.id,
+        driver_id: newOffer.driver_id || newOffer.driver?.id,
+        driver: newOffer.driver ? formatDriverDataFromEvent(newOffer.driver) : null,
+        price: newOffer.price,
+        status: 'pending',
+        order: newOffer.order || {
+          payment_status: 'pending'
+        },
+        created_at: newOffer.created_at || new Date().toISOString(),
+        expires_at: new Date(Date.now() + 5 * 60000).toISOString(), // 5 دقائق افتراضياً
+        delivery_duration_minutes: newOffer.delivery_duration_minutes || 30
+      };
       
-      dispatchOffers({ type: OFFER_ACTIONS.ADD_OFFER, payload: newOffer });
+      dispatchOffers({ type: OFFER_ACTIONS.ADD_OFFER, payload: formattedOffer });
       
       setNewOfferNotification({
         id: Date.now(),
         message: 'تم إضافة عرض جديد',
-        driverName: newOffer.driver?.name || data.driver?.name || 'سائق جديد',
-        price: newOffer.price,
+        driverName: formattedOffer.driver?.name || 'سائق جديد',
+        price: formattedOffer.price,
         expiresIn: 5
       });
+      
+      // إظهار toast notification
+      toast.success(`💰 عرض جديد بقيمة ${formattedOffer.price} ريال`, {
+        duration: 5000,
+        icon: '💰',
+        position: 'top-left',
+      });
     }
-  }, [orderId]);
+  }, [orderId, formatDriverDataFromEvent]);
 
-  // دالة معالجة حدث تحديث عرض
   const handleOfferUpdated = useCallback((data) => {
     console.log('🔄 ===== OFFER UPDATED EVENT =====', data);
     
-    const updatedOffer = data.offer || data.data?.offer || data.data || data;
-    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    const updatedOffer = data.offer || data;
+    const offerOrderId = data.order_id || data.order?.id;
     
     if (offerOrderId && offerOrderId.toString() === orderId?.toString() && updatedOffer?.id) {
       console.log(`🔄 Updating offer ${updatedOffer.id}`);
@@ -372,16 +321,19 @@ export default function AvailableDriversContent({ onBack }) {
           driverName: updatedOffer.driver?.name || 'سائق',
           expiresIn: 3
         });
+        
+        // toast.error(`⏰ انتهت صلاحية عرض السائق ${updatedOffer.driver?.name || ''}`, {
+        //   duration: 3000,
+        // });
       }
     }
   }, [orderId]);
 
-  // دالة معالجة حدث انتهاء صلاحية عرض
   const handleOfferExpired = useCallback((data) => {
     console.log('⏰ ===== OFFER EXPIRED EVENT =====', data);
     
     const expiredOfferId = data.offer_id || data.offer?.id || data.id;
-    const offerOrderId = data.order_id || data.order?.id || data.orderId;
+    const offerOrderId = data.order_id || data.order?.id;
     
     if (offerOrderId && offerOrderId.toString() === orderId?.toString() && expiredOfferId) {
       console.log(`⏰ Offer ${expiredOfferId} expired`);
@@ -401,24 +353,34 @@ export default function AvailableDriversContent({ onBack }) {
         setSelectedForPaymentOfferId(null);
         paymentProcessedRef.current = false;
       }
+      
+      toast.warning('⏰ انتهت صلاحية أحد العروض', {
+        duration: 3000,
+      });
     }
   }, [orderId, pendingPaymentOfferId, selectedForPaymentOfferId]);
 
-  // دالة معالجة حدث قبول السائق للطلب - معدلة بشكل نهائي
   const handleDriverAcceptedOrder = useCallback((data) => {
     console.log('🚗 ===== DRIVER ACCEPTED ORDER EVENT =====', data);
     console.log('📋 Full event data:', JSON.stringify(data, null, 2));
     
     const acceptedOrderId = data.order_id || data.order?.id;
     const currentOrderId = orderId;
-    const paymentStatus = data.order?.payment_status || data.payment_status || 'pending';
+    const paymentStatus = data.order?.payment_status || 'pending';
     
     if (acceptedOrderId && acceptedOrderId.toString() === currentOrderId?.toString()) {
-      console.log(`✅ Driver accepted our order ${currentOrderId}, payment_status: ${paymentStatus}`);
+      // console.log(`✅ Driver accepted our order ${currentOrderId}, payment_status: ${paymentStatus}`);
       
-      // محاولة الحصول على بيانات العرض الكاملة
-      let fullOfferData = data.offer || data.order?.accepted_offer || data.data?.offer || data.data;
-      const acceptedOfferId = fullOfferData?.id || data.offer?.id || data.order?.accepted_offer_id;
+      // إظهار toast notification
+      toast.success('🚗 تم قبول طلبك من قبل السائق!', {
+        duration: 4000,
+        icon: '🎉',
+        position: 'top-left',
+      });
+      
+      // الحصول على بيانات العرض من الحدث
+      const offerData = data.offer;
+      const acceptedOfferId = offerData?.id;
       
       if (!acceptedOfferId) {
         console.error('❌ No offer ID found in event data');
@@ -433,16 +395,25 @@ export default function AvailableDriversContent({ onBack }) {
       
       let offerToUpdate;
       
-      if (fullOfferData && fullOfferData.id) {
-        // لدينا بيانات كاملة من الحدث
+      if (offerData) {
+        // لدينا بيانات كاملة من الحدث - تنسيقها حسب هيكل البيانات الجديد
         console.log('📦 Using full offer data from event');
+        
+        // تنسيق بيانات السائق
+        const driverData = offerData.driver ? formatDriverDataFromEvent(offerData.driver) : (existingOffer?.driver || null);
+        
         offerToUpdate = {
-          ...fullOfferData,
+          id: offerData.id,
+          driver_id: offerData.driver_id,
+          driver: driverData,
+          price: offerData.price,
           status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
           order: {
-            ...(fullOfferData.order || {}),
+            ...(offerData.order || {}),
             payment_status: paymentStatus
-          }
+          },
+          created_at: offerData.created_at,
+          delivery_duration_minutes: offerData.delivery_duration_minutes || 30
         };
       } else if (existingOffer) {
         // لدينا العرض في القائمة، نحدثه مع الحفاظ على البيانات
@@ -455,75 +426,56 @@ export default function AvailableDriversContent({ onBack }) {
             payment_status: paymentStatus
           }
         };
-        
-        // إضافة بيانات إضافية من الحدث إذا وجدت
-        if (data.driver) {
-          offerToUpdate.driver = { ...(existingOffer.driver || {}), ...data.driver };
-        }
-        if (data.price) {
-          offerToUpdate.price = data.price;
-        }
-      } else {
-        // لا يوجد عرض في القائمة ولا بيانات كاملة، ننشئ عرضاً وهمياً
-        console.log('📦 Creating mock offer from event data');
-        offerToUpdate = {
-          id: acceptedOfferId,
-          driver_id: data.driver_id || data.driver?.id || `driver-${Date.now()}`,
-          driver: data.driver || {
-            id: data.driver_id || `driver-${Date.now()}`,
-            name: data.driver_name || data.driver?.name || 'سائق',
-            rating: 4.5,
-            vehicle: {
-              model: 'مركبة',
-              plate_number: 'XXX'
-            }
-          },
-          price: data.price || data.order?.price || 150,
-          status: paymentStatus === 'paid' ? 'accepted' : 'payment_pending',
-          order: {
-            payment_status: paymentStatus
-          },
-          created_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 5 * 60000).toISOString(),
-          delivery_duration_minutes: 30
-        };
       }
       
-      // تحديث العرض في القائمة
-      console.log('🔄 Updating offer with data:', offerToUpdate);
-      dispatchOffers({
-        type: OFFER_ACTIONS.UPDATE_OFFER,
-        payload: offerToUpdate
-      });
-      
-      // تحديث الحالات المختلفة
-      if (paymentStatus === 'paid') {
-        setAcceptedOfferId(acceptedOfferId);
-        setPaidOfferIds(prev => new Set([...prev, acceptedOfferId]));
-        setPendingPaymentOfferId(null);
-        setSelectedForPaymentOfferId(null);
-        setPaymentSuccess(true);
-        
-        setDriverAcceptedNotification({
-          id: Date.now(),
-          message: 'تم قبول طلبك من قبل سائق!',
-          driverName: offerToUpdate.driver?.name || 'سائق',
-          price: offerToUpdate.price,
-          offerId: acceptedOfferId,
-          expiresIn: 10
+      if (offerToUpdate) {
+        // تحديث العرض في القائمة
+        console.log('🔄 Updating offer with data:', offerToUpdate);
+        dispatchOffers({
+          type: OFFER_ACTIONS.UPDATE_OFFER,
+          payload: offerToUpdate
         });
-      } else {
-        console.log(`⚠️ Driver accepted order but payment not completed. Status: ${paymentStatus}`);
-        setPendingPaymentOfferId(acceptedOfferId);
         
-        setDriverAcceptedNotification({
-          id: Date.now(),
-          message: 'تم قبول العرض - في انتظار إتمام الدفع',
-          driverName: offerToUpdate.driver?.name || 'سائق',
-          price: offerToUpdate.price,
-          offerId: acceptedOfferId,
-          expiresIn: 10
-        });
+        // تحديث الحالات المختلفة
+        if (paymentStatus === 'paid') {
+          setAcceptedOfferId(acceptedOfferId);
+          setPaidOfferIds(prev => new Set([...prev, acceptedOfferId]));
+          setPendingPaymentOfferId(null);
+          setSelectedForPaymentOfferId(null);
+          setPaymentSuccess(true);
+          
+          setDriverAcceptedNotification({
+            id: Date.now(),
+            message: 'تم قبول طلبك من قبل سائق!',
+            driverName: offerToUpdate.driver?.name || 'سائق',
+            price: offerToUpdate.price,
+            offerId: acceptedOfferId,
+            expiresIn: 10
+          });
+          
+          toast.success('✅ تم الدفع وقبول الطلب!', {
+            duration: 5000,
+            icon: '🎉',
+          });
+          
+        } else {
+          console.log(`⚠️ Driver accepted order but payment not completed. Status: ${paymentStatus}`);
+          setPendingPaymentOfferId(acceptedOfferId);
+          
+          setDriverAcceptedNotification({
+            id: Date.now(),
+            message: 'تم قبول العرض - في انتظار إتمام الدفع',
+            driverName: offerToUpdate.driver?.name || 'سائق',
+            price: offerToUpdate.price,
+            offerId: acceptedOfferId,
+            expiresIn: 10
+          });
+          
+          // toast('💳 تم قبول العرض - يرجى إتمام الدفع', {
+          //   duration: 5000,
+          //   icon: '💳',
+          // });
+        }
       }
       
       // تأكيد التحديث بعد فترة قصيرة
@@ -532,9 +484,8 @@ export default function AvailableDriversContent({ onBack }) {
         console.log('⏱️ Updated offer:', offersRef.current.find(o => o.id === acceptedOfferId));
       }, 500);
     }
-  }, [orderId]); // ملاحظة: لم نعد نعتمد على offers هنا، نستخدم offersRef.current بدلاً من ذلك
+  }, [orderId, formatDriverDataFromEvent]);
 
-  // معالج حدث TripStartedForUser
   const handleTripStartedForUser = useCallback((data) => {
     console.log('🚀 ===== TRIP STARTED FOR USER EVENT =====', data);
     
@@ -581,11 +532,15 @@ export default function AvailableDriversContent({ onBack }) {
           offerId: acceptedOfferId,
           expiresIn: 10
         });
+        
+        toast.success('🚀 بدأت الرحلة!', {
+          duration: 5000,
+          icon: '🎉',
+        });
       }
     }
   }, [orderId]);
 
-  // معالج حدث انتهاء صلاحية الطلب
   const handleOrderExpired = useCallback((data) => {
     console.log('⏱️ ===== ORDER EXPIRED EVENT =====', data);
     
@@ -604,10 +559,14 @@ export default function AvailableDriversContent({ onBack }) {
       setPendingPaymentOfferId(null);
       setSelectedForPaymentOfferId(null);
       paymentProcessedRef.current = false;
+      
+      toast.error('⏰ انتهت صلاحية الطلب', {
+        duration: 5000,
+        icon: '⏰',
+      });
     }
   }, [orderId]);
 
-  // Handle successful payment
   const handlePaymentSuccess = useCallback((data) => {
     console.log('💰 Payment success callback received:', data);
     
@@ -637,10 +596,14 @@ export default function AvailableDriversContent({ onBack }) {
         driverName: data.driver?.name || data.order?.driver?.name || 'السائق',
         expiresIn: 5
       });
+      
+      toast.success('✅ تم الدفع بنجاح!', {
+        duration: 4000,
+        icon: '💰',
+      });
     }
   }, [orderId, selectedOfferId]);
 
-  // Handle payment failure
   const handlePaymentFailure = useCallback((data) => {
     console.log('❌ Payment failure callback received:', data);
     
@@ -659,55 +622,413 @@ export default function AvailableDriversContent({ onBack }) {
     setPendingPaymentOfferId(null);
     setSelectedForPaymentOfferId(null);
     paymentProcessedRef.current = false;
+    
+    toast.error('❌ فشلت عملية الدفع', {
+      duration: 4000,
+    });
   }, []);
+
+  // ============= دوال الإعداد والتنسيق =============
+  const requestLocationPermission = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('المتصفح لا يدعم تحديد الموقع');
+      setCurrentLocation({ lat: 24.7136, lng: 46.6753 });
+      localStorage.setItem('userLocation', JSON.stringify({ lat: 24.7136, lng: 46.6753 }));
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        setCurrentLocation(location);
+        setLocationLoading(false);
+        setLocationPermissionGranted(true);
+        setShowLocationPrompt(false);
+        
+        localStorage.setItem('userLocation', JSON.stringify(location));
+        localStorage.setItem('locationPermissionGranted', 'true');
+        
+        console.log('✅ Location obtained:', location);
+        toast.success('📍 تم تحديد موقعك بنجاح');
+      },
+      (error) => {
+        console.warn('Error getting location:', error);
+        setLocationLoading(false);
+        
+        let errorMessage = 'فشل الحصول على الموقع';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'تم رفض الوصول إلى الموقع';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'معلومات الموقع غير متاحة';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'انتهت مهلة طلب الموقع';
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        toast.error(errorMessage);
+        
+        const defaultLocation = { lat: 24.7136, lng: 46.6753 };
+        setCurrentLocation(defaultLocation);
+        localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
+        setShowLocationPrompt(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }, []);
+
+  const skipLocation = useCallback(() => {
+    const defaultLocation = { lat: 24.7136, lng: 46.6753 };
+    setCurrentLocation(defaultLocation);
+    localStorage.setItem('userLocation', JSON.stringify(defaultLocation));
+    setShowLocationPrompt(false);
+    toast('📍 تم استخدام الموقع الافتراضي');
+  }, []);
+
+  // دالة إعداد مستمع Pusher
+  const setupPusherListener = useCallback(async (orderId) => {
+    try {
+      console.log(`🎯 Setting up Pusher listener for available drivers page - order ${orderId}`);
+      
+      if (!orderId) {
+        console.warn('⚠️ No order ID provided for Pusher setup');
+        return;
+      }
+
+      // تنظيف المستمعين القدامى
+      removeEventListener('offer.created');
+      removeEventListener('offer.updated');
+      removeEventListener('offer.expired');
+      removeEventListener('order.expired');
+      removeEventListener('DriverAcceptedOrder');
+      removeEventListener('TripStartedForUser');
+
+      // إضافة المستمعين الجدد
+      addEventListener('offer.created', handleOfferCreated);
+      addEventListener('offer.updated', handleOfferUpdated);
+      addEventListener('offer.expired', handleOfferExpired);
+      addEventListener('order.expired', handleOrderExpired);
+      addEventListener('DriverAcceptedOrder', handleDriverAcceptedOrder);
+      addEventListener('TripStartedForUser', handleTripStartedForUser);
+
+      // الاشتراك في قناة الطلب
+      const subscriptionCallbacks = {
+        'offer.created': handleOfferCreated,
+        'offer.updated': handleOfferUpdated,
+        'offer.expired': handleOfferExpired,
+        'order.expired': handleOrderExpired,
+        'DriverAcceptedOrder': handleDriverAcceptedOrder,
+        'TripStartedForUser': handleTripStartedForUser
+      };
+
+      subscribe(`order.${orderId}`, subscriptionCallbacks);
+      
+      // أيضاً الاشتراك في قناة المستخدم إذا كان متاحاً
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.id) {
+            subscribe(`user.${user.id}`, {
+              'DriverAcceptedOrder': handleDriverAcceptedOrder,
+              'TripStartedForUser': handleTripStartedForUser,
+              'offer.created': handleOfferCreated
+            });
+            console.log(`✅ Subscribed to user.${user.id} channel`);
+          }
+        } catch (error) {
+          console.warn('Error parsing user data:', error);
+        }
+      }
+      
+      console.log('✅ Pusher setup completed for available drivers page');
+      // toast.success('📡 جاهز لاستقبال العروض', { duration: 2000 });
+      
+    } catch (error) {
+      console.error('❌ Error setting up Pusher listener:', error);
+      toast.error('❌ خطأ في الاتصال بالخادم');
+    }
+  }, [addEventListener, removeEventListener, subscribe, 
+      handleOfferCreated, handleOfferUpdated, handleOfferExpired, 
+      handleOrderExpired, handleDriverAcceptedOrder, handleTripStartedForUser]);
+
+  // ============= دوال API =============
+  const fetchOffers = async () => {
+    try {
+      setRefreshing(true);
+      setLoading(true);
+      
+      const accessToken = getAccessToken();
+      
+      if (!accessToken) {
+        setError('يجب تسجيل الدخول للوصول إلى هذه الصفحة');
+        router.push('/login');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        cache: 'no-store'
+      });
+
+      if (response.status === 404) {
+        setIsNotFound(true);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      const data = await response.json();
+      
+      if (response.ok && data.status) {
+        setIsNotFound(false);
+        
+        const offersFromApi = data.data.offers || [];
+        console.log('📥 Fetched offers from API:', offersFromApi.length);
+        
+        dispatchOffers({ type: OFFER_ACTIONS.SET_OFFERS, payload: offersFromApi });
+        
+        setOffersData(data.data);
+        setError(null);
+        setAcceptedOfferId(null);
+        
+        if (data.data.accepted_offer) {
+          const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
+          const orderPaymentStatus = data.data.order?.payment_status;
+          
+          if (orderPaymentStatus === 'paid') {
+            setAcceptedOfferId(acceptedId);
+            setPendingPaymentOfferId(null);
+            setSelectedForPaymentOfferId(null);
+            setPaidOfferIds(prev => new Set([...prev, acceptedId]));
+            setPaymentSuccess(true);
+            localStorage.removeItem('pendingOfferData');
+            // toast.success('✅ تم العثور على عرض مقبول مسبقاً');
+          }
+        }
+        
+        // if (offersFromApi.length > 0) {
+        //   toast.success(`📦 تم تحميل ${offersFromApi.length} عرض`, { duration: 2000 });
+        // }
+        
+        setLoading(false);
+        setRefreshing(false);
+        
+      } else {
+        if (data.error_code === 'UNAUTHENTICATED') {
+          setError('انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى.');
+          localStorage.removeItem('accessToken');
+          toast.error('انتهت الجلسة - يرجى تسجيل الدخول مجدداً');
+        }
+        setLoading(false);
+      }
+    } catch (err) {
+      console.warn('API Error:', err.message);
+      
+      if (err.message?.includes('404')) {
+        setIsNotFound(true);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      
+      setError(`حدث خطأ في جلب البيانات: ${err.message}`);
+      setLoading(false);
+      setRefreshing(false);
+      setOffersData(null);
+      toast.error('❌ فشل تحميل العروض');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const fetchOrderStatus = async () => {
+    if (!orderId) return;
+
+    try {
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
+
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        cache: 'no-store'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status && data.data) {
+        setOrderStatus(data.data);
+      }
+    } catch (err) {
+      console.warn('Error fetching order status:', err.message);
+    }
+  };
+
+  // ============= دوال المعالجة =============
+  const handleDriverSelect = (driverId, offerId, driverData, offer) => {
+    setSelectedDriverId(driverId);
+    setSelectedOfferId(offerId);
+    setSelectedOffer(offer);
+    setSelectedForPaymentOfferId(offerId);
+    setIsModalOpen(true);
+    sessionStorage.setItem('selectedDriver', JSON.stringify(driverData));
+    paymentProcessedRef.current = false;
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setPendingPaymentOfferId(null);
+    setSelectedForPaymentOfferId(null);
+    localStorage.removeItem('pendingOfferData');
+    paymentProcessedRef.current = false;
+  };
+
+  const handleConfirmPayment = async (methodId, driverId, paymentData = null) => {
+    try {
+      const params = new URLSearchParams({
+        driver: driverId,
+        offer: selectedOfferId,
+        gateway: methodId
+      });
+      
+      if (paymentData?.payment_url) {
+        params.append('payment_url', paymentData.payment_url);
+      }
+      
+      router.push(`/orders/${orderId}/confirmation?${params.toString()}`);
+    } catch (err) {
+      console.error('Error in payment confirmation:', err);
+      alert('حدث خطأ في تأكيد الطلب. يرجى المحاولة مرة أخرى.');
+    }
+  };
+
+  const formatTimeRemaining = () => {
+    if (!timeRemaining) return 'جاري الحساب...';
+    
+    const { days, hours, minutes, seconds } = timeRemaining;
+    
+    if (days > 0) {
+      return `${days} يوم ${hours} ساعة ${minutes} دقيقة`;
+    } else if (hours > 0) {
+      return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
+    } else if (minutes > 0) {
+      return `${minutes} دقيقة ${seconds} ثانية`;
+    } else {
+      return `${seconds} ثانية`;
+    }
+  };
+
+  // ============= حساب الإحصائيات =============
+  const stats = useMemo(() => {
+    if (!offers || offers.length === 0) {
+      return {
+        totalOffers: 0,
+        averagePrice: 0,
+        fastestDelivery: 0,
+        lowestPrice: 0
+      };
+    }
+
+    const prices = offers.map(o => parseFloat(o.price)).filter(p => !isNaN(p));
+    const times = offers.map(o => o.delivery_duration_minutes || 0).filter(t => t > 0);
+
+    return {
+      totalOffers: offers.length,
+      averagePrice: prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2) : 0,
+      fastestDelivery: times.length > 0 ? Math.min(...times) : 0,
+      lowestPrice: prices.length > 0 ? Math.min(...prices).toFixed(2) : 0
+    };
+  }, [offers]);
+
+  // Memoize drivers data for map
+  const memoizedDrivers = useMemo(() => {
+    return offers.map(formatDriverData);
+  }, [offers]);
+
+  // ============= Effects =============
+
+  // التحقق من إذن الموقع عند التحميل
+  useEffect(() => {
+    if (isLocationInitializedRef.current) return;
+    
+    const savedPermission = localStorage.getItem('locationPermissionGranted');
+    const savedLocation = localStorage.getItem('userLocation');
+    
+    if (savedPermission === 'true' && savedLocation) {
+      try {
+        const location = JSON.parse(savedLocation);
+        setCurrentLocation(location);
+        setLocationPermissionGranted(true);
+      } catch (error) {
+        console.warn('Error parsing saved location:', error);
+        const timer = setTimeout(() => {
+          setShowLocationPrompt(true);
+        }, 2000);
+        
+        return () => clearTimeout(timer);
+      }
+    } else {
+      const timer = setTimeout(() => {
+        setShowLocationPrompt(true);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    isLocationInitializedRef.current = true;
+  }, []);
+
+  // مراقبة حالة اتصال Pusher
+  useEffect(() => {
+    if (pusherConnected) {
+      console.log('✅ Pusher connected - ready to receive offers');
+      if (orderId) {
+        setupPusherListener(orderId);
+      }
+    } else {
+      console.log('🔴 Pusher disconnected - attempting to reconnect...');
+    }
+  }, [pusherConnected, orderId, setupPusherListener]);
 
   // Setup Pusher listeners
   useEffect(() => {
-    if (!orderId || !pusherConnected) {
+    if (!orderId) {
+      console.log(`⏳ Waiting for orderId`);
+      return;
+    }
+    
+    if (!pusherConnected) {
       console.log(`⏳ Waiting for Pusher connection: orderId=${orderId}, connected=${pusherConnected}`);
       return;
     }
     
-    console.log(`🎯 Setting up Pusher listeners for order ${orderId}`);
+    console.log(`🎯 Setting up enhanced Pusher listeners for order ${orderId}`);
     
-    removeEventListener('offer.created');
-    removeEventListener('offer.updated');
-    removeEventListener('offer.expired');
-    removeEventListener('order.expired');
-    removeEventListener('DriverAcceptedOrder');
-    removeEventListener('TripStartedForUser');
-    
-    addEventListener('offer.created', handleOfferCreated);
-    addEventListener('offer.updated', handleOfferUpdated);
-    addEventListener('offer.expired', handleOfferExpired);
-    addEventListener('order.expired', handleOrderExpired);
-    addEventListener('DriverAcceptedOrder', handleDriverAcceptedOrder);
-    addEventListener('TripStartedForUser', handleTripStartedForUser);
-    
-    subscribe(`order.${orderId}`, {
-      'offer.created': handleOfferCreated,
-      'offer.updated': handleOfferUpdated,
-      'offer.expired': handleOfferExpired,
-      'order.expired': handleOrderExpired,
-      'DriverAcceptedOrder': handleDriverAcceptedOrder,
-      'TripStartedForUser': handleTripStartedForUser
-    });
-    
-    const userData = localStorage.getItem('userData');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        if (user.id) {
-          subscribe(`user.${user.id}`, {
-            'DriverAcceptedOrder': handleDriverAcceptedOrder,
-            'TripStartedForUser': handleTripStartedForUser,
-            'offer.created': handleOfferCreated
-          });
-        }
-      } catch (error) {
-        console.warn('Error parsing user data:', error);
-      }
-    }
+    // استدعاء دالة الإعداد المحسنة
+    setupPusherListener(orderId);
     
     return () => {
       console.log('🧹 Cleaning up Pusher listeners');
@@ -719,14 +1040,20 @@ export default function AvailableDriversContent({ onBack }) {
       removeEventListener('TripStartedForUser');
       unsubscribeAll();
     };
-  }, [orderId, pusherConnected, subscribe, unsubscribeAll, addEventListener, removeEventListener,
-      handleOfferCreated, handleOfferUpdated, handleOfferExpired, handleOrderExpired,
-      handleDriverAcceptedOrder, handleTripStartedForUser]);
+  }, [orderId, pusherConnected, setupPusherListener, removeEventListener, unsubscribeAll]);
 
   // Monitor offers changes
   useEffect(() => {
     console.log('📊 Offers updated, current count:', offers.length);
   }, [offers]);
+
+  // تأثير إضافي لعرض إشعارات العروض الجديدة
+  useEffect(() => {
+    if (offers.length > lastOfferCount && lastOfferCount > 0) {
+      // تم التعامل مع هذا في useEffect السابق الذي يراقب offers
+    }
+    setLastOfferCount(offers.length);
+  }, [offers, lastOfferCount]);
 
   // Check for expired offers periodically
   useEffect(() => {
@@ -811,7 +1138,7 @@ export default function AvailableDriversContent({ onBack }) {
     }
   }, [orderId, isExpiredParam]);
 
-  // Payment status check - مع dependencies ثابتة
+  // Payment status check
   useEffect(() => {
     if (paymentProcessedRef.current) return;
     
@@ -821,6 +1148,7 @@ export default function AvailableDriversContent({ onBack }) {
       setPaymentSuccess(false);
       localStorage.removeItem('pendingOfferData');
       paymentProcessedRef.current = true;
+      toast.info('تم إلغاء عملية الدفع');
       return;
     }
     
@@ -844,6 +1172,8 @@ export default function AvailableDriversContent({ onBack }) {
             order: { payment_status: 'paid' }
           }
         });
+        
+        toast.success('✅ تم الدفع بنجاح!');
       }
       return;
     }
@@ -866,6 +1196,8 @@ export default function AvailableDriversContent({ onBack }) {
           order: { payment_status: 'paid' }
         }
       });
+      
+      toast.success('✅ تم الدفع بنجاح!');
       return;
     }
     
@@ -882,174 +1214,7 @@ export default function AvailableDriversContent({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, paymentStatus, paymentSuccessParam, paymentCancelParam]);
 
-  const fetchOffers = async () => {
-    try {
-      setRefreshing(true);
-      setLoading(true);
-      
-      const accessToken = getAccessToken();
-      
-      if (!accessToken) {
-        setError('يجب تسجيل الدخول للوصول إلى هذه الصفحة');
-        router.push('/login');
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/offers`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        cache: 'no-store'
-      });
-
-      if (response.status === 404) {
-        setIsNotFound(true);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      const data = await response.json();
-      
-      if (response.ok && data.status) {
-        setIsNotFound(false);
-        
-        const offersFromApi = data.data.offers || [];
-        console.log('📥 Fetched offers from API:', offersFromApi.length);
-        
-        dispatchOffers({ type: OFFER_ACTIONS.SET_OFFERS, payload: offersFromApi });
-        
-        setOffersData(data.data);
-        setError(null);
-        setAcceptedOfferId(null);
-        
-        if (data.data.accepted_offer) {
-          const acceptedId = data.data.accepted_offer.id || data.data.accepted_offer;
-          const orderPaymentStatus = data.data.order?.payment_status;
-          
-          if (orderPaymentStatus === 'paid') {
-            setAcceptedOfferId(acceptedId);
-            setPendingPaymentOfferId(null);
-            setSelectedForPaymentOfferId(null);
-            setPaidOfferIds(prev => new Set([...prev, acceptedId]));
-            setPaymentSuccess(true);
-            localStorage.removeItem('pendingOfferData');
-          }
-        }
-        
-        setLoading(false);
-        setRefreshing(false);
-        
-      } else {
-        if (data.error_code === 'UNAUTHENTICATED') {
-          setError('انتهت جلسة الدخول. يرجى تسجيل الدخول مرة أخرى.');
-          localStorage.removeItem('accessToken');
-        }
-        setLoading(false);
-      }
-    } catch (err) {
-      console.warn('API Error:', err.message);
-      
-      if (err.message?.includes('404')) {
-        setIsNotFound(true);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-      
-      setError(`حدث خطأ في جلب البيانات: ${err.message}`);
-      setLoading(false);
-      setRefreshing(false);
-      setOffersData(null);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const fetchOrderStatus = async () => {
-    if (!orderId) return;
-
-    try {
-      const accessToken = getAccessToken();
-      if (!accessToken) return;
-
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        cache: 'no-store'
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.status && data.data) {
-        setOrderStatus(data.data);
-      }
-    } catch (err) {
-      console.warn('Error fetching order status:', err.message);
-    }
-  };
-
-  const handleDriverSelect = (driverId, offerId, driverData, offer) => {
-    setSelectedDriverId(driverId);
-    setSelectedOfferId(offerId);
-    setSelectedOffer(offer);
-    setSelectedForPaymentOfferId(offerId);
-    setIsModalOpen(true);
-    sessionStorage.setItem('selectedDriver', JSON.stringify(driverData));
-    paymentProcessedRef.current = false;
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setPendingPaymentOfferId(null);
-    setSelectedForPaymentOfferId(null);
-    localStorage.removeItem('pendingOfferData');
-    paymentProcessedRef.current = false;
-  };
-
-  const handleConfirmPayment = async (methodId, driverId, paymentData = null) => {
-    try {
-      const params = new URLSearchParams({
-        driver: driverId,
-        offer: selectedOfferId,
-        gateway: methodId
-      });
-      
-      if (paymentData?.payment_url) {
-        params.append('payment_url', paymentData.payment_url);
-      }
-      
-      router.push(`/orders/${orderId}/confirmation?${params.toString()}`);
-    } catch (err) {
-      console.error('Error in payment confirmation:', err);
-      alert('حدث خطأ في تأكيد الطلب. يرجى المحاولة مرة أخرى.');
-    }
-  };
-
-  const formatTimeRemaining = () => {
-    if (!timeRemaining) return 'جاري الحساب...';
-    
-    const { days, hours, minutes, seconds } = timeRemaining;
-    
-    if (days > 0) {
-      return `${days} يوم ${hours} ساعة ${minutes} دقيقة`;
-    } else if (hours > 0) {
-      return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
-    } else if (minutes > 0) {
-      return `${minutes} دقيقة ${seconds} ثانية`;
-    } else {
-      return `${seconds} ثانية`;
-    }
-  };
-
-  // Error and loading states
+  // ============= Error and loading states =============
   if (error && error.includes('تسجيل الدخول')) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -1127,9 +1292,38 @@ export default function AvailableDriversContent({ onBack }) {
     );
   }
 
+  // ============= Return JSX =============
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8">
+
+        {/* Connection Status Indicator */}
+        <AnimatePresence>
+          {showConnectionStatus && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50"
+            >
+              {/* <div className={`px-4 py-2 rounded-full shadow-lg flex items-center gap-2 ${
+                pusherConnected ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+              }`}>
+                {pusherConnected ? (
+                  <>
+                    <Wifi className="w-4 h-4" />
+                    <span className="text-sm font-medium">متصل بالخادم</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4" />
+                    <span className="text-sm font-medium">جاري إعادة الاتصال...</span>
+                  </>
+                )}
+              </div> */}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Location Prompt Modal */}
         <AnimatePresence>
@@ -1361,6 +1555,23 @@ export default function AvailableDriversContent({ onBack }) {
                             </span>
                           </div>
                         </div>
+
+                        {/* Pusher Connection Status */}
+                        {/* <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
+                          <div className="flex items-center gap-1.5">
+                            {pusherConnected ? (
+                              <>
+                                <Wifi className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="font-medium text-xs sm:text-sm">متصل</span>
+                              </>
+                            ) : (
+                              <>
+                                <WifiOff className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="font-medium text-xs sm:text-sm">غير متصل</span>
+                              </>
+                            )}
+                          </div>
+                        </div> */}
                       </div>
                     </div>
                   </div>
@@ -1419,51 +1630,6 @@ export default function AvailableDriversContent({ onBack }) {
             animate="visible"
             className="lg:col-span-8 order-2 lg:order-1"
           >
-            {/* Debug Info - يظهر فقط في التطوير */}
-            {/* {process.env.NODE_ENV === 'development' && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-xs">
-                <p><strong>🔍 معلومات التصحيح:</strong></p>
-                <p>عدد العروض في المتغير: {offers.length}</p>
-                <p>حالة الاتصال بـ Pusher: {pusherConnected ? '✅ متصل' : '❌ غير متصل'}</p>
-                <p>آخر تحديث: {new Date().toLocaleTimeString()}</p>
-                <p>العروض المقبولة: {offers.filter(o => o.status === 'accepted' || acceptedOfferId === o.id).length}</p>
-                <button 
-                  onClick={() => console.log('Current offers:', offers)}
-                  className="bg-blue-500 text-white px-2 py-1 rounded mt-1 text-xs ml-2"
-                >
-                  عرض العروض في الكونسول
-                </button>
-                <button 
-                  onClick={() => {
-                    // إضافة عرض اختبار
-                    console.log('Testing with mock accepted offer');
-                    handleDriverAcceptedOrder({
-                      order_id: orderId,
-                      offer: {
-                        id: 'test-offer-123',
-                        driver_id: 'test-driver-456',
-                        driver: {
-                          id: 'test-driver-456',
-                          name: 'سائق تجريبي',
-                          rating: 4.5,
-                          vehicle: {
-                            model: 'تويوتا كامري',
-                            plate_number: 'ABC 123'
-                          }
-                        },
-                        price: 150,
-                        status: 'accepted',
-                        order: { payment_status: 'paid' }
-                      }
-                    });
-                  }}
-                  className="bg-green-500 text-white px-2 py-1 rounded mt-1 text-xs"
-                >
-                  اختبار قبول عرض
-                </button>
-              </div>
-            )} */}
-
             <div className="mb-4 sm:mb-6 flex items-center justify-between">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 العروض المتاحة 
@@ -1472,7 +1638,7 @@ export default function AvailableDriversContent({ onBack }) {
                 </span>
               </h2>
               
-              {/* {offers.length > 0 && (
+              {/* {pusherConnected && offers.length > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-gray-500">تحديث مباشر</span>
@@ -1480,9 +1646,10 @@ export default function AvailableDriversContent({ onBack }) {
               )} */}
             </div>
 
-            {/* {offers.length > 0 && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-sm text-green-800">
-                🎉 تم العثور على {offers.length} عرض متاح!
+            {/* {offers.length > 0 && pusherConnected && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-sm text-green-800 flex items-center gap-2">
+                <Wifi className="w-4 h-4" />
+                🎉 أنت متصل ومستقبل للعروض بشكل مباشر!
               </div>
             )} */}
 
@@ -1501,6 +1668,9 @@ export default function AvailableDriversContent({ onBack }) {
                                            !isAccepted && !isPendingPayment && !isExpired;
                 const isPaid = paidOfferIds.has(offer.id);
                 
+                // Check if this is a new offer (created in last 10 seconds)
+                const isNewOffer = new Date(offer.created_at) > new Date(Date.now() - 10000);
+                
                 return (
                   <motion.div
                     key={offer.id}
@@ -1509,13 +1679,13 @@ export default function AvailableDriversContent({ onBack }) {
                     transition={{ delay: index * 0.1 }}
                     className="relative"
                   >
-                    {/* {index === 0 && offers.length > 0 && (
+                    {isNewOffer && (
                       <div className="absolute -top-2 -right-2 z-10">
                         <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
                           جديد
                         </div>
                       </div>
-                    )} */}
+                    )}
                     
                     <DriverCard
                       {...formatDriverData(offer)}
@@ -1539,9 +1709,10 @@ export default function AvailableDriversContent({ onBack }) {
               })}
             </div>
 
-            {/* {offers.length > 0 && (
-              <div className="mt-6 text-center text-sm text-gray-500">
-                🚚 يتم تحديث العروض تلقائياً...
+            {/* {offers.length > 0 && pusherConnected && (
+              <div className="mt-6 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                🚚 في انتظار عروض جديدة...
               </div>
             )} */}
 
@@ -1559,8 +1730,20 @@ export default function AvailableDriversContent({ onBack }) {
                   لم يتقدم أي سائق لعرض سعر على طلبك بعد. 
                   سيتم إشعارك فور وصول أي عرض جديد.
                 </p>
+                {/* {pusherConnected ? (
+                  <div className="flex items-center justify-center gap-2 text-green-600 mb-4">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>في انتظار العروض...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 text-red-600 mb-4">
+                    <WifiOff className="w-4 h-4" />
+                    <span>غير متصل - جاري إعادة الاتصال...</span>
+                  </div>
+                )} */}
                 <button
                   onClick={fetchOffers}
+                  disabled={refreshing}
                   className="bg-[#579BE8] text-white px-8 py-3 rounded-lg font-medium hover:bg-[#4a8dd8] transition inline-flex items-center gap-2"
                 >
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />

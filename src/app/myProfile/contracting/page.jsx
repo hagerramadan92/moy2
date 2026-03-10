@@ -622,7 +622,7 @@ export default function ContractingPage() {
     }
 
     return (
-        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up">
+        <div className="space-y-4 md:space-y-5 lg:space-y-6 fade-in-up max-w-[60rem] mx-auto">
             {/* Success Popup */}
             <AnimatePresence>
                  {showSuccessPopup && (
