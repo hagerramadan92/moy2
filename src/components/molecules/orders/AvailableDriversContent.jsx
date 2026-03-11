@@ -1055,6 +1055,7 @@ export default function AvailableDriversContent({ onBack }) {
         isPaid={isPaid}
         isDelivered={isOrderDelivered}
         isCancelled={isOrderCancelled || isOfferRejected}
+        isRejected={isOfferRejected}
         isInRoad={isOrderInRoad} // ✅ تمرير حالة في الطريق
         index={index}
       />
