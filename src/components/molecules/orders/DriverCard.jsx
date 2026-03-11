@@ -7,6 +7,7 @@ import {
   Clock, 
   CheckCircle,
   X,
+  Truck,
 } from 'lucide-react';
 import Image from 'next/image';
 import { IoMdEye } from "react-icons/io";
@@ -44,7 +45,9 @@ const formatDriverData = (offer) => {
     lat: lat,
     lng: lng,
     // Store full location object for reference
-    location: location
+    location: location,
+    // ✅ إضافة البيانات الخام للـ driver للتأكد من تمرير كل شيء
+    driver: offer.driver
   };
 };
 
@@ -59,14 +62,17 @@ const DriverCard = memo(function DriverCard({
   successfulOrders,
   ordersCount,
   status,
-  onAcceptOrder,
+  onAcceptOrder, // ✅ هذه الدالة ستستخدم لفتح بوب اب الدفع في حالة pendingPayment
   onViewProfile,
-  isSelectedForPayment = false, // ✅ خاصية جديدة - تم اختيار العرض للدفع
+  isSelectedForPayment = false,
   isPending = true,
   isAccepted = false,
   isPendingPayment = false,
   isExpired = false,
-  isPaid = false, // ✅ حالة الدفع (تم الدفع وبدأت الرحلة)
+  isPaid = false,
+  isDelivered = false,
+  isCancelled = false,
+  isInRoad = false, // ✅ إضافة حالة في الطريق
   offerId,
   createdAt,
   vehicleType,
@@ -77,8 +83,21 @@ const DriverCard = memo(function DriverCard({
   const [accepting, setAccepting] = useState(false);
 
   const handleAccept = async () => {
-    // ✅ منع القبول إذا كان العرض محدد للدفع أو في أي حالة أخرى
-    if (!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment || isPaid) return;
+    // ✅ منع القبول في حالات معينة
+    if (isCancelled || isExpired || isInRoad || isDelivered) {
+      return;
+    }
+
+    // ✅ في حالة isPendingPayment، نسمح بالنقر لفتح بوب اب الدفع
+    if (isPendingPayment) {
+      if (onAcceptOrder) {
+        await onAcceptOrder();
+      }
+      return;
+    }
+    
+    // ✅ منع القبول في الحالات الأخرى
+    if (!isPending || accepting || isAccepted || isSelectedForPayment || isPaid || isDelivered || isCancelled || isInRoad) return;
     
     setAccepting(true);
     try {
@@ -102,7 +121,7 @@ const DriverCard = memo(function DriverCard({
     return `قبل ${Math.floor(diffMins / 1440)} يوم`;
   }, [createdAt]);
 
-  // Memoize badge color - using site primary colors
+  // ✅ تعريف badgeColor أولاً
   const badgeColor = useMemo(() => {
     const colors = [
       'from-[#579BE8] to-[#4a8dd8]',
@@ -119,78 +138,117 @@ const DriverCard = memo(function DriverCard({
   // Memoize rating stars
   const ratingValue = useMemo(() => Math.round(parseFloat(rating)), [rating]);
 
+  // ✅ ثم استخدام badgeColor في الدوال التالية
   // Memoize card classes - using site color scheme
   const cardClasses = useMemo(() => {
-    if (isPaid) return 'border-[#10B981] bg-[#10B981]/10 ring-2 ring-[#10B981] ring-opacity-50'; // ✅ حالة الدفع
+    if (isInRoad) return 'border-[#F59E0B] bg-[#F59E0B]/10 ring-2 ring-[#F59E0B] ring-opacity-50';
+    if (isCancelled) return 'border-[#EF4444] bg-[#EF4444]/10 ring-2 ring-[#EF4444] ring-opacity-50';
+    if (isPaid) return 'border-[#10B981] bg-[#10B981]/10 ring-2 ring-[#10B981] ring-opacity-50';
     if (isAccepted) return 'border-[#10B981] bg-[#10B981]/10';
-    if (isPendingPayment) return 'border-[#F59E0B] bg-[#F59E0B]/10';
+    if (isPendingPayment) return 'border-[#579BE8] bg-[#579BE8]/10 ring-2 ring-[#579BE8] ring-opacity-50';
     if (isExpired) return 'border-[#EF4444] bg-[#EF4444]/10 opacity-75';
-    if (isSelectedForPayment) return 'border-[#579BE8] bg-[#579BE8]/10 ring-2 ring-[#579BE8] ring-opacity-50'; // ✅ حالة جديدة
+    if (isSelectedForPayment) return 'border-[#579BE8] bg-[#579BE8]/10 ring-2 ring-[#579BE8] ring-opacity-50';
+    if (isDelivered) return 'border-[#10B981] bg-[#10B981]/10 ring-2 ring-[#10B981] ring-opacity-50';
     return 'border-gray-200';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isCancelled, isInRoad]);
 
   // Memoize header gradient
   const headerGradient = useMemo(() => {
-    if (isPaid) return 'from-green-50 to-emerald-50'; // ✅ حالة الدفع
+    if (isInRoad) return 'from-amber-50 to-orange-50';
+    if (isCancelled) return 'from-red-50 to-rose-50';
+    if (isPaid) return 'from-green-50 to-emerald-50';
     if (isAccepted) return 'from-green-50 to-emerald-50';
-    if (isPendingPayment) return 'from-amber-50 to-orange-50';
+    if (isPendingPayment) return 'from-blue-50 to-indigo-50';
     if (isExpired) return 'from-red-50 to-rose-50';
-    if (isSelectedForPayment) return 'from-blue-50 to-indigo-50'; // ✅ حالة جديدة
+    if (isSelectedForPayment) return 'from-blue-50 to-indigo-50';
+    if (isDelivered) return 'from-green-50 to-emerald-50';
     return 'from-gray-50 to-gray-100';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isCancelled, isInRoad]);
 
   // Memoize icon background
   const iconBg = useMemo(() => {
-    if (isPaid) return 'bg-gradient-to-br from-green-500 to-emerald-600'; // ✅ حالة الدفع
+    if (isInRoad) return 'bg-gradient-to-br from-amber-500 to-orange-600';
+    if (isCancelled) return 'bg-gradient-to-br from-red-500 to-rose-600';
+    if (isPaid) return 'bg-gradient-to-br from-green-500 to-emerald-600';
     if (isAccepted) return 'bg-gradient-to-br from-green-500 to-emerald-600';
-    if (isPendingPayment) return 'bg-gradient-to-br from-amber-500 to-orange-600';
+    if (isPendingPayment) return 'bg-gradient-to-br from-[#579BE8] to-[#4a8dd8]';
     if (isExpired) return 'bg-gradient-to-br from-red-500 to-rose-600';
-    if (isSelectedForPayment) return 'bg-gradient-to-br from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
+    if (isSelectedForPayment) return 'bg-gradient-to-br from-[#579BE8] to-[#4a8dd8]';
+    if (isDelivered) return 'bg-gradient-to-br from-green-500 to-emerald-600';
     return 'bg-gradient-to-br from-blue-500 to-indigo-600';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isCancelled, isInRoad]);
 
   // Memoize badge gradient - using site color scheme
   const badgeGradient = useMemo(() => {
-    if (isPaid) return 'from-[#10B981] to-[#059669]'; // ✅ حالة الدفع
+    if (isInRoad) return 'from-[#F59E0B] to-[#D97706]';
+    if (isCancelled) return 'from-[#EF4444] to-[#DC2626]';
+    if (isPaid) return 'from-[#10B981] to-[#059669]';
     if (isAccepted) return 'from-[#10B981] to-[#059669]';
-    if (isPendingPayment) return 'from-[#F59E0B] to-[#D97706]';
+    if (isPendingPayment) return 'from-[#579BE8] to-[#4a8dd8]';
     if (isExpired) return 'from-[#EF4444] to-[#DC2626]';
-    if (isSelectedForPayment) return 'from-[#579BE8] to-[#4a8dd8]'; // ✅ حالة جديدة
-    return badgeColor;
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, badgeColor]);
+    if (isSelectedForPayment) return 'from-[#579BE8] to-[#4a8dd8]';
+    if (isDelivered) return 'from-[#10B981] to-[#059669]';
+    return badgeColor; // ✅ الآن badgeColor معرفة
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isCancelled, isInRoad, badgeColor]);
 
   // Memoize button classes - using site color scheme
   const buttonClasses = useMemo(() => {
-    if (isPaid) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg cursor-default'; // ✅ حالة الدفع - لا يمكن النقر
+    if (isInRoad) return 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg cursor-default opacity-75';
+    if (isCancelled) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg cursor-default opacity-75';
+    if (isPaid) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg cursor-default';
     if (isAccepted) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg hover:from-[#059669] hover:to-[#047857]';
-    if (isPendingPayment) return 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg hover:from-[#D97706] hover:to-[#B45309]';
+    if (isPendingPayment) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg hover:from-[#4a8dd8] hover:to-[#3b7bc8] hover:shadow-xl transition-all cursor-pointer';
     if (isExpired) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg opacity-75 cursor-not-allowed';
-    if (isSelectedForPayment) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg cursor-wait'; // ✅ حالة جديدة - مع مؤشر انتظار
+    if (isSelectedForPayment) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg cursor-wait';
+    if (isDelivered) return 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-lg cursor-default opacity-75';
     if (isPending) return 'bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white shadow-lg hover:from-[#4a8dd8] hover:to-[#3b7bc8] hover:shadow-xl transition-all cursor-pointer';
     return 'bg-gray-100 text-gray-400 cursor-not-allowed';
-  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isPending]);
+  }, [isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isPending, isCancelled, isInRoad]);
 
   // نص الزر حسب الحالة
   const buttonText = useMemo(() => {
     if (accepting) return 'جاري القبول...';
-    if (isPaid) return 'تم الدفع - الرحلة بدأت'; // ✅ نص حالة الدفع
+    if (isInRoad) return 'السائق في الطريق';
+    if (isCancelled) return 'تم إلغاء الطلب';
+    if (isPaid) return 'تم الدفع - الرحلة بدأت';
     if (isAccepted) return 'تم قبول العرض';
-    if (isPendingPayment) return 'في انتظار الدفع';
+    if (isPendingPayment) return 'قبول العرض';
     if (isExpired) return 'انتهت صلاحية العرض';
-    if (isSelectedForPayment) return 'جاري تجهيز الدفع...'; // ✅ نص جديد
+    if (isSelectedForPayment) return 'جاري تجهيز الدفع...';
+    if (isDelivered) return 'تم التوصيل';
     if (isPending) return 'قبول العرض';
     return 'غير متاح';
-  }, [accepting, isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isPending]);
+  }, [accepting, isAccepted, isPendingPayment, isExpired, isSelectedForPayment, isPaid, isDelivered, isPending, isCancelled, isInRoad]);
 
   return (
     <div className={`bg-white rounded-2xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col relative ${cardClasses}`}>
       
-      {/* أيقونة صغيرة للدلالة على أن العرض قيد الدفع */}
-      {isSelectedForPayment && (
+      {/* أيقونة صغيرة لحالة "في الطريق" */}
+      {isInRoad && (
         <div className="absolute top-4 left-4 z-20">
-          <div className="bg-[#579BE8] text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span>تجهيز الدفع</span>
+          <div className="bg-[#F59E0B] text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <Truck className="w-3 h-3" />
+            <span>في الطريق</span>
+          </div>
+        </div>
+      )}
+
+      {/* أيقونة صغيرة لحالة "تم الإلغاء" */}
+      {isCancelled && (
+        <div className="absolute top-4 left-4 z-20">
+          <div className="bg-[#EF4444] text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <X className="w-3 h-3" />
+            <span>تم الإلغاء</span>
+          </div>
+        </div>
+      )}
+
+      {/* أيقونة صغيرة لحالة "تم التوصيل" */}
+      {isDelivered && (
+        <div className="absolute top-4 left-4 z-20">
+          <div className="bg-[#10B981] text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+            <CheckCircle className="w-3 h-3" />
+            <span>تم التوصيل</span>
           </div>
         </div>
       )}
@@ -203,9 +261,9 @@ const DriverCard = memo(function DriverCard({
           </div>
         )}
         
-        {/* زر عرض الملف الشخصي - يختفي أثناء تجهيز الدفع */}
+        {/* زر عرض الملف الشخصي - يختفي في حالات معينة */}
         <div className='absolute top-4 left-4'>
-          {onViewProfile && !isSelectedForPayment && (
+          {onViewProfile && !isSelectedForPayment && !isDelivered && !isCancelled && !isInRoad && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -271,7 +329,16 @@ const DriverCard = memo(function DriverCard({
         <div className="mt-auto">
           <button
             onClick={handleAccept}
-            disabled={!isPending || accepting || isAccepted || isPendingPayment || isExpired || isSelectedForPayment || isPaid}
+            disabled={
+              accepting || 
+              isExpired || 
+              isSelectedForPayment || 
+              isPaid ||
+              isDelivered ||
+              isCancelled ||
+              isInRoad || // ✅ منع النقر في حالة في الطريق
+              (!isPending && !isPendingPayment)
+            }
             className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 ${buttonClasses}`}
           >
             {accepting ? (
@@ -283,6 +350,15 @@ const DriverCard = memo(function DriverCard({
               <>
                 {isSelectedForPayment && (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                {isDelivered && (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {isCancelled && (
+                  <X className="w-5 h-5" />
+                )}
+                {isInRoad && (
+                  <Truck className="w-5 h-5" /> 
                 )}
                 <span>{buttonText}</span>
               </>

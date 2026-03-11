@@ -63,8 +63,8 @@ function MapCenterUpdater({ center, shouldUpdate = true }) {
                 const targetZoom = currentZoom || 15;
                 map.setView([center.lat, center.lng], targetZoom, { animate: true });
                 lastCenterRef.current = centerKey;
-                console.log('🗺️ Map center updated to EXACT location:', center);
-                console.log('🗺️ Map view set to:', `[${center.lat}, ${center.lng}] at zoom ${targetZoom}`);
+                // console.log('🗺️ Map center updated to EXACT location:', center);
+                // console.log('🗺️ Map view set to:', `[${center.lat}, ${center.lng}] at zoom ${targetZoom}`);
             }
         } catch (e) {
             console.warn('Error updating map center:', e);
@@ -284,7 +284,7 @@ function FitBounds({ markers, shouldUpdate = true, preserveView = true }) {
                 timeoutRef.current = null;
             }
         };
-    }, [markers, map, shouldUpdate]);
+    }, [markers, map, shouldUpdate, preserveView]);
 
     // Track user interactions to preserve view
     useEffect(() => {
@@ -331,6 +331,8 @@ export default function DriversMap({
     const stableDriversRef = useRef([]);
     const mapKeyRef = useRef(0);
     const [mounted, setMounted] = useState(false);
+
+   
 
     // Ensure component only renders on client
     useEffect(() => {
@@ -380,18 +382,48 @@ export default function DriversMap({
         return driversToUse
             .filter(driver => driver && driver.id) // Filter out invalid drivers
             .map((driver, index) => {
-                // Prioritize actual lat/lng from API (currect_location)
-                // Only use random positions as fallback if no location data
-                let lat = driver.lat;
-                let lng = driver.lng;
+                // استخراج الموقع من driver.location إذا كان موجوداً
+                let lat = null;
+                let lng = null;
                 
-                // If no coordinates from API, use stable random positions as fallback
-                if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-                    const stableSeed = driver.id || index;
-                    const random1 = (stableSeed * 0.1) % 1;
-                    const random2 = (stableSeed * 0.2) % 1;
-                    lat = center.lat + (random1 - 0.5) * 0.05;
-                    lng = center.lng + (random2 - 0.5) * 0.05;
+                // console.log(`📍 Processing driver ${driver.id}:`, {
+                //     name: driver.name,
+                //     location: driver.location
+                // });
+
+                if (driver.location) {
+                    // إذا كان location كائن ويحتوي على lat/lng
+                    if (typeof driver.location.lat === 'number' && typeof driver.location.lng === 'number') {
+                        lat = driver.location.lat;
+                        lng = driver.location.lng;
+                        // console.log(`✅ Driver ${driver.id} has valid number coordinates:`, { lat, lng });
+                    } 
+                    // إذا كان location كائن ويحتوي على lat/lng كـ string
+                    else if (driver.location.lat && driver.location.lng) {
+                        const parsedLat = parseFloat(driver.location.lat);
+                        const parsedLng = parseFloat(driver.location.lng);
+                        if (!isNaN(parsedLat) && !isNaN(parsedLng) && isFinite(parsedLat) && isFinite(parsedLng)) {
+                            lat = parsedLat;
+                            lng = parsedLng;
+                            // console.log(`✅ Driver ${driver.id} has valid string coordinates:`, { lat, lng });
+                        }
+                    }
+                } 
+                // إذا كان lat/lng موجودين مباشرة في driver
+                else if (driver.lat && driver.lng) {
+                    const parsedLat = parseFloat(driver.lat);
+                    const parsedLng = parseFloat(driver.lng);
+                    if (!isNaN(parsedLat) && !isNaN(parsedLng) && isFinite(parsedLat) && isFinite(parsedLng)) {
+                        lat = parsedLat;
+                        lng = parsedLng;
+                        // console.log(`✅ Driver ${driver.id} has direct coordinates:`, { lat, lng });
+                    }
+                }
+                
+                // إذا لم يكن هناك موقع حقيقي، نعيد null (لن يظهر على الخريطة)
+                if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
+                    // console.log(`❌ Driver ${driver.id} has no valid location, skipping`);
+                    return null;
                 }
                 
                 return {
@@ -400,6 +432,7 @@ export default function DriversMap({
                     lng: lng,
                 };
             })
+            .filter(marker => marker !== null) // إزالة الـ null entries
             .filter(marker => 
                 marker.lat && 
                 marker.lng && 
@@ -408,14 +441,24 @@ export default function DriversMap({
                 isFinite(marker.lat) &&
                 isFinite(marker.lng)
             );
-    }, [driversToUse, center]);
+    }, [driversToUse]);
+
+    // console.log('📍 Final driverMarkers:', {
+    //     count: driverMarkers.length,
+    //     markers: driverMarkers.map(m => ({
+    //         id: m.id,
+    //         name: m.name,
+    //         lat: m.lat,
+    //         lng: m.lng
+    //     }))
+    // });
 
     // Custom Icon for drivers (car) - Memoized to prevent recreation
     const carIcon = useMemo(() => {
         if (typeof window === 'undefined') return null;
         try {
             return new L.Icon({
-                iconUrl: '/car22.png', // Updated to use the car image we know exists locally
+                iconUrl: '/car22.png',
                 iconSize: [40, 25],
                 iconAnchor: [20, 12],
                 popupAnchor: [0, -10],
@@ -470,12 +513,10 @@ export default function DriversMap({
         }
     };
 
-    // Map ready state - MUST be declared before any conditional returns (Rules of Hooks)
+    // Map ready state
     const [mapReady, setMapReady] = useState(false);
 
-    // Validate center coordinates - Use exact location from props
-    // Always use the provided center if it's valid, even if it matches default coordinates
-    // MUST be calculated before any conditional returns to maintain hook order
+    // Validate center coordinates
     const validCenter = useMemo(() => {
         return (center && 
             typeof center.lat === 'number' && 
@@ -484,20 +525,16 @@ export default function DriversMap({
             !isNaN(center.lng) &&
             isFinite(center.lat) &&
             isFinite(center.lng))
-            ? { lat: center.lat, lng: center.lng } // Use exact coordinates
-            : { lat: 24.7136, lng: 46.6753 }; // Fallback to default only if center is invalid
+            ? { lat: center.lat, lng: center.lng }
+            : { lat: 24.7136, lng: 46.6753 };
     }, [center]);
 
-    // Log center for debugging - verify exact location is used
-    // MUST be declared before any conditional returns (Rules of Hooks)
+    // Log center for debugging
     useEffect(() => {
         if (validCenter && validCenter.lat && validCenter.lng) {
-            console.log('🗺️ Map center (validCenter):', validCenter);
-            console.log('🗺️ Map center coordinates:', `Lat: ${validCenter.lat}, Lng: ${validCenter.lng}`);
-            console.log('🗺️ Center prop received:', center);
-            console.log('🗺️ Are they equal?', center?.lat === validCenter.lat && center?.lng === validCenter.lng);
+            // console.log('🗺️ Map center:', validCenter);
         }
-    }, [validCenter, center]);
+    }, [validCenter]);
 
     // Don't render map until mounted on client
     if (!mounted || typeof window === 'undefined') {
@@ -513,15 +550,14 @@ export default function DriversMap({
 
     return (
         <MapContainer
-            key={`map-${mapKeyRef.current}`} // Use stable key after initial mount to prevent unnecessary remounts
+            key={`map-${mapKeyRef.current}`}
             center={[validCenter.lat, validCenter.lng]}
             zoom={15}
             className={className}
-            style={{ width: '100%', height: '100%', minHeight: '400px' }} // Ensure height is present
+            style={{ width: '100%', height: '100%', minHeight: '400px' }}
             zoomControl={true}
             scrollWheelZoom={true}
             whenReady={(map) => {
-                // Map is ready - wait longer to ensure DOM and Leaflet internals are fully initialized
                 setTimeout(() => {
                     try {
                         const mapInstance = map.target;
@@ -532,22 +568,18 @@ export default function DriversMap({
                         
                         const container = mapInstance.getContainer();
                         if (!container || !container.parentElement) {
-                            // Retry after a bit more time
                             setTimeout(() => setMapReady(true), 300);
                             return;
                         }
                         
-                        // Check if map panes are initialized
                         const pane = mapInstance.getPane('mapPane');
                         if (pane && pane._leaflet_id) {
                             setMapReady(true);
                         } else {
-                            // Wait a bit more for panes to initialize
                             setTimeout(() => setMapReady(true), 400);
                         }
                     } catch (e) {
                         console.warn('Error checking map readiness:', e);
-                        // Set ready anyway after delay to prevent blocking
                         setTimeout(() => setMapReady(true), 500);
                     }
                 }, 500);
@@ -558,13 +590,12 @@ export default function DriversMap({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* User Current Location Marker - Blue with custom icon - Only render when map is ready */}
+            {/* User Current Location Marker */}
             {mapReady && validCenter && (
                 <>
-                    {/* Circle to highlight user location */}
                     <Circle
                         center={[validCenter.lat, validCenter.lng]}
-                        radius={500} // 500 meters radius
+                        radius={500}
                         pathOptions={{
                             color: '#3B82F6',
                             fillColor: '#3B82F6',
@@ -587,7 +618,7 @@ export default function DriversMap({
                             <div className="text-right">
                                 <strong className="block text-sm mb-1">📍 موقعك الحالي</strong>
                                 <span className="text-xs text-gray-700 block mb-1">موقع التوصيل</span>
-                                <span className="text-xs text-[#579BE8]  block mb-1">
+                                <span className="text-xs text-[#579BE8] block mb-1">
                                     {validCenter.lat.toFixed(8)}, {validCenter.lng.toFixed(8)}
                                 </span>
                                 <span className="text-xs text-gray-400">
@@ -599,24 +630,19 @@ export default function DriversMap({
                 </>
             )}
 
-            {/* Driver Markers - Only render when map is ready */}
+            {/* Driver Markers */}
             {mapReady && driverMarkers.map((driver) => {
-                // Validate position before rendering - Only show drivers with valid coordinates from API
                 if (!driver || !driver.lat || !driver.lng || isNaN(driver.lat) || isNaN(driver.lng)) {
+                    // console.log(`❌ Driver ${driver?.id} has invalid coordinates, skipping`);
                     return null;
                 }
                 
-                // Only show drivers with actual location data from API (currect_location)
-                // Skip drivers with fallback random positions
-                if (!driver.location || !driver.location.lat || !driver.location.lng) {
-                    return null;
-                }
+             
                 
                 const handleMarkerClick = () => {
                     if (onDriverClick) {
                         onDriverClick(driver);
                     } else if (driver.driverUserId || driver.driverId) {
-                        // Navigate to driver profile
                         const profileId = driver.driverUserId || driver.driverId;
                         const driverId = driver.driverId;
                         const name = encodeURIComponent(driver.name || 'سائق');
@@ -627,7 +653,6 @@ export default function DriversMap({
                     }
                 };
                 
-                // Create custom icon with driver name
                 const driverName = driver.name || 'سائق';
                 const markerIcon = createDriverIcon(driverName) || carIcon || new L.Icon({
                     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -639,10 +664,9 @@ export default function DriversMap({
                 
                 return (
                     <React.Fragment key={driver.id || `driver-${driver.driverId || Math.random()}`}>
-                        {/* Circle to highlight driver location */}
                         <Circle
                             center={[driver.lat, driver.lng]}
-                            radius={300} // 300 meters radius
+                            radius={300}
                             pathOptions={{
                                 color: '#10B981',
                                 fillColor: '#10B981',
@@ -669,7 +693,7 @@ export default function DriversMap({
                                     </span>
                                     <button
                                         onClick={handleMarkerClick}
-                                        className="text-xs text-[#579BE8]  hover:text-blue-800 font-medium underline mt-1"
+                                        className="text-xs text-[#579BE8] hover:text-blue-800 font-medium underline mt-1"
                                     >
                                         عرض الملف الشخصي
                                     </button>
@@ -691,7 +715,7 @@ export default function DriversMap({
             {/* Preserve map view state */}
             {mapReady && <MapViewPreserver shouldPreserve={true} />}
 
-            {/* Only render FitBounds when map is ready to prevent _leaflet_pos errors */}
+            {/* Fit bounds to markers */}
             {mapReady && (
                 <FitBounds 
                     markers={[

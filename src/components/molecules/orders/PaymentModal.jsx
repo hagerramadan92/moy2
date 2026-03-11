@@ -9,6 +9,7 @@ import { MdCalendarToday, MdAccessTime, MdClose } from "react-icons/md";
 import { BiErrorCircle } from "react-icons/bi";
 import { API_BASE_URL, getAccessToken, getDeviceId, getIpAddress } from './utils/api';
 import Pusher from 'pusher-js';
+import Image from 'next/image';
 
 /* =============================
    ربط icon string من API بـ react-icons
@@ -412,8 +413,7 @@ export default function PaymentModal({
         saveCard
       );
       
-      // طباعة الـ response بالكامل للتحقق
-      console.log('Full Payment Response:', JSON.stringify(paymentData, null, 2));
+      
 
       // ========== منطق مختلف حسب طريقة الدفع ==========
       
@@ -601,19 +601,19 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative">
+      <div className="bg-white rounded-xl w-full max-w-md overflow-hidden relative">
         {/* Payment Status Overlay - نعرضها فقط عند نجاح أو فشل الدفع الفعلي */}
         {showPaymentStatus && paymentStatus && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10  flex items-center justify-center">
             <div className="text-center p-6">
               {paymentStatus === 'success' ? (
                 <>
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  {/* <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                  </div>
-                  <h3 className="text-2xl font-bold text-green-600 mb-2">
+                  </div> */}
+                  <h3 className="text-2xl font-bold text-green-600 my-2">
                     {paymentType === 'cash' ? 'تم تأكيد الطلب!' : 'تم الدفع بنجاح!'}
                   </h3>
                   
@@ -673,7 +673,7 @@ export default function PaymentModal({
         )}
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex justify-between">
+        <div className="bg-gradient-to-r from-[#579BE8] to-[#4a8dd8] text-white p-6 flex justify-between">
           <h2 className="text-xl font-bold">تأكيد الدفع</h2>
           <button onClick={onClose} disabled={showPaymentStatus}>
             <MdClose size={22} />
@@ -715,7 +715,7 @@ export default function PaymentModal({
                       }`}
                     >
                       <div
-                        className={`p-3 rounded-lg ${
+                        className={`p-1.5 rounded-sm ${
                           isProcessing
                             ? "bg-blue-100 text-[#579BE8] "
                             : "bg-gray-100 text-gray-600"
@@ -724,7 +724,14 @@ export default function PaymentModal({
                         {isProcessing ? (
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                         ) : (
-                        <Icon size={20} />
+                        // <Icon size={20} />
+                           <Image
+                        src={method.image || '/not.jpg'}
+                        alt={method.name}
+                        width={50}
+                        height={30}
+                        className='w-full object-cover h-fit'
+                      />
                         )}
                       </div>
 

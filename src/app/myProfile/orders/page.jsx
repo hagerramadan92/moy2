@@ -225,7 +225,7 @@ export default function OrdersPage() {
             }
 
             // For debugging - log the URL
-            console.log("Fetching orders with URL:", `${API_BASE_URL}/orders?${params.toString()}`);
+            // console.log("Fetching orders with URL:", `${API_BASE_URL}/orders?${params.toString()}`);
 
             const response = await fetch(`${API_BASE_URL}/orders?${params.toString()}`, {
                 method: 'GET',
