@@ -1419,7 +1419,7 @@ export default function OrderDetailsPage() {
                     </div>
                     <div className="flex-1 text-center md:text-right">
                       <h3 className="text-lg sm:text-xl lg:text-xl  xl:text-xl font-black mb-2 sm:mb-3 lg:mb-4 text-gray-900">
-                        ✅ تم التوصيل بنجاح
+                         تم التوصيل بنجاح
                       </h3>
                       <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base ">
                         شكراً لك على استخدام خدماتنا
@@ -1703,10 +1703,10 @@ export default function OrderDetailsPage() {
                         {currentStatus === "in-road"
                           ? " في الطريق"
                           : isProcessing
-                            ? "🔄 جاري التوصيل"
+                            ? " جاري التوصيل"
                             : isCompleted
-                              ? "✅ تم التوصيل"
-                              : "📝 تم التعيين"}
+                              ? " تم التوصيل"
+                              : " تم التعيين"}
                       </span>
                       <div
                         className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${

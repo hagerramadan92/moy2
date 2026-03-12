@@ -73,7 +73,8 @@ const DriverCard = memo(function DriverCard({
   isDelivered = false,
   isRejected = false,
   isCancelled = false,
-  isInRoad = false, // ✅ إضافة حالة في الطريق
+  isInRoad = false,
+   isOrderExpired = false,
   offerId,
   createdAt,
   vehicleType,
@@ -85,7 +86,7 @@ const DriverCard = memo(function DriverCard({
 
   const handleAccept = async () => {
     // ✅ منع القبول في حالات معينة
-    if (isCancelled || isExpired || isInRoad || isDelivered || isRejected) {
+    if ( isOrderExpired || isCancelled || isExpired || isInRoad || isDelivered || isRejected) {
       return;
     }
 
@@ -142,6 +143,7 @@ const DriverCard = memo(function DriverCard({
   // ✅ ثم استخدام badgeColor في الدوال التالية
   // Memoize card classes - using site color scheme
   const cardClasses = useMemo(() => {
+    if(isOrderExpired) return 'border-[#EF4444] bg-[#EF4444]/10 opacity-75';
     if (isInRoad) return 'border-[#F59E0B] bg-[#F59E0B]/10 ring-2 ring-[#F59E0B] ring-opacity-50';
     if (isCancelled) return 'border-[#EF4444] bg-[#EF4444]/10 ring-2 ring-[#EF4444] ring-opacity-50';
     if (isRejected) return 'border-[#EF4444] bg-[#EF4444]/10 ring-2 ring-[#EF4444] ring-opacity-50';
@@ -199,6 +201,7 @@ const DriverCard = memo(function DriverCard({
 
   // Memoize button classes - using site color scheme
   const buttonClasses = useMemo(() => {
+     if (isOrderExpired) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg opacity-75 cursor-not-allowed'; 
     if (isInRoad) return 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg cursor-default opacity-75';
     if (isCancelled) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg cursor-default opacity-75';
     if(isRejected) return 'bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white shadow-lg cursor-default opacity-75';
@@ -214,6 +217,7 @@ const DriverCard = memo(function DriverCard({
 
   // نص الزر حسب الحالة
   const buttonText = useMemo(() => {
+    if (isOrderExpired) return 'انتهت صلاحية الطلب'; // ✅ نص جديد لحالة انتهاء الطلب
     if (accepting) return 'جاري القبول...';
     if (isInRoad) return 'السائق في الطريق';
     if (isCancelled) return 'تم إلغاء الطلب';
@@ -314,6 +318,7 @@ const DriverCard = memo(function DriverCard({
             disabled={
               accepting || 
               isExpired || 
+               isOrderExpired ||
               isSelectedForPayment || 
               isPaid ||
               isDelivered ||

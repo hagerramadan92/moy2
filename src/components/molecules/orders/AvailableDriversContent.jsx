@@ -141,6 +141,14 @@ export default function AvailableDriversContent({ onBack }) {
   const offersRef = useRef(offers);
   const lastOfferCountRef = useRef(0);
 
+  // State for order expiry countdown
+  const [orderExpiryTime, setOrderExpiryTime] = useState(null);
+  const [countdown, setCountdown] = useState({
+    minutes: 0,
+    seconds: 0,
+    expired: false,
+  });
+
   // Update ref when offers change
   useEffect(() => {
     offersRef.current = offers;
@@ -212,6 +220,76 @@ export default function AvailableDriversContent({ onBack }) {
   const paymentSuccessParam = searchParams.get("success");
   const paymentCancelParam = searchParams.get("cancel");
   const isExpiredParam = searchParams.get("expired");
+
+  // ============= دوال حساب الوقت =============
+
+  // دالة حساب الوقت المتبقي من تاريخ الانتهاء
+  const calculateTimeRemaining = (expiresAt) => {
+    if (!expiresAt) return null;
+
+    const expiryTime = new Date(expiresAt).getTime();
+    const now = new Date().getTime();
+    const diff = expiryTime - now;
+
+    if (diff <= 0) {
+      return { minutes: 0, seconds: 0, expired: true };
+    }
+
+    const minutes = Math.floor(diff / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return { minutes, seconds, expired: false };
+  };
+
+  // دالة تنسيق الوقت المتبقي (للعداد الكبير)
+  const formatTimeRemaining = () => {
+    if (!timeRemaining) return "جاري الحساب...";
+
+    const { days, hours, minutes, seconds } = timeRemaining;
+
+    if (days > 0) {
+      return `${days} يوم ${hours} ساعة ${minutes} دقيقة`;
+    } else if (hours > 0) {
+      return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
+    } else if (minutes > 0) {
+      return `${minutes} دقيقة ${seconds} ثانية`;
+    } else {
+      return `${seconds} ثانية`;
+    }
+  };
+
+  // دالة حساب الوقت المتبقي مع تحديد انتهاء الصلاحية
+  const calculateTimeRemainingWithExpiry = (expiresAt) => {
+    if (!expiresAt) return null;
+
+    const expiryTime = new Date(expiresAt).getTime();
+    const now = new Date().getTime();
+    const diff = expiryTime - now;
+
+    if (diff <= 0) {
+      setIsOrderExpired(true);
+      return null;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return { days, hours, minutes, seconds };
+  };
+
+  // دالة تنسيق العداد (MM:SS)
+  const formatCountdown = () => {
+    if (countdown.expired) {
+      return "انتهت صلاحية الطلب";
+    }
+
+    const minutes = countdown.minutes.toString().padStart(2, "0");
+    const seconds = countdown.seconds.toString().padStart(2, "0");
+
+    return `${minutes}:${seconds}`;
+  };
 
   // ============= دوال معالجة الأحداث =============
 
@@ -456,9 +534,20 @@ export default function AvailableDriversContent({ onBack }) {
           type: OFFER_ACTIONS.SET_OFFERS,
           payload: offersFromApi,
         });
- if (data.data.expires_at) {
-    setTimeRemaining(calculateTimeRemainingWithExpiry(data.data.expires_at));
-  }
+
+        // ✅ استخراج وقت انتهاء الطلب
+        if (offersFromApi.length > 0 && offersFromApi[0].order?.expires_at) {
+          setOrderExpiryTime(offersFromApi[0].order.expires_at);
+        } else if (data.data.expires_at) {
+          setOrderExpiryTime(data.data.expires_at);
+        }
+
+        if (data.data.expires_at) {
+          setTimeRemaining(
+            calculateTimeRemainingWithExpiry(data.data.expires_at),
+          );
+        }
+
         setOffersData(data.data);
         setError(null);
         setAcceptedOfferId(null);
@@ -534,6 +623,136 @@ export default function AvailableDriversContent({ onBack }) {
     }
   };
 
+  // ============= Effects =============
+  // ✅ Effect للـ countdown - يتحدث كل ثانية
+  useEffect(() => {
+    if (!orderExpiryTime) return;
+
+    const updateCountdown = () => {
+      const remaining = calculateTimeRemaining(orderExpiryTime);
+
+      // إذا كان الفرق أقل من 1 ثانية (يعني صفر أو أقل)
+      if (remaining?.minutes === 0 && remaining?.seconds === 0) {
+        setCountdown({ minutes: 0, seconds: 0, expired: true });
+        setIsOrderExpired(true);
+      } else {
+        setCountdown(remaining);
+      }
+    };
+
+    // تحديث فوري
+    updateCountdown();
+
+    // تحديث كل ثانية
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [orderExpiryTime]);
+
+  // جلب موقع المستخدم الحقيقي
+  useEffect(() => {
+    const getUserLocation = () => {
+      if (!navigator.geolocation) {
+        setLocationError("المتصفح لا يدعم تحديد الموقع");
+        return;
+      }
+
+      setLocationLoading(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          setCurrentLocation(userLocation);
+          setLocationPermissionGranted(true);
+          setLocationError(null);
+          setShowLocationPrompt(false);
+
+          // حفظ الموقع في localStorage
+          localStorage.setItem("userLocation", JSON.stringify(userLocation));
+          localStorage.setItem("locationPermissionGranted", "true");
+
+          setLocationLoading(false);
+
+          // تحديث الخريطة
+          setMapKey((prev) => prev + 1);
+        },
+        (error) => {
+          console.warn("Error getting location:", error);
+          setLocationError("تعذر الحصول على الموقع");
+          setLocationLoading(false);
+          setShowLocationPrompt(true);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        },
+      );
+    };
+
+    // إذا كان هناك إذن مسبق أو لم يتم التحقق بعد، جلب الموقع
+    if (!currentLocation && !locationLoading) {
+      getUserLocation();
+    }
+  }, [currentLocation, locationLoading]);
+
+  // متابعة حالة اتصال Pusher وإعادة الاشتراك عند الحاجة
+  useEffect(() => {
+    if (pusherConnected && orderId) {
+      // console.log(`🔄 Pusher connected, ensuring subscription for order ${orderId}`);
+      setupPusherListener(orderId);
+    }
+  }, [pusherConnected, orderId, setupPusherListener]);
+
+  // ✅ Setup Pusher listeners - تعديل ليعمل فور تحميل الصفحة بدون انتظار الاتصال
+  useEffect(() => {
+    // console.log('🔄 Pusher setup effect running...');
+
+    if (!orderId) {
+      // console.log(`⏳ Waiting for orderId`);
+      return;
+    }
+
+    // console.log(`🎯 Setting up Pusher listener for order ${orderId} immediately`);
+
+    // محاولة الاشتراك فوراً
+    setupPusherListener(orderId);
+
+    // أيضاً نحاول مرة أخرى بعد فترة قصيرة للتأكد
+    const retryTimer = setTimeout(() => {
+      // console.log(`🔄 Retrying Pusher subscription for order ${orderId}`);
+      setupPusherListener(orderId);
+    }, 2000);
+
+    return () => {
+      // console.log('🧹 Cleaning up Pusher listeners');
+      clearTimeout(retryTimer);
+      unsubscribeAll();
+      removeEventListener("DriverAcceptedOrder");
+    };
+  }, [orderId, setupPusherListener, unsubscribeAll, removeEventListener]);
+
+  // Initial data fetch
+  useEffect(() => {
+    if (orderId && !initialFetchDoneRef.current) {
+      const expiredFlag = localStorage.getItem(`order_${orderId}_expired`);
+      if (expiredFlag === "true" || isExpiredParam === "true") {
+        setIsOrderExpired(true);
+        localStorage.removeItem(`order_${orderId}_expired`);
+      }
+
+      fetchOffers();
+      fetchOrderStatus();
+      initialFetchDoneRef.current = true;
+    } else if (!orderId) {
+      router.back();
+    }
+  }, [orderId, isExpiredParam, router]);
+
   // ============= دوال المعالجة =============
   const handleDriverSelect = (driverId, offerId, driverData, offer) => {
     setSelectedDriverId(driverId);
@@ -573,22 +792,6 @@ export default function AvailableDriversContent({ onBack }) {
     } catch (err) {
       console.error("Error in payment confirmation:", err);
       alert("حدث خطأ في تأكيد الطلب. يرجى المحاولة مرة أخرى.");
-    }
-  };
-
-  const formatTimeRemaining = () => {
-    if (!timeRemaining) return "جاري الحساب...";
-
-    const { days, hours, minutes, seconds } = timeRemaining;
-
-    if (days > 0) {
-      return `${days} يوم ${hours} ساعة ${minutes} دقيقة`;
-    } else if (hours > 0) {
-      return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
-    } else if (minutes > 0) {
-      return `${minutes} دقيقة ${seconds} ثانية`;
-    } else {
-      return `${seconds} ثانية`;
     }
   };
 
@@ -634,8 +837,6 @@ export default function AvailableDriversContent({ onBack }) {
     }
   }, [memoizedDrivers]);
 
-  // ============= Effects =============
-
   // التحقق من إذن الموقع عند التحميل
   useEffect(() => {
     if (isLocationInitializedRef.current) return;
@@ -666,58 +867,6 @@ export default function AvailableDriversContent({ onBack }) {
 
     isLocationInitializedRef.current = true;
   }, []);
-  // متابعة حالة اتصال Pusher وإعادة الاشتراك عند الحاجة
-  useEffect(() => {
-    if (pusherConnected && orderId) {
-      // console.log(`🔄 Pusher connected, ensuring subscription for order ${orderId}`);
-      setupPusherListener(orderId);
-    }
-  }, [pusherConnected, orderId, setupPusherListener]);
-
-  // ✅ Setup Pusher listeners - تعديل ليعمل فور تحميل الصفحة بدون انتظار الاتصال
-  useEffect(() => {
-    // console.log('🔄 Pusher setup effect running...');
-
-    if (!orderId) {
-      // console.log(`⏳ Waiting for orderId`);
-      return;
-    }
-
-    // console.log(`🎯 Setting up Pusher listener for order ${orderId} immediately`);
-
-    // محاولة الاشتراك فوراً
-    setupPusherListener(orderId);
-
-    // أيضاً نحاول مرة أخرى بعد فترة قصيرة للتأكد
-    const retryTimer = setTimeout(() => {
-      // console.log(`🔄 Retrying Pusher subscription for order ${orderId}`);
-      setupPusherListener(orderId);
-    }, 2000);
-
-    return () => {
-      // console.log('🧹 Cleaning up Pusher listeners');
-      clearTimeout(retryTimer);
-      unsubscribeAll();
-      removeEventListener("DriverAcceptedOrder");
-    };
-  }, [orderId, setupPusherListener, unsubscribeAll, removeEventListener]); // ✅ إزالة pusherConnected من الاعتماديات
-
-  // Initial data fetch
-  useEffect(() => {
-    if (orderId && !initialFetchDoneRef.current) {
-      const expiredFlag = localStorage.getItem(`order_${orderId}_expired`);
-      if (expiredFlag === "true" || isExpiredParam === "true") {
-        setIsOrderExpired(true);
-        localStorage.removeItem(`order_${orderId}_expired`);
-      }
-
-      fetchOffers();
-      fetchOrderStatus();
-      initialFetchDoneRef.current = true;
-    } else if (!orderId) {
-      router.back();
-    }
-  }, [orderId, isExpiredParam, router]);
 
   // ============= Error and loading states =============
   if (error && error.includes("تسجيل الدخول")) {
@@ -866,7 +1015,7 @@ export default function AvailableDriversContent({ onBack }) {
 
                       <div className="flex flex-wrap gap-2">
                         <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse" />
                             <span className="font-medium text-xs sm:text-sm">
                               طلب #{orderId}
@@ -875,26 +1024,86 @@ export default function AvailableDriversContent({ onBack }) {
                         </div>
 
                         <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span className="font-medium text-xs sm:text-sm">
                               {stats.totalOffers} عرض
                             </span>
                           </div>
                         </div>
+                       {loading ? (
+  // حالة التحميل الأولي
+  <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-0 flex flex-col justify-center rounded-lg sm:rounded-xl border border-white/30">
+    <div className="flex items-center gap-2">
+      <div className="w-4 h-4 sm:w-5 sm:h-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      <span className="text-xs sm:text-sm font-medium text-white/90">
+        جاري تحميل الوقت...
+      </span>
+    </div>
+  </div>
+) : refreshing ? (
+  // حالة تحديث العروض
+  <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-0 flex flex-col justify-center rounded-lg sm:rounded-xl border border-white/30">
+    <div className="flex items-center gap-2">
+      <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-white/90" />
+      <span className="text-xs sm:text-sm font-medium text-white/90">
+        جاري تحديث العروض...
+      </span>
+    </div>
+  </div>
+) : !offers.length == 0 && (
+  countdown.minutes === 0 && offers.length > 0 ? (
+    <div className="bg-red-800/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-0 flex flex-col justify-center rounded-lg sm:rounded-xl border border-red-300">
+      <div className="flex items-center gap-1">
+        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-red-300 rounded-full flex items-center justify-center">
+          <X className="w-2 h-2 sm:w-3 sm:h-3 text-red-500" />
+        </div>
+        <span className="font-medium text-xs sm:text-sm text-[#ffa7a7]">
+          انتهت صلاحية الطلب
+        </span>
+      </div>
+    </div>
+  ) : (
+    <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-0 flex flex-col justify-center rounded-lg sm:rounded-xl border border-white/30">
+      <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="text-xs sm:text-sm font-medium">
+            الوقت المتبقي:
+          </span>
+        </div>
+        <div
+          className={`text-sm sm:text-xl font-mono font-bold ${
+            countdown.expired
+              ? "text-red-300"
+              : countdown.minutes <= 2
+                ? "text-red-300 animate-pulse"
+                : ""
+          }`}
+        >
+          {countdown.expired
+            ? "انتهت صلاحية الطلب"
+            : formatCountdown()}
+        </div>
+      </div>
+    </div>
+  )
+)}
+                      </div>
 
-                        <div className="bg-white/20 backdrop-blur-lg px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/30">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="font-medium text-xs sm:text-sm">
-                              {isOrderExpired
-                                ? "انتهت الصلاحية"
-                                : timeRemaining
-                                  ? `متبقي: ${formatTimeRemaining()}`
-                                  : "جاري الحساب..."}
-                            </span>
+                      {/* Countdown Timer Section */}
+                      <div className="mt-4 pt-4 border-t border-white/20">
+                        {/* إضافة تاريخ الانتهاء */}
+                        {orderExpiryTime && !countdown.expired && (
+                          <div className="mt-1 text-xs opacity-80 text-start">
+                            ينتهي في:{" "}
+                            {new Date(orderExpiryTime).toLocaleString("ar-SA", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -974,94 +1183,103 @@ export default function AvailableDriversContent({ onBack }) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-            
+              {offers.map((offer, index) => {
+                const offerStatus = offer.status;
+                const orderPaymentStatus = offer.order?.payment_status;
+                const isPaymentPending =
+                  offerStatus === "payment_pending" ||
+                  orderPaymentStatus === "processing" ||
+                  orderPaymentStatus === "pending";
 
-{offers.map((offer, index) => {
-  const offerStatus = offer.status;
-  const orderPaymentStatus = offer.order?.payment_status;
-  const isPaymentPending =
-    offerStatus === "payment_pending" ||
-    orderPaymentStatus === "processing" ||
-    orderPaymentStatus === "pending";
+                const isAccepted =
+                  acceptedOfferId === offer.id && !isPaymentPending;
+                const isPendingPayment = pendingPaymentOfferId === offer.id;
+                const isExpired =
+                  expiredOfferIds.includes(offer.id) ||
+                  offerStatus === "expired";
+                const isSelectedForPayment =
+                  selectedForPaymentOfferId === offer.id &&
+                  !isAccepted &&
+                  !isPendingPayment &&
+                  !isExpired;
+                const isPaid = paidOfferIds.has(offer.id);
 
-  const isAccepted = acceptedOfferId === offer.id && !isPaymentPending;
-  const isPendingPayment = pendingPaymentOfferId === offer.id;
-  const isExpired = expiredOfferIds.includes(offer.id) || offerStatus === "expired";
-  const isSelectedForPayment =
-    selectedForPaymentOfferId === offer.id &&
-    !isAccepted &&
-    !isPendingPayment &&
-    !isExpired;
-  const isPaid = paidOfferIds.has(offer.id);
-  
-  // ✅ حالات الطلب العامة
-  const isOrderDelivered = orderStatus?.status_name === "delivered" || offersData?.order_status === "delivered";
-  const isOrderCancelled = orderStatus?.status_name === "cancelled" || offersData?.order_status === "cancelled";
-  const isOrderInRoad = orderStatus?.status_name === "in-road" || offersData?.order_status === "in-road"; // ✅ حالة في الطريق
-  
-  // ✅ حالة العرض إذا كان مرفوضاً
-  const isOfferRejected = offer.status === "rejected";
+                // ✅ حالات الطلب العامة
+                const isOrderDelivered =
+                  orderStatus?.status_name === "delivered" ||
+                  offersData?.order_status === "delivered";
+                const isOrderCancelled =
+                  orderStatus?.status_name === "cancelled" ||
+                  offersData?.order_status === "cancelled";
+                const isOrderInRoad =
+                  orderStatus?.status_name === "in-road" ||
+                  offersData?.order_status === "in-road";
 
-  // Check if this is a new offer (created in last 10 seconds)
-  const isNewOffer =
-    new Date(offer.created_at) > new Date(Date.now() - 10000);
+                // ✅ حالة العرض إذا كان مرفوضاً
+                const isOfferRejected = offer.status === "rejected";
 
-  return (
-    <motion.div
-      key={offer.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="relative"
-    >
-      {isNewOffer && (
-        <div className="absolute -top-2 -right-2 z-10">
-          <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
-            جديد
-          </div>
-        </div>
-      )}
+                // Check if this is a new offer (created in last 10 seconds)
+                const isNewOffer =
+                  new Date(offer.created_at) > new Date(Date.now() - 10000);
 
-      <DriverCard
-        {...formatDriverData(offer)}
-        onAcceptOrder={() =>
-          handleDriverSelect(
-            offer.driver_id,
-            offer.id,
-            formatDriverData(offer),
-            offer,
-          )
-        }
-        onViewProfile={() =>
-          router.push(
-            `/orders/driver_profile?driverId=${offer.driver_id}`,
-          )
-        }
-        isPending={
-          !isAccepted &&
-          !isPendingPayment &&
-          !isExpired &&
-          !isSelectedForPayment &&
-          !isPaid &&
-          !isOrderDelivered &&
-          !isOrderCancelled &&
-          !isOrderInRoad && // ✅ منع عرض كـ pending في حالة in-road
-          !isOfferRejected
-        }
-        isSelectedForPayment={isSelectedForPayment}
-        isAccepted={isAccepted}
-        isPendingPayment={isPendingPayment}
-        isExpired={isExpired}
-        isPaid={isPaid}
-        isDelivered={isOrderDelivered}
-        isCancelled={isOrderCancelled || isOfferRejected}
-        isRejected={isOfferRejected}
-        isInRoad={isOrderInRoad} // ✅ تمرير حالة في الطريق
-        index={index}
-      />
-    </motion.div>
-  );
-})}
+                return (
+                  <motion.div
+                    key={offer.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="relative"
+                  >
+                    {isNewOffer && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
+                          جديد
+                        </div>
+                      </div>
+                    )}
+
+                    <DriverCard
+                      {...formatDriverData(offer)}
+                      onAcceptOrder={() =>
+                        handleDriverSelect(
+                          offer.driver_id,
+                          offer.id,
+                          formatDriverData(offer),
+                          offer,
+                        )
+                      }
+                      onViewProfile={() =>
+                        router.push(
+                          `/orders/driver_profile?driverId=${offer.driver_id}`,
+                        )
+                      }
+                      isPending={
+                        !isAccepted &&
+                        !isPendingPayment &&
+                        !isExpired &&
+                        !isSelectedForPayment &&
+                        !isPaid &&
+                        !isOrderDelivered &&
+                        !isOrderCancelled &&
+                        !isOrderInRoad &&
+                        !isOfferRejected &&
+                        !isOrderExpired
+                      }
+                      isSelectedForPayment={isSelectedForPayment}
+                      isAccepted={isAccepted}
+                      isPendingPayment={isPendingPayment}
+                      isExpired={isExpired}
+                      isPaid={isPaid}
+                      isDelivered={isOrderDelivered}
+                      isCancelled={isOrderCancelled || isOfferRejected}
+                      isRejected={isOfferRejected}
+                      isInRoad={isOrderInRoad}
+                      isOrderExpired={isOrderExpired}
+                      index={index}
+                    />
+                  </motion.div>
+                );
+              })}
             </div>
 
             {offers.length === 0 && !loading && (
@@ -1116,13 +1334,39 @@ export default function AvailableDriversContent({ onBack }) {
                     {currentLocation && (
                       <button
                         onClick={() => {
-                          // طلب تحديث الموقع
+                          setLocationLoading(true);
+                          navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                              const newLocation = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude,
+                              };
+                              setCurrentLocation(newLocation);
+                              localStorage.setItem(
+                                "userLocation",
+                                JSON.stringify(newLocation),
+                              );
+                              setMapKey((prev) => prev + 1);
+                              setLocationLoading(false);
+                            },
+                            (error) => {
+                              console.warn("Error refreshing location:", error);
+                              setLocationLoading(false);
+                              toast.error("تعذر تحديث الموقع");
+                            },
+                            {
+                              enableHighAccuracy: true,
+                              timeout: 10000,
+                            },
+                          );
                         }}
                         disabled={locationLoading}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-[#579BE8] text-white text-xs rounded-lg hover:bg-[#4a8dd8] transition"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#579BE8] text-white text-xs rounded-lg hover:bg-[#4a8dd8] transition disabled:opacity-50"
                         title="تحديث موقعي"
                       >
-                        <Navigation className="w-3.5 h-3.5" />
+                        <Navigation
+                          className={`w-3.5 h-3.5 ${locationLoading ? "animate-pulse" : ""}`}
+                        />
                         <span className="hidden sm:inline">موقعي</span>
                       </button>
                     )}
