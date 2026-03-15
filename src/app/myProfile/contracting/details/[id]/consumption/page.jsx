@@ -269,7 +269,7 @@ export default function ConsumptionPage() {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value) => `${value.toLocaleString()} لتر`}
+                      formatter={(value) => `${value.toLocaleString()} طن `}
                       contentStyle={{
                         backgroundColor: 'white',
                         borderRadius: '8px',
@@ -287,20 +287,20 @@ export default function ConsumptionPage() {
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[0] }}></div>
                   <span className="text-sm text-muted-foreground">المستهلك:</span>
                   <span className="text-sm font-bold">
-                    {stats?.total_orders_used?.toLocaleString() || 0} لتر
+                    {stats?.total_orders_used?.toLocaleString() || 0} <span className="mx-1"> طن</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[1] }}></div>
                   <span className="text-sm text-muted-foreground">المتبقي:</span>
                   <span className="text-sm font-bold">
-                    {contractData?.remaining_orders?.toLocaleString() || 0} لتر
+                    {contractData?.remaining_orders?.toLocaleString() || 0}<span className="mx-1"> طن</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-3 pt-2 border-t border-border/60">
                   <span className="text-sm text-muted-foreground">الإجمالي:</span>
                   <span className="text-sm font-bold text-[#579BE8]">
-                    {total?.toLocaleString() || 0} لتر
+                    {total?.toLocaleString() || 0}<span className="mx-1"> طن</span>
                   </span>
                 </div>
               </div>
@@ -325,7 +325,7 @@ export default function ConsumptionPage() {
               <p className="text-xl font-black text-foreground">
                 {contractData?.total_orders_limit?.toLocaleString() || 0}
               </p>
-              <p className="text-xs text-muted-foreground">لتر</p>
+              <p className="text-xs text-muted-foreground">طن</p>
             </motion.div>
 
             {/* الطلبات المتبقية */}
@@ -344,7 +344,7 @@ export default function ConsumptionPage() {
               <p className="text-xl font-black text-foreground">
                 {contractData?.remaining_orders?.toLocaleString() || 0}
               </p>
-              <p className="text-xs text-muted-foreground">لتر</p>
+              <p className="text-xs text-muted-foreground">طن</p>
             </motion.div>
 
             {/* المستخدم من الحد */}
@@ -364,7 +364,7 @@ export default function ConsumptionPage() {
                 {stats?.total_orders_used?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-muted-foreground">
-                من {contractData?.total_orders_limit || 0} لتر
+                من {contractData?.total_orders_limit || 0}<span className="mx-1"> طن</span>
               </p>
             </motion.div>
 
@@ -432,13 +432,13 @@ export default function ConsumptionPage() {
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">المستخدم:</span>
               <span className="font-bold">
-                {stats.total_orders_used?.toLocaleString() || 0} لتر
+                {stats.total_orders_used?.toLocaleString() || 0} <span className="mx-1"> طن</span>
               </span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground">المتبقي:</span>
               <span className="font-bold">
-                {contractData.remaining_orders?.toLocaleString() || 0} لتر
+                {contractData.remaining_orders?.toLocaleString() || 0}<span className="mx-1"> طن</span>
               </span>
             </div>
           </div>

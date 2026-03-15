@@ -760,7 +760,7 @@ export default function ContractDetailsPage() {
                                                 ))}
                                             </Pie>
                                             <Tooltip 
-                                                formatter={(value) => `${value.toLocaleString()} لتر`}
+                                                formatter={(value) => `${value.toLocaleString()}طن`}
                                                 contentStyle={{
                                                     backgroundColor: 'white',
                                                     borderRadius: '8px',
@@ -779,20 +779,20 @@ export default function ContractDetailsPage() {
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[0] }}></div>
                                         <span className="text-sm text-muted-foreground">المستهلك:</span>
                                         <span className="text-sm font-bold">
-                                            {contract.totalOrdersUsed?.toLocaleString() || 0} لتر
+                                            {contract.totalOrdersUsed?.toLocaleString() || 0}<span className="ms-0.5"> طن</span>
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[1] }}></div>
                                         <span className="text-sm text-muted-foreground">المتبقي:</span>
                                         <span className="text-sm font-bold">
-                                            {contract.remainingOrders?.toLocaleString() || 0} لتر
+                                            {contract.remainingOrders?.toLocaleString() || 0}<span className="ms-0.5"> طن</span>
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3 pt-2 border-t border-border/60">
                                         <span className="text-sm text-muted-foreground">الإجمالي:</span>
                                         <span className="text-sm font-bold text-[#579BE8]">
-                                            {total?.toLocaleString() || 0} لتر
+                                            {total?.toLocaleString() || 0}<span className="ms-0.5"> طن</span>
                                         </span>
                                     </div>
                                 </div>
