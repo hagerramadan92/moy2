@@ -134,12 +134,30 @@ export default function FaqsPage() {
     );
   }
 
+  // دالة لتنظيف النص من علامات HTML
+  const cleanHtml = (html: string) => {
+    return html.replace(/<[^>]*>/g, '');
+  };
+
+  // دالة لتحويل النص إلى HTML منسق
+  const formatAnswer = (answer: string) => {
+    // تنظيف النص من علامات HTML
+    const cleanText = cleanHtml(answer);
+    
+    return (
+      <div className="faq-answer text-right" dir="rtl">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {cleanText}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* FAQs Section */}
       <div className="max-w-4xl mx-auto my-2 md:my-5 bg-white dark:bg-card border border-border/50 rounded-2xl p-8 shadow-sm">
      
-
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,6 +171,7 @@ export default function FaqsPage() {
             </h1>
           </div>
         </motion.div>
+        
         {faqs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             لا توجد أسئلة شائعة متاحة حالياً
@@ -189,8 +208,8 @@ export default function FaqsPage() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border/10 mt-1 pt-4">
-                        {faq.answer}
+                      <div className="px-5 pb-5 text-sm leading-relaxed border-t border-border/10 mt-1 pt-4">
+                        {formatAnswer(faq.answer)}
                       </div>
                     </motion.div>
                   )}
