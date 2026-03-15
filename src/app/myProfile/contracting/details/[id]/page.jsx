@@ -28,6 +28,8 @@ export default function ContractDetailsPage() {
     const [isRenewing, setIsRenewing] = useState(false);
     const [isCanceling, setIsCanceling] = useState(false);
     const [ proof , setProof] = useState(null);
+    // ✅ إضافة حالة لتخزين بيانات الخدمات
+    const [services, setServices] = useState(null);
 
     // ألوان الرسمة الدائرية
     const COLORS = [ "#E5E7EB" , "#579BE8"]; // أزرق للمستهلك، رمادي للمتبقي
@@ -74,8 +76,13 @@ export default function ContractDetailsPage() {
             if (response.ok && data.success && data.data && data.data.contract) {
                 const contractData = data.data.contract;
                 const stats = data.data.stats || {};
-                 const paymentProofUrl = data.data.payment_proof_url || null;
-            setProof(paymentProofUrl);
+                const paymentProofUrl = data.data.payment_proof_url || null;
+                setProof(paymentProofUrl);
+                
+                // ✅ حفظ بيانات الخدمات في حالة منفصلة
+                if (contractData.services) {
+                    setServices(contractData.services);
+                }
 
                 // Format contract ID
                 const fullId = contractData.contract_number || `CONT-${contractData.id}`;
@@ -117,7 +124,7 @@ export default function ContractDetailsPage() {
                     paymentProgress: stats.payment_progress || 0,
                     daysRemaining: stats.days_remaining || 0,
                     canRenew: stats.can_renew || false,
-                     paymentProofUrl: paymentProofUrl
+                    paymentProofUrl: paymentProofUrl
                 };
                 
                 setContract(mappedContract);
@@ -140,229 +147,229 @@ export default function ContractDetailsPage() {
         }
     };
 
- const handleRenew = async () => {
-    // نافذة SweetAlert2 مع حقل رفع الصورة والمعاينة
-    const { value: file, isConfirmed } = await Swal.fire({
-        title: "تجديد العقد",
-        html: `
-            <div class="space-y-4 text-right" dir="rtl">
-                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">يرجى إرفاق صورة إثبات الدفع لتجديد العقد</p>
-                
-                <!-- حقل رفع الملف المخفي -->
-                <input type="file" id="payment-proof" class="hidden" accept="image/*" />
-                
-                <!-- منطقة الرفع والمعاينة -->
-                <div class="flex flex-col items-center gap-3">
-                    <label for="payment-proof" id="upload-label" class="w-full cursor-pointer">
-                        <div id="upload-area" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 hover:border-[#579BE8] transition-colors">
-                            <div id="upload-content" class="flex flex-col items-center gap-2">
-                                <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">اضغط لاختيار صورة</span>
-                                <span id="file-name" class="text-xs text-gray-500 dark:text-gray-400">لم يتم اختيار ملف</span>
+    const handleRenew = async () => {
+        // نافذة SweetAlert2 مع حقل رفع الصورة والمعاينة
+        const { value: file, isConfirmed } = await Swal.fire({
+            title: "تجديد العقد",
+            html: `
+                <div class="space-y-4 text-right" dir="rtl">
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">يرجى إرفاق صورة إثبات الدفع لتجديد العقد</p>
+                    
+                    <!-- حقل رفع الملف المخفي -->
+                    <input type="file" id="payment-proof" class="hidden" accept="image/*" />
+                    
+                    <!-- منطقة الرفع والمعاينة -->
+                    <div class="flex flex-col items-center gap-3">
+                        <label for="payment-proof" id="upload-label" class="w-full cursor-pointer">
+                            <div id="upload-area" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 hover:border-[#579BE8] transition-colors">
+                                <div id="upload-content" class="flex flex-col items-center gap-2">
+                                    <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">اضغط لاختيار صورة</span>
+                                    <span id="file-name" class="text-xs text-gray-500 dark:text-gray-400">لم يتم اختيار ملف</span>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <!-- منطقة معاينة الصورة (تظهر بعد اختيار صورة) -->
+                        <div id="preview-container" class="w-full hidden mt-2">
+                            <div class="relative rounded-xl overflow-hidden border-2 border-[#579BE8]/30 bg-gray-50 dark:bg-gray-800 p-2">
+                                <img id="image-preview" src="" alt="Preview" class="max-h-48 mx-auto rounded-lg object-contain" />
+                                <button type="button" id="remove-image" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                    </label>
-                    
-                    <!-- منطقة معاينة الصورة (تظهر بعد اختيار صورة) -->
-                    <div id="preview-container" class="w-full hidden mt-2">
-                        <div class="relative rounded-xl overflow-hidden border-2 border-[#579BE8]/30 bg-gray-50 dark:bg-gray-800 p-2">
-                            <img id="image-preview" src="" alt="Preview" class="max-h-48 mx-auto rounded-lg object-contain" />
-                            <button type="button" id="remove-image" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
                     </div>
+                    
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">الصيغ المدعومة: JPG, PNG, GIF</p>
                 </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: "تأكيد التجديد",
+            cancelButtonText: "إلغاء",
+            confirmButtonColor: "#579BE8",
+            cancelButtonColor: "#6b7280",
+            background: "var(--background)",
+            color: "var(--foreground)",
+            customClass: {
+                popup: "rounded-[2.5rem] border border-border/50 shadow-2xl p-6",
+                confirmButton: "rounded-2xl font-black px-8 py-3 text-sm",
+                cancelButton: "rounded-2xl font-black px-8 py-3 text-sm",
+                htmlContainer: "text-right",
+            },
+            didOpen: () => {
+                const fileInput = document.getElementById('payment-proof');
+                const fileNameSpan = document.getElementById('file-name');
+                const uploadContent = document.getElementById('upload-content');
+                const previewContainer = document.getElementById('preview-container');
+                const imagePreview = document.getElementById('image-preview');
+                const removeButton = document.getElementById('remove-image');
+                const uploadArea = document.getElementById('upload-area');
                 
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">الصيغ المدعومة: JPG, PNG, GIF</p>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: "تأكيد التجديد",
-        cancelButtonText: "إلغاء",
-        confirmButtonColor: "#579BE8",
-        cancelButtonColor: "#6b7280",
-        background: "var(--background)",
-        color: "var(--foreground)",
-        customClass: {
-            popup: "rounded-[2.5rem] border border-border/50 shadow-2xl p-6",
-            confirmButton: "rounded-2xl font-black px-8 py-3 text-sm",
-            cancelButton: "rounded-2xl font-black px-8 py-3 text-sm",
-            htmlContainer: "text-right",
-        },
-        didOpen: () => {
-            const fileInput = document.getElementById('payment-proof');
-            const fileNameSpan = document.getElementById('file-name');
-            const uploadContent = document.getElementById('upload-content');
-            const previewContainer = document.getElementById('preview-container');
-            const imagePreview = document.getElementById('image-preview');
-            const removeButton = document.getElementById('remove-image');
-            const uploadArea = document.getElementById('upload-area');
-            
-            if (fileInput) {
-                // عند اختيار ملف
-                fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                        // عرض اسم الملف
-                        fileNameSpan.textContent = file.name;
-                        fileNameSpan.className = "text-xs text-[#579BE8] font-medium";
-                        
-                        // معاينة الصورة
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            imagePreview.src = e.target.result;
-                            previewContainer.classList.remove('hidden');
+                if (fileInput) {
+                    // عند اختيار ملف
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                            // عرض اسم الملف
+                            fileNameSpan.textContent = file.name;
+                            fileNameSpan.className = "text-xs text-[#579BE8] font-medium";
                             
-                            // تغيير لون border منطقة الرفع
-                            uploadArea.classList.add('border-[#579BE8]', 'bg-[#579BE8]/5');
-                            uploadArea.classList.remove('border-gray-300', 'dark:border-gray-600');
-                        };
-                        reader.readAsDataURL(file);
+                            // معاينة الصورة
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                imagePreview.src = e.target.result;
+                                previewContainer.classList.remove('hidden');
+                                
+                                // تغيير لون border منطقة الرفع
+                                uploadArea.classList.add('border-[#579BE8]', 'bg-[#579BE8]/5');
+                                uploadArea.classList.remove('border-gray-300', 'dark:border-gray-600');
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+
+                    // فتح نافذة اختيار الملف عند الضغط على منطقة الرفع
+                    const uploadLabel = document.getElementById('upload-label');
+                    if (uploadLabel) {
+                        uploadLabel.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            fileInput.click();
+                        });
+                    }
+
+                    // زر إزالة الصورة
+                    if (removeButton) {
+                        removeButton.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // إعادة تعيين input
+                            fileInput.value = '';
+                            
+                            // إخفاء المعاينة
+                            previewContainer.classList.add('hidden');
+                            imagePreview.src = '';
+                            
+                            // إعادة نص اسم الملف
+                            fileNameSpan.textContent = 'لم يتم اختيار ملف';
+                            fileNameSpan.className = "text-xs text-gray-500 dark:text-gray-400";
+                            
+                            // إعادة لون border منطقة الرفع
+                            uploadArea.classList.remove('border-[#579BE8]', 'bg-[#579BE8]/5');
+                            uploadArea.classList.add('border-gray-300', 'dark:border-gray-600');
+                        });
+                    }
+                }
+            },
+            preConfirm: () => {
+                const fileInput = document.getElementById('payment-proof');
+                
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    Swal.showValidationMessage('الرجاء اختيار صورة إثبات الدفع');
+                    return false;
+                }
+                
+                const file = fileInput.files[0];
+                
+                // التحقق من نوع الملف فقط (بدون تحديد حجم)
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp', 'image/bmp'];
+                if (!validTypes.includes(file.type)) {
+                    Swal.showValidationMessage('نوع الملف غير مدعوم. الأنواع المدعومة: JPG, PNG, GIF, WEBP, BMP');
+                    return false;
+                }
+                
+                return file;
+            }
+        });
+
+        if (!isConfirmed || !file) return;
+
+        setIsRenewing(true);
+        const loadingToast = toast.loading("جاري تجديد العقد...", {
+            duration: Infinity,
+        });
+
+        try {
+            const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+            if (!accessToken) {
+                toast.dismiss(loadingToast);
+                toast.error("يجب تسجيل الدخول لتجديد العقد. يرجى تسجيل الدخول أولاً", {
+                    duration: 4000,
+                    icon: "❌",
+                });
+                setIsRenewing(false);
+                return;
+            }
+
+            // إنشاء FormData وإضافة الملف
+            const formData = new FormData();
+            formData.append('payment_proof', file);
+
+            const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${contractId}/renew`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: formData,
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            toast.dismiss(loadingToast);
+
+            if (response.ok) {
+                toast.success(data.message || "تم تجديد العقد بنجاح", {
+                    duration: 4000,
+                    icon: "✅",
+                });
+                
+                // نافذة نجاح مبسطة
+                await Swal.fire({
+                    title: "تم التجديد!",
+                    text: data.message || "تم تجديد العقد بنجاح.",
+                    icon: "success",
+                    confirmButtonText: "حسناً",
+                    confirmButtonColor: "#579BE8",
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    customClass: {
+                        popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
+                        confirmButton: "rounded-2xl font-black px-10 py-3",
                     }
                 });
 
-                // فتح نافذة اختيار الملف عند الضغط على منطقة الرفع
-                const uploadLabel = document.getElementById('upload-label');
-                if (uploadLabel) {
-                    uploadLabel.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        fileInput.click();
-                    });
-                }
-
-                // زر إزالة الصورة
-                if (removeButton) {
-                    removeButton.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // إعادة تعيين input
-                        fileInput.value = '';
-                        
-                        // إخفاء المعاينة
-                        previewContainer.classList.add('hidden');
-                        imagePreview.src = '';
-                        
-                        // إعادة نص اسم الملف
-                        fileNameSpan.textContent = 'لم يتم اختيار ملف';
-                        fileNameSpan.className = "text-xs text-gray-500 dark:text-gray-400";
-                        
-                        // إعادة لون border منطقة الرفع
-                        uploadArea.classList.remove('border-[#579BE8]', 'bg-[#579BE8]/5');
-                        uploadArea.classList.add('border-gray-300', 'dark:border-gray-600');
-                    });
+                // Refresh contract data
+                await fetchContract();
+            } else {
+                const errorMessage = data.message || data.error || 'فشل تجديد العقد. يرجى المحاولة مرة أخرى';
+                toast.error(errorMessage, {
+                    duration: 5000,
+                    icon: "❌",
+                });
+                
+                // عرض رسالة الخطأ التفصيلية
+                if (data.errors) {
+                    console.error('Validation errors:', data.errors);
                 }
             }
-        },
-        preConfirm: () => {
-            const fileInput = document.getElementById('payment-proof');
-            
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                Swal.showValidationMessage('الرجاء اختيار صورة إثبات الدفع');
-                return false;
-            }
-            
-            const file = fileInput.files[0];
-            
-            // التحقق من نوع الملف فقط (بدون تحديد حجم)
-            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp', 'image/bmp'];
-            if (!validTypes.includes(file.type)) {
-                Swal.showValidationMessage('نوع الملف غير مدعوم. الأنواع المدعومة: JPG, PNG, GIF, WEBP, BMP');
-                return false;
-            }
-            
-            return file;
-        }
-    });
-
-    if (!isConfirmed || !file) return;
-
-    setIsRenewing(true);
-    const loadingToast = toast.loading("جاري تجديد العقد...", {
-        duration: Infinity,
-    });
-
-    try {
-        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-
-        if (!accessToken) {
+        } catch (error) {
             toast.dismiss(loadingToast);
-            toast.error("يجب تسجيل الدخول لتجديد العقد. يرجى تسجيل الدخول أولاً", {
-                duration: 4000,
-                icon: "❌",
-            });
-            setIsRenewing(false);
-            return;
-        }
-
-        // إنشاء FormData وإضافة الملف
-        const formData = new FormData();
-        formData.append('payment_proof', file);
-
-        const response = await fetch(`https://dashboard.waytmiah.com/api/v1/contracts/${contractId}/renew`, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-            },
-            body: formData,
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        toast.dismiss(loadingToast);
-
-        if (response.ok) {
-            toast.success(data.message || "تم تجديد العقد بنجاح", {
-                duration: 4000,
-                icon: "✅",
-            });
-            
-            // نافذة نجاح مبسطة
-            await Swal.fire({
-                title: "تم التجديد!",
-                text: data.message || "تم تجديد العقد بنجاح.",
-                icon: "success",
-                confirmButtonText: "حسناً",
-                confirmButtonColor: "#579BE8",
-                background: "var(--background)",
-                color: "var(--foreground)",
-                customClass: {
-                    popup: "rounded-[2.5rem] border border-border/50 shadow-2xl",
-                    confirmButton: "rounded-2xl font-black px-10 py-3",
-                }
-            });
-
-            // Refresh contract data
-            await fetchContract();
-        } else {
-            const errorMessage = data.message || data.error || 'فشل تجديد العقد. يرجى المحاولة مرة أخرى';
-            toast.error(errorMessage, {
+            console.error('Renewal error:', error);
+            toast.error("حدث خطأ أثناء تجديد العقد. يرجى المحاولة مرة أخرى", {
                 duration: 5000,
                 icon: "❌",
             });
-            
-            // عرض رسالة الخطأ التفصيلية
-            if (data.errors) {
-                console.error('Validation errors:', data.errors);
-            }
+        } finally {
+            setIsRenewing(false);
         }
-    } catch (error) {
-        toast.dismiss(loadingToast);
-        console.error('Renewal error:', error);
-        toast.error("حدث خطأ أثناء تجديد العقد. يرجى المحاولة مرة أخرى", {
-            duration: 5000,
-            icon: "❌",
-        });
-    } finally {
-        setIsRenewing(false);
-    }
-};
+    };
 
     const handleCancel = async () => {
         const result = await Swal.fire({
@@ -520,6 +527,19 @@ export default function ContractDetailsPage() {
             { name: "المستهلك", value: used, color: COLORS[0] },
             { name: "المتبقي", value: remaining, color: COLORS[1] },
         ];
+    };
+
+    // ✅ دالة مساعدة لترجمة أسماء الخدمات
+    const getServiceNameInArabic = (serviceKey) => {
+        const serviceNames = {
+            'service_6_ton': '٦ طن',
+            'service_12_ton': '١٢ طن',
+            'service_18_ton': '١٨ طن',
+            'service_19_ton': '١٩ طن',
+            'service_20_ton': '٢٠ طن',
+            'service_32_ton': '٣٢ طن'
+        };
+        return serviceNames[serviceKey] || serviceKey;
     };
 
     // Skeleton Components
@@ -760,7 +780,7 @@ export default function ContractDetailsPage() {
                                                 ))}
                                             </Pie>
                                             <Tooltip 
-                                                formatter={(value) => `${value.toLocaleString()}طن`}
+                                                formatter={(value) => `${value.toLocaleString()} طن`}
                                                 contentStyle={{
                                                     backgroundColor: 'white',
                                                     borderRadius: '8px',
@@ -980,6 +1000,28 @@ export default function ContractDetailsPage() {
                                             </p>
                                         </div>
                                     </div>
+                                    
+                                    {/* ✅ قسم توزيعة الطلبات */}
+                                    {services && Object.keys(services).length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-border/60">
+                                            <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-lg bg-[#579BE8]/10 flex items-center justify-center">
+                                                    <FaWater className="w-3 h-3 text-[#579BE8]" />
+                                                </div>
+                                                <span>توزيعة الطلبات</span>
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {Object.entries(services).map(([key, value]) => (
+                                                    value > 0 && (
+                                                        <div key={key} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 text-center border border-border/40">
+                                                            <p className="text-xs text-muted-foreground">{getServiceNameInArabic(key)}</p>
+                                                            <p className="text-sm font-bold text-[#579BE8]">{value}</p>
+                                                        </div>
+                                                    )
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="p-5">
