@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { messageService } from "../../../../Services/message.service";
+
 import EmojiPicker from 'emoji-picker-react';
 import Pusher from 'pusher-js';
 
@@ -302,158 +303,170 @@ export default function HelpCenterPage() {
     }, [chatId, currentUser.id]);
 
     // Create or get support chat
-    const createOrGetChat = useCallback(async () => {
-        if (!isLoggedIn) {
-            toast.error("يرجى تسجيل الدخول أولاً");
-            return null;
-        }
+ // Create or get support chat
+const createOrGetChat = useCallback(async () => {
+    if (!isLoggedIn) {
+        toast.error("يرجى تسجيل الدخول أولاً");
+        return null;
+    }
 
-        if (creatingChat) return null;
+    if (creatingChat) return null;
 
-        // جلب support ID إذا لم يكن موجوداً
-        let currentSupportId = supportParticipantId;
+    // جلب support ID إذا لم يكن موجوداً
+    let currentSupportId = supportParticipantId;
+    if (!currentSupportId) {
+        currentSupportId = await fetchSupportId();
         if (!currentSupportId) {
-            currentSupportId = await fetchSupportId();
-            if (!currentSupportId) {
-                toast.error("لا يوجد دعم فني متاح حالياً");
-                return null;
-            }
-        }
-
-        // Check if we already attempted to create support chat
-        if (chatCreationAttemptedRef.current === currentSupportId) {
+            toast.error("لا يوجد دعم فني متاح حالياً");
             return null;
         }
+    }
 
-        try {
-            chatCreationAttemptedRef.current = currentSupportId;
-            setCreatingChat(true);
+    // Check if we already attempted to create support chat
+    if (chatCreationAttemptedRef.current === currentSupportId) {
+        return null;
+    }
 
-            const result = await messageService.createChat(
-                currentSupportId, 
-                "user_user",
-                "الدعم الفني"
-            );
+    try {
+        chatCreationAttemptedRef.current = currentSupportId;
+        setCreatingChat(true);
 
-            if (result.success && result.chat) {
-                const newChatId = result.chat.id || result.chat.chat_id;
+        // ✅ استخدام الدالة الموجودة في service
+        const result = await messageService.createChat(
+            currentSupportId, 
+            "user_user",
+            "الدعم الفني"
+        );
+
+        if (result.success && result.chat) {
+            const newChatId = result.chat.id || result.chat.chat_id;
+            
+            if (newChatId) {
+                setChatId(newChatId);
+                setSupportChat(result.chat);
                 
-                if (newChatId) {
-                    setChatId(newChatId);
-                    setSupportChat(result.chat);
-                    
-                    if (typeof window !== 'undefined') {
-                        localStorage.setItem('support_chat_id', newChatId.toString());
-                    }
-                    
-                    return newChatId;
-                }
-            } else {
-                console.error('Failed to create support chat:', result.error);
-                
-                // Try to get existing support chat from localStorage
                 if (typeof window !== 'undefined') {
-                    const storedChatId = localStorage.getItem('support_chat_id');
-                    if (storedChatId) {
-                        setChatId(parseInt(storedChatId));
-                        return parseInt(storedChatId);
-                    }
+                    localStorage.setItem('support_chat_id', newChatId.toString());
                 }
-                return null;
+                
+                return newChatId;
             }
-        } catch (error) {
-            console.error('Error creating support chat:', error);
+        } else {
+            console.error('Failed to create support chat:', result.error);
+            
+            // Try to get existing support chat from localStorage
+            if (typeof window !== 'undefined') {
+                const storedChatId = localStorage.getItem('support_chat_id');
+                if (storedChatId) {
+                    setChatId(parseInt(storedChatId));
+                    return parseInt(storedChatId);
+                }
+            }
             return null;
-        } finally {
-            setCreatingChat(false);
         }
-    }, [isLoggedIn, supportParticipantId, fetchSupportId, creatingChat]);
+    } catch (error) {
+        console.error('Error creating support chat:', error);
+        return null;
+    } finally {
+        setCreatingChat(false);
+    }
+}, [isLoggedIn, supportParticipantId, fetchSupportId, creatingChat]);
 
     // Load messages
-    const loadMessages = useCallback(async (currentChatId, page = 1, refresh = false) => {
-        if (!currentChatId || !isLoggedIn) return;
+  // Load messages
+const loadMessages = useCallback(async (currentChatId, page = 1, refresh = false) => {
+    if (!currentChatId || !isLoggedIn) return;
 
-        if (page === 1 && !refresh && lastLoadedChatIdRef.current === currentChatId) {
-            return;
+    if (page === 1 && !refresh && lastLoadedChatIdRef.current === currentChatId) {
+        return;
+    }
+
+    try {
+        if (page === 1) {
+            setMessagesLoading(true);
+            lastLoadedChatIdRef.current = currentChatId;
         }
 
-        try {
+        // ✅ استخدام الدالة الموجودة في service
+        const response = await messageService.getMessages(currentChatId, { 
+            page,
+            refresh: refresh || page === 1
+        });
+
+        if (response.success && Array.isArray(response.data)) {
+            const fetchedMessages = response.data;
+            
+            const formattedMessages = fetchedMessages.map(msg => ({
+                id: msg.id,
+                type: msg.sender_id === currentUser.id ? "user" : "support",
+                text: msg.message || msg.text || "",
+                time: formatMessageTime(msg.created_at),
+                timestamp: new Date(msg.created_at).getTime(),
+                is_outgoing: msg.sender_id === currentUser.id,
+                isCurrentUser: msg.sender_id === currentUser.id,
+                is_read: msg.is_read || false,
+                file: msg.file_url ? {
+                    url: msg.file_url,
+                    name: msg.file_name || 'ملف',
+                    size: msg.file_size,
+                    type: msg.file_type || (msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image/' : 'file'),
+                    isImage: msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i),
+                    isVoice: msg.message_type === 'voice'
+                } : (msg.attachments?.[0] ? {
+                    url: msg.attachments[0].url,
+                    name: msg.attachments[0].file_name || msg.attachments[0].name,
+                    size: msg.attachments[0].size,
+                    type: msg.attachments[0].mime_type || msg.attachments[0].type,
+                    isImage: (msg.attachments[0].mime_type || '').startsWith('image/'),
+                    isVoice: msg.message_type === 'voice'
+                } : null)
+            }));
+
+            const sortedMessages = formattedMessages.sort((a, b) => a.timestamp - b.timestamp);
+
             if (page === 1) {
-                setMessagesLoading(true);
-                lastLoadedChatIdRef.current = currentChatId;
-            }
-
-            const response = await messageService.getMessages(currentChatId, { 
-                page,
-                refresh: refresh || page === 1
-            });
-
-            if (response.success && Array.isArray(response.data)) {
-                const fetchedMessages = response.data;
+                setMessages(sortedMessages);
+                setCurrentPage(1);
+                setHasMoreMessages(fetchedMessages.length >= 20);
                 
-                const formattedMessages = fetchedMessages.map(msg => ({
-                    id: msg.id,
-                    type: msg.sender_id === currentUser.id ? "user" : "support",
-                    text: msg.message || msg.text || "",
-                    time: formatMessageTime(msg.created_at),
-                    timestamp: new Date(msg.created_at).getTime(),
-                    is_outgoing: msg.sender_id === currentUser.id,
-                    isCurrentUser: msg.sender_id === currentUser.id,
-                    is_read: msg.is_read || false,
-                    file: msg.attachments?.[0] ? {
-                        url: msg.attachments[0].url,
-                        name: msg.attachments[0].file_name || msg.attachments[0].name,
-                        size: msg.attachments[0].size,
-                        type: msg.attachments[0].mime_type || msg.attachments[0].type,
-                        isImage: (msg.attachments[0].mime_type || '').startsWith('image/')
-                    } : null
-                }));
-
-                const sortedMessages = formattedMessages.sort((a, b) => a.timestamp - b.timestamp);
-
-                if (page === 1) {
-                    setMessages(sortedMessages);
-                    setCurrentPage(1);
-                    setHasMoreMessages(fetchedMessages.length >= 20);
-                    
-                    setTimeout(() => {
-                        scrollToBottom();
-                    }, 300);
-                } else {
-                    setMessages(prev => {
-                        const combined = [...sortedMessages, ...prev];
-                        return combined.sort((a, b) => a.timestamp - b.timestamp);
-                    });
-                    setCurrentPage(prev => prev + 1);
-                    setHasMoreMessages(fetchedMessages.length >= 20);
-                }
-
-                // Get chat details for Pusher initialization
-                if (page === 1) {
-                    const chatDetails = await messageService.getChatDetails(currentChatId);
-                    if (chatDetails.success && chatDetails.data?.chat_uuid) {
-                        initializePusher(currentChatId, chatDetails.data.chat_uuid);
-                    }
-                }
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 300);
             } else {
-                if (page === 1) {
-                    setMessages([]);
-                }
-                setHasMoreMessages(false);
+                setMessages(prev => {
+                    const combined = [...sortedMessages, ...prev];
+                    return combined.sort((a, b) => a.timestamp - b.timestamp);
+                });
+                setCurrentPage(prev => prev + 1);
+                setHasMoreMessages(fetchedMessages.length >= 20);
             }
-        } catch (error) {
-            console.error('Error loading messages:', error);
+
+            // Get chat details for Pusher initialization
             if (page === 1) {
-                toast.error("حدث خطأ في تحميل الرسائل");
+                const chatDetails = await messageService.getChatDetails(currentChatId);
+                if (chatDetails.success && chatDetails.data?.chat_uuid) {
+                    initializePusher(currentChatId, chatDetails.data.chat_uuid);
+                }
+            }
+        } else {
+            if (page === 1) {
                 setMessages([]);
             }
-        } finally {
-            if (page === 1) {
-                setMessagesLoading(false);
-                setLoading(false);
-            }
+            setHasMoreMessages(false);
         }
-    }, [isLoggedIn, currentUser.id, initializePusher]);
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        if (page === 1) {
+            toast.error("حدث خطأ في تحميل الرسائل");
+            setMessages([]);
+        }
+    } finally {
+        if (page === 1) {
+            setMessagesLoading(false);
+            setLoading(false);
+        }
+    }
+}, [isLoggedIn, currentUser.id, initializePusher]);
 
     // Load more messages (pagination)
     const loadMoreMessages = async () => {
@@ -506,144 +519,236 @@ export default function HelpCenterPage() {
         setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Upload files and send message
-    const uploadFilesAndSendMessage = async () => {
-        if (!chatId || selectedFiles.length === 0 || !isLoggedIn) return;
+   // Upload files and send message
+const uploadFilesAndSendMessage = async () => {
+    if (!chatId || selectedFiles.length === 0 || !isLoggedIn) return;
 
-        try {
-            setUploadingFiles(true);
-            
-            const formData = new FormData();
-            
-            if (message.trim()) {
-                formData.append('message', message);
-            }
-            
-            if (selectedFiles.length > 0) {
-                formData.append('message_type', 'file');
-            }
-
-            selectedFiles.forEach((file, index) => {
-                formData.append('files[]', file);
-            });
-
-            const tempMessage = {
-                id: `temp-${Date.now()}`,
-                type: "user",
-                text: message.trim() || (selectedFiles[0].type.startsWith('image/') ? '📷 صورة' : '📎 ملف'),
-                time: formatMessageTime(new Date().toISOString()),
-                timestamp: Date.now(),
-                is_temp: true,
-                is_outgoing: true,
-                isCurrentUser: true,
-                is_read: false,
-                file: {
-                    url: URL.createObjectURL(selectedFiles[0]),
-                    name: selectedFiles[0].name,
-                    size: selectedFiles[0].size,
-                    type: selectedFiles[0].type,
-                    isImage: selectedFiles[0].type.startsWith('image/'),
-                    pending: true
-                }
-            };
-
-            setMessages(prev => [...prev, tempMessage]);
-            setMessage("");
-            setSelectedFiles([]);
-            scrollToBottom();
-
-            const result = await messageService.sendMessageWithAttachments(chatId, formData);
-
-            if (result.success) {
-                setMessages(prev => prev.map(msg => {
-                    if (msg.id === tempMessage.id) {
-                        return {
-                            ...msg,
-                            id: result.message?.id || msg.id,
-                            is_temp: false,
-                            file: msg.file ? { ...msg.file, pending: false } : null
-                        };
-                    }
-                    return msg;
-                }));
-                
-                setTimeout(() => {
-                    loadMessages(chatId, 1, true);
-                }, 500);
-            } else {
-                setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-                setSelectedFiles(prev => [...prev, ...selectedFiles]);
-                toast.error(result.message || 'فشل إرسال الرسالة');
-            }
-        } catch (error) {
-            console.error('Error uploading files:', error);
-            toast.error('حدث خطأ: ' + error.message);
-        } finally {
-            setUploadingFiles(false);
-        }
-    };
-
-    // Send text message
-    const handleSendMessage = async () => {
-        if (!isLoggedIn) {
-            toast.error("يرجى تسجيل الدخول أولاً");
-            return;
+    try {
+        setUploadingFiles(true);
+        
+        const formData = new FormData();
+        
+        if (message.trim()) {
+            formData.append('message', message);
         }
         
-        if ((!message.trim() && selectedFiles.length === 0) || sending || uploadingFiles || !chatId) return;
+        // ✅ مهم: نحدد نوع الرسالة كـ file
+        formData.append('message_type', 'file');
 
-        if (selectedFiles.length > 0) {
-            await uploadFilesAndSendMessage();
-            return;
-        }
+        // ✅ إضافة الملفات - كل ملف على حدة
+        selectedFiles.forEach((file) => {
+            formData.append('file', file); // المفتاح 'file' وليس 'files[]'
+        });
 
-        try {
-            setSending(true);
-            
-            const tempMessage = {
-                id: `temp-${Date.now()}`,
-                type: "user",
-                text: message,
-                time: formatMessageTime(new Date().toISOString()),
-                timestamp: Date.now(),
-                is_temp: true,
-                is_outgoing: true,
-                isCurrentUser: true,
-                is_read: false
-            };
+        // ✅ تحضير المعاينة المؤقتة
+        const attachments = selectedFiles.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: URL.createObjectURL(file),
+            isImage: file.type.startsWith('image/'),
+            pending: true
+        }));
 
-            setMessages(prev => [...prev, tempMessage]);
-            setMessage("");
-            scrollToBottom();
+        const tempMessage = {
+            id: `temp-${Date.now()}`,
+            type: "user",
+            text: message.trim() || (attachments.length === 1 && attachments[0].isImage ? '🖼️ صورة' : '📎 ملف'),
+            time: formatMessageTime(new Date().toISOString()),
+            timestamp: Date.now(),
+            is_temp: true,
+            is_outgoing: true,
+            isCurrentUser: true,
+            is_read: false,
+            file: attachments[0] // أول ملف فقط للعرض المؤقت
+        };
 
-            const result = await messageService.sendMessage(chatId, message);
+        setMessages(prev => [...prev, tempMessage]);
+        setMessage("");
+        setSelectedFiles([]);
+        scrollToBottom();
 
-            if (result.success && result.message) {
-                setMessages(prev => prev.map(msg => 
-                    msg.id === tempMessage.id ? {
-                        id: result.message.id,
+        // ✅ استخدام الدالة الموجودة في service
+        const result = await messageService.sendMessageWithAttachments(chatId, formData);
+
+        if (result.success) {
+            setMessages(prev => prev.map(msg => {
+                if (msg.id === tempMessage.id) {
+                    // ✅ تنسيق الرسالة حسب البيانات المرجعة من الـ API
+                    const apiMessage = result.data?.message || result.message;
+                    
+                    return {
+                        id: apiMessage?.id || msg.id,
                         type: "user",
-                        text: result.message.message,
-                        time: formatMessageTime(result.message.created_at),
-                        timestamp: new Date(result.message.created_at).getTime(),
+                        text: apiMessage?.message || msg.text,
+                        time: formatMessageTime(apiMessage?.created_at),
+                        timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
                         is_outgoing: true,
                         isCurrentUser: true,
                         is_temp: false,
-                        is_read: result.message.is_read || false
-                    } : msg
-                ));
-            } else {
-                setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-                toast.error(result.error || 'فشل إرسال الرسالة');
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
+                        is_read: apiMessage?.is_read || false,
+                        file: apiMessage?.file_url ? {
+                            url: apiMessage.file_url,
+                            name: apiMessage.file_name || 'ملف',
+                            size: apiMessage.file_size,
+                            type: apiMessage.file_type || attachments[0]?.type,
+                            isImage: apiMessage.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                        } : null
+                    };
+                }
+                return msg;
+            }));
+        } else {
             setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-            toast.error('حدث خطأ في إرسال الرسالة');
-        } finally {
-            setSending(false);
+            setSelectedFiles(prev => [...prev, ...selectedFiles]);
+            toast.error(result.error || result.message || 'فشل إرسال الرسالة');
         }
-    };
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        toast.error('حدث خطأ: ' + error.message);
+    } finally {
+        setUploadingFiles(false);
+    }
+};
+
+// Send voice message
+const sendVoiceMessage = async (audioBlob, duration) => {
+    if (!chatId || !isLoggedIn) return;
+    
+    try {
+        setUploadingFiles(true);
+        
+        const tempMessage = {
+            id: `temp-${Date.now()}`,
+            type: "user",
+            text: '🎤 رسالة صوتية',
+            time: formatMessageTime(new Date().toISOString()),
+            timestamp: Date.now(),
+            is_temp: true,
+            is_outgoing: true,
+            isCurrentUser: true,
+            is_read: false,
+            file: {
+                url: URL.createObjectURL(audioBlob),
+                name: 'voice-message.webm',
+                size: audioBlob.size,
+                type: 'audio/webm',
+                isImage: false,
+                isVoice: true,
+                duration: duration,
+                pending: true
+            }
+        };
+        
+        setMessages(prev => [...prev, tempMessage]);
+        setShowVoiceRecorder(false);
+        scrollToBottom();
+        
+        // ✅ استخدام الدالة الموجودة في service
+        const result = await messageService.sendVoiceMessage(chatId, audioBlob);
+        
+        if (result.success) {
+            setMessages(prev => prev.map(msg => {
+                if (msg.id === tempMessage.id) {
+                    const apiMessage = result.data?.message || result.message;
+                    
+                    return {
+                        id: apiMessage?.id || msg.id,
+                        type: "user",
+                        text: '🎤 رسالة صوتية',
+                        time: formatMessageTime(apiMessage?.created_at),
+                        timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
+                        is_outgoing: true,
+                        isCurrentUser: true,
+                        is_temp: false,
+                        file: apiMessage?.file_url ? {
+                            url: apiMessage.file_url,
+                            name: apiMessage.file_name || 'تسجيل صوتي',
+                            size: apiMessage.file_size,
+                            type: 'audio/webm',
+                            isVoice: true,
+                            duration: duration,
+                            pending: false
+                        } : null
+                    };
+                }
+                return msg;
+            }));
+        } else {
+            setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+            toast.error(result.error || 'فشل إرسال التسجيل الصوتي');
+        }
+    } catch (error) {
+        console.error('Error sending voice:', error);
+        toast.error('حدث خطأ في إرسال التسجيل الصوتي');
+    } finally {
+        setUploadingFiles(false);
+    }
+};
+
+    // Send text message
+    // Send text message
+const handleSendMessage = async () => {
+    if (!isLoggedIn) {
+        toast.error("يرجى تسجيل الدخول أولاً");
+        return;
+    }
+    
+    if ((!message.trim() && selectedFiles.length === 0) || sending || uploadingFiles || !chatId) return;
+
+    if (selectedFiles.length > 0) {
+        await uploadFilesAndSendMessage();
+        return;
+    }
+
+    try {
+        setSending(true);
+        
+        const tempMessage = {
+            id: `temp-${Date.now()}`,
+            type: "user",
+            text: message,
+            time: formatMessageTime(new Date().toISOString()),
+            timestamp: Date.now(),
+            is_temp: true,
+            is_outgoing: true,
+            isCurrentUser: true,
+            is_read: false
+        };
+
+        setMessages(prev => [...prev, tempMessage]);
+        setMessage("");
+        scrollToBottom();
+
+        // ✅ استخدام الدالة الموجودة في service
+        const result = await messageService.sendMessage(chatId, message);
+
+        if (result.success && result.message) {
+            setMessages(prev => prev.map(msg => 
+                msg.id === tempMessage.id ? {
+                    id: result.message.id,
+                    type: "user",
+                    text: result.message.message,
+                    time: formatMessageTime(result.message.created_at),
+                    timestamp: new Date(result.message.created_at).getTime(),
+                    is_outgoing: true,
+                    isCurrentUser: true,
+                    is_temp: false,
+                    is_read: result.message.is_read || false
+                } : msg
+            ));
+        } else {
+            setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+            toast.error(result.error || 'فشل إرسال الرسالة');
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        toast.error('حدث خطأ في إرسال الرسالة');
+    } finally {
+        setSending(false);
+    }
+};
 
     // Search in messages
     const searchMessages = (query) => {

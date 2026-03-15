@@ -567,7 +567,7 @@ class MessageService {
     }
   }
 
-  // ==================== إرسال الرسائل ====================
+  // ==================== إرسال رسالة نصية ====================
   async sendMessage(chatId, messageData) {
     // التحقق من المصادقة أولاً
     if (!checkAuthentication(true, 'messages')) {
@@ -579,11 +579,34 @@ class MessageService {
       };
     }
     
-    const payload = {
-      message: messageData.message || messageData.text || messageData,
-      message_type: messageData.message_type || "text",
-      file: messageData.metadata || ["text"]
-    };
+    // تحديد نوع الرسالة
+    let payload = {};
+    
+    if (typeof messageData === 'string') {
+      // إذا كان النص مباشرة
+      payload = {
+        message: messageData,
+        message_type: "text",
+        metadata: ["text"]
+      };
+    } else {
+      // إذا كان object مع تحديد النوع
+      payload = {
+        message: messageData.message || messageData.text || "",
+        message_type: messageData.message_type || "text",
+        metadata: messageData.metadata || ["text"]
+      };
+      
+      // إضافة الملف إذا كان موجوداً
+      if (messageData.file) {
+        payload.file = messageData.file;
+      }
+      
+      // إضافة التسجيل الصوتي إذا كان موجوداً
+      if (messageData.voice) {
+        payload.voice = messageData.voice;
+      }
+    }
     
     try {
       const response = await this.axiosInstance.post(`/chats/${chatId}/send`, payload);
@@ -618,7 +641,7 @@ class MessageService {
     }
   }
   
-  // ==================== إرسال رسالة مع مرفقات ====================
+   // ==================== إرسال رسالة مع مرفقات ====================
   async sendMessageWithAttachments(chatId, formData) {
     // التحقق من المصادقة أولاً
     if (!checkAuthentication(true, 'messages')) {
@@ -642,6 +665,9 @@ class MessageService {
       console.log('📥 Response:', response.data);
       
       if (response.data.status === "success") {
+        // مسح التخزين المؤقت للرسائل
+        cacheManager.clearPattern(`messages_${chatId}`);
+        
         return {
           success: true,
           message: response.data.message,
@@ -674,6 +700,121 @@ class MessageService {
     }
   }
 
+    // ==================== إرسال تسجيل صوتي ====================
+  async sendVoiceMessage(chatId, voiceBlob, text = '') {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'messages')) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول لإرسال الرسائل',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
+    try {
+      const formData = new FormData();
+      
+      if (text) {
+        formData.append('message', text);
+      }
+      
+      formData.append('message_type', 'voice');
+      formData.append('voice', voiceBlob, 'voice-message.webm');
+      
+      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (response.data.status === "success") {
+        // مسح التخزين المؤقت للرسائل
+        cacheManager.clearPattern(`messages_${chatId}`);
+        
+        return {
+          success: true,
+          message: response.data.message,
+          data: response.data,
+          source: 'axios'
+        };
+      }
+      
+      return {
+        success: false,
+        error: response.data.message || 'فشل إرسال التسجيل الصوتي',
+        source: 'axios'
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error sending voice message:`, error);
+      
+      return {
+        success: false,
+        error: 'فشل إرسال التسجيل الصوتي',
+        source: 'failed',
+        details: error.message
+      };
+    }
+  }
+
+   // ==================== إرسال صورة ====================
+  async sendImageMessage(chatId, imageFile, text = '') {
+    // التحقق من المصادقة أولاً
+    if (!checkAuthentication(true, 'messages')) {
+      return {
+        success: false,
+        error: 'يجب تسجيل الدخول لإرسال الصور',
+        requiresLogin: true,
+        source: 'auth-check'
+      };
+    }
+    
+    try {
+      const formData = new FormData();
+      
+      if (text) {
+        formData.append('message', text);
+      }
+      
+      formData.append('message_type', 'file');
+      formData.append('file', imageFile);
+      
+      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (response.data.status === "success") {
+        // مسح التخزين المؤقت للرسائل
+        cacheManager.clearPattern(`messages_${chatId}`);
+        
+        return {
+          success: true,
+          message: response.data.message,
+          data: response.data,
+          source: 'axios'
+        };
+      }
+      
+      return {
+        success: false,
+        error: response.data.message || 'فشل إرسال الصورة',
+        source: 'axios'
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error sending image message:`, error);
+      
+      return {
+        success: false,
+        error: 'فشل إرسال الصورة',
+        source: 'failed',
+        details: error.message
+      };
+    }
+  }
   // ==================== إنشاء محادثة جديدة ====================
   async createChat(participantId, type = "user_user", participantName = '') {
     // التحقق من المصادقة أولاً

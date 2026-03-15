@@ -134,16 +134,35 @@ export default function FaqsPage() {
     );
   }
 
-  // دالة لتنظيف النص من علامات HTML
+  // دالة لتنظيف النص من علامات HTML غير المرغوب فيها مع الحفاظ على التنسيق
   const cleanHtml = (html: string) => {
-    return html.replace(/<[^>]*>/g, '');
+    // إزالة علامات <span> مع الحفاظ على محتواها
+    let cleaned = html.replace(/<\/?span[^>]*>/g, '');
+    // إزالة سمات style من علامات <p>
+    cleaned = cleaned.replace(/<p[^>]*>/g, '<p>');
+    // تنظيف المسافات الزائدة
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    return cleaned;
   };
 
   // دالة لتحويل النص إلى HTML منسق
   const formatAnswer = (answer: string) => {
-    // تنظيف النص من علامات HTML
+    // تنظيف النص من علامات HTML غير المرغوب فيها
     const cleanText = cleanHtml(answer);
     
+    // إذا كان النص يحتوي على علامات HTML، نستخدم dangerouslySetInnerHTML
+    if (cleanText.includes('<') && cleanText.includes('>')) {
+      return (
+        <div className="faq-answer text-right" dir="rtl">
+          <div 
+            className="text-sm text-muted-foreground leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: cleanText }}
+          />
+        </div>
+      );
+    }
+    
+    // إذا كان النص عادي بدون HTML
     return (
       <div className="faq-answer text-right" dir="rtl">
         <p className="text-sm text-muted-foreground leading-relaxed">
