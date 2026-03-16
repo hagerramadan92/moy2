@@ -59,6 +59,10 @@ const nextConfig = {
   // إعدادات Rewrites أكثر تحديداً
   async rewrites() {
     return [
+        {
+        source: '/api/storage/:path*',
+        destination: 'https://dashboard.waytmiah.com/storage/:path*',
+      },
       {
         source: '/api/moya/:path*',
         destination: 'https://dashboard.waytmiah.com/api/v1/:path*',

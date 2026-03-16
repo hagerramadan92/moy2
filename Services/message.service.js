@@ -604,7 +604,7 @@ class MessageService {
       
       // إضافة التسجيل الصوتي إذا كان موجوداً
       if (messageData.voice) {
-        payload.voice = messageData.voice;
+        payload.file = messageData.voice;
       }
     }
     
@@ -701,63 +701,103 @@ class MessageService {
   }
 
     // ==================== إرسال تسجيل صوتي ====================
-  async sendVoiceMessage(chatId, voiceBlob, text = '') {
-    // التحقق من المصادقة أولاً
-    if (!checkAuthentication(true, 'messages')) {
+ // في ملف message.service.js، ابحث عن دالة sendVoiceMessage
+
+// ==================== إرسال تسجيل صوتي ====================
+async sendVoiceMessage(chatId, voiceBlob, text = '') {
+  // التحقق من المصادقة أولاً
+  if (!checkAuthentication(true, 'messages')) {
+    return {
+      success: false,
+      error: 'يجب تسجيل الدخول لإرسال الرسائل',
+      requiresLogin: true,
+      source: 'auth-check'
+    };
+  }
+  
+  try {
+    const formData = new FormData();
+    
+    if (text) {
+      formData.append('message', text);
+    }
+    
+    formData.append('message_type', 'voice');
+    
+    // التأكد من أن الملف يحمل الامتداد mp3
+    let fileToSend = voiceBlob;
+    
+    // إذا كان الـ blob ليس ملفاً، حوله إلى ملف
+    if (!(voiceBlob instanceof File)) {
+      fileToSend = new File([voiceBlob], 'voice-message.mp3', { type: 'audio/mp3' });
+    } else if (!voiceBlob.name.endsWith('.mp3')) {
+      // إذا كان الاسم لا ينتهي بـ .mp3، أعد تسميته
+      fileToSend = new File([voiceBlob], 'voice-message.mp3', { type: 'audio/mp3' });
+    }
+    
+    formData.append('file', fileToSend);
+    
+    const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    if (response.data.status === "success") {
+      // مسح التخزين المؤقت للرسائل
+      cacheManager.clearPattern(`messages_${chatId}`);
+      
       return {
-        success: false,
-        error: 'يجب تسجيل الدخول لإرسال الرسائل',
-        requiresLogin: true,
-        source: 'auth-check'
+        success: true,
+        message: response.data.message,
+        data: response.data,
+        source: 'axios'
       };
     }
     
-    try {
-      const formData = new FormData();
-      
-      if (text) {
-        formData.append('message', text);
-      }
-      
-      formData.append('message_type', 'voice');
-      formData.append('voice', voiceBlob, 'voice-message.webm');
-      
-      const response = await this.axiosInstance.post(`/chats/${chatId}/send`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      if (response.data.status === "success") {
-        // مسح التخزين المؤقت للرسائل
-        cacheManager.clearPattern(`messages_${chatId}`);
-        
-        return {
-          success: true,
-          message: response.data.message,
-          data: response.data,
-          source: 'axios'
-        };
-      }
-      
-      return {
-        success: false,
-        error: response.data.message || 'فشل إرسال التسجيل الصوتي',
-        source: 'axios'
-      };
-      
-    } catch (error) {
-      console.error(`❌ Error sending voice message:`, error);
-      
-      return {
-        success: false,
-        error: 'فشل إرسال التسجيل الصوتي',
-        source: 'failed',
-        details: error.message
-      };
-    }
+    return {
+      success: false,
+      error: response.data.message || 'فشل إرسال التسجيل الصوتي',
+      source: 'axios'
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error sending voice message:`, error);
+    
+    return {
+      success: false,
+      error: 'فشل إرسال التسجيل الصوتي',
+      source: 'failed',
+      details: error.message
+    };
   }
-
+}
+// في message.service.js، أضف هذه الدالة الجديدة
+async fetchAudioFile(fileUrl) {
+  try {
+    const token = getToken();
+    
+    const response = await this.axiosInstance.get(fileUrl, {
+      responseType: 'blob',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Accept': 'audio/*'
+      }
+    });
+    
+    return {
+      success: true,
+      blob: response.data,
+      type: response.headers['content-type']
+    };
+  } catch (error) {
+    console.error('❌ Error fetching audio file:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
    // ==================== إرسال صورة ====================
   async sendImageMessage(chatId, imageFile, text = '') {
     // التحقق من المصادقة أولاً

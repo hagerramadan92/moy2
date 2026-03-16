@@ -79,7 +79,8 @@ const ChatModal = ({
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
-
+const [playingVoiceId, setPlayingVoiceId] = useState(null);
+const audioRefs = useRef({});
   // ألوان ثابتة للرسائل
   const MESSAGE_COLORS = {
     outgoing: {
@@ -115,7 +116,34 @@ const ChatModal = ({
       return '';
     }
   };
-
+const toggleVoicePlayback = (messageId, audioUrl) => {
+  if (playingVoiceId === messageId) {
+    // إيقاف التشغيل
+    if (audioRefs.current[messageId]) {
+      audioRefs.current[messageId].pause();
+      audioRefs.current[messageId].currentTime = 0;
+    }
+    setPlayingVoiceId(null);
+  } else {
+    // إيقاف أي تشغيل سابق
+    if (playingVoiceId && audioRefs.current[playingVoiceId]) {
+      audioRefs.current[playingVoiceId].pause();
+      audioRefs.current[playingVoiceId].currentTime = 0;
+    }
+    
+    // تشغيل الجديد
+    if (audioRefs.current[messageId]) {
+      audioRefs.current[messageId].play();
+      setPlayingVoiceId(messageId);
+    } else {
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setPlayingVoiceId(null);
+      audio.play();
+      audioRefs.current[messageId] = audio;
+      setPlayingVoiceId(messageId);
+    }
+  }
+};
   // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -125,7 +153,6 @@ const ChatModal = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Get file icon
  // Get file icon
 const getFileIcon = (fileType) => {
   if (!fileType) return <File size={20} />;
@@ -138,7 +165,12 @@ const getFileIcon = (fileType) => {
   if (type.startsWith('video/') || type.match(/\.(mp4|mov|avi|mkv)$/)) {
     return <Film size={20} className="text-purple-500" />;
   }
-  if (type.startsWith('audio/') || type.match(/\.(mp3|wav|ogg)$/)) {
+  if (type.startsWith('audio/') || 
+      type.match(/\.(mp3|wav|m4a|aac)$/) || // إضافة الامتدادات الجديدة
+      type.endsWith('.mp3') ||
+      type.endsWith('.wav') ||
+      type.endsWith('.m4a') ||
+      type.endsWith('.aac')) {
     return <Music size={20} className="text-green-500" />;
   }
   if (type.includes('pdf') || type.match(/\.pdf$/)) {
@@ -175,57 +207,308 @@ const getFileIcon = (fileType) => {
     
     setShowAttachmentMenu(false);
   };
+  
 
   // Remove file from selection
   const removeFile = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // دالة عرض التسجيل الصوتي في الرسائل
-  const renderVoiceMessage = (attachment) => {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const audioRef = useRef(null);
-    
-    const togglePlay = () => {
-      if (audioRef.current) {
-        if (isPlaying) {
-          audioRef.current.pause();
-        } else {
-          audioRef.current.play();
-        }
-        setIsPlaying(!isPlaying);
+ // Render voice message
+// Render voice message - نسخة محسنة للتعامل مع مشاكل التشغيل
+const renderVoiceMessage = (message, attachment) => {
+  const isPlaying = playingVoiceId === message.id;
+  let audioUrl = attachment?.file_url || attachment?.url || message.file_url;
+  
+  if (!audioUrl) return null;
+  
+  // التحقق من أن الملف صوتي
+  const isAudioFile = 
+    audioUrl.endsWith('.mp3') ||
+    audioUrl.endsWith('.wav') ||
+    audioUrl.endsWith('.m4a') ||
+    audioUrl.endsWith('.aac') ||
+    audioUrl.endsWith('.webm') ||
+    message.message_type === 'voice' ||
+    attachment?.mime_type?.startsWith('audio/');
+  
+  if (!isAudioFile) return null;
+  
+  // بناء الرابط الكامل
+  let fullAudioUrl = audioUrl.startsWith('http') 
+    ? audioUrl 
+    : `https://dashboard.waytmiah.com${audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl}`;
+  
+  // حساب المدة
+  const duration = message.duration || attachment?.duration || 30;
+  const durationFormatted = typeof duration === 'number' 
+    ? `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
+    : '0:30';
+  
+  // الحصول على التوكن
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  
+  // دالة متقدمة لتشغيل الصوت مع معالجة الأخطاء
+  // دالة متقدمة لتشغيل الصوت مع معالجة الأخطاء
+const playAudio = async (messageId, url) => {
+  try {
+    if (playingVoiceId === messageId) {
+      // إيقاف التشغيل
+      if (audioRefs.current[messageId]) {
+        audioRefs.current[messageId].pause();
+        audioRefs.current[messageId].currentTime = 0;
       }
+      setPlayingVoiceId(null);
+      return;
+    }
+    
+    // إيقاف أي تشغيل سابق
+    if (playingVoiceId && audioRefs.current[playingVoiceId]) {
+      audioRefs.current[playingVoiceId].pause();
+      audioRefs.current[playingVoiceId].currentTime = 0;
+    }
+    
+    const token = localStorage.getItem('accessToken');
+    
+    // ✅ الحل: استخدام audio element مباشرة مع إضافة token في headers
+    const audio = new Audio();
+    
+    // استخدام fetch لتحميل الملف مع التوكن أولاً
+    try {
+      console.log('محاولة تحميل الصوت مع التوكن:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'audio/mpeg, audio/mp3, audio/wav, audio/*'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`فشل التحميل: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      console.log('تم تحميل الصوت، نوع الملف:', blob.type);
+      
+      // إنشاء رابط مؤقت من blob
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // ✅ هذا يتجاوز CORS لأنه URL محلي
+      audio.src = blobUrl;
+      
+      // إعداد events
+      audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
+        setPlayingVoiceId(null);
+      };
+      
+      audio.onerror = (e) => {
+        console.error('خطأ في تشغيل الصوت:', e);
+        URL.revokeObjectURL(blobUrl);
+        setPlayingVoiceId(null);
+        
+        // ✅ محاولة بديلة - استخدام عنصر audio في DOM
+        playAudioWithAudioElement(messageId, url, token);
+      };
+      
+      // محاولة التشغيل
+      await audio.play();
+      
+      // حفظ المرجع
+      if (audioRefs.current[messageId]) {
+        // تنظيف الرابط القديم
+        if (audioRefs.current[messageId].src?.startsWith('blob:')) {
+          URL.revokeObjectURL(audioRefs.current[messageId].src);
+        }
+      }
+      audioRefs.current[messageId] = audio;
+      setPlayingVoiceId(messageId);
+      
+    } catch (fetchError) {
+      console.error('فشل تحميل الصوت:', fetchError);
+      
+      // ✅ محاولة بديلة 2: استخدام عنصر HTMLAudioElement مع التوكن في الـ headers
+      playAudioWithAudioElement(messageId, url, token);
+    }
+  } catch (error) {
+    console.error('خطأ عام في تشغيل الصوت:', error);
+    
+    // ✅ محاولة أخيرة: فتح الرابط في نافذة جديدة
+    if (confirm('تعذر تشغيل الصوت. هل تريد فتحه في نافذة جديدة؟')) {
+      window.open(url, '_blank');
+    }
+    setPlayingVoiceId(null);
+  }
+};
+
+// ✅ دالة مساعدة: استخدام عنصر audio في DOM مع التوكن
+const playAudioWithAudioElement = (messageId, url, token) => {
+  try {
+    // إنشاء عنصر audio مؤقت في DOM
+    const audioElement = document.createElement('audio');
+    audioElement.controls = true;
+    audioElement.style.display = 'none';
+    document.body.appendChild(audioElement);
+    
+    // إضافة التوكن في headers غير ممكن مع عنصر audio مباشرة
+    // لذلك نستخدم source مع التوكن في query string
+    const urlWithToken = token 
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      : url;
+    
+    audioElement.src = urlWithToken;
+    
+    audioElement.onended = () => {
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
     };
     
-    return (
-      <div className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg min-w-[200px]">
-        <audio
-          ref={audioRef}
-          src={attachment.url}
-          onEnded={() => setIsPlaying(false)}
-          className="hidden"
-        />
-        <button
-          onClick={togglePlay}
-          className="w-10 h-10 rounded-full bg-[#579BE8] text-white flex items-center justify-center hover:bg-[#124987] transition-colors"
-        >
-          {isPlaying ? <Square size={16} /> : <Play size={16} />}
-        </button>
-        
-        <div className="flex-1">
-          <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
-            <div className="h-full bg-[#579BE8] w-0"></div>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs text-gray-600">🎤 رسالة صوتية</span>
-            <span className="text-xs text-gray-500">
-              {attachment.duration ? `${Math.floor(attachment.duration / 60)}:${(attachment.duration % 60).toString().padStart(2, '0')}` : '0:30'}
-            </span>
-          </div>
+    audioElement.onerror = () => {
+      console.error('فشل التشغيل بعنصر audio');
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
+      
+      // ✅ محاولة أخيرة: استخدام iframe
+      playAudioWithIframe(messageId, url, token);
+    };
+    
+    audioElement.play().catch(err => {
+      console.error('فشل تشغيل audio element:', err);
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
+    });
+    
+    audioRefs.current[messageId] = audioElement;
+    setPlayingVoiceId(messageId);
+  } catch (error) {
+    console.error('خطأ في playAudioWithAudioElement:', error);
+    setPlayingVoiceId(null);
+  }
+};
+
+// ✅ دالة مساعدة أخيرة: استخدام iframe مخفي
+const playAudioWithIframe = (messageId, url, token) => {
+  try {
+    const urlWithToken = token 
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      : url;
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = urlWithToken;
+    document.body.appendChild(iframe);
+    
+    // لا يمكن تتبع متى ينتهي التشغيل بالـ iframe
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      setPlayingVoiceId(null);
+    }, 30000); // افترض أن المدة 30 ثانية
+    
+    audioRefs.current[messageId] = {
+      stop: () => {
+        document.body.removeChild(iframe);
+        setPlayingVoiceId(null);
+      }
+    };
+    setPlayingVoiceId(messageId);
+  } catch (error) {
+    console.error('خطأ في playAudioWithIframe:', error);
+    setPlayingVoiceId(null);
+  }
+};
+  // دالة احتياطية للتشغيل
+  const playAudioFallback = (messageId, url) => {
+    const token = localStorage.getItem('accessToken');
+    const urlWithToken = token 
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      : url;
+    
+    const audio = new Audio(urlWithToken);
+    
+    audio.onended = () => setPlayingVoiceId(null);
+    audio.onerror = () => {
+      console.error('فشل التشغيل الاحتياطي');
+      setPlayingVoiceId(null);
+    };
+    
+    audio.play().catch(err => {
+      console.error('فشل التشغيل الاحتياطي:', err);
+      setPlayingVoiceId(null);
+    });
+    
+    audioRefs.current[messageId] = audio;
+    setPlayingVoiceId(messageId);
+  };
+  
+  // دالة التحميل
+  const downloadAudio = async () => {
+    try {
+      const response = await fetch(fullAudioUrl, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      if (!response.ok) throw new Error('فشل التحميل');
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = message.file_name || 'voice-message.mp3';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('فشل تحميل الملف:', error);
+      
+      // محاولة بديلة - فتح الرابط في نافذة جديدة
+      window.open(fullAudioUrl, '_blank');
+    }
+  };
+  
+  return (
+    <div className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg min-w-[200px]">
+      <button
+        onClick={() => playAudio(message.id, fullAudioUrl)}
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+          isPlaying 
+            ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+            : 'bg-[#579BE8] hover:bg-[#4a8bd1]'
+        }`}
+        disabled={!token}
+        title={!token ? 'يجب تسجيل الدخول أولاً' : ''}
+      >
+        {isPlaying ? <Square size={16} className="text-white" /> : <Play size={16} className="text-white" />}
+      </button>
+      
+      <div className="flex-1">
+        <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-[#579BE8] transition-all duration-100" 
+            style={{ width: isPlaying ? '100%' : '0%' }}
+          ></div>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-xs text-gray-600">🎤 رسالة صوتية</span>
+          <span className="text-xs text-gray-500">
+            {durationFormatted}
+          </span>
         </div>
       </div>
-    );
-  };
+      
+      <button
+        onClick={downloadAudio}
+        className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+        title="تحميل"
+      >
+        <Download size={12} className="text-gray-500" />
+      </button>
+    </div>
+  );
+};
 
   // جلب support ID من الـ API
   const fetchSupportId = useCallback(async () => {
@@ -471,65 +754,75 @@ const uploadFilesAndSendMessage = async () => {
     }
   };
 
-  // دالة لإرسال التسجيل الصوتي - تستخدم service.sendVoiceMessage
-  const sendVoiceMessage = async (audioBlob, duration) => {
-    if (!selectedChat || !isLoggedIn) return;
+// دالة إرسال التسجيل الصوتي
+const sendVoiceMessage = async (audioFile, duration) => {
+  if (!selectedChat || !isLoggedIn) return;
+  
+  try {
+    setUploadingFiles(true);
     
-    try {
-      setUploadingFiles(true);
+    const tempId = `temp-${Date.now()}`;
+    const tempUrl = URL.createObjectURL(audioFile);
+    
+    const tempMessage = {
+      id: tempId,
+      message: '🎤 رسالة صوتية',
+      sender_id: currentUser.id,
+      sender_type: "App\\Models\\User",
+      isCurrentUser: true,
+      is_temp: true,
+      is_outgoing: true,
+      message_type: 'voice',
+      duration: duration,
+      file: {
+        url: tempUrl,
+        name: audioFile.name,
+        size: audioFile.size,
+        type: audioFile.type,
+        isVoice: true
+      },
+      file_url: tempUrl,
+      file_name: audioFile.name,
+      created_at: new Date().toISOString(),
+      formattedTime: formatMessageTime(new Date().toISOString())
+    };
+    
+    setMessages(prev => [...prev, tempMessage]);
+    setShowVoiceRecorder(false);
+    scrollToBottom();
+    
+    // إرسال للـ API
+    const result = await messageService.sendVoiceMessage(selectedChat.id, audioFile);
+    
+    if (result.success && result.data?.message) {
+      // استبدال الرسالة المؤقتة بالرسالة الحقيقية من الـ API
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === tempId) {
+          const apiMessage = result.data.message;
+          return {
+            ...apiMessage,
+            isCurrentUser: true,
+            is_outgoing: true,
+            formattedTime: formatMessageTime(apiMessage.created_at),
+            file_url: apiMessage.file_url // استخدام الرابط الحقيقي من الـ API
+          };
+        }
+        return msg;
+      }));
       
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        message: '🎤 رسالة صوتية',
-        sender_id: currentUser.id,
-        sender_type: "App\\Models\\User",
-        isCurrentUser: true,
-        is_temp: true,
-        is_outgoing: true,
-        message_type: 'voice',
-        voice_duration: duration,
-        attachments: [{
-          file_name: 'voice-message.webm',
-          size: audioBlob.size,
-          mime_type: 'audio/webm',
-          url: URL.createObjectURL(audioBlob),
-          pending: true,
-          is_voice: true,
-          duration: duration
-        }],
-        created_at: new Date().toISOString(),
-        formattedTime: formatMessageTime(new Date().toISOString())
-      };
-      
-      setMessages(prev => [...prev, tempMessage]);
-      setShowVoiceRecorder(false);
-      scrollToBottom();
-      
-      // ✅ استخدام service.sendVoiceMessage
-      const result = await messageService.sendVoiceMessage(selectedChat.id, audioBlob);
-      
-      if (result.success) {
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === tempMessage.id) {
-            return {
-              ...msg,
-              id: result.message?.id || msg.id,
-              is_temp: false,
-              pending: false
-            };
-          }
-          return msg;
-        }));
-      } else {
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-      }
-    } catch (error) {
-      console.error('Error sending voice:', error);
-    } finally {
-      setUploadingFiles(false);
+      // إلغاء تحميل الرابط المؤقت
+      URL.revokeObjectURL(tempUrl);
+    } else {
+      // فشل الإرسال - إزالة الرسالة المؤقتة
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      URL.revokeObjectURL(tempUrl);
     }
-  };
-
+  } catch (error) {
+    console.error('Error sending voice:', error);
+  } finally {
+    setUploadingFiles(false);
+  }
+};
   // Handle emoji click
   const onEmojiClick = (emojiData) => {
     setNewMessage(prev => prev + emojiData.emoji);
@@ -540,6 +833,19 @@ const uploadFilesAndSendMessage = async () => {
   };
 
   // Close emoji picker when clicking outside
+  useEffect(() => {
+  if (!selectedChat) {
+    // إيقاف كل التسجيلات الصوتية
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    audioRefs.current = {};
+  }
+}, [selectedChat]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
@@ -635,6 +941,22 @@ const renderFileMessage = (message) => {
   // ✅ التحقق من وجود attachments أو file_url مباشرة في الرسالة
   const hasFileUrl = message.file_url;
   const attachments = message.attachments || [];
+  if (message.message_type === 'voice') {
+  // إنشاء attachment من بيانات الرسالة
+  const voiceAttachment = {
+    url: message.file_url,
+    duration: message.duration,
+    file_name: message.file_name,
+    mime_type: message.metadata?.mime_type || 'audio/mp3'
+  };
+  return renderVoiceMessage(message, voiceAttachment);
+}
+    if (attachments.some(a => a.is_voice || a.mime_type?.startsWith('audio/'))) {
+  const voiceAttachment = attachments.find(a => a.is_voice || a.mime_type?.startsWith('audio/')) || attachments[0];
+  if (voiceAttachment) {
+    return renderVoiceMessage(message, voiceAttachment);
+  }
+}
   
   // إذا كانت الرسالة تحتوي على file_url مباشرة (زي ما جايز في response)
   if (hasFileUrl && message.message_type === 'file') {
@@ -2288,7 +2610,7 @@ const renderFileMessage = (message) => {
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
                         {/* Voice Recorder Button */}
-                        {/* <button
+                        <button
                           onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
                           className={`p-3 rounded-lg transition-colors ${
                             showVoiceRecorder 
@@ -2299,7 +2621,7 @@ const renderFileMessage = (message) => {
                           disabled={sending || uploadingFiles}
                         >
                           <Mic size={20} />
-                        </button> */}
+                        </button>
 
                         {/* Emoji Button */}
                         <button

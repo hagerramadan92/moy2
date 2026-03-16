@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { FaPaperPlane, FaPaperclip, FaSmile, FaInfoCircle, FaTimes, FaFile, FaDownload, FaSearch, FaCheckDouble, FaCheck } from "react-icons/fa";
+import { FaPaperPlane, FaPaperclip, FaSmile, FaInfoCircle, FaTimes, FaFile, FaDownload, FaSearch, FaCheckDouble, FaCheck, FaMicrophone, FaStop, FaPlay, FaPause } from "react-icons/fa";
 import { IoIosSearch } from "react-icons/io";
 import { BiSupport } from "react-icons/bi";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,250 @@ import { messageService } from "../../../../Services/message.service";
 
 import EmojiPicker from 'emoji-picker-react';
 import Pusher from 'pusher-js';
+
+// Voice Recorder Component
+const VoiceRecorder = ({ onSend, onCancel }) => {
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [audioBlob, setAudioBlob] = useState(null);
+    const [audioUrl, setAudioUrl] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const timerRef = useRef(null);
+    const audioRef = useRef(null);
+    
+    // بدء التسجيل
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // تحديد نوع MIME المناسب للتسجيل
+            const options = { mimeType: 'audio/webm' };
+            try {
+                mediaRecorderRef.current = new MediaRecorder(stream, options);
+            } catch (e) {
+                // إذا لم يدعم المتصفح webm، نستخدم الصيغة الافتراضية
+                mediaRecorderRef.current = new MediaRecorder(stream);
+            }
+            
+            audioChunksRef.current = [];
+            
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+            
+            mediaRecorderRef.current.onstop = () => {
+                // تحديد نوع الملف بناءً على MIME type المدعوم
+                let mimeType = 'audio/webm';
+                if (mediaRecorderRef.current.mimeType) {
+                    mimeType = mediaRecorderRef.current.mimeType;
+                }
+                
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                
+                // تحديد الامتداد المناسب
+                let extension = 'webm';
+                if (mimeType.includes('mp4')) extension = 'm4a';
+                else if (mimeType.includes('mpeg')) extension = 'mp3';
+                else if (mimeType.includes('wav')) extension = 'wav';
+                else if (mimeType.includes('aac')) extension = 'aac';
+                
+                // إضافة خاصية الامتداد للـ blob
+                audioBlob.extension = extension;
+                
+                const url = URL.createObjectURL(audioBlob);
+                setAudioBlob(audioBlob);
+                setAudioUrl(url);
+                
+                // إيقاف المسارات
+                stream.getTracks().forEach(track => track.stop());
+            };
+            
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            
+            // بدء المؤقت
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            toast.error('لا يمكن الوصول إلى الميكروفون');
+        }
+    };
+    
+    // إيقاف التسجيل
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        }
+    };
+    
+    // إلغاء التسجيل
+    const cancelRecording = () => {
+        stopRecording();
+        if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+        }
+        setAudioBlob(null);
+        setAudioUrl(null);
+        setRecordingTime(0);
+        setIsPlaying(false);
+        onCancel();
+    };
+    
+    // إرسال التسجيل
+    const sendRecording = () => {
+        if (audioBlob) {
+            // تحديد الامتداد المناسب للملف
+            const extension = audioBlob.extension || 'webm';
+            
+            // إنشاء كائن ملف بالامتداد الصحيح
+            const audioFile = new File(
+                [audioBlob], 
+                `voice-message.${extension}`, 
+                { type: audioBlob.type || 'audio/webm' }
+            );
+            
+            onSend(audioFile, recordingTime);
+            if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+            }
+        }
+    };
+    
+    // تشغيل/إيقاف التسجيل
+    const togglePlayback = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play().catch(e => console.log('Playback error:', e));
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+    
+    // تنظيف
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+            if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+            }
+        };
+    }, [audioUrl]);
+    
+    // تنسيق الوقت
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+    
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="bg-white dark:bg-card rounded-xl p-3 border border-border/60 shadow-lg"
+        >
+            {!audioBlob ? (
+                // وضع التسجيل
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                            isRecording 
+                                ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                                : 'bg-[#579BE8] hover:bg-[#4a8bd1]'
+                        }`}
+                    >
+                        {isRecording ? <FaStop size={20} className="text-white" /> : <FaMicrophone size={20} className="text-white" />}
+                    </button>
+                    
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                            <span className="text-sm font-medium">
+                                {isRecording ? formatTime(recordingTime) : 'اضغط للتسجيل'}
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {isRecording ? 'جاري التسجيل...' : 'سجل رسالة صوتية'}
+                        </p>
+                    </div>
+                    
+                    <button
+                        onClick={cancelRecording}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <FaTimes size={16} className="text-gray-500" />
+                    </button>
+                </div>
+            ) : (
+                // وضع المعاينة
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={togglePlayback}
+                        className="w-12 h-12 rounded-full bg-[#579BE8] hover:bg-[#4a8bd1] flex items-center justify-center transition-all"
+                    >
+                        {isPlaying ? <FaPause size={20} className="text-white" /> : <FaPlay size={20} className="text-white" />}
+                    </button>
+                    
+                    <audio
+                        ref={audioRef}
+                        src={audioUrl}
+                        onEnded={() => setIsPlaying(false)}
+                        className="hidden"
+                    />
+                    
+                    <div className="flex-1">
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-[#579BE8] transition-all duration-100"
+                                style={{ width: isPlaying ? '100%' : '0%' }}
+                            ></div>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-gray-600">🎤 رسالة صوتية</span>
+                            <span className="text-xs text-gray-500">{formatTime(recordingTime)}</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={sendRecording}
+                            className="p-2 bg-green-500 hover:bg-green-600 rounded-full transition-colors"
+                            title="إرسال"
+                        >
+                            <FaPaperPlane size={14} className="text-white" />
+                        </button>
+                        <button
+                            onClick={cancelRecording}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            title="إلغاء"
+                        >
+                            <FaTimes size={14} className="text-gray-500" />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </motion.div>
+    );
+};
 
 export default function HelpCenterPage() {
     // States
@@ -39,6 +283,11 @@ export default function HelpCenterPage() {
         phone: ''
     });
     
+    // Voice Recording States
+    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+    const [playingVoiceId, setPlayingVoiceId] = useState(null);
+    const audioRefs = useRef({});
+    
     // Support ID States
     const [supportParticipantId, setSupportParticipantId] = useState(null);
     const [loadingSupportId, setLoadingSupportId] = useState(false);
@@ -61,7 +310,7 @@ export default function HelpCenterPage() {
     const lastLoadedChatIdRef = useRef(null);
     const chatCreationAttemptedRef = useRef(null);
     
-    // ألوان ثابتة للرسائل (مثل ChatModal)
+    // ألوان ثابتة للرسائل
     const MESSAGE_COLORS = {
         outgoing: {
             bg: '#0084ff',
@@ -105,7 +354,37 @@ export default function HelpCenterPage() {
         return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    // Get file icon
+    // Toggle voice playback - نسخة طبق الأصل من الكود الشغال
+    const toggleVoicePlayback = (messageId, audioUrl) => {
+        if (playingVoiceId === messageId) {
+            // إيقاف التشغيل
+            if (audioRefs.current[messageId]) {
+                audioRefs.current[messageId].pause();
+                audioRefs.current[messageId].currentTime = 0;
+            }
+            setPlayingVoiceId(null);
+        } else {
+            // إيقاف أي تشغيل سابق
+            if (playingVoiceId && audioRefs.current[playingVoiceId]) {
+                audioRefs.current[playingVoiceId].pause();
+                audioRefs.current[playingVoiceId].currentTime = 0;
+            }
+            
+            // تشغيل الجديد
+            if (audioRefs.current[messageId]) {
+                audioRefs.current[messageId].play();
+                setPlayingVoiceId(messageId);
+            } else {
+                const audio = new Audio(audioUrl);
+                audio.onended = () => setPlayingVoiceId(null);
+                audio.play();
+                audioRefs.current[messageId] = audio;
+                setPlayingVoiceId(messageId);
+            }
+        }
+    };
+
+    // Get file icon - نسخة محدثة مع دعم الصيغ الجديدة
     const getFileIcon = (fileType) => {
         if (!fileType) return <FaFile size={20} />;
         
@@ -117,7 +396,13 @@ export default function HelpCenterPage() {
         if (type.startsWith('video/') || type.match(/\.(mp4|mov|avi|mkv)$/)) {
             return <FaFile className="text-purple-500" size={20} />;
         }
-        if (type.startsWith('audio/') || type.match(/\.(mp3|wav|ogg)$/)) {
+        // تحديث شرط الصوت ليشمل الامتدادات الجديدة
+        if (type.startsWith('audio/') || 
+            type.match(/\.(mp3|wav|m4a|aac)$/) ||
+            type.endsWith('.mp3') ||
+            type.endsWith('.wav') ||
+            type.endsWith('.m4a') ||
+            type.endsWith('.aac')) {
             return <FaFile className="text-green-500" size={20} />;
         }
         if (type.includes('pdf') || type.match(/\.pdf$/)) {
@@ -134,6 +419,449 @@ export default function HelpCenterPage() {
         }
         
         return <FaFile size={20} />;
+    };
+
+    // Render voice message - نسخة طبق الأصل من الكود الشغال
+  // في صفحة page.jsx، ابحث عن دالة renderVoiceMessage واستبدلها بهذا:
+
+// Render voice message - نسخة محسنة مع معالجة أخطاء التحميل
+
+const renderVoiceMessage = (message, attachment) => {
+    const isPlaying = playingVoiceId === message.id;
+    let audioUrl = attachment?.file_url || attachment?.url || message.file_url;
+    
+    if (!audioUrl) return null;
+    
+    // التحقق من أن الملف صوتي
+    const isAudioFile = 
+        audioUrl.endsWith('.mp3') ||
+        audioUrl.endsWith('.wav') ||
+        audioUrl.endsWith('.m4a') ||
+        audioUrl.endsWith('.aac') ||
+        message.message_type === 'voice' ||
+        attachment?.mime_type?.startsWith('audio/');
+    
+    if (!isAudioFile) return null;
+    
+    // معالجة الرابط - إضافة token في الـ headers أو في الـ URL
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    
+    // طريقة 1: إضافة token في الـ URL كـ query parameter (إذا كان الخادم يدعم ذلك)
+    const fullAudioUrl = audioUrl.startsWith('http') 
+        ? audioUrl 
+        : `https://dashboard.waytmiah.com${audioUrl.startsWith('/') ? audioUrl : '/' + audioUrl}`;
+    
+    // إضافة token إلى الرابط إذا كان متاحاً (لبعض الخوادم)
+    const urlWithToken = token ? `${fullAudioUrl}?token=${token}` : fullAudioUrl;
+    
+    // حساب المدة
+    const duration = message.duration || attachment?.duration || 30;
+    const durationFormatted = typeof duration === 'number' 
+        ? `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`
+        : '0:30';
+    
+    // دالة تشغيل الصوت مع معالجة الأخطاء
+   // دالة متقدمة لتشغيل الصوت مع معالجة الأخطاء
+const playAudio = async (messageId, url) => {
+  try {
+    if (playingVoiceId === messageId) {
+      // إيقاف التشغيل
+      if (audioRefs.current[messageId]) {
+        audioRefs.current[messageId].pause();
+        audioRefs.current[messageId].currentTime = 0;
+      }
+      setPlayingVoiceId(null);
+      return;
+    }
+    
+    // إيقاف أي تشغيل سابق
+    if (playingVoiceId && audioRefs.current[playingVoiceId]) {
+      audioRefs.current[playingVoiceId].pause();
+      audioRefs.current[playingVoiceId].currentTime = 0;
+    }
+    
+    const token = localStorage.getItem('accessToken');
+    
+    // ✅ الحل: استخدام audio element مباشرة مع إضافة token في headers
+    const audio = new Audio();
+    
+    // استخدام fetch لتحميل الملف مع التوكن أولاً
+    try {
+      console.log('محاولة تحميل الصوت مع التوكن:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'audio/mpeg, audio/mp3, audio/wav, audio/*'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`فشل التحميل: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      console.log('تم تحميل الصوت، نوع الملف:', blob.type);
+      
+      // إنشاء رابط مؤقت من blob
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // ✅ هذا يتجاوز CORS لأنه URL محلي
+      audio.src = blobUrl;
+      
+      // إعداد events
+      audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
+        setPlayingVoiceId(null);
+      };
+      
+      audio.onerror = (e) => {
+        console.error('خطأ في تشغيل الصوت:', e);
+        URL.revokeObjectURL(blobUrl);
+        setPlayingVoiceId(null);
+        
+        // ✅ محاولة بديلة - استخدام عنصر audio في DOM
+        playAudioWithAudioElement(messageId, url, token);
+      };
+      
+      // محاولة التشغيل
+      await audio.play();
+      
+      // حفظ المرجع
+      if (audioRefs.current[messageId]) {
+        // تنظيف الرابط القديم
+        if (audioRefs.current[messageId].src?.startsWith('blob:')) {
+          URL.revokeObjectURL(audioRefs.current[messageId].src);
+        }
+      }
+      audioRefs.current[messageId] = audio;
+      setPlayingVoiceId(messageId);
+      
+    } catch (fetchError) {
+      console.error('فشل تحميل الصوت:', fetchError);
+      
+      // ✅ محاولة بديلة 2: استخدام عنصر HTMLAudioElement مع التوكن في الـ headers
+      playAudioWithAudioElement(messageId, url, token);
+    }
+  } catch (error) {
+    console.error('خطأ عام في تشغيل الصوت:', error);
+    
+    // ✅ محاولة أخيرة: فتح الرابط في نافذة جديدة
+    if (confirm('تعذر تشغيل الصوت. هل تريد فتحه في نافذة جديدة؟')) {
+      window.open(url, '_blank');
+    }
+    setPlayingVoiceId(null);
+  }
+};
+
+// ✅ دالة مساعدة: استخدام عنصر audio في DOM مع التوكن
+const playAudioWithAudioElement = (messageId, url, token) => {
+  try {
+    // إنشاء عنصر audio مؤقت في DOM
+    const audioElement = document.createElement('audio');
+    audioElement.controls = true;
+    audioElement.style.display = 'none';
+    document.body.appendChild(audioElement);
+    
+    // إضافة التوكن في headers غير ممكن مع عنصر audio مباشرة
+    // لذلك نستخدم source مع التوكن في query string
+    const urlWithToken = token 
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      : url;
+    
+    audioElement.src = urlWithToken;
+    
+    audioElement.onended = () => {
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
+    };
+    
+    audioElement.onerror = () => {
+      console.error('فشل التشغيل بعنصر audio');
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
+      
+      // ✅ محاولة أخيرة: استخدام iframe
+      playAudioWithIframe(messageId, url, token);
+    };
+    
+    audioElement.play().catch(err => {
+      console.error('فشل تشغيل audio element:', err);
+      document.body.removeChild(audioElement);
+      setPlayingVoiceId(null);
+    });
+    
+    audioRefs.current[messageId] = audioElement;
+    setPlayingVoiceId(messageId);
+  } catch (error) {
+    console.error('خطأ في playAudioWithAudioElement:', error);
+    setPlayingVoiceId(null);
+  }
+};
+
+// ✅ دالة مساعدة أخيرة: استخدام iframe مخفي
+const playAudioWithIframe = (messageId, url, token) => {
+  try {
+    const urlWithToken = token 
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      : url;
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = urlWithToken;
+    document.body.appendChild(iframe);
+    
+    // لا يمكن تتبع متى ينتهي التشغيل بالـ iframe
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      setPlayingVoiceId(null);
+    }, 30000); // افترض أن المدة 30 ثانية
+    
+    audioRefs.current[messageId] = {
+      stop: () => {
+        document.body.removeChild(iframe);
+        setPlayingVoiceId(null);
+      }
+    };
+    setPlayingVoiceId(messageId);
+  } catch (error) {
+    console.error('خطأ في playAudioWithIframe:', error);
+    setPlayingVoiceId(null);
+  }
+};
+    
+    return (
+        <div className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg min-w-[200px]">
+            <button
+                onClick={() => playAudio(message.id, fullAudioUrl)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                    isPlaying 
+                        ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                        : 'bg-[#579BE8] hover:bg-[#4a8bd1]'
+                }`}
+            >
+                {isPlaying ? <FaStop size={16} className="text-white" /> : <FaPlay size={16} className="text-white" />}
+            </button>
+            
+            <div className="flex-1">
+                <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-[#579BE8] transition-all duration-100" 
+                        style={{ width: isPlaying ? '100%' : '0%' }}
+                    ></div>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-gray-600">🎤 رسالة صوتية</span>
+                    <span className="text-xs text-gray-500">
+                        {durationFormatted}
+                    </span>
+                </div>
+            </div>
+            
+            <a 
+                href="#"
+                onClick={(e) => {
+                    e.preventDefault();
+                    // تحميل الملف مع token
+                    fetch(fullAudioUrl, {
+                        headers: {
+                            'Authorization': token ? `Bearer ${token}` : ''
+                        }
+                    })
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = message.file_name || 'voice-message.mp3';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(err => console.error('Download failed:', err));
+                }}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                title="تحميل"
+            >
+                <FaDownload size={12} className="text-gray-500" />
+            </a>
+        </div>
+    );
+};
+
+    // Render file message - محدثة لدعم الصوت
+    const renderFileMessage = (message) => {
+        // التحقق من وجود attachments أو file_url مباشرة في الرسالة
+        const hasFileUrl = message.file_url;
+        const attachments = message.attachments || [];
+        
+        // إذا كانت رسالة صوتية
+        if (message.message_type === 'voice') {
+            // إنشاء attachment من بيانات الرسالة
+            const voiceAttachment = {
+                url: message.file_url,
+                duration: message.duration,
+                file_name: message.file_name,
+                mime_type: message.metadata?.mime_type || 'audio/mp3'
+            };
+            return renderVoiceMessage(message, voiceAttachment);
+        }
+        
+        if (attachments.some(a => a.is_voice || a.mime_type?.startsWith('audio/'))) {
+            const voiceAttachment = attachments.find(a => a.is_voice || a.mime_type?.startsWith('audio/')) || attachments[0];
+            if (voiceAttachment) {
+                return renderVoiceMessage(message, voiceAttachment);
+            }
+        }
+        
+        // إذا كانت الرسالة تحتوي على file_url مباشرة
+        if (hasFileUrl && message.message_type === 'file') {
+            const fileName = message.file_name || 'ملف';
+            const fileUrl = message.file_url;
+            const isImage = fileUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+            
+            if (isImage) {
+                return (
+                    <div className="relative group max-w-[300px] mt-2">
+                        <img
+                            src={fileUrl}
+                            alt={fileName}
+                            className="rounded-lg max-h-64 w-auto object-cover cursor-pointer hover:opacity-90 transition-all"
+                            onClick={() => window.open(fileUrl, '_blank')}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <button
+                                onClick={() => window.open(fileUrl, '_blank')}
+                                className="p-2 bg-white rounded-full shadow-lg transform hover:scale-110 transition-transform"
+                                title="فتح الصورة"
+                            >
+                                <FaDownload size={14} />
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+            
+            // لو ملف مش صورة
+            return (
+                <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors max-w-xs mt-2"
+                >
+                    <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+                        {getFileIcon(fileName)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">
+                            {fileName}
+                        </p>
+                        {message.file_size && (
+                            <p className="text-[10px] sm:text-xs text-gray-500">
+                                {formatFileSize(message.file_size)}
+                            </p>
+                        )}
+                    </div>
+                    <FaDownload size={14} className="text-gray-500 flex-shrink-0" />
+                </a>
+            );
+        }
+        
+        // إذا كانت الرسالة فيها attachments array
+        if (attachments.length > 0) {
+            return (
+                <div className="space-y-2 mt-2">
+                    {attachments.map((attachment, index) => {
+                        const fileName = attachment.file_name || attachment.name || 'ملف';
+                        const fileSize = attachment.size || attachment.file_size;
+                        const mimeType = attachment.mime_type || attachment.type;
+                        
+                        const isImage = mimeType?.startsWith('image/') || 
+                                       fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                        
+                        const isVoice = attachment.is_voice || mimeType?.startsWith('audio/');
+                        
+                        const imageUrl = attachment.url || 
+                                        (attachment.file ? URL.createObjectURL(attachment.file) : null);
+                        
+                        // إذا كانت صورة
+                        if (isImage && imageUrl) {
+                            return (
+                                <div key={index} className="relative group max-w-[300px]">
+                                    <img
+                                        src={imageUrl}
+                                        alt={fileName}
+                                        className={`rounded-lg max-h-48 sm:max-h-64 w-auto object-cover cursor-pointer transition-all ${
+                                            attachment.pending ? 'opacity-70' : 'hover:opacity-90'
+                                        }`}
+                                        onClick={() => !attachment.pending && window.open(imageUrl, '_blank')}
+                                    />
+                                    
+                                    {attachment.pending && (
+                                        <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+                                            <div className="bg-white rounded-full p-2 shadow-lg">
+                                                <div className="w-5 h-5 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {!attachment.pending && (
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                            <button
+                                                onClick={() => window.open(imageUrl, '_blank')}
+                                                className="p-2 bg-white rounded-full shadow-lg transform hover:scale-110 transition-transform"
+                                                title="فتح الصورة"
+                                            >
+                                                <FaDownload size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+                        
+                        // إذا كانت رسالة صوتية
+                        if (isVoice) {
+                            return renderVoiceMessage(message, attachment);
+                        }
+                        
+                        // باقي أنواع الملفات
+                        return (
+                            <a
+                                key={index}
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-3 p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors max-w-xs ${
+                                    attachment.pending ? 'opacity-70 pointer-events-none' : ''
+                                }`}
+                            >
+                                <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
+                                    {getFileIcon(mimeType || fileName)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">
+                                        {fileName}
+                                    </p>
+                                    <p className="text-[10px] sm:text-xs text-gray-500">
+                                        {fileSize ? formatFileSize(fileSize) : 'ملف'}
+                                    </p>
+                                </div>
+                                {attachment.pending ? (
+                                    <div className="w-4 h-4 border-2 border-[#579BE8] border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <FaDownload size={14} className="text-gray-500 flex-shrink-0" />
+                                )}
+                            </a>
+                        );
+                    })}
+                </div>
+            );
+        }
+        
+        return null;
     };
 
     // Check authentication status
@@ -200,18 +928,6 @@ export default function HelpCenterPage() {
         }
     }, [isLoggedIn]);
 
-    // Check if chat is support chat
-    const isSupportChat = useCallback((chat) => {
-        if (!chat || !chat.participants) return false;
-        
-        if (!supportParticipantId) return false;
-        
-        return chat.participants.some(p => 
-            String(p) === String(supportParticipantId) || 
-            Number(p) === Number(supportParticipantId)
-        );
-    }, [supportParticipantId]);
-
     // Initialize Pusher
     const initializePusher = useCallback((chatId, chatUuid) => {
         if (!chatUuid || !isLoggedIn || !chatId) return null;
@@ -248,25 +964,45 @@ export default function HelpCenterPage() {
             console.error('Pusher initialization failed:', error);
             return null;
         }
-    }, [isLoggedIn, pusherChannel]);
+    }, [isLoggedIn]);
 
-    // Handle new Pusher message - تحسين معالجة الرسائل الجديدة
+    // Handle new Pusher message
     const handleNewPusherMessage = useCallback((newMessage) => {
         if (!newMessage || !chatId) return;
         
         console.log('📨 معالجة رسالة جديدة من Pusher في Support:', newMessage);
         
-        // التأكد من أن الرسالة تخص هذه المحادثة
         if (chatId && chatId === newMessage.chat_id) {
             setMessages(prevMessages => {
-                // التحقق من عدم وجود الرسالة مسبقاً
                 const messageExists = prevMessages.some(msg => msg.id === newMessage.id);
                 if (messageExists) {
                     return prevMessages;
                 }
                 
-                // تنسيق الرسالة الجديدة
                 const isFromCurrentUser = newMessage.sender_id === currentUser.id;
+                
+                let fileData = null;
+                if (newMessage.file_url) {
+                    fileData = {
+                        url: newMessage.file_url,
+                        name: newMessage.file_name || 'ملف',
+                        size: newMessage.file_size,
+                        type: newMessage.file_type || (newMessage.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image/' : 'file'),
+                        isImage: newMessage.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i),
+                        isVoice: newMessage.message_type === 'voice',
+                        duration: newMessage.duration
+                    };
+                } else if (newMessage.attachments?.[0]) {
+                    fileData = {
+                        url: newMessage.attachments[0].url,
+                        name: newMessage.attachments[0].file_name || newMessage.attachments[0].name,
+                        size: newMessage.attachments[0].size,
+                        type: newMessage.attachments[0].mime_type || newMessage.attachments[0].type,
+                        isImage: (newMessage.attachments[0].mime_type || '').startsWith('image/'),
+                        isVoice: newMessage.message_type === 'voice',
+                        duration: newMessage.duration
+                    };
+                }
                 
                 const formattedMessage = {
                     id: newMessage.id,
@@ -277,23 +1013,21 @@ export default function HelpCenterPage() {
                     is_outgoing: isFromCurrentUser,
                     isCurrentUser: isFromCurrentUser,
                     is_read: newMessage.is_read || false,
-                    file: newMessage.attachments?.[0] ? {
-                        url: newMessage.attachments[0].url,
-                        name: newMessage.attachments[0].file_name || newMessage.attachments[0].name,
-                        size: newMessage.attachments[0].size,
-                        type: newMessage.attachments[0].mime_type || newMessage.attachments[0].type,
-                        isImage: (newMessage.attachments[0].mime_type || '').startsWith('image/')
-                    } : null
+                    file: fileData,
+                    message_type: newMessage.message_type,
+                    file_url: newMessage.file_url,
+                    file_name: newMessage.file_name,
+                    file_size: newMessage.file_size,
+                    duration: newMessage.duration,
+                    attachments: newMessage.attachments
                 };
                 
                 console.log('✅ إضافة رسالة جديدة إلى القائمة:', formattedMessage);
                 
-                // إضافة الرسالة الجديدة وترتيبها زمنياً
                 const updatedMessages = [...prevMessages, formattedMessage];
                 return updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
             });
             
-            // التمرير إلى أسفل عند استلام رسالة جديدة
             setTimeout(() => {
                 scrollToBottom();
             }, 100);
@@ -303,170 +1037,170 @@ export default function HelpCenterPage() {
     }, [chatId, currentUser.id]);
 
     // Create or get support chat
- // Create or get support chat
-const createOrGetChat = useCallback(async () => {
-    if (!isLoggedIn) {
-        toast.error("يرجى تسجيل الدخول أولاً");
-        return null;
-    }
-
-    if (creatingChat) return null;
-
-    // جلب support ID إذا لم يكن موجوداً
-    let currentSupportId = supportParticipantId;
-    if (!currentSupportId) {
-        currentSupportId = await fetchSupportId();
-        if (!currentSupportId) {
-            toast.error("لا يوجد دعم فني متاح حالياً");
+    const createOrGetChat = useCallback(async () => {
+        if (!isLoggedIn) {
+            toast.error("يرجى تسجيل الدخول أولاً");
             return null;
         }
-    }
 
-    // Check if we already attempted to create support chat
-    if (chatCreationAttemptedRef.current === currentSupportId) {
-        return null;
-    }
+        if (creatingChat) return null;
 
-    try {
-        chatCreationAttemptedRef.current = currentSupportId;
-        setCreatingChat(true);
+        let currentSupportId = supportParticipantId;
+        if (!currentSupportId) {
+            currentSupportId = await fetchSupportId();
+            if (!currentSupportId) {
+                toast.error("لا يوجد دعم فني متاح حالياً");
+                return null;
+            }
+        }
 
-        // ✅ استخدام الدالة الموجودة في service
-        const result = await messageService.createChat(
-            currentSupportId, 
-            "user_user",
-            "الدعم الفني"
-        );
+        if (chatCreationAttemptedRef.current === currentSupportId) {
+            return null;
+        }
 
-        if (result.success && result.chat) {
-            const newChatId = result.chat.id || result.chat.chat_id;
-            
-            if (newChatId) {
-                setChatId(newChatId);
-                setSupportChat(result.chat);
+        try {
+            chatCreationAttemptedRef.current = currentSupportId;
+            setCreatingChat(true);
+
+            const result = await messageService.createChat(
+                currentSupportId, 
+                "user_user",
+                "الدعم الفني"
+            );
+
+            if (result.success && result.chat) {
+                const newChatId = result.chat.id || result.chat.chat_id;
+                
+                if (newChatId) {
+                    setChatId(newChatId);
+                    setSupportChat(result.chat);
+                    
+                    if (typeof window !== 'undefined') {
+                        localStorage.setItem('support_chat_id', newChatId.toString());
+                    }
+                    
+                    return newChatId;
+                }
+            } else {
+                console.error('Failed to create support chat:', result.error);
                 
                 if (typeof window !== 'undefined') {
-                    localStorage.setItem('support_chat_id', newChatId.toString());
+                    const storedChatId = localStorage.getItem('support_chat_id');
+                    if (storedChatId) {
+                        setChatId(parseInt(storedChatId));
+                        return parseInt(storedChatId);
+                    }
                 }
-                
-                return newChatId;
+                return null;
             }
-        } else {
-            console.error('Failed to create support chat:', result.error);
-            
-            // Try to get existing support chat from localStorage
-            if (typeof window !== 'undefined') {
-                const storedChatId = localStorage.getItem('support_chat_id');
-                if (storedChatId) {
-                    setChatId(parseInt(storedChatId));
-                    return parseInt(storedChatId);
-                }
-            }
+        } catch (error) {
+            console.error('Error creating support chat:', error);
             return null;
+        } finally {
+            setCreatingChat(false);
         }
-    } catch (error) {
-        console.error('Error creating support chat:', error);
-        return null;
-    } finally {
-        setCreatingChat(false);
-    }
-}, [isLoggedIn, supportParticipantId, fetchSupportId, creatingChat]);
+    }, [isLoggedIn, supportParticipantId, fetchSupportId, creatingChat]);
 
     // Load messages
-  // Load messages
-const loadMessages = useCallback(async (currentChatId, page = 1, refresh = false) => {
-    if (!currentChatId || !isLoggedIn) return;
+    const loadMessages = useCallback(async (currentChatId, page = 1, refresh = false) => {
+        if (!currentChatId || !isLoggedIn) return;
 
-    if (page === 1 && !refresh && lastLoadedChatIdRef.current === currentChatId) {
-        return;
-    }
-
-    try {
-        if (page === 1) {
-            setMessagesLoading(true);
-            lastLoadedChatIdRef.current = currentChatId;
+        if (page === 1 && !refresh && lastLoadedChatIdRef.current === currentChatId) {
+            return;
         }
 
-        // ✅ استخدام الدالة الموجودة في service
-        const response = await messageService.getMessages(currentChatId, { 
-            page,
-            refresh: refresh || page === 1
-        });
-
-        if (response.success && Array.isArray(response.data)) {
-            const fetchedMessages = response.data;
-            
-            const formattedMessages = fetchedMessages.map(msg => ({
-                id: msg.id,
-                type: msg.sender_id === currentUser.id ? "user" : "support",
-                text: msg.message || msg.text || "",
-                time: formatMessageTime(msg.created_at),
-                timestamp: new Date(msg.created_at).getTime(),
-                is_outgoing: msg.sender_id === currentUser.id,
-                isCurrentUser: msg.sender_id === currentUser.id,
-                is_read: msg.is_read || false,
-                file: msg.file_url ? {
-                    url: msg.file_url,
-                    name: msg.file_name || 'ملف',
-                    size: msg.file_size,
-                    type: msg.file_type || (msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image/' : 'file'),
-                    isImage: msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i),
-                    isVoice: msg.message_type === 'voice'
-                } : (msg.attachments?.[0] ? {
-                    url: msg.attachments[0].url,
-                    name: msg.attachments[0].file_name || msg.attachments[0].name,
-                    size: msg.attachments[0].size,
-                    type: msg.attachments[0].mime_type || msg.attachments[0].type,
-                    isImage: (msg.attachments[0].mime_type || '').startsWith('image/'),
-                    isVoice: msg.message_type === 'voice'
-                } : null)
-            }));
-
-            const sortedMessages = formattedMessages.sort((a, b) => a.timestamp - b.timestamp);
-
+        try {
             if (page === 1) {
-                setMessages(sortedMessages);
-                setCurrentPage(1);
-                setHasMoreMessages(fetchedMessages.length >= 20);
+                setMessagesLoading(true);
+                lastLoadedChatIdRef.current = currentChatId;
+            }
+
+            const response = await messageService.getMessages(currentChatId, { 
+                page,
+                refresh: refresh || page === 1
+            });
+
+            if (response.success && Array.isArray(response.data)) {
+                const fetchedMessages = response.data;
                 
-                setTimeout(() => {
-                    scrollToBottom();
-                }, 300);
-            } else {
-                setMessages(prev => {
-                    const combined = [...sortedMessages, ...prev];
-                    return combined.sort((a, b) => a.timestamp - b.timestamp);
-                });
-                setCurrentPage(prev => prev + 1);
-                setHasMoreMessages(fetchedMessages.length >= 20);
-            }
+                const formattedMessages = fetchedMessages.map(msg => ({
+                    id: msg.id,
+                    type: msg.sender_id === currentUser.id ? "user" : "support",
+                    text: msg.message || msg.text || "",
+                    time: formatMessageTime(msg.created_at),
+                    timestamp: new Date(msg.created_at).getTime(),
+                    is_outgoing: msg.sender_id === currentUser.id,
+                    isCurrentUser: msg.sender_id === currentUser.id,
+                    is_read: msg.is_read || false,
+                    message_type: msg.message_type,
+                    file_url: msg.file_url,
+                    file_name: msg.file_name,
+                    file_size: msg.file_size,
+                    duration: msg.duration,
+                    attachments: msg.attachments,
+                    file: msg.file_url ? {
+                        url: msg.file_url,
+                        name: msg.file_name || 'ملف',
+                        size: msg.file_size,
+                        type: msg.file_type || (msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image/' : 'file'),
+                        isImage: msg.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i),
+                        isVoice: msg.message_type === 'voice',
+                        duration: msg.duration
+                    } : (msg.attachments?.[0] ? {
+                        url: msg.attachments[0].url,
+                        name: msg.attachments[0].file_name || msg.attachments[0].name,
+                        size: msg.attachments[0].size,
+                        type: msg.attachments[0].mime_type || msg.attachments[0].type,
+                        isImage: (msg.attachments[0].mime_type || '').startsWith('image/'),
+                        isVoice: msg.message_type === 'voice',
+                        duration: msg.duration
+                    } : null)
+                }));
 
-            // Get chat details for Pusher initialization
-            if (page === 1) {
-                const chatDetails = await messageService.getChatDetails(currentChatId);
-                if (chatDetails.success && chatDetails.data?.chat_uuid) {
-                    initializePusher(currentChatId, chatDetails.data.chat_uuid);
+                const sortedMessages = formattedMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+                if (page === 1) {
+                    setMessages(sortedMessages);
+                    setCurrentPage(1);
+                    setHasMoreMessages(fetchedMessages.length >= 20);
+                    
+                    setTimeout(() => {
+                        scrollToBottom();
+                    }, 300);
+                } else {
+                    setMessages(prev => {
+                        const combined = [...sortedMessages, ...prev];
+                        return combined.sort((a, b) => a.timestamp - b.timestamp);
+                    });
+                    setCurrentPage(prev => prev + 1);
+                    setHasMoreMessages(fetchedMessages.length >= 20);
                 }
+
+                if (page === 1) {
+                    const chatDetails = await messageService.getChatDetails(currentChatId);
+                    if (chatDetails.success && chatDetails.data?.chat_uuid) {
+                        initializePusher(currentChatId, chatDetails.data.chat_uuid);
+                    }
+                }
+            } else {
+                if (page === 1) {
+                    setMessages([]);
+                }
+                setHasMoreMessages(false);
             }
-        } else {
+        } catch (error) {
+            console.error('Error loading messages:', error);
             if (page === 1) {
+                toast.error("حدث خطأ في تحميل الرسائل");
                 setMessages([]);
             }
-            setHasMoreMessages(false);
+        } finally {
+            if (page === 1) {
+                setMessagesLoading(false);
+                setLoading(false);
+            }
         }
-    } catch (error) {
-        console.error('Error loading messages:', error);
-        if (page === 1) {
-            toast.error("حدث خطأ في تحميل الرسائل");
-            setMessages([]);
-        }
-    } finally {
-        if (page === 1) {
-            setMessagesLoading(false);
-            setLoading(false);
-        }
-    }
-}, [isLoggedIn, currentUser.id, initializePusher]);
+    }, [isLoggedIn, currentUser.id, initializePusher]);
 
     // Load more messages (pagination)
     const loadMoreMessages = async () => {
@@ -519,236 +1253,250 @@ const loadMessages = useCallback(async (currentChatId, page = 1, refresh = false
         setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-   // Upload files and send message
-const uploadFilesAndSendMessage = async () => {
-    if (!chatId || selectedFiles.length === 0 || !isLoggedIn) return;
+    // Upload files and send message
+    const uploadFilesAndSendMessage = async () => {
+        if (!chatId || selectedFiles.length === 0 || !isLoggedIn) return;
 
-    try {
-        setUploadingFiles(true);
-        
-        const formData = new FormData();
-        
-        if (message.trim()) {
-            formData.append('message', message);
-        }
-        
-        // ✅ مهم: نحدد نوع الرسالة كـ file
-        formData.append('message_type', 'file');
+        try {
+            setUploadingFiles(true);
+            
+            const formData = new FormData();
+            
+            if (message.trim()) {
+                formData.append('message', message);
+            }
+            
+            formData.append('message_type', 'file');
 
-        // ✅ إضافة الملفات - كل ملف على حدة
-        selectedFiles.forEach((file) => {
-            formData.append('file', file); // المفتاح 'file' وليس 'files[]'
-        });
+            selectedFiles.forEach((file) => {
+                formData.append('file', file);
+            });
 
-        // ✅ تحضير المعاينة المؤقتة
-        const attachments = selectedFiles.map(file => ({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: URL.createObjectURL(file),
-            isImage: file.type.startsWith('image/'),
-            pending: true
-        }));
-
-        const tempMessage = {
-            id: `temp-${Date.now()}`,
-            type: "user",
-            text: message.trim() || (attachments.length === 1 && attachments[0].isImage ? '🖼️ صورة' : '📎 ملف'),
-            time: formatMessageTime(new Date().toISOString()),
-            timestamp: Date.now(),
-            is_temp: true,
-            is_outgoing: true,
-            isCurrentUser: true,
-            is_read: false,
-            file: attachments[0] // أول ملف فقط للعرض المؤقت
-        };
-
-        setMessages(prev => [...prev, tempMessage]);
-        setMessage("");
-        setSelectedFiles([]);
-        scrollToBottom();
-
-        // ✅ استخدام الدالة الموجودة في service
-        const result = await messageService.sendMessageWithAttachments(chatId, formData);
-
-        if (result.success) {
-            setMessages(prev => prev.map(msg => {
-                if (msg.id === tempMessage.id) {
-                    // ✅ تنسيق الرسالة حسب البيانات المرجعة من الـ API
-                    const apiMessage = result.data?.message || result.message;
-                    
-                    return {
-                        id: apiMessage?.id || msg.id,
-                        type: "user",
-                        text: apiMessage?.message || msg.text,
-                        time: formatMessageTime(apiMessage?.created_at),
-                        timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
-                        is_outgoing: true,
-                        isCurrentUser: true,
-                        is_temp: false,
-                        is_read: apiMessage?.is_read || false,
-                        file: apiMessage?.file_url ? {
-                            url: apiMessage.file_url,
-                            name: apiMessage.file_name || 'ملف',
-                            size: apiMessage.file_size,
-                            type: apiMessage.file_type || attachments[0]?.type,
-                            isImage: apiMessage.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-                        } : null
-                    };
-                }
-                return msg;
+            const attachments = selectedFiles.map(file => ({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                url: URL.createObjectURL(file),
+                isImage: file.type.startsWith('image/'),
+                pending: true
             }));
-        } else {
-            setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-            setSelectedFiles(prev => [...prev, ...selectedFiles]);
-            toast.error(result.error || result.message || 'فشل إرسال الرسالة');
+
+            const tempMessage = {
+                id: `temp-${Date.now()}`,
+                type: "user",
+                text: message.trim() || (attachments.length === 1 && attachments[0].isImage ? '🖼️ صورة' : '📎 ملف'),
+                time: formatMessageTime(new Date().toISOString()),
+                timestamp: Date.now(),
+                is_temp: true,
+                is_outgoing: true,
+                isCurrentUser: true,
+                is_read: false,
+                file: attachments[0],
+                attachments: attachments,
+                message_type: 'file'
+            };
+
+            setMessages(prev => [...prev, tempMessage]);
+            setMessage("");
+            setSelectedFiles([]);
+            scrollToBottom();
+
+            const result = await messageService.sendMessageWithAttachments(chatId, formData);
+
+            if (result.success) {
+                setMessages(prev => prev.map(msg => {
+                    if (msg.id === tempMessage.id) {
+                        const apiMessage = result.data?.message || result.message;
+                        
+                        return {
+                            id: apiMessage?.id || msg.id,
+                            type: "user",
+                            text: apiMessage?.message || msg.text,
+                            time: formatMessageTime(apiMessage?.created_at),
+                            timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
+                            is_outgoing: true,
+                            isCurrentUser: true,
+                            is_temp: false,
+                            is_read: apiMessage?.is_read || false,
+                            message_type: apiMessage?.message_type,
+                            file_url: apiMessage?.file_url,
+                            file_name: apiMessage?.file_name,
+                            file_size: apiMessage?.file_size,
+                            duration: apiMessage?.duration,
+                            attachments: apiMessage?.attachments
+                        };
+                    }
+                    return msg;
+                }));
+            } else {
+                setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+                setSelectedFiles(prev => [...prev, ...selectedFiles]);
+                toast.error(result.error || result.message || 'فشل إرسال الرسالة');
+            }
+        } catch (error) {
+            console.error('Error uploading files:', error);
+            toast.error('حدث خطأ: ' + error.message);
+        } finally {
+            setUploadingFiles(false);
         }
-    } catch (error) {
-        console.error('Error uploading files:', error);
-        toast.error('حدث خطأ: ' + error.message);
-    } finally {
-        setUploadingFiles(false);
-    }
-};
+    };
+
+    // Send voice message
+    // في ملف page.jsx، ابحث عن دالة sendVoiceMessage واستبدلها بهذا:
 
 // Send voice message
-const sendVoiceMessage = async (audioBlob, duration) => {
-    if (!chatId || !isLoggedIn) return;
+const sendVoiceMessage = async (audioFile, duration) => {
+  if (!chatId || !isLoggedIn) return;
+  
+  try {
+    setUploadingFiles(true);
     
-    try {
-        setUploadingFiles(true);
-        
-        const tempMessage = {
-            id: `temp-${Date.now()}`,
+    const tempId = `temp-${Date.now()}`;
+    const tempUrl = URL.createObjectURL(audioFile);
+    
+    const tempMessage = {
+      id: tempId,
+      type: "user",
+      text: '🎤 رسالة صوتية',
+      time: formatMessageTime(new Date().toISOString()),
+      timestamp: Date.now(),
+      is_temp: true,
+      is_outgoing: true,
+      isCurrentUser: true,
+      is_read: false,
+      message_type: 'voice',
+      duration: duration,
+      file_url: tempUrl,
+      file_name: audioFile.name, // سيكون voice-message.mp3
+      file_size: audioFile.size,
+      file: {
+        url: tempUrl,
+        name: audioFile.name,
+        size: audioFile.size,
+        type: 'audio/mp3', // تأكد من أنها MP3
+        isVoice: true,
+        duration: duration,
+        pending: true
+      }
+    };
+    
+    setMessages(prev => [...prev, tempMessage]);
+    setShowVoiceRecorder(false);
+    scrollToBottom();
+    
+    const result = await messageService.sendVoiceMessage(chatId, audioFile);
+    
+    if (result.success) {
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === tempId) {
+          const apiMessage = result.data?.message || result.message;
+          
+          return {
+            id: apiMessage?.id || msg.id,
             type: "user",
             text: '🎤 رسالة صوتية',
-            time: formatMessageTime(new Date().toISOString()),
-            timestamp: Date.now(),
-            is_temp: true,
+            time: formatMessageTime(apiMessage?.created_at),
+            timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
             is_outgoing: true,
             isCurrentUser: true,
+            is_temp: false,
             is_read: false,
+            message_type: 'voice',
+            duration: duration,
+            file_url: apiMessage?.file_url || msg.file_url,
+            file_name: apiMessage?.file_name || audioFile.name,
+            file_size: apiMessage?.file_size || msg.file_size,
             file: {
-                url: URL.createObjectURL(audioBlob),
-                name: 'voice-message.webm',
-                size: audioBlob.size,
-                type: 'audio/webm',
-                isImage: false,
-                isVoice: true,
-                duration: duration,
-                pending: true
+              url: apiMessage?.file_url || msg.file_url,
+              name: apiMessage?.file_name || audioFile.name,
+              size: apiMessage?.file_size || msg.file_size,
+              type: 'audio/mp3',
+              isVoice: true,
+              duration: duration,
+              pending: false
             }
-        };
+          };
+        }
+        return msg;
+      }));
+      
+      URL.revokeObjectURL(tempUrl);
+    } else {
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      URL.revokeObjectURL(tempUrl);
+      toast.error(result.error || 'فشل إرسال التسجيل الصوتي');
+    }
+  } catch (error) {
+    console.error('Error sending voice:', error);
+    toast.error('حدث خطأ في إرسال التسجيل الصوتي');
+  } finally {
+    setUploadingFiles(false);
+  }
+};
+
+    // Send text message
+    const handleSendMessage = async () => {
+        if (!isLoggedIn) {
+            toast.error("يرجى تسجيل الدخول أولاً");
+            return;
+        }
         
-        setMessages(prev => [...prev, tempMessage]);
-        setShowVoiceRecorder(false);
-        scrollToBottom();
-        
-        // ✅ استخدام الدالة الموجودة في service
-        const result = await messageService.sendVoiceMessage(chatId, audioBlob);
-        
-        if (result.success) {
-            setMessages(prev => prev.map(msg => {
-                if (msg.id === tempMessage.id) {
-                    const apiMessage = result.data?.message || result.message;
-                    
-                    return {
-                        id: apiMessage?.id || msg.id,
+        if ((!message.trim() && selectedFiles.length === 0) || sending || uploadingFiles || !chatId) return;
+
+        if (selectedFiles.length > 0) {
+            await uploadFilesAndSendMessage();
+            return;
+        }
+
+        try {
+            setSending(true);
+            
+            const tempMessage = {
+                id: `temp-${Date.now()}`,
+                type: "user",
+                text: message,
+                time: formatMessageTime(new Date().toISOString()),
+                timestamp: Date.now(),
+                is_temp: true,
+                is_outgoing: true,
+                isCurrentUser: true,
+                is_read: false,
+                message_type: 'text'
+            };
+
+            setMessages(prev => [...prev, tempMessage]);
+            setMessage("");
+            scrollToBottom();
+
+            const result = await messageService.sendMessage(chatId, message);
+
+            if (result.success && result.message) {
+                setMessages(prev => prev.map(msg => 
+                    msg.id === tempMessage.id ? {
+                        id: result.message.id,
                         type: "user",
-                        text: '🎤 رسالة صوتية',
-                        time: formatMessageTime(apiMessage?.created_at),
-                        timestamp: new Date(apiMessage?.created_at || Date.now()).getTime(),
+                        text: result.message.message,
+                        time: formatMessageTime(result.message.created_at),
+                        timestamp: new Date(result.message.created_at).getTime(),
                         is_outgoing: true,
                         isCurrentUser: true,
                         is_temp: false,
-                        file: apiMessage?.file_url ? {
-                            url: apiMessage.file_url,
-                            name: apiMessage.file_name || 'تسجيل صوتي',
-                            size: apiMessage.file_size,
-                            type: 'audio/webm',
-                            isVoice: true,
-                            duration: duration,
-                            pending: false
-                        } : null
-                    };
-                }
-                return msg;
-            }));
-        } else {
+                        is_read: result.message.is_read || false,
+                        message_type: 'text'
+                    } : msg
+                ));
+            } else {
+                setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+                toast.error(result.error || 'فشل إرسال الرسالة');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
             setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-            toast.error(result.error || 'فشل إرسال التسجيل الصوتي');
+            toast.error('حدث خطأ في إرسال الرسالة');
+        } finally {
+            setSending(false);
         }
-    } catch (error) {
-        console.error('Error sending voice:', error);
-        toast.error('حدث خطأ في إرسال التسجيل الصوتي');
-    } finally {
-        setUploadingFiles(false);
-    }
-};
-
-    // Send text message
-    // Send text message
-const handleSendMessage = async () => {
-    if (!isLoggedIn) {
-        toast.error("يرجى تسجيل الدخول أولاً");
-        return;
-    }
-    
-    if ((!message.trim() && selectedFiles.length === 0) || sending || uploadingFiles || !chatId) return;
-
-    if (selectedFiles.length > 0) {
-        await uploadFilesAndSendMessage();
-        return;
-    }
-
-    try {
-        setSending(true);
-        
-        const tempMessage = {
-            id: `temp-${Date.now()}`,
-            type: "user",
-            text: message,
-            time: formatMessageTime(new Date().toISOString()),
-            timestamp: Date.now(),
-            is_temp: true,
-            is_outgoing: true,
-            isCurrentUser: true,
-            is_read: false
-        };
-
-        setMessages(prev => [...prev, tempMessage]);
-        setMessage("");
-        scrollToBottom();
-
-        // ✅ استخدام الدالة الموجودة في service
-        const result = await messageService.sendMessage(chatId, message);
-
-        if (result.success && result.message) {
-            setMessages(prev => prev.map(msg => 
-                msg.id === tempMessage.id ? {
-                    id: result.message.id,
-                    type: "user",
-                    text: result.message.message,
-                    time: formatMessageTime(result.message.created_at),
-                    timestamp: new Date(result.message.created_at).getTime(),
-                    is_outgoing: true,
-                    isCurrentUser: true,
-                    is_temp: false,
-                    is_read: result.message.is_read || false
-                } : msg
-            ));
-        } else {
-            setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-            toast.error(result.error || 'فشل إرسال الرسالة');
-        }
-    } catch (error) {
-        console.error('Error sending message:', error);
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-        toast.error('حدث خطأ في إرسال الرسالة');
-    } finally {
-        setSending(false);
-    }
-};
+    };
 
     // Search in messages
     const searchMessages = (query) => {
@@ -846,7 +1594,6 @@ const handleSendMessage = async () => {
                 return;
             }
 
-            // Check for existing chat
             if (typeof window !== 'undefined') {
                 const storedChatId = localStorage.getItem('support_chat_id');
                 if (storedChatId) {
@@ -870,8 +1617,15 @@ const handleSendMessage = async () => {
                 pusherChannel.unbind_all();
                 pusherChannel.unsubscribe();
             }
+            Object.values(audioRefs.current).forEach(audio => {
+                if (audio) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            });
+            audioRefs.current = {};
         };
-    }, [isLoggedIn]); // تشغيل مرة واحدة فقط عند تغيير حالة تسجيل الدخول
+    }, [isLoggedIn, fetchSupportId, createOrGetChat, loadMessages]);
 
     return (
         <div className="flex flex-col h-[500px] sm:h-[600px] md:h-[700px] lg:h-[750px] bg-white dark:bg-card border border-border/60 rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden shadow-sm fade-in-up p-1 sm:p-2 md:p-0">
@@ -1017,7 +1771,7 @@ const handleSendMessage = async () => {
                 ) : loading && messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-2 sm:space-y-3">
-                            <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 border-b-2 border-[#579BE8] mx-auto"></div>
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:h-7 md:h-8 md:w-8 border-b-2 border-[#579BE8] mx-auto"></div>
                             <p className="text-xs sm:text-sm text-muted-foreground">جاري تحميل المحادثة...</p>
                         </div>
                     </div>
@@ -1046,13 +1800,15 @@ const handleSendMessage = async () => {
                                         >
                                             {msg.file && (
                                                 <div className="mb-2">
-                                                    {msg.file.isImage ? (
+                                                    {msg.file.isVoice ? (
+                                                        renderVoiceMessage(msg, msg.file)
+                                                    ) : msg.file.isImage ? (
                                                         <div className="relative group">
                                                             <img 
-                                                                src={msg.file.url || msg.file.preview} 
+                                                                src={msg.file.url} 
                                                                 alt={msg.file.name}
                                                                 className="max-w-full max-h-48 sm:max-h-64 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                                                onClick={() => window.open(msg.file.url || msg.file.preview, '_blank')}
+                                                                onClick={() => window.open(msg.file.url, '_blank')}
                                                             />
                                                             {msg.file.pending && (
                                                                 <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
@@ -1075,6 +1831,8 @@ const handleSendMessage = async () => {
                                                                     download={msg.file.name}
                                                                     className="p-1 hover:bg-white/20 rounded-full transition-colors"
                                                                     onClick={(e) => e.stopPropagation()}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
                                                                 >
                                                                     <FaDownload className="w-3 h-3" />
                                                                 </a>
@@ -1087,7 +1845,11 @@ const handleSendMessage = async () => {
                                                 </div>
                                             )}
                                             
-                                            {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
+                                            {!msg.file?.isVoice && renderFileMessage(msg)}
+                                            
+                                            {msg.text && !msg.file?.isVoice && msg.message_type !== 'voice' && (
+                                                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-1 sm:gap-2 px-1">
                                             {msg.type === "support" && (
@@ -1194,6 +1956,16 @@ const handleSendMessage = async () => {
                             </div>
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Voice Recorder */}
+            <AnimatePresence>
+                {showVoiceRecorder && (
+                    <VoiceRecorder
+                        onSend={sendVoiceMessage}
+                        onCancel={() => setShowVoiceRecorder(false)}
+                    />
                 )}
             </AnimatePresence>
 
@@ -1328,6 +2100,18 @@ const handleSendMessage = async () => {
                                             {selectedFiles.length}
                                         </span>
                                     )}
+                                </button>
+                                <button 
+                                    onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
+                                    className={`p-1.5 sm:p-2 md:p-2.5 rounded-full transition-all ${
+                                        showVoiceRecorder 
+                                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                                            : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
+                                    }`}
+                                    disabled={sending || uploadingFiles}
+                                    title="تسجيل صوتي"
+                                >
+                                    <FaMicrophone size={16} className="sm:w-4 sm:h-4 md:w-5 md:h-5" />
                                 </button>
                             </div>
 
