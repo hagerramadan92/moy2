@@ -1,4 +1,4 @@
-// [file name]: Layout.js (المحدث)
+// [file name]: Layout.js (المحدث مع إضافة واتساب)
 // [file content begin]
 'use client';
 
@@ -10,6 +10,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import FloatingChatIcon from '@/components/Chat/FloatingChatIcon';
 import ChatModal from '@/components/Chat/ChatModal';
+import WhatsAppIcon from '../WhatsApp/WhatsAppIcon';
+// import WhatsAppIcon from '@/components/WhatsAppIcon/WhatsAppIcon'; // استيراد أيقونة الواتساب
 
 const Layout = ({ children }) => {
 
@@ -28,6 +30,10 @@ const Layout = ({ children }) => {
   // Routes where chat should be hidden
   const hideChatRoutes = ['/login', '/otp', '/register', '/forgot-password'];
   const showChat = !hideChatRoutes.includes(pathname);
+
+  // Routes where WhatsApp icon should be hidden (optional)
+  const hideWhatsAppRoutes = ['/login', '/otp', '/register', '/forgot-password'];
+  const showWhatsApp = !hideWhatsAppRoutes.includes(pathname);
 
   // Get user ID from localStorage
   useEffect(() => {
@@ -196,6 +202,9 @@ const Layout = ({ children }) => {
           />
         )}
 
+        {/* WhatsApp Icon - يظهر في جميع الصفحات ما عدا صفحات المصادقة */}
+        {showWhatsApp && <WhatsAppIcon />}
+
         {/* Chat Modal */}
         <ChatModal 
           isOpen={isChatModalOpen || showSupportModal}
@@ -211,8 +220,6 @@ const Layout = ({ children }) => {
     </AuthProvider>
   );
 };
-
-
 
 // Component to handle global chat events
 const GlobalChatEvents = ({ onOpenChat, onOpenSpecificChat, onStartNewChat }) => {
