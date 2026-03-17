@@ -126,7 +126,7 @@ export const walletApi = {
   // الحصول على رصيد المحفظة
   async getWalletBalance() {
     try {
-      const response = await api.get('/user/wallet');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/user/wallet');
       return response.data;
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
@@ -137,7 +137,7 @@ export const walletApi = {
   // الحصول على المعاملات
   async getTransactions(page = 1, limit = 10, type = 'all') {
     try {
-      let url = `/user/wallet/transactions?page=${page}&limit=${limit}`;
+      let url = `https://dashboard.waytmiah.com/api/v1/user/wallet/transactions?page=${page}&limit=${limit}`;
       if (type !== 'all') {
         url += `&type=${type}`;
       }
@@ -161,7 +161,7 @@ export const walletApi = {
     endDate = ''
   ) {
     try {
-      let url = `/user/wallet/transactions?page=${page}&limit=${limit}`;
+      let url = `https://dashboard.waytmiah.com/api/v1/user/wallet/transactions?page=${page}&limit=${limit}`;
       
       const params = new URLSearchParams();
       
@@ -186,7 +186,7 @@ export const walletApi = {
   // إضافة أموال
   async depositMoney(amount, payment_method) {
     try {
-      const response = await api.post('/user/wallet/deposit', {
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/user/wallet/deposit', {
         amount: parseFloat(amount),
         payment_method
       });
@@ -200,7 +200,7 @@ export const walletApi = {
   // الحصول على طرق الدفع
   async getPaymentMethods() {
     try {
-      const response = await api.get('/payment-methods');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/payment-methods');
       return response.data;
     } catch (error) {
       console.error('Error fetching payment methods:', error);
@@ -212,7 +212,7 @@ export const walletApi = {
   async exportStatement(startDate, endDate, format = 'pdf') {
     try {
       const response = await api.get(
-        `/user/wallet/statement?start_date=${startDate}&end_date=${endDate}&format=${format}`,
+        `https://dashboard.waytmiah.com/api/v1/user/wallet/statement?start_date=${startDate}&end_date=${endDate}&format=${format}`,
         {
           responseType: 'blob'
         }
@@ -227,7 +227,7 @@ export const walletApi = {
   // الحصول على تفاصيل معاملة محددة
   async getTransactionDetails(transactionId) {
     try {
-      const response = await api.get(`/user/wallet/transactions/${transactionId}`);
+      const response = await api.get(`https://dashboard.waytmiah.com/api/v1/user/wallet/transactions/${transactionId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching transaction details:', error);
@@ -238,7 +238,7 @@ export const walletApi = {
   // الحصول على إحصائيات المعاملات
   async getTransactionStats(startDate = '', endDate = '') {
     try {
-      let url = '/user/wallet/transactions/stats';
+      let url = 'https://dashboard.waytmiah.com/api/v1/user/wallet/transactions/stats';
       const params = new URLSearchParams();
       
       if (startDate) params.append('start_date', startDate);
@@ -262,7 +262,7 @@ export const generalApi = {
   // جلب بيانات الصفحة الرئيسية
   async getHomePageData() {
     try {
-      const response = await api.get('/pages/home');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/pages/home');
       return response.data;
     } catch (error) {
       console.error('Error fetching home page data:', error);
@@ -285,7 +285,7 @@ export const generalApi = {
   // جلب العروض
   async getDeals() {
     try {
-      const response = await api.get('/deals');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/deals');
       return response.data;
     } catch (error) {
       console.error('Error fetching deals:', error);
@@ -300,7 +300,7 @@ export const generalApi = {
   // جلب التقييمات
   async getReviews() {
     try {
-      const response = await api.get('/reviews');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/reviews');
       return response.data;
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -315,7 +315,7 @@ export const generalApi = {
   // جلب خطوات العمل
   async getHowItWorks() {
     try {
-      const response = await api.get('/how-it-works');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/how-it-works');
       return response.data;
     } catch (error) {
       console.error('Error fetching how it works:', error);
@@ -330,7 +330,7 @@ export const generalApi = {
   // جلب الموقع الحالي (إذا كان هناك API للمواقع)
   async getLocations() {
     try {
-      const response = await api.get('/locations');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/locations');
       return response.data;
     } catch (error) {
       console.error('Error fetching locations:', error);
@@ -348,7 +348,7 @@ export const userApi = {
   // تسجيل الدخول
   async login(email, password) {
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/auth/login', {
         email,
         password
       });
@@ -362,7 +362,7 @@ export const userApi = {
   // التسجيل
   async register(userData) {
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/auth/register', userData);
       return response.data;
     } catch (error) {
       console.error('Error registering:', error);
@@ -373,7 +373,7 @@ export const userApi = {
   // الحصول على بيانات المستخدم
   async getUserProfile() {
     try {
-      const response = await api.get('/user/profile');
+      const response = await api.get('https://dashboard.waytmiah.com/api/v1/user/profile');
       return response.data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -384,7 +384,7 @@ export const userApi = {
   // تحديث بيانات المستخدم
   async updateUserProfile(userData) {
     try {
-      const response = await api.put('/user/profile', userData);
+      const response = await api.put('https://dashboard.waytmiah.com/api/v1/user/profile', userData);
       return response.data;
     } catch (error) {
       console.error('Error updating user profile:', error);
@@ -395,7 +395,7 @@ export const userApi = {
   // تحديث كلمة المرور
   async updatePassword(currentPassword, newPassword) {
     try {
-      const response = await api.put('/user/password', {
+      const response = await api.put('https://dashboard.waytmiah.com/api/v1/user/password', {
         current_password: currentPassword,
         new_password: newPassword
       });
@@ -409,7 +409,7 @@ export const userApi = {
   // نسيان كلمة المرور
   async forgotPassword(email) {
     try {
-      const response = await api.post('/auth/forgot-password', { email });
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/auth/forgot-password', { email });
       return response.data;
     } catch (error) {
       console.error('Error in forgot password:', error);
@@ -420,7 +420,7 @@ export const userApi = {
   // إعادة تعيين كلمة المرور
   async resetPassword(token, email, password, password_confirmation) {
     try {
-      const response = await api.post('/auth/reset-password', {
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/auth/reset-password', {
         token,
         email,
         password,
@@ -439,7 +439,7 @@ export const ordersApi = {
   // إنشاء طلب جديد
   async createOrder(orderData) {
     try {
-      const response = await api.post('/orders', orderData);
+      const response = await api.post('https://dashboard.waytmiah.com/api/v1/orders', orderData);
       return response.data;
     } catch (error) {
       console.error('Error creating order:', error);
@@ -450,7 +450,7 @@ export const ordersApi = {
   // جلب طلبات المستخدم
   async getUserOrders(page = 1, limit = 10, status = '') {
     try {
-      let url = `/user/orders?page=${page}&limit=${limit}`;
+      let url = `https://dashboard.waytmiah.com/api/v1/user/orders?page=${page}&limit=${limit}`;
       if (status) {
         url += `&status=${status}`;
       }
@@ -465,7 +465,7 @@ export const ordersApi = {
   // جلب تفاصيل طلب معين
   async getOrderDetails(orderId) {
     try {
-      const response = await api.get(`/orders/${orderId}`);
+      const response = await api.get(`https://dashboard.waytmiah.com/api/v1/orders/${orderId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -476,7 +476,7 @@ export const ordersApi = {
   // تحديث حالة الطلب
   async updateOrderStatus(orderId, status) {
     try {
-      const response = await api.put(`/orders/${orderId}/status`, { status });
+      const response = await api.put(`https://dashboard.waytmiah.com/api/v1/orders/${orderId}/status`, { status });
       return response.data;
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -487,7 +487,7 @@ export const ordersApi = {
   // إلغاء الطلب
   async cancelOrder(orderId) {
     try {
-      const response = await api.delete(`/orders/${orderId}`);
+      const response = await api.delete(`https://dashboard.waytmiah.com/api/v1/orders/${orderId}`);
       return response.data;
     } catch (error) {
       console.error('Error canceling order:', error);
@@ -626,32 +626,32 @@ export const getApiConfig = () => {
 };
 
 // دالة لاختبار الـ proxy
-export const testProxyConnection = async () => {
-  try {
-    const response = await api.get('/services');
-    return {
-      success: true,
-      data: response.data,
-      proxyUsed: response.config.url.includes('/api/proxy/'),
-      config: {
-        url: response.config.url,
-        baseURL: response.config.baseURL,
-        method: response.config.method
-      }
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message,
-      proxyUsed: error.config?.url?.includes('/api/proxy/') || false,
-      config: {
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        method: error.config?.method
-      }
-    };
-  }
-};
+// export const testProxyConnection = async () => {
+//   try {
+//     const response = await api.get('/services');
+//     return {
+//       success: true,
+//       data: response.data,
+//       proxyUsed: response.config.url.includes('/api/proxy/'),
+//       config: {
+//         url: response.config.url,
+//         baseURL: response.config.baseURL,
+//         method: response.config.method
+//       }
+//     };
+//   } catch (error) {
+//     return {
+//       success: false,
+//       error: error.message,
+//       proxyUsed: error.config?.url?.includes('/api/proxy/') || false,
+//       config: {
+//         url: error.config?.url,
+//         baseURL: error.config?.baseURL,
+//         method: error.config?.method
+//       }
+//     };
+//   }
+// };
 
 // دالة للحصول على الـ services مباشرة (بدون proxy)
 export const getServicesDirect = async () => {
