@@ -241,10 +241,7 @@ const FeaturedArticle = ({ article }) => {
                 <FaCalendarAlt className="text-gray-300" />
                 <span className="text-gray-200">{article.date}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <FaClock className="text-gray-300" />
-                <span className="text-gray-200">{article.readTime}</span>
-              </div>
+           
               <div className="flex items-center gap-2">
                 <FaChartLine className="text-gray-300" />
                 <span className="text-gray-200">{article.views.toLocaleString()} مشاهدة</span>
@@ -355,7 +352,7 @@ const ArticleCard = ({ article, variant = 'default' }) => {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <FaClock className="text-xs" />
-                  <span>{article.readTime}</span>
+                  <span>{article.date}</span>
                 </div>
               </div>
               <FaArrowRight className="text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all flex-shrink-0" />

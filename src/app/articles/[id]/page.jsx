@@ -656,15 +656,7 @@ const ArticleDetails = () => {
                 <span className="font-cairo font-bold text-gray-700">{article.date}</span>
               </motion.div>
               
-              <motion.div 
-                className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-gradient-to-br from-[#579BE8]/10 to-[#315782]/10 backdrop-blur-sm border border-[#579BE8]/20"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="p-1.5 rounded-lg bg-[#579BE8]/20">
-                  <FaClock className="text-[#579BE8] text-sm" />
-                </div>
-                <span className="font-cairo font-bold text-gray-700">{article.readTime}</span>
-              </motion.div>
+            
               
               <motion.div 
                 className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-gradient-to-br from-[#579BE8]/10 to-[#315782]/10 backdrop-blur-sm border border-[#579BE8]/20"
@@ -1273,9 +1265,7 @@ const ArticleDetails = () => {
                 <p className="font-cairo font-medium text-sm text-gray-600 mb-3 line-clamp-1">
                   {article.author2Title}
                 </p>
-                <button className="px-5 py-2 bg-gradient-to-r from-[#579BE8] to-[#315782] text-white rounded-lg font-cairo font-semibold text-sm hover:from-[#4788d5] hover:to-[#2a4a6f] transition-all duration-300 shadow-sm hover:shadow-md">
-                  متابعة
-                </button>
+            
               </div>
             </div>
           </div>

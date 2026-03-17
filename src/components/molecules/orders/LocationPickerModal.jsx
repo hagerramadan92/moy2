@@ -1,26 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { X, Navigation, Check, AlertCircle, Search , MapPin } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from 'next/dynamic';
+import { X, Navigation, Check, AlertCircle, Search, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
- 
+
+// ✅ Dynamic import for Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+
 // ✅ Fix Leaflet marker icons in Next.js
 const fixLeafletIcons = () => {
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  });
+  if (typeof window !== 'undefined') {
+    const L = require('leaflet');
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+      iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+    });
+  }
 };
 
+// MapRefBridge component - simplified version
 function MapRefBridge({ mapRef }) {
   const map = useMap();
   useEffect(() => {
-    mapRef.current = map;
+    if (map) {
+      mapRef.current = map;
+    }
     return () => {
       mapRef.current = null;
     };
@@ -28,20 +48,68 @@ function MapRefBridge({ mapRef }) {
   return null;
 }
 
+// Custom hook for using map
+const useMap = () => {
+  const map = require('react-leaflet').useMap();
+  return map;
+};
+
+// Custom hook for map events
+const useMapEvents = (events) => {
+  const map = useMap();
+  useEffect(() => {
+    if (map) {
+      map.on(events);
+      return () => {
+        map.off(events);
+      };
+    }
+  }, [map, events]);
+};
+
+// LocationMarker component - simplified
 function LocationMarker({ position, setPosition }) {
   const map = useMap();
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    if (position) map.flyTo(position, Math.max(map.getZoom(), 15));
-  }, [position, map]);
+    if (map) {
+      setMapReady(true);
+    }
+  }, [map]);
 
-  useMapEvents({
-    click(e) {
+  useEffect(() => {
+    if (position && map && mapReady) {
+      try {
+        const currentZoom = map.getZoom();
+        map.flyTo(position, Math.max(currentZoom, 15));
+      } catch (error) {
+        console.error('Error flying to position:', error);
+        // Fallback to setView if flyTo fails
+        try {
+          map.setView(position, 15);
+        } catch (e) {
+          console.error('Error setting view:', e);
+        }
+      }
+    }
+  }, [position, map, mapReady]);
+
+  useEffect(() => {
+    if (!map || !mapReady) return;
+
+    const handleClick = (e) => {
       setPosition(e.latlng);
-    },
-  });
+    };
 
-  return position ? <Marker position={position} /> : null;
+    map.on('click', handleClick);
+
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, mapReady, setPosition]);
+
+  return position && mapReady ? <Marker position={position} /> : null;
 }
 
 /**
@@ -157,7 +225,7 @@ function SearchBox({ onPick }) {
                       onClick={() => pickItem(item)}
                       className="w-full text-right px-4 py-3 hover:bg-gray-50 transition flex items-start gap-2"
                     >
-                      <MapPin size={16} className="text-[#579BE8]  mt-0.5 flex-shrink-0" />
+                      <MapPin size={16} className="text-[#579BE8] mt-0.5 flex-shrink-0" />
                       <span className="text-sm text-gray-800 leading-5">{title}</span>
                     </button>
                   </li>
@@ -172,7 +240,7 @@ function SearchBox({ onPick }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-xs font-semibold text-[#579BE8]  hover:underline"
+                className="text-xs font-semibold text-[#579BE8] hover:underline"
               >
                 إغلاق
               </button>
@@ -191,12 +259,12 @@ function SearchBox({ onPick }) {
   );
 }
 
-
 export default function LocationPickerModal({ isOpen, onClose, onSelect, initialLocation }) {
   const [position, setPosition] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [lastLocateError, setLastLocateError] = useState(null);
+  const [isClient, setIsClient] = useState(false);
 
   const mapRef = useRef(null);
   const hardTimeoutRef = useRef(null);
@@ -204,9 +272,17 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
   const isHttps = typeof window !== "undefined" ? window.location.protocol === "https:" : false;
 
   useEffect(() => {
-    fixLeafletIcons();
+    setIsClient(true);
+  }, []);
 
-    if (isOpen) {
+  useEffect(() => {
+    if (isClient) {
+      fixLeafletIcons();
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isOpen && isClient) {
       setLastLocateError(null);
 
       if (initialLocation?.lat && initialLocation?.lng) {
@@ -225,7 +301,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
         hardTimeoutRef.current = null;
       }
     }
-  }, [isOpen, initialLocation]);
+  }, [isOpen, initialLocation, isClient]);
 
   const stopLoading = () => {
     setLoading(false);
@@ -261,7 +337,20 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
       const coords = { lat: latitude, lng: longitude };
       setPosition(coords);
 
-      if (mapRef.current) mapRef.current.flyTo(coords, Math.max(mapRef.current.getZoom(), 15));
+      if (mapRef.current) {
+        try {
+          const currentZoom = mapRef.current.getZoom();
+          mapRef.current.flyTo(coords, Math.max(currentZoom, 15));
+        } catch (error) {
+          console.error('Error flying to location:', error);
+          // Fallback
+          try {
+            mapRef.current.setView(coords, 15);
+          } catch (e) {
+            console.error('Error setting view:', e);
+          }
+        }
+      }
 
       toast.success("تم تحديد موقعك");
       stopLoading();
@@ -271,7 +360,6 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
       setLastLocateError(err);
       stopLoading();
 
-      // keep it short (as you asked)
       if (!isHttps) {
         toast.error("الموقع يحتاج HTTPS لتحديد الموقع");
         return;
@@ -319,10 +407,22 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
   const handlePickFromSearch = (coords) => {
     setPosition(coords);
     setLastLocateError(null);
-    if (mapRef.current) mapRef.current.flyTo(coords, Math.max(mapRef.current.getZoom(), 15));
+    if (mapRef.current) {
+      try {
+        const currentZoom = mapRef.current.getZoom();
+        mapRef.current.flyTo(coords, Math.max(currentZoom, 15));
+      } catch (error) {
+        console.error('Error flying to search result:', error);
+        try {
+          mapRef.current.setView(coords, 15);
+        } catch (e) {
+          console.error('Error setting view:', e);
+        }
+      }
+    }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !isClient) return null;
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -338,8 +438,8 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
         </div>
 
         <div className="flex-1 relative bg-gray-100">
-          {/* ✅ Search input ALWAYS at top of map */}
-          {/* <SearchBox onPick={handlePickFromSearch} /> */}
+          {/* Search input */}
+          <SearchBox onPick={handlePickFromSearch} />
 
           {mapReady && (
             <MapContainer
@@ -347,13 +447,14 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
               zoom={position ? 15 : 13}
               style={{ height: "100%", width: "100%" }}
               scrollWheelZoom
+              whenCreated={(map) => {
+                mapRef.current = map;
+              }}
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-
-              <MapRefBridge mapRef={mapRef} />
 
               <LocationMarker position={position} setPosition={setPosition} />
             </MapContainer>
@@ -369,7 +470,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
             </div>
           )}
 
-          {/* ✅ ONLY show this panel when locate fails */}
+          {/* Error panel */}
           {lastLocateError && !loading && (
             <div className="absolute top-20 left-4 right-4 z-[1100]">
               <div className="bg-white/95 backdrop-blur-sm border border-red-200 rounded-2xl shadow-lg p-3 flex items-start gap-2">
@@ -389,7 +490,7 @@ export default function LocationPickerModal({ isOpen, onClose, onSelect, initial
             <button
               onClick={handleLocateMe}
               disabled={loading}
-              className="flex  items-center md:gap-2 bg-white text-[#579BE8]  md:px-6 md:py-3 py-1 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
+              className="flex items-center md:gap-2 bg-white text-[#579BE8] md:px-6 md:py-3 py-1 rounded-xl shadow-lg font-semibold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-70 min-w-[160px] justify-center"
             >
               <Navigation size={20} className={loading ? "animate-spin" : ""} />
               <span>{loading ? "جاري التحديد..." : "موقعي الحالي"}</span>

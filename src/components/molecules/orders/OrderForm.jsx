@@ -6,14 +6,16 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Calendar, ArrowRight, Truck, CheckCircle2, AlertCircle, X, ArrowLeft, Navigation, Search, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { FaStar, FaMapMarkerAlt, FaHome, FaBriefcase, FaMapMarkedAlt, FaPlus } from 'react-icons/fa';
-
+import { FaStar, FaMapMarkerAlt, FaHome, FaBriefcase, FaMapMarkedAlt, FaPlus, FaTrashAlt, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
 import usePusher from '@/hooks/usePusher';
+import { BiCurrentLocation } from "react-icons/bi";
+import { FaBuilding, FaInfoCircle } from "react-icons/fa";
 import OrderSchedulePage from './OrderSchedulePage';
 import Spinner from "@/components/ui/spinner";
 import WaterTypeSelect from '@/components/common/WaterTypeSelect';
 import ServiceSelect from '@/components/common/ServiceSelect';
-
+import Swal from "sweetalert2";
+import { FaRegTrashCan } from 'react-icons/fa6';
 // LocationPickerModal مع تحسينات الريسبونسيف
 const LocationPickerModal = dynamic(
   () => import('./LocationPickerModal'),
@@ -60,7 +62,7 @@ const getAddressFromCoordinates = async (lat, lng) => {
     return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   }
 };
-
+ 
 // Add Address Modal Component
 function AddAddressModal({ isOpen, onClose, onAddressAdded }) {
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -388,6 +390,130 @@ function AddAddressModal({ isOpen, onClose, onAddressAdded }) {
     </>
   );
 }
+//   const handleDeleteAddress = async (addressId, addressName, event) => {
+//     event.stopPropagation(); // Prevent card click
+    
+//     // Show confirmation dialog
+//     const result = await Swal.fire({
+//         title: "حذف العنوان",
+//         text: `هل أنت متأكد من حذف العنوان "${addressName}"؟`,
+//         icon: "warning",
+//         showCancelButton: true,
+//         confirmButtonText: "نعم، حذف",
+//         cancelButtonText: "إلغاء",
+//         confirmButtonColor: "#ef4444",
+//         cancelButtonColor: "#6b7280",
+//         background: "var(--background)",
+//         color: "var(--foreground)",
+//         width: window.innerWidth < 640 ? '90%' : '32rem',
+//         customClass: {
+//             popup: "rounded-2xl border border-border shadow-xl mx-4",
+//             confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 ml-2 text-sm sm:text-base",
+//             cancelButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+//             title: "text-sm text-right",
+//             htmlContainer: "text-sm sm:text-base text-right"
+//         }
+//     });
+
+//     if (!result.isConfirmed) return;
+
+//     // Show loading toast
+//     const loadingToast = toast.loading("جاري حذف العنوان...", {
+//         style: {
+//             background: "var(--background)",
+//             border: "1px solid var(--border)",
+//             borderRadius: "12px",
+//             padding: "16px",
+//         },
+//     });
+
+//     try {
+//         const accessToken = localStorage.getItem("accessToken");
+        
+//         if (!accessToken) {
+//             toast.dismiss(loadingToast);
+//             toast.error("يرجى تسجيل الدخول أولاً", {
+//                 icon: <FaExclamationTriangle className="w-5 h-5" />,
+//                 style: {
+//                     background: "#F75A65",
+//                     color: "#fff",
+//                     borderRadius: "12px",
+//                     padding: "16px",
+//                 },
+//             });
+//             return;
+//         }
+
+//         const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${addressId}`, {
+//             method: 'DELETE',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'Accept': 'application/json',
+//                 'Authorization': `Bearer ${accessToken}`,
+//             },
+//         });
+
+//         const data = await response.json().catch(() => ({}));
+
+//         toast.dismiss(loadingToast);
+
+//         if (response.ok) {
+//             // Remove the address from local state
+//             setAddresses(prevAddresses => prevAddresses.filter(addr => addr.id !== addressId));
+//             setPlaces(prevPlaces => prevPlaces.filter(place => {
+//                 if (typeof place === 'object' && place.id) {
+//                     return place.id !== addressId;
+//                 }
+//                 return true;
+//             }));
+//             setFavorites(prevFavorites => prevFavorites.filter(fav => {
+//                 if (typeof fav === 'object' && fav.id) {
+//                     return fav.id !== addressId;
+//                 }
+//                 return true;
+//             }));
+
+//             // Close popup if the deleted address was selected
+//             if (selectedAddress?.id === addressId) {
+//                 setShowAddressPopup(false);
+//                 setSelectedAddress(null);
+//             }
+
+//             toast.success(data.message || "تم حذف العنوان بنجاح", {
+//                 icon: <FaCheckCircle className="w-5 h-5" />,
+//                 style: {
+//                     background: "#579BE8",
+//                     color: "#fff",
+//                     borderRadius: "12px",
+//                     padding: "16px",
+//                 },
+//             });
+//         } else {
+//             const errorMessage = data.message || data.error || 'فشل حذف العنوان. يرجى المحاولة مرة أخرى';
+//             toast.error(errorMessage, {
+//                 icon: <FaExclamationTriangle className="w-5 h-5" />,
+//                 style: {
+//                     background: "#F75A65",
+//                     color: "#fff",
+//                     borderRadius: "12px",
+//                     padding: "16px",
+//                 },
+//             });
+//         }
+//     } catch (error) {
+//         toast.dismiss(loadingToast);
+//         console.error('Error deleting address:', error);
+//         toast.error("حدث خطأ أثناء حذف العنوان. يرجى المحاولة مرة أخرى", {
+//             icon: <FaExclamationTriangle className="w-5 h-5" />,
+//             style: {
+//                 background: "#F75A65",
+//                 color: "#fff",
+//                 borderRadius: "12px",
+//                 padding: "16px",
+//             },
+//         });
+//     }
+// };
 
 function OrderFormContent() {
   const [waterType, setWaterType] = useState('');
@@ -514,7 +640,243 @@ function OrderFormContent() {
       setLoadingLocations(false);
     }
   };
+// دالة حذف العنوان
+const handleDeleteAddress = async (addressId, addressName, event) => {
+  event.stopPropagation(); // Prevent card click
+  
+  // Show confirmation dialog
+  const result = await Swal.fire({
+      title: "حذف العنوان",
+      text: `هل أنت متأكد من حذف العنوان "${addressName}"؟`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "نعم، حذف",
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      background: "var(--background)",
+      color: "var(--foreground)",
+      width: window.innerWidth < 640 ? '90%' : '32rem',
+      customClass: {
+          popup: "rounded-2xl border border-border shadow-xl mx-4",
+          confirmButton: "rounded-xl font-bold px-4 sm:px-6 py-2 ml-2 text-sm sm:text-base",
+          cancelButton: "rounded-xl font-bold px-4 sm:px-6 py-2 text-sm sm:text-base",
+          title: "text-sm text-right",
+          htmlContainer: "text-sm sm:text-base text-right"
+      }
+  });
 
+  if (!result.isConfirmed) return;
+
+  // Show loading toast
+  const loadingToast = toast.loading("جاري حذف العنوان...", {
+      style: {
+          background: "var(--background)",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+          padding: "16px",
+      },
+  });
+
+  try {
+      const accessToken = localStorage.getItem("accessToken");
+      
+      if (!accessToken) {
+          toast.dismiss(loadingToast);
+          toast.error("يرجى تسجيل الدخول أولاً", {
+              icon: <FaExclamationTriangle className="w-5 h-5" />,
+              style: {
+                  background: "#F75A65",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  padding: "16px",
+              },
+          });
+          return;
+      }
+
+      const response = await fetch(`https://dashboard.waytmiah.com/api/v1/addresses/${addressId}`, {
+          method: 'DELETE',
+          headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+          },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+          // Remove the address from local state
+          setSavedLocations(prevAddresses => prevAddresses.filter(addr => addr.id !== addressId));
+          
+          // If the deleted address was selected, clear selection
+          if (selectedSavedLocation?.id === addressId) {
+              setSelectedSavedLocation(null);
+              setLocationData(null);
+          }
+
+          toast.success(data.message || "تم حذف العنوان بنجاح", {
+              icon: <FaCheckCircle className="w-5 h-5" />,
+              style: {
+                  background: "#579BE8",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  padding: "16px",
+              },
+          });
+      } else {
+          const errorMessage = data.message || data.error || 'فشل حذف العنوان. يرجى المحاولة مرة أخرى';
+          toast.error(errorMessage, {
+              icon: <FaExclamationTriangle className="w-5 h-5" />,
+              style: {
+                  background: "#F75A65",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  padding: "16px",
+              },
+          });
+      }
+  } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error('Error deleting address:', error);
+      toast.error("حدث خطأ أثناء حذف العنوان. يرجى المحاولة مرة أخرى", {
+          icon: <FaExclamationTriangle className="w-5 h-5" />,
+          style: {
+              background: "#F75A65",
+              color: "#fff",
+              borderRadius: "12px",
+              padding: "16px",
+          },
+      });
+  }
+};
+// دالة تبديل حالة المفضلة (إضافة/إزالة)
+const handleToggleFavorite = async (addressId, currentFavoriteStatus, addressName, event) => {
+  event.stopPropagation(); // منع انتشار الحدث لعدم فتح تفاصيل العنوان
+  
+  // Show loading toast
+  const loadingToast = toast.loading(
+    currentFavoriteStatus ? "جاري الإزالة من المفضلة..." : "جاري الإضافة إلى المفضلة...",
+    {
+      style: {
+        background: "var(--background)",
+        border: "1px solid var(--border)",
+        borderRadius: "12px",
+        padding: "16px",
+      },
+    }
+  );
+
+  try {
+    const accessToken = localStorage.getItem("accessToken");
+    
+    if (!accessToken) {
+      toast.dismiss(loadingToast);
+      toast.error("يرجى تسجيل الدخول أولاً", {
+        icon: <FaExclamationTriangle className="w-5 h-5" />,
+        style: {
+          background: "#F75A65",
+          color: "#fff",
+          borderRadius: "12px",
+          padding: "16px",
+        },
+      });
+      return;
+    }
+
+    // جلب العنوان أولاً للحصول على جميع البيانات الحالية
+    const getResponse = await fetch(`${API_BASE_URL}/addresses/${addressId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    const getData = await getResponse.json();
+
+    if (!getResponse.ok) {
+      throw new Error(getData.message || 'فشل في جلب بيانات العنوان');
+    }
+
+    // تجهيز البيانات مع تحديث حالة المفضلة
+    const addressData = getData.data;
+    const updateData = {
+      name: addressData.name || '',
+      address: addressData.address || '',
+      city: addressData.city || '',
+      area: addressData.area || '',
+      latitude: addressData.latitude?.toString() || '',
+      longitude: addressData.longitude?.toString() || '',
+      type: addressData.type || 'home',
+      additional_info: addressData.additional_info || '',
+      is_favorite: !currentFavoriteStatus // عكس القيمة الحالية
+    };
+
+    // إرسال طلب التحديث
+    const updateResponse = await fetch(`${API_BASE_URL}/addresses/${addressId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    const updateResult = await updateResponse.json();
+    toast.dismiss(loadingToast);
+
+    if (updateResponse.ok && updateResult.status) {
+      // تحديث الحالة المحلية في savedLocations
+      setSavedLocations(prevAddresses => 
+        prevAddresses.map(addr => 
+          addr.id === addressId 
+            ? { ...addr, is_favorite: !currentFavoriteStatus }
+            : addr
+        )
+      );
+
+      // إذا كان هذا العنوان هو المحدد حالياً، قم بتحديثه أيضاً
+      if (selectedSavedLocation?.id === addressId) {
+        setSelectedSavedLocation(prev => ({ ...prev, is_favorite: !currentFavoriteStatus }));
+      }
+
+      // عرض رسالة نجاح
+      toast.success(
+        !currentFavoriteStatus 
+          ? `تمت إضافة "${addressName || 'العنوان'}" إلى المفضلة بنجاح`
+          : `تمت إزالة "${addressName || 'العنوان'}" من المفضلة بنجاح`,
+        {
+          icon: !currentFavoriteStatus ? <FaStar className="w-5 h-5" /> : <FaRegTrashCan className="w-5 h-5" />,
+          style: {
+            background: "#579BE8",
+            color: "#fff",
+            borderRadius: "12px",
+            padding: "16px",
+          },
+        }
+      );
+    } else {
+      throw new Error(updateResult.message || 'فشل تحديث حالة المفضلة');
+    }
+  } catch (error) {
+    toast.dismiss(loadingToast);
+    console.error('Error toggling favorite:', error);
+    toast.error(error.message || "حدث خطأ أثناء تحديث حالة المفضلة", {
+      icon: <FaExclamationTriangle className="w-5 h-5" />,
+      style: {
+        background: "#F75A65",
+        color: "#fff",
+        borderRadius: "12px",
+        padding: "16px",
+      },
+    });
+  }
+};
   const handleAddressAdded = (newAddress) => {
     setSavedLocations(prev => [newAddress, ...prev]);
     // Auto-select the newly added address
@@ -1044,7 +1406,7 @@ function OrderFormContent() {
                   <div className="flex gap-2">
                     
                     <button
-                      onClick={() => router.push('/myProfile')}
+                      onClick={() => router.push('/myProfile/addresses')}
                       className="text-xs px-3 py-1.5 bg-[#579BE8]/10 text-[#579BE8] rounded-lg hover:bg-[#579BE8]/20 transition-colors font-medium flex items-center gap-1"
                     >
                       <FaMapMarkerAlt className="w-3 h-3" />
@@ -1060,41 +1422,75 @@ function OrderFormContent() {
                       الأماكن المحفوظة
                     </h3>
                     <div className="space-y-2">
-                      {savedLocations.slice(0, showAllLocations ? savedLocations.length : 2).map((location) => (
-                        <div
-                          key={location.id}
-                          onClick={() => {
-                            setTouched(prev => ({ ...prev, location: true }));
-                            handleSavedLocationSelect(location);
-                          }}
-                          className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                            selectedSavedLocation?.id === location.id
-                              ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8]'
-                              : 'bg-gray-50/50 border-gray-200 hover:border-[#579BE8]/50'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              selectedSavedLocation?.id === location.id
-                                ? 'bg-[#579BE8] text-white'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {location.type === 'home' ? <FaHome className="w-4 h-4" /> :
-                               location.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
-                               <FaMapMarkedAlt className="w-4 h-4" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm text-gray-900">
-                                {location.name}
-                              </h4>
-                              <p className="text-xs text-gray-700">
-                                {location.address}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
+                    {savedLocations.slice(0, showAllLocations ? savedLocations.length : 2).map((location) => (
+  <div
+    key={location.id}
+    onClick={() => {
+      setTouched(prev => ({ ...prev, location: true }));
+      handleSavedLocationSelect(location);
+    }}
+    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+      selectedSavedLocation?.id === location.id
+        ? 'bg-gradient-to-br from-[#579BE8]/10 to-[#124987]/5 border-[#579BE8]'
+        : 'bg-gray-50/50 border-gray-200 hover:border-[#579BE8]/50'
+    }`}
+  >
+    <div className="flex items-start gap-3">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+        selectedSavedLocation?.id === location.id
+          ? 'bg-[#579BE8] text-white'
+          : 'bg-gray-100 text-gray-700'
+      }`}>
+        {location.type === 'home' ? <FaHome className="w-4 h-4" /> :
+         location.type === 'work' ? <FaBriefcase className="w-4 h-4" /> :
+         <FaMapMarkedAlt className="w-4 h-4" />}
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className="font-medium text-sm text-gray-900">
+            {location.name}
+          </h4>
+          {location.is_favorite && (
+            <FaStar className="text-[#579BE8] w-3 h-3" />
+          )}
+        </div>
+        <p className="text-xs text-gray-700 truncate">
+          {location.address}
+        </p>
+      </div>
+      
+      <div className="flex items-center gap-1">
+        {/* زر التبديل للمفضلة */}
+        <button
+          onClick={(e) => handleToggleFavorite(
+            location.id, 
+            location.is_favorite || false, 
+            location.name || 'العنوان',
+            e
+          )}
+          className={`transition-all p-1.5 rounded-lg hover:scale-110 ${
+            location.is_favorite 
+              ? 'text-[#579BE8] hover:bg-[#579BE8]/10' 
+              : 'text-gray-400 hover:text-[#579BE8] hover:bg-[#579BE8]/10'
+          }`}
+          title={location.is_favorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+        >
+          <FaStar className={`w-4 h-4 ${location.is_favorite ? 'fill-current' : ''}`} />
+        </button>
+        
+        {/* زر الحذف */}
+        <button
+          onClick={(e) => handleDeleteAddress(location.id, location.name || 'العنوان', e)}
+          className="transition-opacity p-1.5 hover:bg-red-100 rounded-lg text-red-600 hover:scale-110"
+          title="حذف العنوان"
+        >
+          <FaTrashAlt className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+))}
                       {savedLocations.length > 2 && (
                         <button
                           onClick={() => setShowAllLocations(!showAllLocations)}
@@ -1284,6 +1680,7 @@ function OrderFormContent() {
     </>
   );
 }
+
 
 export default function OrderForm() {
   return (

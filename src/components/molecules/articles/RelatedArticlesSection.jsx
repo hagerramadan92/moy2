@@ -100,18 +100,7 @@ const ArticleCard = ({ article, index, currentIndex, isActive = false }) => {
           </span>
         </motion.div>
 
-        {/* Reading Time Badge */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="absolute bottom-4 left-4 z-20"
-        >
-          <div className="px-3 py-1.5 rounded-lg bg-black/70 backdrop-blur-md text-white text-xs font-bold flex items-center gap-1.5 shadow-lg group-hover:bg-black/80 transition-all duration-300">
-            <FaClock className="text-[10px]" />
-            <span>{article.readTime}</span>
-          </div>
-        </motion.div>
+ 
       </div>
 
        {/* Content */}
